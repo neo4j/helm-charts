@@ -1,61 +1,160 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: "apps/v1"
+kind: StatefulSet
 metadata:
-  name: {{ include "neo4j.fullname" . }}
-  labels:
-    {{- include "neo4j.labels" . | nindent 4 }}
+  name: "{{ template "neo4j.core.fullname" . }}"
 spec:
-{{- if not .Values.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
-{{- end }}
+  podManagementPolicy: Parallel
+  serviceName: {{ template "neo4j.fullname" . }}
+  replicas: 1
   selector:
     matchLabels:
-      {{- include "neo4j.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/instance: {{ .Release.Name | quote }}
+      app.kubernetes.io/name: {{ template "neo4j.name" . }}
+      app.kubernetes.io/component: core
   template:
     metadata:
-    {{- with .Values.podAnnotations }}
-      annotations:
-        {{- toYaml . | nindent 8 }}
-    {{- end }}
       labels:
-        {{- include "neo4j.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+        app.kubernetes.io/instance: {{ .Release.Name | quote }}
+        helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+        app.kubernetes.io/name: {{ template "neo4j.name" . }}
+        app.kubernetes.io/component: core
     spec:
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      serviceAccountName: {{ include "neo4j.serviceAccountName" . }}
-      securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      serviceAccountName: "{{ template "neo4j.fullname" . }}-sa"
       containers:
-        - name: {{ .Chart.Name }}
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+        - name: {{ template "neo4j.fullname" . }}
+          image: "{{ .Values.image }}:{{ .Values.imageTag }}"
+          imagePullPolicy: "{{ .Values.imagePullPolicy }}"
+          # Most pod config is factored into a different configMap, which is user overrideable.
+          envFrom:
+            - configMapRef:
+                name: {{ template "neo4j.commonConfig.fullname" . }}
+            - configMapRef:
+                {{- if .Values.core.configMap }}
+                name: "{{ .Values.core.configMap }}"
+                {{- else }}
+                name: {{ template "neo4j.coreConfig.fullname" . }}
+          {{- end }}
+          env:
+            {{- if .Values.authEnabled }}
+            - name: NEO4J_SECRETS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "neo4j.secrets.fullname" . }}
+                  key: neo4j-password
+                  {{- end }}
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+
+              # Processes key configuration elements and exports env vars we need.
+              . /helm-init/init.sh
+
+              echo "Starting Neo4j on $HOST"
+              exec /docker-entrypoint.sh "neo4j"
           ports:
-            - name: http
-              containerPort: 80
-              protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /
-              port: http
+            - containerPort: 5000
+              name: discovery
+            - containerPort: 6000
+              name: tx
+            - containerPort: 7474
+              name: browser
+            - containerPort: 7687
+              name: bolt
+            {{- if .Values.metrics.prometheus.enabled }}
+            - containerPort: 2004
+              name: prometheus
+            {{- end }}
+            {{- if .Values.metrics.graphite.enabled }}
+            - containerPort: 2003
+              name: graphite
+            {{- end }}
+            {{- if .Values.metrics.jmx.enabled }}
+            - containerPort: 3637
+              name: jmx
+          {{- end }}
+          volumeMounts:
+            - name: init-script
+              mountPath: /helm-init
+            - name: datadir
+              mountPath: "{{ .Values.core.persistentVolume.mountPath }}"
+              {{- if .Values.core.persistentVolume.subPath }}
+              subPath: {{ .Values.core.persistentVolume.subPath }}
+            {{- end }}
+            - name: plugins
+              mountPath: /plugins
+            {{- if .Values.restoreSecret }}
+            - name: creds
+              mountPath: /auth
+              readOnly: true
+              {{- end }}
           readinessProbe:
-            httpGet:
-              path: /
-              port: http
+          {{ toYaml .Values.readinessProbe | indent 10 }}
+          livenessProbe:
+          {{ toYaml .Values.livenessProbe | indent 10 }}
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+      {{ toYaml .Values.resources | indent 10 }}
+      {{- if .Values.core.sidecarContainers }}
+      {{ toYaml .Values.core.sidecarContainers | indent 6 }}
+      {{- end }}
+      {{- if .Values.imagePullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.imagePullSecret }}
+      {{- end -}}
+      {{- if .Values.core.initContainers }}
+      initContainers:
+      {{ toYaml .Values.core.initContainers | indent 6 }}
+      {{- end }}
+      volumes:
+        - name: init-script
+          configMap:
+            name: "{{ .Release.Name }}-init-script"
+        {{- if .Values.restoreSecret }}
+        - name: creds
+          secret:
+            secretName: {{ .Values.restoreSecret }}
+            items:
+              - key: credentials.json
+                path: credentials.json
+        {{- end }}
+        {{- if not .Values.core.persistentVolume.enabled }}
+        - name: datadir
+          emptyDir: {}
+        {{- end }}
+        - name: plugins
+          emptyDir: {}
       {{- with .Values.nodeSelector }}
       nodeSelector:
-        {{- toYaml . | nindent 8 }}
+      {{ toYaml . | indent 8 }}
       {{- end }}
       {{- with .Values.affinity }}
       affinity:
-        {{- toYaml . | nindent 8 }}
+      {{ toYaml . | indent 8 }}
       {{- end }}
       {{- with .Values.tolerations }}
       tolerations:
-        {{- toYaml . | nindent 8 }}
+  {{ toYaml . | indent 8 }}
+  {{- end }}
+  {{- if .Values.core.persistentVolume.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: datadir
+        annotations:
+        {{- if .Values.core.persistentVolume.annotations }}
+        {{ toYaml .Values.core.persistentVolume.annotations | indent 12 }}
       {{- end }}
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        {{- if .Values.core.persistentVolume.storageClass }}
+        {{- if (eq "-" .Values.core.persistentVolume.storageClass) }}
+        storageClassName: ""
+        {{- else }}
+        storageClassName: "{{ .Values.core.persistentVolume.storageClass }}"
+        {{- end }}
+        {{- end }}
+        resources:
+          requests:
+            storage: "{{ .Values.core.persistentVolume.size }}"
+  {{- end }}
