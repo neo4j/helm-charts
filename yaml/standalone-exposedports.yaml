@@ -1,0 +1,39 @@
+# this actually works and allows you to create a standalone neo4j in GKE with an external IP address.
+# Not got it working in kind yet. Minikube might work?
+apiVersion: v1
+kind: Pod
+metadata:
+  name: neo4j-standalone
+  labels:
+    name: neo4j-standalone
+    component: test
+spec:
+  containers:
+    - name: neo4j-standalone
+      image: neo4j:latest
+      ports:
+      - containerPort: 7474
+        name: tcp-browser
+      - containerPort: 7687
+        name: tcp-bolt
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: neo4j-standalone-service
+  labels:
+    name: neo4j-standalone-service
+    component: test
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 7474
+      targetPort: 7474
+      nodePort: 31474
+      name: tcp-browser
+    - port: 7687
+      targetPort: 7687
+      nodePort: 31687
+      name: tcp-bolt
+  selector:
+    component: test
