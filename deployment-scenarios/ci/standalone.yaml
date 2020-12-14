@@ -1,0 +1,22 @@
+acceptLicenseAgreement: "yes"
+neo4jPassword: mySecretPassword
+
+readinessProbe:
+   initialDelaySeconds: 20
+
+livenessProbe:
+   initialDelaySeconds: 20
+
+core:
+    standalone: true
+    envFrom: 
+        - secretRef:
+            name: my-secret-config
+
+podAnnotations:
+    ci-test: "true"
+
+podLabels:
+    ci-test: "true"
+    hello: world
+    
