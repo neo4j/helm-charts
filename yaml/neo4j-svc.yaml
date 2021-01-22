@@ -18,5 +18,7 @@ spec:
       port: 7687
       targetPort: 7687
       name: bolt
+      targetPort: 6362
+      name: backup
   selector:
     app: neo4j-db
