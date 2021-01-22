@@ -32,8 +32,14 @@ spec:
               name: https
           volumeMounts:
             - name: neo4j-data
-              mountPath: "/var/lib/neo4j/data"
-      volumes:
-        - name: neo4j-data
-          persistentVolumeClaim:
-            claimName: neo4j-data-claim
+              mountPath: "/data"
+  volumeClaimTemplates:
+  - metadata:
+      name: neo4j-data-claim
+      annotations:
+        volume.beta.kubernetes.io/storage-class: "fast"
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10Gi
