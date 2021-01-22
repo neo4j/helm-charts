@@ -13,7 +13,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: fast
   gcePersistentDisk:
-    pdName: pd-ssd-disk-1
+    pdName: neo4j-data-disk
 ---
 kind: "PersistentVolumeClaim"
 apiVersion: "v1"
