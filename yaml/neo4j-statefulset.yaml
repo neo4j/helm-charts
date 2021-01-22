@@ -33,11 +33,11 @@ spec:
             - containerPort: 6362
               name: backup
           volumeMounts:
-            - name: neo4j-data-claim
+            - name: neo4j-data
               mountPath: "/data"
   volumeClaimTemplates:
   - metadata:
-      name: neo4j-data-claim
+      name: neo4j-data
       annotations:
         volume.beta.kubernetes.io/storage-class: "fast"
     spec:
