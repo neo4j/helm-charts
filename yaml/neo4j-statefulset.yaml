@@ -30,6 +30,8 @@ spec:
               name: bolt
             - containerPort: 7473
               name: https
+            - containerPort: 6362
+              name: backup
           volumeMounts:
             - name: neo4j-data
               mountPath: "/data"
