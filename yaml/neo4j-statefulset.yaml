@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: neo4j-db
+  name: neo4j-db
+  namespace: neo4j
+spec:
+  serviceName: neo4j-lb
+  replicas: 1
+  selector:
+    matchLabels:
+      app: neo4j-db
+  template:
+    metadata:
+      labels:
+        app: neo4j-db
+    spec:
+      containers:
+        - image: neo4j:4.2.2-enterprise
+          imagePullPolicy: "IfNotPresent"
+          name: neo4j
+          envFrom:
+            - configMapRef:
+                name: neo4j-config
+          ports:
+            - containerPort: 7474
+              name: http
+            - containerPort: 7687
+              name: bolt
+            - containerPort: 7473
+              name: https
+          volumeMounts:
+            - name: neo4j-data
+              mountPath: "/var/lib/neo4j/data"
+      volumes:
+        - name: neo4j-data
+          persistentVolumeClaim:
+            claimName: neo4j-data-claim

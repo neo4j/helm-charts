@@ -59,12 +59,12 @@ kubectl apply -f neo4j-gce-storageclass.yaml
 gcloud compute disks create --size 10GB --type pd-ssd pd-ssd-disk-1 --zone=europe-west1-b
 kubectl apply -f neo4j-pvc.yaml
 kubectl apply -f neo4j-config.yaml
-kubectl apply -f neo4j-deployment.yaml
-kubectl apply -f neo4j-service.yaml
+kubectl apply -f neo4j-statefulset.yaml
+kubectl apply -f neo4j-svc.yaml
 ````
 If you want to use Neo4j browser run
  ```shell script
-kubectl port-forward deployment/neo4j-db -n neo4j 7474:7474 7687:7687
+kubectl port-forward statefulSet/neo4j-db -n neo4j 7474:7474 7687:7687
 ```
 
 Open localhost:7474 in your favourite browser.
