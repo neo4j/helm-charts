@@ -33,7 +33,7 @@ spec:
             - containerPort: 6362
               name: backup
           volumeMounts:
-            - name: neo4j-data
+            - name: neo4j-data-claim
               mountPath: "/data"
   volumeClaimTemplates:
   - metadata:
