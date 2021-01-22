@@ -14,17 +14,3 @@ spec:
   storageClassName: fast
   gcePersistentDisk:
     pdName: neo4j-data-disk
----
-kind: "PersistentVolumeClaim"
-apiVersion: "v1"
-metadata:
-  name: neo4j-data-claim
-  namespace: neo4j
-  labels:
-    app: neo4j-db
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 2Gi
