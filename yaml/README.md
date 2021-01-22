@@ -53,20 +53,47 @@ kubectl version --client
 ```
 
 ## Deploying Neo4j
+ **To restore Neo4j data from a pre existing `neo4j-data-disk` disk start from step 3**
+
+1. Register GCE's SSD persistent disk to be used
+```shell script
+kubectl apply -f neo4j-gce-storageclass.yaml
+```
+2. Allocate Google Cloud Storage disk 
+```shell script
+gcloud compute disks create --size 10GB --type pd-ssd neo4j-data-disk --zone=europe-west1-b --project PROJECT
+```
+3. Declare a kubernetes **Persistent Volume** definition that references the newly created disk
+```shell script
+kubectl apply -f neo4j-pvc.yaml
+```
+4. Create a custom namespace and apply the specified components to provision Neo4j
 ```shell script
 kubectl create namespace neo4j
-kubectl apply -f neo4j-gce-storageclass.yaml
-gcloud compute disks create --size 10GB --type pd-ssd pd-ssd-disk-1 --zone=europe-west1-b
-kubectl apply -f neo4j-pvc.yaml
 kubectl apply -f neo4j-config.yaml
 kubectl apply -f neo4j-statefulset.yaml
 kubectl apply -f neo4j-svc.yaml
-````
-If you want to use Neo4j browser run
+```
+5. If you want to use Neo4j browser run
  ```shell script
 kubectl port-forward statefulSet/neo4j-db -n neo4j 7474:7474 7687:7687
 ```
 
 Open localhost:7474 in your favourite browser.
 
-Enjoy :)
+## Cleanup
+
+To cleanup all the k8s resources that we created run
+```shell script
+kubectl delete namespace neo4j
+```
+To teardown the whole GKE cluster run the script
+```shell script
+./teardown-gke-cluster.sh
+```
+To delete GKE`s persisted disk run
+
+ **⚠ WARNING: You will loose all Neo4j data: Be very careful here!**
+```shell script
+gcloud compute disks delete neo4j-data-disk --zone=europe-west1-b --project PROJECT
+```
