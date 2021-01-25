@@ -84,6 +84,8 @@ Open localhost:7474 in your favourite browser.
 ## Cleanup
 
 To cleanup all the k8s resources that we created run
+
+ **⚠ WARNING: Your GKE Cluster and persistent disk will still be up and running**
 ```shell script
 kubectl delete namespace neo4j
 ```
