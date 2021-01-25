@@ -18,6 +18,8 @@ spec:
       port: 7687
       targetPort: 7687
       name: bolt
+    - protocol: TCP
+      port: 6362
       targetPort: 6362
       name: backup
   selector:
