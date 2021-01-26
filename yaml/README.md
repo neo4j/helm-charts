@@ -63,9 +63,9 @@ kubectl apply -f neo4j-gce-storageclass.yaml
 ```shell script
 gcloud compute disks create --size 10GB --type pd-ssd neo4j-data-disk --zone=europe-west1-b --project PROJECT
 ```
-3. Declare a kubernetes **Persistent Volume** definition that references the newly created disk
+3. Declare a kubernetes **Persistent Volume** instance that references the newly created disk
 ```shell script
-kubectl apply -f neo4j-pvc.yaml
+kubectl apply -f neo4j-persistentvolume.yaml
 ```
 4. Create a custom namespace and apply the specified components to provision Neo4j
 ```shell script
@@ -76,7 +76,7 @@ kubectl apply -f neo4j-svc.yaml
 ```
 5. If you want to use Neo4j browser run
  ```shell script
-kubectl port-forward statefulSet/neo4j-db -n neo4j 7474:7474 7687:7687
+kubectl --namespace neo4j port-forward service/neo4j-lb 7474:7474 7687:7687
 ```
 
 Open localhost:7474 in your favourite browser.
@@ -99,3 +99,17 @@ To delete GKE`s persisted disk run
 ```shell script
 gcloud compute disks delete neo4j-data-disk --zone=europe-west1-b --project PROJECT
 ```
+
+## Re-Use a persistent volume
+
+After a persistent volume has been bound to a persistent volume claim it can only be used by that claim.
+
+If you want to re-use the persistent volume (retaining the data) then you have to delete the persistent volume claim which will "release" the persistent volume.
+
+"Released" persistent volumes still cannot be claimed: https://stackoverflow.com/questions/50667437/what-to-do-with-released-persistent-volume
+In theory you can patch the existing persistent volume to make it available again but it is more straightforward to replace the persistent volume.
+
+```kubectl replace --force -f neo4j-persistentvolume.yaml```
+
+This will log a message like "Deleting PersistentVolume" - but don't worry, this only refers to the PeristentVolume object in Kubernetes. 
+The underlying Persistent Disk in Google Cloud is not affected. 

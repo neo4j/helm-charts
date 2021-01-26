@@ -6,6 +6,7 @@ metadata:
     type: local
     app: neo4j-db
 spec:
+  storageClassName: "fast"
   capacity:
     storage: 10Gi
   accessModes:
