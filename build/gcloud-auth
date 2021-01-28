@@ -8,9 +8,13 @@ set -o pipefail -o errtrace -o errexit -o nounset
 shopt -s inherit_errexit
 [[ -n "${TRACE:-}" ]] && set -o xtrace
 
+# Required env vars
 GCLOUD_SERVICE_KEY="${GCLOUD_SERVICE_KEY:?GCLOUD_SERVICE_KEY is required}"
+
+# Params
 SERVICE_KEY_FILE="gcloud.key"
 
+# Auth with gcloud
 echo $GCLOUD_SERVICE_KEY | base64 -d > $SERVICE_KEY_FILE
 gcloud auth activate-service-account --key-file=$SERVICE_KEY_FILE
 rm ${SERVICE_KEY_FILE}

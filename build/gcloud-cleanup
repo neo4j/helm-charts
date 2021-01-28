@@ -10,6 +10,8 @@ shopt -s inherit_errexit
 
 # disable delete prompts
 export CLOUDSDK_CORE_DISABLE_PROMPTS=True
+# unlink ourselves from whatever cluster was just being used
+unset CLOUDSDK_CONTAINER_CLUSTER
 
 GCR_REPO="eu.gcr.io/${CLOUDSDK_CORE_PROJECT}/neo4j-helm-chart"
 CUT_OFF_TIMESTAMP="$(expr $(date +%s) - 86400)"
