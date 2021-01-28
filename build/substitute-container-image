@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+# This replaces the container image that the k8s yaml template for the stateful set uses with the one from the current build
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+
+# TODO: once we switch to using helm this will not be necessary
+sed -i "s/neo4j:4.2.2-enterprise/${GCLOUD_DOCKER_IMG}/" yaml/neo4j-statefulset.yaml

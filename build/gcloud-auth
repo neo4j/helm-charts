@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+# This authenticates with google cloud
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+GCLOUD_SERVICE_KEY="${GCLOUD_SERVICE_KEY:?GCLOUD_SERVICE_KEY is required}"
+SERVICE_KEY_FILE="gcloud.key"
+
+echo $GCLOUD_SERVICE_KEY | base64 -d > $SERVICE_KEY_FILE
+gcloud auth activate-service-account --key-file=$SERVICE_KEY_FILE
+rm ${SERVICE_KEY_FILE}
+gcloud auth configure-docker --quiet eu.gcr.io

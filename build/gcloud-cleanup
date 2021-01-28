@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+# This cleans up google cloud resources that are more than 24 hours old
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+# disable delete prompts
+export CLOUDSDK_CORE_DISABLE_PROMPTS=True
+
+GCR_REPO="eu.gcr.io/${CLOUDSDK_CORE_PROJECT}/neo4j-helm-chart"
+CUT_OFF_TIMESTAMP="$(expr $(date +%s) - 86400)"
+
+# convert to YYY-MM-DD date, taking into account different implementations of date
+# do not try and be more specific than the date, different gcloud resources use different formats beyond the date so this is easiest
+CUT_OFF_DATE="$(date -r ${CUT_OFF_TIMESTAMP} "+%Y-%m-%d" 2>/dev/null || date -d @${CUT_OFF_TIMESTAMP} "+%Y-%m-%d")"
+
+echo "Removing all items created before ${CUT_OFF_DATE} (${CUT_OFF_TIMESTAMP})"
+
+# Container Registry Images
+gcloud container images list-tags "${GCR_REPO}" --filter="timestamp.datetime<${CUT_OFF_DATE}" --format="get(digest)" \
+  | xargs -I{} gcloud container images delete "${GCR_REPO}@{}" --force-delete-tags
+
+# Kubernetes Clusters
+gcloud container clusters list --filter="createTime<${CUT_OFF_DATE}" --format="get(name)" \
+ | xargs -I{} gcloud container clusters delete {}
+
+# Compute Disks (have to come after clusters)
+gcloud compute disks list --filter="creationTimestamp<${CUT_OFF_DATE}" --format="get(name)" \
+  | xargs -I{} gcloud compute disks delete {}
