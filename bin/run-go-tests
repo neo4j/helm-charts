@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+# This run `go test` for all tests defined in the internal module
+# The go test output is written to a .log file and is then transformed into junit xml by a python script
+# The junit xml is written to `output/go-test.xml` and can be interpreted by TeamCity
+#
+# This script assumes that you have a correctly configured kubectl
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+
+# run go test and format the output for junit consumption
+#
+mkdir -p output
+go test -json -count ${GO_TEST_COUNT:-1} -timeout "${GO_TEST_TIMEOUT:-5}m" ./internal | tee output/go-test.json
