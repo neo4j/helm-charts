@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+# This creates a new Kubernetes cluster on GKE
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+# Required env vars
+CLOUDSDK_CONTAINER_CLUSTER="${CLOUDSDK_CONTAINER_CLUSTER:?CLOUDSDK_CONTAINER_CLUSTER is required}"
+CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
+
+# Parameters
+NODE_MACHINE="e2-medium"
+
+# For more info on release channels see https://cloud.google.com/kubernetes-engine/docs/concepts/release-channels
+RELEASE_CHANNEL="stable"
+
+# make a new Kubernetes cluster
+#
+gcloud container clusters create "${CLOUDSDK_CONTAINER_CLUSTER}" \
+     --release-channel=${RELEASE_CHANNEL} \
+     --zone="${CLOUDSDK_COMPUTE_ZONE}" \
+     --num-nodes "1" \
+     --preemptible --machine-type "${NODE_MACHINE}" --image-type "COS_CONTAINERD" \
+     --disk-type "pd-ssd" --disk-size "10" \
+     --max-pods-per-node=30 --enable-ip-alias \
+     --enable-shielded-nodes --metadata disable-legacy-endpoints=true --no-enable-basic-auth --no-issue-client-certificate \
+     --enable-stackdriver-kubernetes
+
+gcloud-configure-kubectl

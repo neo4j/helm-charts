@@ -1,0 +1,4 @@
+output/
+devenv.local
+.idea/
+.kube/

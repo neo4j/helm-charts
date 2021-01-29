@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+# This removes a Kubernetes cluster from GKE
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+# disable delete prompts
+export CLOUDSDK_CORE_DISABLE_PROMPTS=True
+
+# delete the current Kubernetes cluster
+#
+gcloud-delete-gke-cluster
+
+# Clear out env vars
+unset CLOUDSDK_CONTAINER_CLUSTER
+echo "##teamcity[setParameter name='env.CLOUDSDK_CONTAINER_CLUSTER' value='']"

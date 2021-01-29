@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+# This sets up the kubectl configuration to point at the current cluster
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+# Required env vars
+CLOUDSDK_CONTAINER_CLUSTER="${CLOUDSDK_CONTAINER_CLUSTER:?CLOUDSDK_CONTAINER_CLUSTER is required}"
+KUBECONFIG="${KUBECONFIG:?KUBECONFIG is required}"
+
+# Configure kubectl
+gcloud container clusters get-credentials "${CLOUDSDK_CONTAINER_CLUSTER}"
+
+echo "kubectl configured for $(kubectl config current-context)"

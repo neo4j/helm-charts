@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+# This sets the cluster name for Team City and creates the cluster
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+# Required env vars
+TEAMCITY_PROJECT_NAME="${TEAMCITY_PROJECT_NAME:?TEAMCITY_PROJECT_NAME is required}"
+CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
+
+# Params
+cluster_name_prefix="tc-${TEAMCITY_PROJECT_NAME}"
+
+CLOUDSDK_CONTAINER_CLUSTER="${cluster_name_prefix}-$(date +%s)-helm"
+export CLOUDSDK_CONTAINER_CLUSTER="$(echo "${CLOUDSDK_CONTAINER_CLUSTER}" | sed 's/\./-/g' )"
+echo "##teamcity[setParameter name='env.CLOUDSDK_CONTAINER_CLUSTER' value='$CLOUDSDK_CONTAINER_CLUSTER']"
+
+gcloud-create-gke-cluster
