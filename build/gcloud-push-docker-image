@@ -8,7 +8,6 @@ set -o pipefail -o errtrace -o errexit -o nounset
 shopt -s inherit_errexit
 [[ -n "${TRACE:-}" ]] && set -o xtrace
 
-#
 
 TARBALL=$(ls | grep "neo4j-enterprise-")
 echo TARBALL=$TARBALL
@@ -20,8 +19,8 @@ DOCKER_TAG="$(date +%s)-$(echo $DOCKER_IMG | cut -d ':' -f2-)"
 echo TAG=$DOCKER_TAG
 echo "##teamcity[setParameter name='env.DOCKER_TAG' value='$DOCKER_TAG']"
 
-GCLOUD_DOCKER_IMG="eu.gcr.io/${CLOUDSDK_CORE_PROJECT}/neo4j-helm-chart:${DOCKER_TAG}"
-docker tag $DOCKER_IMG "${GCLOUD_DOCKER_IMG}"
-docker push "${GCLOUD_DOCKER_IMG}"
-echo "##teamcity[setParameter name='env.GCLOUD_DOCKER_IMG' value='$GCLOUD_DOCKER_IMG']"
-docker rmi "${GCLOUD_DOCKER_IMG}" "${DOCKER_IMG}"
+NEO4J_DOCKER_IMG="eu.gcr.io/${CLOUDSDK_CORE_PROJECT}/neo4j-helm-chart:${DOCKER_TAG}"
+docker tag $DOCKER_IMG "${NEO4J_DOCKER_IMG}"
+docker push "${NEO4J_DOCKER_IMG}"
+echo "##teamcity[setParameter name='env.NEO4J_DOCKER_IMG' value='${NEO4J_DOCKER_IMG}']"
+docker rmi "${NEO4J_DOCKER_IMG}" "${DOCKER_IMG}"

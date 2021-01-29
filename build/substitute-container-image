@@ -10,4 +10,4 @@ shopt -s inherit_errexit
 
 
 # TODO: once we switch to using helm this will not be necessary
-sed -i "s|neo4j:4\.2\.2-enterprise|${GCLOUD_DOCKER_IMG}|g" yaml/neo4j-statefulset.yaml
+sed -i "s|neo4j:4\.2\.2-enterprise|${NEO4J_DOCKER_IMG}|g" yaml/neo4j-statefulset.yaml

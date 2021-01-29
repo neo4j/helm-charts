@@ -9,20 +9,10 @@ shopt -s inherit_errexit
 [[ -n "${TRACE:-}" ]] && set -o xtrace
 
 # Required env vars
+CLOUDSDK_CONTAINER_CLUSTER="${CLOUDSDK_CONTAINER_CLUSTER:?CLOUDSDK_CONTAINER_CLUSTER is required}"
 CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
 
-# Params
-if [ -z "${CLOUDSDK_CONTAINER_CLUSTER:-}" ]; then
-    if [ -z "${TEAMCITY_PROJECT_NAME:-}" ]; then
-        cluster_name_prefix="$(whoami)"
-    else
-        cluster_name_prefix="tc-${TEAMCITY_PROJECT_NAME}"
-    fi
-    CLOUDSDK_CONTAINER_CLUSTER="${cluster_name_prefix}-$(date +%s)-helm"
-    export CLOUDSDK_CONTAINER_CLUSTER="$(echo "${CLOUDSDK_CONTAINER_CLUSTER}" | sed 's/\./-/g' )"
-fi
-
-echo "##teamcity[setParameter name='env.CLOUDSDK_CONTAINER_CLUSTER' value='$CLOUDSDK_CONTAINER_CLUSTER']"
+# Parameters
 NODE_MACHINE="e2-medium"
 
 # For more info on release channels see https://cloud.google.com/kubernetes-engine/docs/concepts/release-channels
@@ -40,4 +30,4 @@ gcloud container clusters create "${CLOUDSDK_CONTAINER_CLUSTER}" \
      --enable-shielded-nodes --metadata disable-legacy-endpoints=true --no-enable-basic-auth --no-issue-client-certificate \
      --enable-stackdriver-kubernetes
 
-gcloud container clusters get-credentials "${CLOUDSDK_CONTAINER_CLUSTER}"
+gcloud-configure-kubectl

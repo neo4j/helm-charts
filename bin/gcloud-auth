@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+# This authenticates with google cloud and sets up docker to use gcloud authentication for gcr.io repositories
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+function get_current_gcloud_account {
+    gcloud auth list --filter="status=ACTIVE" --format="get(account)"
+}
+
+if [[ -z "$(get_current_gcloud_account)" ]]; then
+    gcloud auth login  --no-launch-browser
+fi
+
+echo "Using gcloud account: $(get_current_gcloud_account)"
+
+gcloud auth configure-docker  --verbosity=error --quiet eu.gcr.io

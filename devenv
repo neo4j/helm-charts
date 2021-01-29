@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+if [ -f ./devenv.local ]; then
+    . ./devenv.local
+    export CLOUDSDK_CORE_PROJECT
+    export CLOUDSDK_COMPUTE_ZONE
+    export CLOUDSDK_COMPUTE_REGION
+    export CLOUDSDK_CONTAINER_CLUSTER
+else
+    echo "Couldn't find ./devenv.local."
+fi
+
+# Add scripts to path
+export PATH=${PATH}:./bin
+
+# Use a local kubeconfig
+export KUBECONFIG=".kube/config"

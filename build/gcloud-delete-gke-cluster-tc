@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# This creates a new Kubernetes cluster on GKE
+# This removes a Kubernetes cluster from GKE
 
 # make bash play nicely
 #
@@ -11,12 +11,10 @@ shopt -s inherit_errexit
 # disable delete prompts
 export CLOUDSDK_CORE_DISABLE_PROMPTS=True
 
-# Required env vars
-CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
-CLOUDSDK_CONTAINER_CLUSTER="${CLOUDSDK_CONTAINER_CLUSTER:?CLOUDSDK_CONTAINER_CLUSTER is required}"
-
 # delete the current Kubernetes cluster
 #
-gcloud container clusters delete --zone="${CLOUDSDK_COMPUTE_ZONE}" "${CLOUDSDK_CONTAINER_CLUSTER}"
+gcloud-delete-gke-cluster
+
+# Clear out env vars
 unset CLOUDSDK_CONTAINER_CLUSTER
 echo "##teamcity[setParameter name='env.CLOUDSDK_CONTAINER_CLUSTER' value='']"

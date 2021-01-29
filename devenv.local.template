@@ -1,0 +1,4 @@
+CLOUDSDK_CORE_PROJECT="your project"
+CLOUDSDK_COMPUTE_REGION="your region" # e.g. europe-north1
+CLOUDSDK_COMPUTE_ZONE="your zone" # e.g. europe-north1-b
+CLOUDSDK_CONTAINER_CLUSTER="your container cluster name" # this needs to be set, to create a cluster - set this and run `source devenv && gcloud-create-gke-cluster`
