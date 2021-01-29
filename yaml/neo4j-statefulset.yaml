@@ -43,20 +43,20 @@ spec:
           readinessProbe:
             tcpSocket:
               port: 7687
-            failureThreshold: 3
+            failureThreshold: 2
             timeoutSeconds: 2
-            periodSeconds: 10
+            periodSeconds: 1
           livenessProbe:
             tcpSocket:
               port: 7687
-            failureThreshold: 3
+            failureThreshold: 30
             timeoutSeconds: 2
-            periodSeconds: 10
+            periodSeconds: 20
           startupProbe:
             tcpSocket:
               port: 7687
-            failureThreshold: 5
-            periodSeconds: 10
+            failureThreshold: 2000
+            periodSeconds: 25
   volumeClaimTemplates:
   - metadata:
       name: neo4j-data
