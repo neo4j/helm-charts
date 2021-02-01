@@ -40,6 +40,23 @@ spec:
           volumeMounts:
             - name: neo4j-data
               mountPath: "/data"
+          readinessProbe:
+            tcpSocket:
+              port: 7687
+            failureThreshold: 2
+            timeoutSeconds: 2
+            periodSeconds: 1
+          livenessProbe:
+            tcpSocket:
+              port: 7687
+            failureThreshold: 30
+            timeoutSeconds: 2
+            periodSeconds: 20
+          startupProbe:
+            tcpSocket:
+              port: 7687
+            failureThreshold: 2000
+            periodSeconds: 25
   volumeClaimTemplates:
   - metadata:
       name: neo4j-data
