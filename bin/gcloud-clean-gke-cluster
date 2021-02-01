@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+# This cleans resources related to a running GKE k8s cluster but it doesn't remove the cluster itself
+# it is useful to run this after tests that panic or are otherwise terminated unexpectedly
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+kubectl delete namespace neo4j --ignore-not-found
+kubectl delete persistentvolume neo4j-data-storage  --ignore-not-found
+gcloud compute disks delete neo4j-data-disk || true
+
+echo "cleanup complete"

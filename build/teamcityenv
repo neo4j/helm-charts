@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+# Env settings for TeamCity
+
+# Add scripts to path
+export PATH=${PATH}:./bin
+
+# Use a local kubeconfig
+export KUBECONFIG=".kube/config"

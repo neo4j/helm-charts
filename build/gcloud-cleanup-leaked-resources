@@ -38,5 +38,5 @@ gcloud container clusters list --filter="createTime<${CUT_OFF_DATE}" --format="g
  | xargs -I{} gcloud container clusters delete {}
 
 # Compute Disks (have to come after clusters)
-gcloud compute disks list --filter="creationTimestamp<${CUT_OFF_DATE}" --format="get(name)" \
-  | xargs -I{} gcloud compute disks delete {}
+gcloud compute disks list --filter="creationTimestamp<${CUT_OFF_DATE}" --format="get(selfLink)" \
+  | cut -d'/' -f6- | xargs -I{} gcloud compute disks delete {}
