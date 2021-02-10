@@ -1,0 +1,18 @@
+kind: "PersistentVolume"
+apiVersion: "v1"
+metadata:
+  name: neo4j-data-storage
+  labels:
+    type: local
+    app: {{ .Release.Name }}
+spec:
+  storageClassName: "{{ .Values.volumeClaimTemplates.storageClassName }}"
+  capacity:
+    storage: {{ .Values.volumeClaimTemplates.storage }}
+  accessModes:
+    - ReadWriteOnce
+  claimRef:
+    namespace: {{ .Release.Namespace }}
+    name: neo4j-data-{{ .Release.Name }}-0
+  gcePersistentDisk:
+    pdName: neo4j-data-disk

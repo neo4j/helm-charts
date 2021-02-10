@@ -1,0 +1,58 @@
+# Default values for Neo4j.
+# This is a YAML-formatted file.
+# Declare name/value pairs to be passed into your templates.
+# name: value
+
+name: neo4j-db
+
+# Specs for the Neo4j docker image
+image:
+ #repository:
+ imagePullPolicy: IfNotPresent
+ # Overrides the image tag whose default is the chart appVersion.
+ tag: ""
+
+# Set the load balancer name
+serviceName: neo4j-lb
+
+# securityContext defines privilege and access control settings for a Pod
+# or Container. Making sure that we dont run Neo4j as root user.
+securityContext:
+ runAsNonRoot: true
+ runAsUser: 7474
+ runAsGroup: 7474
+ fsGroup: 7474
+
+# Set your custom configMap
+configMapRef:
+  name: neo4j-config
+# Persistent Volume mount name and root path
+volumeMounts:
+ name: neo4j-data
+
+# Readiness probes will send a kill signal to the container if
+# it fails enough times.  It's therefore very important
+# that initialDelaySeconds give the cluster time to form, because
+# if readiness probes start immediately after container start,
+# they may end up not forming quickly enough and getting killed.
+readinessProbe:
+  failureThreshold: 2
+  timeoutSeconds: 2
+  periodSeconds: 1
+# Liveness probes are uset to know when to restart a container
+livenessProbe:
+  failureThreshold: 30
+  timeoutSeconds: 2
+  periodSeconds: 20
+# Startup probes are used to know when a container application has started.
+# If such a probe is configured, it disables liveness and readiness checks until it succeeds
+startupProbe:
+ failureThreshold: 2000
+ periodSeconds: 25
+# The volumeClaimTemplates will provide stable storage using
+# PersistentVolumes provisioned by a PersistentVolume Provisioner.
+volumeClaimTemplates:
+ storageClassName: fast
+ selector: # adding a selector here ensures that we use only Persistent Volumes that have been created and labelled specifically for neo4j and prevents "helpful" systems creating new Persistent Volumes dynamically
+ accessModes: ReadWriteOnce
+ storage: 10Gi
