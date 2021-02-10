@@ -1,8 +1,8 @@
 apiVersion: v1
 name: neo4j
 home: https://www.neo4j.com
-version: 4.1.1
-appVersion: 4.1.1
+version: 4.2.3
+appVersion: 4.2.3
 description: Neo4j is the world's leading graph database
 keywords:
   - graph
@@ -13,7 +13,9 @@ sources:
   - https://github.com/neo4j/neo4j
   - https://github.com/neo4j/docker-neo4j
 maintainers:
+  - name: eastlondoner
+    email: andrew.jefferson@neotechnology.com
   - name: bfeshti
-    email: bledi.feshti@neo4j.com
+    email: bledi.feshti@neotechnology.com
   - name: jennyowen
-    email: jenny.owen@neotechnology.com.com
+    email: jenny.owen@neotechnology.com
