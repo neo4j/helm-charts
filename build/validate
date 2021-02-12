@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+# TC runs this to perform all validation
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+# Required env vars
+NEO4J_DOCKER_IMG="${NEO4J_DOCKER_IMG:?NEO4J_DOCKER_IMG is required}"
+
+# check the included neo4j.conf file matches our expectations
+check-neo4j-conf

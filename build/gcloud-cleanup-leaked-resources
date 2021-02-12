@@ -40,3 +40,7 @@ gcloud container clusters list --filter="createTime<${CUT_OFF_DATE}" --format="g
 # Compute Disks (have to come after clusters)
 gcloud compute disks list --filter="creationTimestamp<${CUT_OFF_DATE}" --format="get(selfLink)" \
   | cut -d'/' -f6- | xargs -I{} gcloud compute disks delete {}
+
+function count_leaked_resources {
+  gcloud asset search-all-resources --scope="projects/${CLOUDSDK_CORE_PROJECT}" | wc -l
+}

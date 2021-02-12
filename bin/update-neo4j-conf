@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+# This copies the neo4j.conf file from the ${NEO4J_DOCKER_IMG) docker image to the neo4j helm chart
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+# Required env vars
+NEO4J_DOCKER_IMG="${NEO4J_DOCKER_IMG:?NEO4J_DOCKER_IMG is required}"
+
+function overwrite_conf_using_docker {
+  docker run --entrypoint cp -v "$(pwd)/neo4j/":/neo4j/ "${NEO4J_DOCKER_IMG}" /var/lib/neo4j/conf/neo4j.conf /neo4j/neo4j.conf
+}
+
+overwrite_conf_using_docker

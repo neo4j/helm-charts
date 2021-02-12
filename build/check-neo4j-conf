@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+# This checks that the helm chart's packaged neo4j conf matches the docker image's neo4j conf
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+# Required env vars
+NEO4J_DOCKER_IMG="${NEO4J_DOCKER_IMG:?NEO4J_DOCKER_IMG is required}"
+
+function check_conf_using_docker {
+  docker run --entrypoint diff -v "$(pwd)/neo4j/neo4j.conf":/neo4j.conf "${NEO4J_DOCKER_IMG}" /var/lib/neo4j/conf/neo4j.conf /neo4j.conf
+}
+
+if ! check_conf_using_docker ; then
+  echo "The neo4j.conf file packaged with the helm chart does not match the neo4j.conf packaged with the matching neo4j version. See build log for details."
+  echo "To fix this update the neo4j.conf in the helm chart repo (use the ./bin/update-neo4j-conf script with NEO4J_DOCKER_IMG=<the neo4j docker image that this build is using>"
+  exit 1
+fi

@@ -29,21 +29,30 @@ func init() {
 	err = os.Chdir(dir)
 	CheckError(err)
 
-	os.Setenv("KUBECONFIG", path.Join(dir,".kube/config"))
+	os.Setenv("KUBECONFIG", path.Join(dir, ".kube/config"))
+}
+
+func helmInstallCommands() [][]string {
+	imageArg := []string{}
+	if value, found := os.LookupEnv("NEO4J_DOCKER_IMG"); found {
+		imageArg = []string{"--set", "image.customImage=" + value}
+	}
+	return [][]string{
+		append([]string{"install", "neo4j", "./neo4j", "--namespace", "neo4j", "--create-namespace", "--wait", "--timeout", "300s"}, imageArg...),
+	}
 }
 
 var kSetupCommands = [][]string{
-	{"apply", "-f", "yaml/neo4j-gce-storageclass.yaml"}, // it doesnt matter if this already exists currently and it's a PITA to clean up so just apply here
+	{"apply", "-f", "yaml/neo4j-gce-storageclass.yaml"},  // it doesnt matter if this already exists currently and it's a PITA to clean up so just apply here
 	{"create", "-f", "yaml/neo4j-persistentvolume.yaml"}, // create because if this already exists we run into problems (pv are not namespaced)
-	{"create", "namespace", "neo4j"}, // create will fail if already exists so we know we are going into a clean namespace
-	{"apply", "-f", "yaml/neo4j-config.yaml"},
-	{"apply", "-f", "yaml/neo4j-statefulset.yaml"},
-	{"apply", "-f", "yaml/neo4j-svc.yaml"},
-	{"wait", "--namespace=neo4j", "--for=condition=ready", "pod", "-l", "app=neo4j-db", "--timeout=300s"},
+}
+
+var helmCleanupCommands = [][]string{
+	{"uninstall", "neo4j", "--namespace", "neo4j"},
 }
 
 var kCleanupCommands = [][]string{
-	{"delete", "namespace", "neo4j"},
+	{"delete", "namespace", "neo4j", "--ignore-not-found"},
 	{"delete", "persistentvolumes", "neo4j-data-storage"},
 	{"delete", "storageclass", "fast"},
 }
@@ -141,14 +150,15 @@ func InstallNeo4j(zone Zone, project Project) Closeable {
 		return err
 	}()
 
-	run("pwd")
-
 	cleanupDisk, err := createDisk(zone, project)
 	addCloseable(cleanupDisk)
 	CheckError(err)
 
-	addCloseable(func() error { return runAll(kCleanupCommands, false) })
-	err = runAll(kSetupCommands, true)
+	addCloseable(func() error { return runAll("kubectl", kCleanupCommands, false) })
+	err = runAll("kubectl", kSetupCommands, true)
+	addCloseable(func() error { return runAll("helm", helmCleanupCommands, false) })
+	err = runAll("helm", helmInstallCommands(), true)
+
 	CheckError(err)
 
 	cleanupProxy, proxyErr := proxyBolt()
@@ -168,10 +178,10 @@ func combineErrors(firstOrNil error, second error) error {
 	return firstOrNil
 }
 
-func runAll(commands [][]string, failFast bool) error {
+func runAll(bin string, commands [][]string, failFast bool) error {
 	var combinedErrors error
 	for _, command := range commands {
-		err := run("kubectl", command...)
+		err := run(bin, command...)
 		if err != nil {
 			if failFast {
 				return err

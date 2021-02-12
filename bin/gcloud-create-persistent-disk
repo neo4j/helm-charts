@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+# This creates the expected persistent disk
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+# Required env vars
+
+CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
+
+gcloud-configure-kubectl
+gcloud compute disks create --size 10GB --type pd-ssd neo4j-data-disk --zone="${CLOUDSDK_COMPUTE_ZONE}"
+kubectl apply -f yaml/neo4j-gce-storageclass.yaml
+kubectl create -f yaml/neo4j-persistentvolume.yaml

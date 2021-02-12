@@ -3,7 +3,7 @@ kind: StatefulSet
 metadata:
   labels:
     app: {{ .Release.Name }}
-  name: {{ .Values.name  }}
+  name: {{ .Release.Name }}
   namespace: {{ .Release.Namespace }}
 spec:
   serviceName: {{ .Values.serviceName }}
@@ -15,15 +15,21 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name }}
+      annotations:
+        "checksum/{{ .Release.Name }}-config": {{ include (print $.Template.BasePath "/neo4j-config.yaml") . | sha256sum }}
     spec:
       securityContext: {{toYaml .Values.securityContext | nindent 8 }}
       containers:
-        - image: {{ .Chart.Name }}:{{ .Chart.AppVersion }}-enterprise
+        - name: "{{ .Chart.Name }}"
+          {{- if .Values.image.customImage }}
+          image: "{{ .Values.image.customImage }}"
+          {{- else }}
+          image: "{{ .Chart.Name }}:{{ .Chart.AppVersion }}-enterprise"
+          {{- end }}
           imagePullPolicy: "{{ .Values.image.imagePullPolicy }}"
-          name: {{ .Chart.Name }}
           envFrom:
             - configMapRef:
-                name: {{ .Release.Name }}-config
+                name: "{{ .Release.Name }}-env"
           ports:
             - containerPort: 7474
               name: http
@@ -34,8 +40,10 @@ spec:
             - containerPort: 6362
               name: backup
           volumeMounts:
-            - name: {{ .Values.volumeMounts.name }}
+            - name: "{{ .Release.Name }}-data"
               mountPath: "/data"
+            - name: neo4j-conf
+              mountPath: "/config/neo4j.conf"
           readinessProbe:
             tcpSocket:
               port: 7687
@@ -53,15 +61,19 @@ spec:
               port: 7687
             failureThreshold: {{ .Values.startupProbe.failureThreshold }}
             periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+      volumes:
+        - name: neo4j-conf
+          configMap:
+            name: "{{ .Release.Name }}-config"
   volumeClaimTemplates:
-  - metadata:
-      name: neo4j-data
-    spec:
-      storageClassName: "{{ .Values.volumeClaimTemplates.storageClassName }}"
-      selector: # adding a selector here ensures that we use only Persistent Volumes that have been created and labelled specifically for neo4j and prevents "helpful" systems creating new Persistent Volumes dynamically
-        matchLabels:
-          app: {{ .Release.Name }}
-      accessModes: [ "{{ .Values.volumeClaimTemplates.accessModes }}" ]
-      resources:
-        requests:
-          storage: {{ .Values.volumeClaimTemplates.storage }}
+    - metadata:
+        name: "{{ .Release.Name }}-data"
+      spec:
+        storageClassName: "{{ .Values.volumeClaimTemplates.storageClassName }}"
+        selector: # adding a selector here ensures that we use only Persistent Volumes that have been created and labelled specifically for neo4j and prevents "helpful" systems creating new Persistent Volumes dynamically
+          matchLabels:
+            app: {{ .Release.Name }}
+        accessModes: [ "{{ .Values.volumeClaimTemplates.accessModes }}" ]
+        resources:
+          requests:
+            storage: {{ .Values.volumeClaimTemplates.storage }}
