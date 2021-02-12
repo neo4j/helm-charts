@@ -26,9 +26,6 @@ securityContext:
 # Set your custom configMap
 configMapRef:
   name: neo4j-config
-# Persistent Volume mount name and root path
-volumeMounts:
- name: neo4j-data
 
 # Readiness probes will send a kill signal to the container if
 # it fails enough times.  It's therefore very important

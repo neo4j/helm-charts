@@ -4,6 +4,14 @@ metadata:
   name: {{ .Release.Name }}-config
   namespace: {{ .Release.Namespace }}
 data:
-  NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
-  NEO4J_dbms_directories_logs: "/data/logs"
-  NEO4J_dbms_mode: SINGLE
+  dbms.mode: SINGLE
+  dbms.default_listen_address: "0.0.0.0"
+  dbms.directories.logs: "/data/logs"
+  {{- /*
+    TODO: figure out how to use lookup to detect if there is an existing configMap and require user to explicitly force overwrite
+  */}}
+  {{- /* This removes comments and all dbms.jvm.additional entries */}}
+{{ regexReplaceAll "(?m)^([^=]*?)=" ( regexReplaceAllLiteral "\\s*(#|dbms\\.jvm\\.additional).*" (.Files.Get "neo4j.conf") "" )  "${1}: " | trim | replace ": true\n" ": 'true'\n" | replace ": false\n" ": 'false'\n"  |  replace ": yes\n" ": 'yes'\n" |  replace ": no\n" ": 'no'\n"  | indent 2 }}
+  {{- /* This collects together all dbms.jvm.additional entries and puts them on the end */}}
+  # jvm arguments must be on separate lines
+  dbms.jvm.additional: |- {{- range ( regexFindAll "(?m)^\\s*(dbms\\.jvm\\.additional=).+" (.Files.Get "neo4j.conf") -1 ) }}{{ trim . | replace "dbms.jvm.additional=" "" | trim | nindent 4 }}{{- end }}
