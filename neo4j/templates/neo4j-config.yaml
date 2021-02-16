@@ -1,17 +1,24 @@
+{{- $confFile := .Files.Get "neo4j.conf" -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Release.Name }}-config
+  name: {{ .Release.Name }}-default-config
   namespace: {{ .Release.Namespace }}
 data:
   dbms.mode: SINGLE
   dbms.default_listen_address: "0.0.0.0"
   dbms.directories.logs: "/data/logs"
-  {{- /*
-    TODO: figure out how to use lookup to detect if there is an existing configMap and require user to explicitly force overwrite
-  */}}
+  {{- /* TODO: figure out how to use lookup to detect if there is an existing configMap and require user to explicitly force overwrite */}}
   {{- /* This removes comments and all dbms.jvm.additional entries */}}
-{{ regexReplaceAll "(?m)^([^=]*?)=" ( regexReplaceAllLiteral "\\s*(#|dbms\\.jvm\\.additional).*" (.Files.Get "neo4j.conf") "" )  "${1}: " | trim | replace ": true\n" ": 'true'\n" | replace ": false\n" ": 'false'\n"  |  replace ": yes\n" ": 'yes'\n" |  replace ": no\n" ": 'no'\n"  | indent 2 }}
+{{ regexReplaceAll "(?m)^([^=]*?)=" ( regexReplaceAllLiteral "\\s*(#|dbms\\.jvm\\.additional).*" $confFile "" )  "${1}: " | trim | replace ": true\n" ": 'true'\n" | replace ": false\n" ": 'false'\n"  |  replace ": yes\n" ": 'yes'\n" |  replace ": no\n" ": 'no'\n"  | indent 2 }}
   {{- /* This collects together all dbms.jvm.additional entries and puts them on the end */}}
+
   # jvm arguments must be on separate lines
-  dbms.jvm.additional: |- {{- range ( regexFindAll "(?m)^\\s*(dbms\\.jvm\\.additional=).+" (.Files.Get "neo4j.conf") -1 ) }}{{ trim . | replace "dbms.jvm.additional=" "" | trim | nindent 4 }}{{- end }}
+  dbms.jvm.additional: |- {{- range ( regexFindAll "(?m)^\\s*(dbms\\.jvm\\.additional=).+" $confFile -1 ) }}{{ trim . | replace "dbms.jvm.additional=" "" | trim | nindent 4 }}{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-user-config
+  namespace: {{ .Release.Namespace }}
+data: {{toYaml .Values.config | nindent 2 }}
