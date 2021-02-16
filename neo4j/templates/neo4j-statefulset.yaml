@@ -63,8 +63,12 @@ spec:
             periodSeconds: {{ .Values.startupProbe.periodSeconds }}
       volumes:
         - name: neo4j-conf
-          configMap:
-            name: "{{ .Release.Name }}-config"
+          projected:
+            sources:
+              - configMap:
+                  name: "{{ .Release.Name }}-default-config"
+              - configMap:
+                  name: "{{ .Release.Name }}-user-config"
   volumeClaimTemplates:
     - metadata:
         name: "{{ .Release.Name }}-data"

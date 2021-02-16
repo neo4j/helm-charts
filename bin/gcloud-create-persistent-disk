@@ -9,10 +9,14 @@ shopt -s inherit_errexit
 [[ -n "${TRACE:-}" ]] && set -o xtrace
 
 # Required env vars
-
+RELEASE_NAME="${1:?Missing argument. Usage: gcloud-create-persistent-disk <release name>}"
 CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
 
+# Local vars
+DISK_NAME="${RELEASE_NAME}-neo4j-data-disk"
+NAMESPACE="${NAMESPACE:-default}"
+
 gcloud-configure-kubectl
-gcloud compute disks create --size 10GB --type pd-ssd neo4j-data-disk --zone="${CLOUDSDK_COMPUTE_ZONE}"
+gcloud compute disks create --size 10GB --type pd-ssd --zone="${CLOUDSDK_COMPUTE_ZONE}" "${DISK_NAME}"
 kubectl apply -f yaml/neo4j-gce-storageclass.yaml
-kubectl create -f yaml/neo4j-persistentvolume.yaml
+yq --yaml-output ".spec.claimRef.namespace=\"${NAMESPACE}\" | .spec.claimRef.name=\"${RELEASE_NAME}-data-${RELEASE_NAME}-0\" | .metadata.labels[\"app\"]=\"${RELEASE_NAME}\" | .spec.gcePersistentDisk.pdName=\"${DISK_NAME}\"" yaml/neo4j-persistentvolume.yaml | kubectl create -f -

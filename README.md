@@ -3,7 +3,52 @@
 This repository contains work on official Neo4j Helm Charts
 
 
-# Working with different Cloud / K8s Provider Specific Instructions
+# Usage
+
+The helm chart is in the `neo4j/` directory.
+
+## Installation
+
+```
+# Currently we require you to have a pre-existing persistent disk. To create a suitable one use:
+gcloud-create-persistent-disk "my-release-name"
+
+cd neo4j
+helm install "my-release-name" . [-f <values.yaml>]
+
+# Find the external IP address of the created service and then connect using browser <IP>:7474 
+kubectl get svc 
+```
+
+### Using a pre-existing Neo4j Configuration
+
+This requires checking out the helm chart and modifying it. Unfortunately for packaged charts helm does not permit reading files from the filesystem. 
+```
+cd neo4j
+
+# modify or replace the neo4j.conf file as required
+# e.g. echo "dbms.allow_upgrade=true" >> neo4j.conf
+
+helm install "my-release-name" .
+```
+
+### Passing Additional Neo4j Configuration
+
+To set additional config (or override) to the "standard" neo4j.conf that is packaged with the version of neo4j being used. Set the `config` property in values.yaml 
+
+Or you can use `--set` if values are quoted and the dots in neo4j config keys are escaped with `\`
+```
+helm install "my-release-name" . --set 'config.dbms\.tx_state\.memory_allocation=OFF_HEAP'
+```
+
+## Upgrade
+
+```
+helm upgrade "MyReleaseName" .
+```
+
+
+# Development: Working with different Cloud / K8s Provider Specific Instructions
 
 We target different Kubernetes providers. This section contains instructions on working with each provider. 
 
@@ -25,7 +70,7 @@ gcloud-create-gke-cluster
 
 ### Run tests
 
-This assumes you have a running GKE cluster
+This assumes you have a running GKE cluster (or you can use `gcloud-create-gke-cluster` to create a GKE cluster if you don't have one already)
 
 ```
 source devenv
