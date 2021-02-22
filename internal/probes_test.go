@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,9 +12,10 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"path"
 	"runtime"
+	"testing"
 )
 
-func CheckProbes() error {
+func CheckProbes(t *testing.T) error {
 	// uses the current context in kubeconfig
 	// path-to-kubeconfig -- for example, /root/.kube/config
 	_, filename, _, _ := runtime.Caller(0)
@@ -68,15 +70,9 @@ func CheckProbes() error {
 	}
 	podsLiveness := "neo4j_LivenessProbe"
 	yamlConfigLiveness := yamlConfig.LivenessProbe.PeriodSeconds
-	if pods_map[podsLiveness] != yamlConfigLiveness {
-
-		return fmt.Errorf("LivenessProbe mismatch.Expected: %v but got %v", yamlConfigLiveness, podsLiveness )
-	}
+	assert.Equal(t, pods_map[podsLiveness], yamlConfigLiveness, "LivenessProbe mismatch")
 	podsReadiness := "neo4j_ReadinessProbe"
 	yamlConfigReadiness := yamlConfig.ReadinessProbe.PeriodSeconds
-	if pods_map[podsReadiness] != yamlConfigReadiness {
-
-		return fmt.Errorf("ReadinessProbe mismatch.Expected: %v but got %v", yamlConfigReadiness, podsReadiness )
-	}
+	assert.Equal(t, pods_map[podsReadiness], yamlConfigReadiness, "ReadinessProbe mismatch")
 	return nil
 }
