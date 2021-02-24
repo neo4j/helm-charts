@@ -14,27 +14,23 @@ import (
 	"runtime"
 	"testing"
 )
-
-func CheckProbes(t *testing.T) error {
+var clientset *kubernetes.Clientset
+func init() {
 	// uses the current context in kubeconfig
 	// path-to-kubeconfig -- for example, /root/.kube/config
 	_, filename, _, _ := runtime.Caller(0)
 	currentDir := path.Dir(filename)
 	dir := path.Join(currentDir, "..")
 	config, err := clientcmd.BuildConfigFromFlags("", path.Join(dir, ".kube/config"))
-	if err != nil {
-		return fmt.Errorf("Unable to read kubeconfig file: %v", err)
-	}
-
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return fmt.Errorf("Unable to create kubernetes client: %v", err)
-	}
+	CheckError(err)
+	clientset, err = kubernetes.NewForConfig(config)
+	CheckError(err)
+}
+func CheckProbes(t *testing.T) error {
 	pods, err := clientset.CoreV1().Pods("neo4j").List(context.TODO(), v1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to get Pods options: %v", err)
 	}
-
 	// getting Probes values from values.yaml
 	type ValuesYaml struct {
 		ReadinessProbe struct {
