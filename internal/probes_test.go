@@ -10,18 +10,13 @@ import (
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/tools/clientcmd"
-	"path"
-	"runtime"
+	"os"
 	"testing"
 )
 var clientset *kubernetes.Clientset
 func init() {
-	// uses the current context in kubeconfig
-	// path-to-kubeconfig -- for example, /root/.kube/config
-	_, filename, _, _ := runtime.Caller(0)
-	currentDir := path.Dir(filename)
-	dir := path.Join(currentDir, "..")
-	config, err := clientcmd.BuildConfigFromFlags("", path.Join(dir, ".kube/config"))
+	// gets kubeconfig from env variable
+	config, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	CheckError(err)
 	clientset, err = kubernetes.NewForConfig(config)
 	CheckError(err)
