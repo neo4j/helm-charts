@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
+	v12 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -13,7 +14,10 @@ import (
 	"os"
 	"testing"
 )
-var clientset *kubernetes.Clientset
+var (
+	clientset *kubernetes.Clientset
+	pods *v12.PodList
+)
 func init() {
 	// gets kubeconfig from env variable
 	config, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
@@ -66,4 +70,14 @@ func CheckProbes(t *testing.T) error {
 	yamlConfigReadiness := yamlConfig.ReadinessProbe.PeriodSeconds
 	assert.Equal(t, pods_map[podsReadiness], yamlConfigReadiness, "ReadinessProbe mismatch")
 	return nil
+}
+func RunAsNonRoot(t *testing.T) error {
+	pods, err := clientset.CoreV1().Pods("neo4j").List(context.TODO(), v1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("Failed to get Pods options: %v", err)
+	}
+	for _, opt := range pods.Items {
+			assert.Equal(t, true, *opt.Spec.SecurityContext.RunAsNonRoot )
+		}
+		return nil
 }
