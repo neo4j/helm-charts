@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
-	v12 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -16,7 +15,6 @@ import (
 )
 var (
 	clientset *kubernetes.Clientset
-	pods *v12.PodList
 )
 func init() {
 	// gets kubeconfig from env variable
@@ -77,7 +75,11 @@ func RunAsNonRoot(t *testing.T) error {
 		return fmt.Errorf("Failed to get Pods options: %v", err)
 	}
 	for _, opt := range pods.Items {
-			assert.Equal(t, true, *opt.Spec.SecurityContext.RunAsNonRoot )
+		if pods.Items != nil {
+			assert.Equal(t, true, *opt.Spec.SecurityContext.RunAsNonRoot)
+		}	else {
+			return fmt.Errorf("pods.Items is empty: %v", pods.Items )
 		}
+	}
 		return nil
 }
