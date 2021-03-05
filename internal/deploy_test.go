@@ -16,6 +16,7 @@ var k8sTests = []SubTest{
 	{name: "Count Nodes ", test: func(t *testing.T) { assert.NoError(t, CheckNodeCount(t), "Count Nodes should succeed") }},
 	{name: "Check Probes ", test: func(t *testing.T) { assert.NoError(t, CheckProbes(t), "Probes Matching should succeed") }},
 	{name: "Check RunAsNonRoot ", test: func(t *testing.T) { assert.NoError(t, RunAsNonRoot(t), "RunAsNonRoot check should succeed") }},
+	{name: "Exec in Pod ", test: func(t *testing.T) { assert.NoError(t, ExecInPod(t), "Exec in Pod should succeed") }},
 }
 
 // Install neo4j on the provided GKE K8s cluster and then run the tests from the table above using it

@@ -1,24 +1,33 @@
 package internal
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
+	coreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/remotecommand"
 	"os"
+	"strings"
+
 	"testing"
 )
 var (
 	clientset *kubernetes.Clientset
+	config *restclient.Config
 )
 func init() {
+	var err error
 	// gets kubeconfig from env variable
-	config, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
+	config, err = clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	CheckError(err)
 	clientset, err = kubernetes.NewForConfig(config)
 	CheckError(err)
@@ -82,4 +91,46 @@ func RunAsNonRoot(t *testing.T) error {
 		}
 	}
 		return nil
+}
+func ExecInPod(t *testing.T) error {
+	cmd := []string{
+		"bash",
+		"-c",
+		"id -u",
+	}
+	var (
+	stdout bytes.Buffer
+	stderr bytes.Buffer
+	)
+	req := clientset.CoreV1().RESTClient().Post().Resource("pods").Name("neo4j-0").
+		Namespace("neo4j").SubResource("exec")
+	option := &coreV1.PodExecOptions{
+		Command: cmd,
+		Stdin:   false,
+		Stdout:  true,
+		Stderr:  true,
+		TTY:     false,
+	}
+	req.VersionedParams(
+		option,
+		scheme.ParameterCodec,
+	)
+	exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
+	if err != nil {
+		return err
+	}
+	err = exec.Stream(remotecommand.StreamOptions{
+		Stdout: &stdout,
+		Stderr: &stderr,
+	})
+	if err != nil {
+		return err
+	}
+	s := stdout.String()
+	s = strings.TrimSuffix(s, "\n")
+	assert.Equal(t, "7474", s)
+	e :=stderr.String()
+	assert.Empty(t, e)
+
+	return nil
 }
