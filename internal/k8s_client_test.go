@@ -83,8 +83,8 @@ func RunAsNonRoot(t *testing.T) error {
 	if err != nil {
 		return fmt.Errorf("Failed to get Pods options: %v", err)
 	}
+	assert.NotEmpty(t, pods.Items, "pods.Items is empty")
 	for _, opt := range pods.Items {
-		assert.NotEmpty(t, pods.Items, "pods.Items is empty")
 		assert.Equal(t, true, *opt.Spec.SecurityContext.RunAsNonRoot)
 	}
 		return nil
