@@ -84,11 +84,8 @@ func RunAsNonRoot(t *testing.T) error {
 		return fmt.Errorf("Failed to get Pods options: %v", err)
 	}
 	for _, opt := range pods.Items {
-		if pods.Items != nil {
-			assert.Equal(t, true, *opt.Spec.SecurityContext.RunAsNonRoot)
-		}	else {
-			return fmt.Errorf("pods.Items is empty: %v", pods.Items )
-		}
+		assert.NotEmpty(t, pods.Items, "pods.Items is empty")
+		assert.Equal(t, true, *opt.Spec.SecurityContext.RunAsNonRoot)
 	}
 		return nil
 }
@@ -128,9 +125,9 @@ func ExecInPod(t *testing.T) error {
 	}
 	s := stdout.String()
 	s = strings.TrimSuffix(s, "\n")
-	assert.Equal(t, "7474", s)
+	assert.Equal(t, "7474", s, "UID is different than expected")
 	e :=stderr.String()
-	assert.Empty(t, e)
+	assert.Empty(t, e, "stderr is not empty")
 
 	return nil
 }
