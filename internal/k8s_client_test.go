@@ -17,7 +17,6 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 	"os"
 	"strings"
-
 	"testing"
 )
 var (

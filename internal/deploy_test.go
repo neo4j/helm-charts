@@ -13,6 +13,8 @@ type SubTest struct {
 
 var k8sTests = []SubTest{
 	{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, CreateNode(), "Create Node should succeed") }},
+	{name: "Delete Resources", test: func(t *testing.T) { assert.NoError(t, ResourcesCleanup(), "Cleanup Resources should succeed") }},
+	{name: "Reinstall Resources", test: func(t *testing.T) { assert.NoError(t, ResourcesReinstall(), "Reinstall Resources should succeed") }},
 	{name: "Count Nodes ", test: func(t *testing.T) { assert.NoError(t, CheckNodeCount(t), "Count Nodes should succeed") }},
 	{name: "Check Probes ", test: func(t *testing.T) { assert.NoError(t, CheckProbes(t), "Probes Matching should succeed") }},
 	{name: "Check RunAsNonRoot ", test: func(t *testing.T) { assert.NoError(t, RunAsNonRoot(t), "RunAsNonRoot check should succeed") }},

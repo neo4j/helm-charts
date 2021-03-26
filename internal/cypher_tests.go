@@ -98,6 +98,10 @@ func runQuery(cypher string, params map[string]interface{}) ([]*neo4j.Record, er
 		return nil, fmt.Errorf("driver's auth token has not yet been set")
 	}
 
+	cleanupProxy, proxyErr := proxyBolt()
+	defer cleanupProxy()
+	CheckError(proxyErr)
+
 	driver, err := neo4j.NewDriver(dbUri, *authToUse)
 	// Handle driver lifetime based on your application lifetime requirements  driver's lifetime is usually
 	// bound by the application lifetime, which usually implies one driver instance per application

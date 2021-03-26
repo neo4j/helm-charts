@@ -161,10 +161,6 @@ func InstallNeo4j(zone Zone, project Project) Closeable {
 
 	CheckError(err)
 
-	cleanupProxy, proxyErr := proxyBolt()
-	addCloseable(cleanupProxy)
-	CheckError(proxyErr)
-
 	completed = true
 	return cleanup
 }
