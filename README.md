@@ -14,39 +14,57 @@ The helm chart is in the `neo4j/` directory.
 gcloud-create-persistent-disk "my-release-name"
 
 cd neo4j
-helm install "my-release-name" . [-f <values.yaml>]
+helm install "my-release-name" . [-f <values.yaml>] [--set key=value]
 
 # Find the external IP address of the created service and then connect using browser <IP>:7474 
 kubectl get svc 
 ```
 
-### Using a pre-existing Neo4j Configuration
-
-This requires checking out the helm chart and modifying it. Unfortunately for packaged charts helm does not permit reading files from the filesystem. 
-```
-cd neo4j
-
-# modify or replace the neo4j.conf file as required
-# e.g. echo "dbms.allow_upgrade=true" >> neo4j.conf
-
-helm install "my-release-name" .
-```
-
-### Passing Additional Neo4j Configuration
-
-To set additional config (or override) to the "standard" neo4j.conf that is packaged with the version of neo4j being used. Set the `config` property in values.yaml 
-
-Or you can use `--set` if values are quoted and the dots in neo4j config keys are escaped with `\`
-```
-helm install "my-release-name" . --set 'config.dbms\.tx_state\.memory_allocation=OFF_HEAP'
-```
-
 ## Upgrade
 
 ```
-helm upgrade "MyReleaseName" .
+helm upgrade "MyReleaseName" . [-f <values.yaml>] [--set key=value]
 ```
 
+## Configuring Neo4j
+
+### Setting Neo4j Configuration in yaml
+
+Additional Neo4j configuration can be added to the `config` property in values.yaml as a yaml-object. We recommend quoting all neo4j configuration values in yaml. Neo4j expects configuration values to be strings, certain values will be parsed as non-string types if they are not quoted for example: `true`, `false`, `yes`, `no` and any numeric values. This is the best way to manage Neo4j configuration in helm.
+
+```
+# values.yaml
+
+# multiline string using block scalar (requries indentation of multiline text)
+config:
+  dbms.tx_state.memory_allocation: "OFF_HEAP"
+  causal_clustering.catchup_batch_size: "64"
+  metrics.csv.enabled: "true"
+
+```
+
+Neo4j configuration values can also be passed to helm using the `--set` parameter but these must be quoted, and the dots in neo4j configuration keys should be escaped with backslashes:
+
+```
+helm upgrade "my-release-name" . --set 'config.dbms\.tx_state\.memory_allocation=OFF_HEAP'
+```
+
+### Using a pre-existing Neo4j Configuration
+
+You can include existing neo4j.conf properties-file content in the `configImport` field of values.yaml. This has to be included as a [multi-line string](https://yaml-multiline.info) we recommend removing all comments and carefully checking the indentation of text included in this way to avoid yaml parsing errors.
+
+```
+# values.yaml
+
+# multiline string using block scalar (requries indentation of multiline text)
+configImport: |
+  dbms.allow_upgrade=true
+  dbms.connector.bolt.enabled=true
+  dbms.connector.bolt.tls_level=DISABLED
+  dbms.connector.bolt.listen_address=:7687
+  dbms.connector.bolt.advertised_address=:7687
+
+```
 
 # Development: Working with different Cloud / K8s Provider Specific Instructions
 
