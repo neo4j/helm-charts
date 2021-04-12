@@ -35,7 +35,7 @@ Additional Neo4j configuration can be added to the `config` property in values.y
 ```
 # values.yaml
 
-# multiline string using block scalar (requries indentation of multiline text)
+# neo4j config as yaml object
 config:
   dbms.tx_state.memory_allocation: "OFF_HEAP"
   causal_clustering.catchup_batch_size: "64"
@@ -56,7 +56,7 @@ You can include existing neo4j.conf properties-file content in the `configImport
 ```
 # values.yaml
 
-# multiline string using block scalar (requries indentation of multiline text)
+# multiline string using block scalar (requires indentation of multiline text)
 configImport: |
   dbms.allow_upgrade=true
   dbms.connector.bolt.enabled=true
