@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/ini.v1"
 	"log"
 	"strings"
 	"sync"
@@ -17,6 +18,14 @@ var user = "neo4j"
 var dbName = "neo4j"
 
 // BEGIN auth stuff
+var foo int
+
+const neo4jConfJvmAdditionalKey = "dbms.jvm.additional"
+
+func init() {
+	foo = 1
+
+}
 
 var defaultPassword = "neo4j"
 var desiredPassword = fmt.Sprintf("%d", RandomIntBetween(100000, 999999999))
@@ -41,7 +50,7 @@ func SetPassword() error {
 
 	var auth = neo4j.BasicAuth(user, defaultPassword, "")
 	authToUse = &auth
-	_, err := runQuery( fmt.Sprintf("ALTER CURRENT USER SET PASSWORD FROM '%s' TO '%s'", defaultPassword, desiredPassword), noParams)
+	_, err := runQuery(fmt.Sprintf("ALTER CURRENT USER SET PASSWORD FROM '%s' TO '%s'", defaultPassword, desiredPassword), noParams)
 	if err == nil {
 		auth = neo4j.BasicAuth(user, desiredPassword, "")
 		authToUse = &auth
@@ -65,6 +74,97 @@ var createdNodes int64 = 0
 
 // empty param map (makes queries without params more readable)
 var noParams = map[string]interface{}{}
+
+type Neo4jConfiguration struct {
+	conf    map[string]string
+	jvmArgs []string
+}
+
+func (c *Neo4jConfiguration) PopulateFromFile(filename string) Neo4jConfiguration {
+	yamlFile, err := ini.ShadowLoad(filename)
+	CheckError(err)
+	defaultSection := yamlFile.Section("")
+
+	jvmAdditional, err := defaultSection.GetKey(neo4jConfJvmAdditionalKey)
+	CheckError(err)
+	c.jvmArgs = jvmAdditional.StringsWithShadows("\n")
+	c.conf = defaultSection.KeysHash()
+	delete(c.conf, neo4jConfJvmAdditionalKey)
+
+	return *c
+}
+
+func (c *Neo4jConfiguration) Update(other Neo4jConfiguration) Neo4jConfiguration {
+	var jvmArgs []string
+	if len(other.jvmArgs) > 0 {
+		jvmArgs = other.jvmArgs
+	} else {
+		jvmArgs = c.jvmArgs
+	}
+	for k, v := range other.conf {
+		c.conf[k] = v
+	}
+
+	return Neo4jConfiguration{
+		jvmArgs: jvmArgs,
+		conf: c.conf,
+	}
+}
+
+// Very quick test to check that no errors are thrown and a couple of values from the default neo4j conf show up
+func TestPopulateFromFile(t *testing.T) {
+
+	t.Run("populateFromFile", func(t *testing.T) {
+		conf := (&Neo4jConfiguration{}).PopulateFromFile("neo4j/neo4j.conf")
+		value, found := conf.conf["dbms.windows_service_name"]
+		assert.True(t, found)
+		assert.Equal(t, "neo4j", value)
+
+		_, jvmKeyFound := conf.conf[neo4jConfJvmAdditionalKey]
+		assert.False(t, jvmKeyFound)
+
+		assert.Contains(t, conf.jvmArgs, "-XX:+UnlockDiagnosticVMOptions")
+		assert.Contains(t, conf.jvmArgs, "-XX:+DebugNonSafepoints")
+		assert.Greater(t, len(conf.jvmArgs), 1)
+	})
+}
+
+func CheckNeo4jConfiguration(t *testing.T, expectedConfiguration Neo4jConfiguration) (err error) {
+
+	var runtimeConfig []*neo4j.Record
+
+	deadline := time.Now().Add(3 * time.Minute)
+	for true {
+		if !time.Now().Before(deadline) {
+			return fmt.Errorf("timed out fetching config:  %d", len(runtimeConfig))
+		}
+		runtimeConfig, err = runQuery("CALL dbms.listConfig() YIELD name, value", nil)
+		CheckError(err)
+		if len(runtimeConfig) >= len(expectedConfiguration.conf) {
+			break
+		}
+	}
+
+	for _, record := range runtimeConfig {
+		nameUntyped, foundName := record.Get("name")
+		valueUntyped, foundValue := record.Get("value")
+		if !(foundName && foundValue) {
+			panic("record is missing expected name or value")
+		}
+
+		name := nameUntyped.(string)
+		value := valueUntyped.(string)
+		if expectedValue, found := expectedConfiguration.conf[name]; found {
+			assert.Equal(t, strings.ToLower(expectedValue), strings.ToLower(value),
+				"Expected runtime config for %s to match provided value", name)
+		}
+		if name == "dbms.jvm.additional" {
+			assert.Equal(t, expectedConfiguration.jvmArgs, strings.Split(value, "\n"))
+		}
+	}
+
+	return err
+}
 
 func CreateNode() error {
 	_, err := runQuery("CREATE (n:Item { id: $id, name: $name }) RETURN n.id, n.name", map[string]interface{}{
@@ -150,4 +250,3 @@ func awaitConnectivity(err error, driver neo4j.Driver) error {
 		}
 	}
 }
-
