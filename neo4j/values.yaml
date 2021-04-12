@@ -13,6 +13,23 @@ volumeClaimTemplates:
  accessModes: ReadWriteOnce
  storage: 10Gi
 
+# Specs for the Neo4j docker image
+image:
+ imagePullPolicy: IfNotPresent
+ customImage: "eu.gcr.io/neo4j-helm/neo4j-helm-chart:1613427365-4.3.0-drop02.0-enterprise"
+
+### Neo4j Configuration
+
+# Neo4j configuration (yaml format)
+config:
+ dbms.default_database: "neo4j"
+ dbms.config.strict_validation: "true"
+
+# Neo4j configuration (text format)
+configImport: |
+ # neo4j.conf key=value properties file contents can be included here.
+ # multi-line text must be indented correctly.
+
 
 # securityContext defines privilege and access control settings for a Pod
 # or Container. Making sure that we dont run Neo4j as root user.
@@ -22,31 +39,6 @@ securityContext:
  runAsGroup: 7474
  fsGroup: 7474
 
-
-# Specs for the Neo4j docker image
-image:
- imagePullPolicy: IfNotPresent
- customImage: "eu.gcr.io/neo4j-helm/neo4j-helm-chart:1613427365-4.3.0-drop02.0-enterprise"
-
-config:
- dbms.default_database: neo4j #'$(echo "${DATABASE_NAME:-neo4j}")'
-
-configImport: |
- # Bolt connector
- dbms.connector.bolt.enabled=true
- dbms.connector.bolt.tls_level=DISABLED
- dbms.connector.bolt.listen_address=:7687
- dbms.connector.bolt.advertised_address=:7687
-
- # HTTP Connector. There can be zero or one HTTP connectors.
- dbms.connector.http.enabled=true
- dbms.connector.http.listen_address=:7474
- dbms.connector.http.advertised_address=:7474
-
- # HTTPS Connector. There can be zero or one HTTPS connectors.
- dbms.connector.https.enabled=false
- dbms.connector.https.listen_address=:7473
- dbms.connector.https.advertised_address=:7473
 
 # Readiness probes will send a kill signal to the container if
 # it fails enough times.  It's therefore very important

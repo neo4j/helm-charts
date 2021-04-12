@@ -4,5 +4,7 @@ metadata:
   name: {{ .Release.Name }}-env
   namespace: {{ .Release.Namespace }}
 data:
+  # It should not be necessary for neo4j users/administrators to modify this configMap
+  # Neo4j configuration is set in the {{ .Release.Name }}-user-config ConfigMap
   NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
   NEO4J_CONF: "/config/"
