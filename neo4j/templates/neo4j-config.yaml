@@ -1,24 +1,48 @@
+# Neo4j config values that are required for neo4j to work correctly in Kubernetes, these are not overridden by user-provided values
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-k8s-config
+  namespace: {{ .Release.Namespace }}
+data:
+  dbms.mode: SINGLE
+  dbms.default_listen_address: "0.0.0.0"
+---
 {{- $confFile := .Files.Get "neo4j.conf" -}}
+{{- $configImport := .Values.configImport -}}
+# User-provided Neo4j config values
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-user-config
+  namespace: {{ .Release.Namespace }}
+data:
+  {{- /* imported config first */}}
+    {{- if regexMatch "dbms\\.jvm\\.additional" .Values.configImport }}
+      {{- fail "dbms.jvm.additional properties are not currently supported in values.configImport" }}
+    {{- end }}
+  {{- include "neo4j.configYaml" $configImport | nindent 2 }}
+
+  {{- /* then explicit config - throw an error if it contains jvm additional */}}
+  {{- with toYaml .Values.config }}
+    {{- if regexMatch "dbms\\.jvm\\.additional" . }}
+      {{- fail "dbms.jvm.additional properties are not currently supported in values.config" }}
+    {{- else }}
+      {{- nindent 2 . }}
+    {{- end }}
+  {{- end }}
+
+  {{- /* then default jvm config */}}
+  {{- include "neo4j.configJvmAdditionalYaml" $confFile | nindent 2 }}
+---
+# Default Neo4j config values, these are overridden by user-provided values in {{ .Release.Name }}-user-config
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Release.Name }}-default-config
   namespace: {{ .Release.Namespace }}
 data:
-  dbms.mode: SINGLE
-  dbms.default_listen_address: "0.0.0.0"
+  {{- /* TODO: Figure out a different way to handle logs. I dislike remapping the log location to the data directory like this */}}
   dbms.directories.logs: "/data/logs"
-  {{- /* TODO: figure out how to use lookup to detect if there is an existing configMap and require user to explicitly force overwrite */}}
-  {{- /* This removes comments and all dbms.jvm.additional entries */}}
-{{ regexReplaceAll "(?m)^([^=]*?)=" ( regexReplaceAllLiteral "\\s*(#|dbms\\.jvm\\.additional).*" $confFile "" )  "${1}: " | trim | replace ": true\n" ": 'true'\n" | replace ": false\n" ": 'false'\n"  |  replace ": yes\n" ": 'yes'\n" |  replace ": no\n" ": 'no'\n"  | indent 2 }}
-  {{- /* This collects together all dbms.jvm.additional entries and puts them on the end */}}
-
-  # jvm arguments must be on separate lines
-  dbms.jvm.additional: |- {{- range ( regexFindAll "(?m)^\\s*(dbms\\.jvm\\.additional=).+" $confFile -1 ) }}{{ trim . | replace "dbms.jvm.additional=" "" | trim | nindent 4 }}{{- end }}
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ .Release.Name }}-user-config
-  namespace: {{ .Release.Namespace }}
-data: {{toYaml .Values.config | nindent 2 }}
+  {{- /* TODO: figure out how to use lookup to detect if there is an existing default configMap and require user to explicitly force overwrite */}}
+  {{- include "neo4j.configYaml" $confFile | nindent 2 }}
