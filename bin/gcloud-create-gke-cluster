@@ -9,6 +9,7 @@ shopt -s inherit_errexit
 [[ -n "${TRACE:-}" ]] && set -o xtrace
 
 # Required env vars
+CLOUDSDK_CORE_PROJECT="${CLOUDSDK_CORE_PROJECT:?CLOUDSDK_CORE_PROJECT is required}"
 CLOUDSDK_CONTAINER_CLUSTER="${CLOUDSDK_CONTAINER_CLUSTER:?CLOUDSDK_CONTAINER_CLUSTER is required}"
 CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
 
@@ -24,6 +25,7 @@ gcloud container clusters create "${CLOUDSDK_CONTAINER_CLUSTER}" \
      --release-channel=${RELEASE_CHANNEL} \
      --zone="${CLOUDSDK_COMPUTE_ZONE}" \
      --num-nodes "1" \
+     --workload-pool="${CLOUDSDK_CORE_PROJECT}.svc.id.goog" \
      --preemptible --machine-type "${NODE_MACHINE}" --image-type "COS_CONTAINERD" \
      --disk-type "pd-ssd" --disk-size "10" \
      --max-pods-per-node=30 --enable-ip-alias \

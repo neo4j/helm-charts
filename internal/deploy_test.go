@@ -12,6 +12,7 @@ type SubTest struct {
 }
 
 var k8sTests = []SubTest{
+	{name: "Check Neo4j Configuration", test: func(t *testing.T) { assert.NoError(t, CheckNeo4jConfiguration(t, (&Neo4jConfiguration{}).PopulateFromFile( "neo4j/neo4j.conf")), "Neo4j Config check should succeed") }},
 	{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, CreateNode(), "Create Node should succeed") }},
 	{name: "Delete Resources", test: func(t *testing.T) { assert.NoError(t, ResourcesCleanup(), "Cleanup Resources should succeed") }},
 	{name: "Reinstall Resources", test: func(t *testing.T) { assert.NoError(t, ResourcesReinstall(), "Reinstall Resources should succeed") }},
