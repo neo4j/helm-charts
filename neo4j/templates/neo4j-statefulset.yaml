@@ -62,9 +62,16 @@ spec:
             failureThreshold: {{ .Values.startupProbe.failureThreshold }}
             periodSeconds: {{ .Values.startupProbe.periodSeconds }}
       volumes:
+        {{- /* neo4j.conf settings. Using a projected volume allows keys defined later in the list of configMaps to override keys defined earlier in the list of configmaps. */}}
         - name: neo4j-conf
-          configMap:
-            name: "{{ .Release.Name }}-config"
+          projected:
+            sources:
+              - configMap:
+                  name: "{{ .Release.Name }}-default-config"
+              - configMap:
+                  name: "{{ .Release.Name }}-user-config"
+              - configMap:
+                  name: "{{ .Release.Name }}-k8s-config"
   volumeClaimTemplates:
     - metadata:
         name: "{{ .Release.Name }}-data"
