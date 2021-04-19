@@ -12,16 +12,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/remotecommand"
 	"os"
 	"strings"
 	"testing"
-)
-var (
-	clientset *kubernetes.Clientset
-	config *restclient.Config
 )
 func init() {
 	var err error
