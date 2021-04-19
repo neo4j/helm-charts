@@ -2,18 +2,34 @@ package internal
 
 import (
 	"bufio"
+	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
 	"github.com/hashicorp/go-multierror"
 	"io/ioutil"
+	"k8s.io/client-go/kubernetes"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"log"
+	"math/big"
 	"os"
 	"os/exec"
 	"path"
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 )
-
+var (
+	clientset *kubernetes.Clientset
+	config *restclient.Config
+)
 // This changes the working directory to the parent directory if the current working directory doesn't contain a directory called "yaml"
 func init() {
 	_, filename, _, _ := runtime.Caller(0)
@@ -30,9 +46,100 @@ func init() {
 	CheckError(err)
 
 	os.Setenv("KUBECONFIG", path.Join(dir, ".kube/config"))
+
+	// gets kubeconfig from env variable
+	config, err = clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
+	CheckError(err)
+	clientset, err = kubernetes.NewForConfig(config)
+	CheckError(err)
 }
 
+func publicKey(priv interface{}) interface{} {
+	switch k := priv.(type) {
+	case *rsa.PrivateKey:
+		return &k.PublicKey
+	case *ecdsa.PrivateKey:
+		return &k.PublicKey
+	default:
+		return nil
+	}
+}
+
+func pemBlockForKey(priv interface{}) *pem.Block {
+	switch k := priv.(type) {
+	case *rsa.PrivateKey:
+		return &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(k)}
+	case *ecdsa.PrivateKey:
+		b, err := x509.MarshalECPrivateKey(k)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to marshal ECDSA private key: %v", err)
+			os.Exit(2)
+		}
+		return &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}
+	default:
+		return nil
+	}
+}
+
+func generateCerts() {
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		log.Fatal(err)
+	}
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			Organization: []string{"Acme Co"},
+		},
+		NotBefore: time.Now(),
+		NotAfter:  time.Now().Add(time.Hour * 24 * 180),
+
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+	}
+
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, publicKey(priv), priv)
+	if err != nil {
+		log.Fatalf("Failed to create certificate: %s", err)
+	}
+	out := &bytes.Buffer{}
+	pem.Encode(out, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+
+	f, err := os.Create("/tmp/public.crt")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = f.WriteString(out.String())
+	f.Close()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	out.Reset()
+	pem.Encode(out, pemBlockForKey(priv))
+	f, err = os.Create("/tmp/private.key")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = f.WriteString(out.String())
+	f.Close()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+
 func helmInstallCommands() [][]string {
+	generateCerts()
+	err := runAll("kubectl", kCreateSecret, true)
+	if err != nil {
+		fmt.Println("Creating secrets failed:", err)
+	}
 	imageArg := []string{}
 	if value, found := os.LookupEnv("NEO4J_DOCKER_IMG"); found {
 		imageArg = []string{"--set", "image.customImage=" + value}
@@ -45,6 +152,14 @@ func helmInstallCommands() [][]string {
 var kSetupCommands = [][]string{
 	{"apply", "-f", "yaml/neo4j-gce-storageclass.yaml"},  // it doesnt matter if this already exists currently and it's a PITA to clean up so just apply here
 	{"create", "-f", "yaml/neo4j-persistentvolume.yaml"}, // create because if this already exists we run into problems (pv are not namespaced)
+}
+
+var kCreateSecret = [][]string{
+	{"create", "ns", "neo4j"},
+	{"create", "secret", "-n", "neo4j", "generic", "bolt-cert", "--from-file=/tmp/public.crt"},
+	{"create", "secret", "-n", "neo4j", "generic", "https-cert", "--from-file=/tmp/public.crt"},
+	{"create", "secret", "-n", "neo4j", "generic", "bolt-key", "--from-file=/tmp/private.key"},
+	{"create", "secret", "-n", "neo4j", "generic", "https-key", "--from-file=/tmp/private.key"},
 }
 
 var helmCleanupCommands = [][]string{
