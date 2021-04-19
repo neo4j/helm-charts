@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/remotecommand"
 	"os"
@@ -21,13 +22,13 @@ import (
 func init() {
 	var err error
 	// gets kubeconfig from env variable
-	config, err = clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
+	Config, err = clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	CheckError(err)
-	clientset, err = kubernetes.NewForConfig(config)
+	Clientset, err = kubernetes.NewForConfig(Config)
 	CheckError(err)
 }
 func CheckProbes(t *testing.T) error {
-	pods, err := clientset.CoreV1().Pods("neo4j").List(context.TODO(), v1.ListOptions{})
+	pods, err := Clientset.CoreV1().Pods("neo4j").List(context.TODO(), v1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to get Pods options: %v", err)
 	}
@@ -73,7 +74,7 @@ func CheckProbes(t *testing.T) error {
 	return nil
 }
 func RunAsNonRoot(t *testing.T) error {
-	pods, err := clientset.CoreV1().Pods("neo4j").List(context.TODO(), v1.ListOptions{})
+	pods, err := Clientset.CoreV1().Pods("neo4j").List(context.TODO(), v1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to get Pods options: %v", err)
 	}
@@ -93,7 +94,7 @@ func ExecInPod(t *testing.T) error {
 	stdout bytes.Buffer
 	stderr bytes.Buffer
 	)
-	req := clientset.CoreV1().RESTClient().Post().Resource("pods").Name("neo4j-0").
+	req := Clientset.CoreV1().RESTClient().Post().Resource("pods").Name("neo4j-0").
 		Namespace("neo4j").SubResource("exec")
 	option := &coreV1.PodExecOptions{
 		Command: cmd,
@@ -106,7 +107,7 @@ func ExecInPod(t *testing.T) error {
 		option,
 		scheme.ParameterCodec,
 	)
-	exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
+	exec, err := remotecommand.NewSPDYExecutor(Config, "POST", req.URL())
 	if err != nil {
 		return err
 	}

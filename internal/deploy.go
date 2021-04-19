@@ -27,8 +27,8 @@ import (
 	"time"
 )
 var (
-	clientset *kubernetes.Clientset
-	config *restclient.Config
+	Clientset *kubernetes.Clientset
+	Config *restclient.Config
 )
 // This changes the working directory to the parent directory if the current working directory doesn't contain a directory called "yaml"
 func init() {
@@ -48,9 +48,9 @@ func init() {
 	os.Setenv("KUBECONFIG", path.Join(dir, ".kube/config"))
 
 	// gets kubeconfig from env variable
-	config, err = clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
+	Config, err = clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	CheckError(err)
-	clientset, err = kubernetes.NewForConfig(config)
+	Clientset, err = kubernetes.NewForConfig(Config)
 	CheckError(err)
 }
 
