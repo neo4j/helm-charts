@@ -16,7 +16,7 @@ volumeClaimTemplates:
 # Specs for the Neo4j docker image
 image:
  imagePullPolicy: IfNotPresent
- customImage: "gcr.io/launcher-development-191917/neo4j:4.3.0-drop03.0"
+ customImage: "eu.gcr.io/neo4j-helm/neo4j-helm-chart:1613427365-4.3.0-drop02.0-enterprise"
 
 ### Neo4j Configuration
 
