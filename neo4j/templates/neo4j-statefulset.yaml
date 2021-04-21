@@ -45,20 +45,10 @@ spec:
             - name: neo4j-conf
               mountPath: "/config/neo4j.conf"
             - name: bolt-cert
-              mountPath: /var/lib/neo4j/certificates/bolt/public.crt
-              subPath: public.crt
-              readOnly: true
-            - name: bolt-key
-              mountPath: /var/lib/neo4j/certificates/bolt/private.key
-              subPath: private.key
+              mountPath: /var/lib/neo4j/certificates/bolt
               readOnly: true
             - name: https-cert
-              mountPath: /var/lib/neo4j/certificates/https/public.crt
-              subPath: public.crt
-              readOnly: true
-            - name: https-key
-              mountPath: /var/lib/neo4j/certificates/https/private.key
-              subPath: private.key
+              mountPath: /var/lib/neo4j/certificates/https
               readOnly: true
           readinessProbe:
             tcpSocket:
@@ -89,17 +79,19 @@ spec:
               - configMap:
                   name: "{{ .Release.Name }}-k8s-config"
         - name: bolt-cert
-          secret:
-           secretName: bolt-cert
-        - name: bolt-key
-          secret:
-            secretName: bolt-key
+          projected:
+            sources:
+              - secret:
+                  name: bolt-cert
+              - secret:
+                  name: bolt-key
         - name: https-cert
-          secret:
-            secretName: https-cert
-        - name: https-key
-          secret:
-            secretName: https-key
+          projected:
+            sources:
+              - secret:
+                  name: https-cert
+              - secret:
+                  name: https-key
   volumeClaimTemplates:
     - metadata:
         name: "{{ .Release.Name }}-data"
