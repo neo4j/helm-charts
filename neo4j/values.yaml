@@ -24,8 +24,6 @@ image:
 config:
  dbms.default_database: "neo4j"
  dbms.config.strict_validation: "true"
- dbms.ssl.policy.bolt.enabled: "true"
- dbms.ssl.policy.https.enabled: "true"
 
 # Neo4j configuration (text format)
 configImport: |
@@ -68,4 +66,24 @@ startupProbe:
 # Set the load balancer name
 serviceName: neo4j-lb
 
-encryption: enabled
+# top level setting called ssl to match the "ssl" from "dbms.ssl.policy"
+ssl:
+ # setting per "connector" matching neo4j config
+ bolt:
+  privateKey:
+   secretName: bolt-key # we set up the template to grab `private.key` from this secret
+  publicCertificate:
+   secretName: bolt-cert # we set up the template to grab `public.crt` from this secret
+  trustedCerts:
+   sources: [] # a sources array for a projected volume - this allows someone to (relatively) easily mount multiple public certs from multiple secrets for example.
+  revokedCerts:
+   sources: []  # a sources array for a projected volume
+ https:
+  privateKey:
+   secretName: https-key
+  publicCertificate:
+   secretName: https-cert
+  trustedCerts:
+   sources: []
+  revokedCerts:
+   sources: []
