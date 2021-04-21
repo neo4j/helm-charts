@@ -82,16 +82,16 @@ spec:
           projected:
             sources:
               - secret:
-                  name: bolt-cert
+                  name: {{ .Values.ssl.bolt.publicCertificate.secretName }}
               - secret:
-                  name: bolt-key
+                  name: {{ .Values.ssl.bolt.privateKey.secretName }}
         - name: https-cert
           projected:
             sources:
               - secret:
-                  name: https-cert
+                  name: {{ .Values.ssl.https.publicCertificate.secretName }}
               - secret:
-                  name: https-key
+                  name: {{ .Values.ssl.https.privateKey.secretName }}
   volumeClaimTemplates:
     - metadata:
         name: "{{ .Release.Name }}-data"
