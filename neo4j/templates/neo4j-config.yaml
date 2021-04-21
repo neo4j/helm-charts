@@ -7,6 +7,8 @@ metadata:
 data:
   dbms.mode: SINGLE
   dbms.default_listen_address: "0.0.0.0"
+  dbms.ssl.policy.bolt.enabled: "{{ if .Values.ssl.bolt.privateKey.secretName }}true{{ else }}false{{ end }}"
+  dbms.ssl.policy.https.enabled: "{{ if .Values.ssl.https.privateKey.secretName }}true{{ else }}false{{ end }}"
 ---
 {{- $confFile := .Files.Get "neo4j.conf" -}}
 {{- $configImport := .Values.configImport -}}
