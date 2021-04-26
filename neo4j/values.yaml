@@ -8,7 +8,7 @@ name: neo4j-db
 # The volumeClaimTemplates will provide stable storage using
 # PersistentVolumes provisioned by a PersistentVolume Provisioner.
 volumeClaimTemplates:
- storageClassName: fast
+ storageClassName: neo4j-storage
  selector: # adding a selector here ensures that we use only Persistent Volumes that have been created and labelled specifically for neo4j and prevents "helpful" systems creating new Persistent Volumes dynamically
  accessModes: ReadWriteOnce
  storage: 10Gi
@@ -16,7 +16,7 @@ volumeClaimTemplates:
 # Specs for the Neo4j docker image
 image:
  imagePullPolicy: IfNotPresent
- customImage: "eu.gcr.io/neo4j-helm/neo4j-helm-chart:1613427365-4.3.0-drop02.0-enterprise"
+ customImage: "neo4j:4.3-enterprise"
 
 ### Neo4j Configuration
 
