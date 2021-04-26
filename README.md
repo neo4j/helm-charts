@@ -10,13 +10,13 @@ The helm chart is in the `neo4j/` directory.
 ## Installation
 
 ```
-# Currently we require you to have a pre-existing persistent disk. To create a suitable one use:
-gcloud-create-persistent-disk "my-release-name"
+# Currently we require you to have a pre-existing persistent disk. To create a suitable one uncomment the relevant script:
+# gcloud-create-persistent-disk "my-release-name"
+# docker-desktop-create-persistent-disk my-neo4j "my-release-name"
 
-cd neo4j
-helm install "my-release-name" . [-f <values.yaml>] [--set key=value]
+helm install "my-release-name" ./neo4j [-f <values.yaml>] [--set key=value]
 
-# Find the external IP address of the created service and then connect using browser <IP>:7474 
+# Find the external IP address of the created service and then connect using browser <EXTERNAL-IP>:7474
 kubectl get svc 
 ```
 
@@ -69,6 +69,23 @@ configImport: |
 # Development: Working with different Cloud / K8s Provider Specific Instructions
 
 We target different Kubernetes providers. This section contains instructions on working with each provider. 
+
+## Docker Desktop
+
+This requires that you have [enabled kubernetes on Docker Desktop](https://docs.docker.com/desktop/kubernetes/#enable-kubernetes)
+
+Make sure that you have not already got any neo4j instances using the default neo4j ports (e.g. Neo4j Desktop)
+```
+source devenv
+
+docker-desktop-configure-kubectl
+docker-desktop-create-persistent-disk my-neo4j "my-release-name"
+
+helm install "my-release-name" ./neo4j [-f <values.yaml>] [--set key=value]
+
+# you may need to wait a minute or two for browser access to work
+open http://localhost:7474
+```
 
 ## Kubernetes IN Docker (KIND)
 

@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+# This creates the expected persistent disk
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+# Required env vars
+RELEASE_NAME="${1:?Missing argument. Usage: gcloud-create-persistent-disk <release name>}"
+CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
+
+# Local vars
+DISK_NAME="${RELEASE_NAME}-neo4j-data-disk"
+NAMESPACE="${NAMESPACE:-default}"
+
+docker-desktop-configure-kubectl
+kubectl apply -f yaml/neo4j-docker-desktop-storageclass.yaml
+yq --yaml-output ".spec.claimRef.namespace=\"${NAMESPACE}\" | .spec.claimRef.name=\"${RELEASE_NAME}-data-${RELEASE_NAME}-0\" | .metadata.labels[\"app\"]=\"${RELEASE_NAME}\" | .spec.storageClassName=\"neo4j-storage\"" yaml/neo4j-persistentvolume.yaml | kubectl create -f -

@@ -54,7 +54,7 @@ var helmCleanupCommands = [][]string{
 var kCleanupCommands = [][]string{
 	{"delete", "namespace", "neo4j", "--ignore-not-found"},
 	{"delete", "persistentvolumes", "neo4j-data-storage"},
-	{"delete", "storageclass", "fast"},
+	{"delete", "storageclass", "neo4j-storage"},
 }
 
 type Closeable func() error

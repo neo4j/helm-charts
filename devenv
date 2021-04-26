@@ -14,4 +14,8 @@ fi
 export PATH=${PATH}:./bin
 
 # Use a local kubeconfig
-export KUBECONFIG=".kube/config"
+KUBECONFIG=".kube/config"
+if [ -f ~/.kube/config ]; then
+    cp ~/.kube/config "${KUBECONFIG}"
+fi
+export KUBECONFIG
