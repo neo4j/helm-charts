@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-var dbUri = "neo4j://localhost:7687"
+var dbUri = "neo4j+ssc://localhost:7687"
 var user = "neo4j"
 var dbName = "neo4j"
 
@@ -42,10 +42,10 @@ func SetPassword() error {
 
 	var dbNameBefore = dbName
 	defer func() {
-		dbUri = strings.Replace(dbUri, "bolt://", "neo4j://", 1)
+		dbUri = strings.Replace(dbUri, "bolt+ssc://", "neo4j+ssc://", 1)
 		dbName = dbNameBefore
 	}()
-	dbUri = strings.Replace(dbUri, "neo4j://", "bolt://", 1)
+	dbUri = strings.Replace(dbUri, "neo4j+ssc://", "bolt+ssc://", 1)
 	dbName = "system"
 
 	var auth = neo4j.BasicAuth(user, defaultPassword, "")
@@ -132,6 +132,10 @@ func TestPopulateFromFile(t *testing.T) {
 func CheckNeo4jConfiguration(t *testing.T, expectedConfiguration Neo4jConfiguration) (err error) {
 
 	var runtimeConfig []*neo4j.Record
+	var expectedOverrides = map[string]string{
+		"dbms.connector.https.enabled": "true",
+		"dbms.connector.bolt.tls_level": "REQUIRED",
+	}
 
 	deadline := time.Now().Add(3 * time.Minute)
 	for true {
@@ -143,6 +147,9 @@ func CheckNeo4jConfiguration(t *testing.T, expectedConfiguration Neo4jConfigurat
 		if len(runtimeConfig) >= len(expectedConfiguration.conf) {
 			break
 		}
+	}
+	for key, value := range expectedOverrides {
+		expectedConfiguration.conf[key] = value
 	}
 
 	for _, record := range runtimeConfig {
@@ -202,7 +209,8 @@ func runQuery(cypher string, params map[string]interface{}) ([]*neo4j.Record, er
 	defer cleanupProxy()
 	CheckError(proxyErr)
 
-	driver, err := neo4j.NewDriver(dbUri, *authToUse)
+	driver, err := neo4j.NewDriver(dbUri, *authToUse, func (config *neo4j.Config) {
+	})
 	// Handle driver lifetime based on your application lifetime requirements  driver's lifetime is usually
 	// bound by the application lifetime, which usually implies one driver instance per application
 	defer driver.Close()
