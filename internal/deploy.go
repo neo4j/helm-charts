@@ -12,6 +12,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"github.com/hashicorp/go-multierror"
+	"io"
 	"io/ioutil"
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
@@ -86,20 +87,12 @@ func generateCerts() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	template := x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject: pkix.Name{
-			Organization: []string{"Acme Co"},
-		},
-		NotBefore: time.Now(),
-		NotAfter:  time.Now().Add(time.Hour * 24 * 180),
-
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		BasicConstraintsValid: true,
+	template, err := buildCert(rand.Reader, priv, time.Now(), big.NewInt(1))
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, publicKey(priv), priv)
+	derBytes, err := x509.CreateCertificate(rand.Reader, template, template, publicKey(priv), priv)
 	if err != nil {
 		log.Fatalf("Failed to create certificate: %s", err)
 	}
@@ -133,6 +126,29 @@ func generateCerts() {
 	}
 }
 
+func buildCert(random io.Reader, private *ecdsa.PrivateKey, validFrom time.Time, serialNumber *big.Int) (*x509.Certificate, error) {
+
+	template := x509.Certificate{}
+
+	template.Subject = pkix.Name{
+		CommonName: string("localhost"),
+	}
+	template.DNSNames = []string{"localhost", "localhost:7473", "localhost:7687"}
+	template.NotBefore = validFrom
+	template.NotAfter = validFrom.Add(100*time.Hour )
+	template.KeyUsage = x509.KeyUsageCertSign
+	template.IsCA = true
+	template.BasicConstraintsValid = true
+
+	template.SerialNumber = serialNumber
+
+	derBytes, err := x509.CreateCertificate(
+		random, &template, &template, &private.PublicKey, private)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to create certificate: %v", err)
+	}
+	return x509.ParseCertificate(derBytes)
+}
 
 func helmInstallCommands() [][]string {
 	generateCerts()
