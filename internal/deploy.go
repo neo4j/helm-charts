@@ -2,18 +2,35 @@ package internal
 
 import (
 	"bufio"
+	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
 	"github.com/hashicorp/go-multierror"
+	"io"
 	"io/ioutil"
+	"k8s.io/client-go/kubernetes"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"log"
+	"math/big"
 	"os"
 	"os/exec"
 	"path"
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 )
-
+var (
+	Clientset *kubernetes.Clientset
+	Config *restclient.Config
+)
 // This changes the working directory to the parent directory if the current working directory doesn't contain a directory called "yaml"
 func init() {
 	_, filename, _, _ := runtime.Caller(0)
@@ -30,21 +47,138 @@ func init() {
 	CheckError(err)
 
 	os.Setenv("KUBECONFIG", path.Join(dir, ".kube/config"))
+
+	// gets kubeconfig from env variable
+	Config, err = clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
+	CheckError(err)
+	Clientset, err = kubernetes.NewForConfig(Config)
+	CheckError(err)
+}
+
+func publicKey(priv interface{}) interface{} {
+	switch k := priv.(type) {
+	case *rsa.PrivateKey:
+		return &k.PublicKey
+	case *ecdsa.PrivateKey:
+		return &k.PublicKey
+	default:
+		return nil
+	}
+}
+
+func pemBlockForKey(priv interface{}) *pem.Block {
+	switch k := priv.(type) {
+	case *rsa.PrivateKey:
+		return &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(k)}
+	case *ecdsa.PrivateKey:
+		b, err := x509.MarshalECPrivateKey(k)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to marshal ECDSA private key: %v", err)
+			os.Exit(2)
+		}
+		return &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}
+	default:
+		return nil
+	}
+}
+
+func generateCerts() {
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		log.Fatal(err)
+	}
+	template, err := buildCert(rand.Reader, priv, time.Now(), big.NewInt(1))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	derBytes, err := x509.CreateCertificate(rand.Reader, template, template, publicKey(priv), priv)
+	if err != nil {
+		log.Fatalf("Failed to create certificate: %s", err)
+	}
+	out := &bytes.Buffer{}
+	pem.Encode(out, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+
+	f, err := os.Create("/tmp/public.crt")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = f.WriteString(out.String())
+	f.Close()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	out.Reset()
+	pem.Encode(out, pemBlockForKey(priv))
+	f, err = os.Create("/tmp/private.key")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = f.WriteString(out.String())
+	f.Close()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func buildCert(random io.Reader, private *ecdsa.PrivateKey, validFrom time.Time, serialNumber *big.Int) (*x509.Certificate, error) {
+
+	template := x509.Certificate{}
+
+	template.Subject = pkix.Name{
+		CommonName: string("localhost"),
+	}
+	template.DNSNames = []string{"localhost", "localhost:7473", "localhost:7687"}
+	template.NotBefore = validFrom
+	template.NotAfter = validFrom.Add(100*time.Hour )
+	template.KeyUsage = x509.KeyUsageCertSign
+	template.IsCA = true
+	template.BasicConstraintsValid = true
+
+	template.SerialNumber = serialNumber
+
+	derBytes, err := x509.CreateCertificate(
+		random, &template, &template, &private.PublicKey, private)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to create certificate: %v", err)
+	}
+	return x509.ParseCertificate(derBytes)
 }
 
 func helmInstallCommands() [][]string {
+	generateCerts()
+	err := runAll("kubectl", kCreateSecret, true)
+	if err != nil {
+		fmt.Println("Creating secrets failed:", err)
+	}
 	imageArg := []string{}
 	if value, found := os.LookupEnv("NEO4J_DOCKER_IMG"); found {
 		imageArg = []string{"--set", "image.customImage=" + value}
 	}
 	return [][]string{
-		append([]string{"install", "neo4j", "./neo4j", "--namespace", "neo4j", "--create-namespace", "--wait", "--timeout", "300s"}, imageArg...),
+		append([]string{
+			"install", "neo4j", "./neo4j", "--namespace", "neo4j", "--create-namespace", "--wait", "--timeout", "300s",
+			"--set", "ssl.bolt.privateKey.secretName=bolt-key", "--set", "ssl.bolt.publicCertificate.secretName=bolt-cert",
+			"--set", "ssl.https.privateKey.secretName=https-key", "--set", "ssl.https.publicCertificate.secretName=https-cert",}, imageArg...),
 	}
 }
 
 var kSetupCommands = [][]string{
 	{"apply", "-f", "yaml/neo4j-gce-storageclass.yaml"},  // it doesnt matter if this already exists currently and it's a PITA to clean up so just apply here
 	{"create", "-f", "yaml/neo4j-persistentvolume.yaml"}, // create because if this already exists we run into problems (pv are not namespaced)
+}
+
+var kCreateSecret = [][]string{
+	{"create", "ns", "neo4j"},
+	{"create", "secret", "-n", "neo4j", "generic", "bolt-cert", "--from-file=/tmp/public.crt"},
+	{"create", "secret", "-n", "neo4j", "generic", "https-cert", "--from-file=/tmp/public.crt"},
+	{"create", "secret", "-n", "neo4j", "generic", "bolt-key", "--from-file=/tmp/private.key"},
+	{"create", "secret", "-n", "neo4j", "generic", "https-key", "--from-file=/tmp/private.key"},
 }
 
 var helmCleanupCommands = [][]string{

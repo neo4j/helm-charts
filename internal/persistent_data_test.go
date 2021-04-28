@@ -30,7 +30,11 @@ func ResourcesCleanup() error {
 }
 
 func ResourcesReinstall() error {
-	err := runAll("helm", helmInstallCommands(), true)
+	err := runAll("kubectl", kCreateSecret, true)
+	if err != nil {
+		fmt.Println("Re-creating secrets failed:", err)
+	}
+	err = runAll("helm", helmInstallCommands(), true)
 	if err != nil {
 		fmt.Println("Helm Install failed:", err)
 	}
