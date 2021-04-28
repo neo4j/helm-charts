@@ -161,7 +161,10 @@ func helmInstallCommands() [][]string {
 		imageArg = []string{"--set", "image.customImage=" + value}
 	}
 	return [][]string{
-		append([]string{"install", "neo4j", "./neo4j", "--namespace", "neo4j", "--create-namespace", "--wait", "--timeout", "300s"}, imageArg...),
+		append([]string{
+			"install", "neo4j", "./neo4j", "--namespace", "neo4j", "--create-namespace", "--wait", "--timeout", "300s",
+			"--set", "ssl.bolt.privateKey.secretName=bolt-key", "--set", "ssl.bolt.publicCertificate.secretName=bolt-cert",
+			"--set", "ssl.https.privateKey.secretName=https-key", "--set", "ssl.https.publicCertificate.secretName=https-cert",}, imageArg...),
 	}
 }
 
