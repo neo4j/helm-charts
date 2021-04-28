@@ -10,7 +10,7 @@ data:
   dbms.ssl.policy.bolt.enabled: "{{ if .Values.ssl.bolt.privateKey.secretName }}true{{ else }}false{{ end }}"
   dbms.ssl.policy.https.enabled: "{{ if .Values.ssl.https.privateKey.secretName }}true{{ else }}false{{ end }}"
   dbms.connector.bolt.tls_level: "{{ if .Values.ssl.https.privateKey.secretName }}REQUIRED{{ else }}DISABLED{{ end }}"
-  dbms.connector.https.enabled: "true"
+  dbms.connector.https.enabled: "{{ if .Values.ssl.https.privateKey.secretName }}true{{ else }}false{{ end }}"
 ---
 {{- $confFile := .Files.Get "neo4j.conf" -}}
 {{- $configImport := .Values.configImport -}}
