@@ -71,18 +71,18 @@ ssl:
  # setting per "connector" matching neo4j config
  bolt:
   privateKey:
-   secretName: bolt-key # we set up the template to grab `private.key` from this secret
+   secretName:  # we set up the template to grab `private.key` from this secret
   publicCertificate:
-   secretName: bolt-cert # we set up the template to grab `public.crt` from this secret
+   secretName:  # we set up the template to grab `public.crt` from this secret
   trustedCerts:
    sources: [] # a sources array for a projected volume - this allows someone to (relatively) easily mount multiple public certs from multiple secrets for example.
   revokedCerts:
    sources: []  # a sources array for a projected volume
  https:
   privateKey:
-   secretName: https-key
+   secretName:
   publicCertificate:
-   secretName: https-cert
+   secretName:
   trustedCerts:
    sources: []
   revokedCerts:
