@@ -10,7 +10,6 @@ shopt -s inherit_errexit
 
 # Required env vars
 RELEASE_NAME="${1:?Missing argument. Usage: gcloud-create-persistent-disk <release name>}"
-CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
 
 # Local vars
 DISK_NAME="${RELEASE_NAME}-neo4j-data-disk"
