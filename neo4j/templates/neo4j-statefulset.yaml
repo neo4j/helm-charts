@@ -44,12 +44,16 @@ spec:
               mountPath: "/data"
             - name: neo4j-conf
               mountPath: "/config/neo4j.conf"
+            {{ if .Values.ssl.bolt.privateKey.secretName }}
             - name: bolt-cert
               mountPath: /var/lib/neo4j/certificates/bolt
               readOnly: true
+            {{ end }}
+            {{ if .Values.ssl.bolt.privateKey.secretName }}
             - name: https-cert
               mountPath: /var/lib/neo4j/certificates/https
               readOnly: true
+            {{ end }}
           readinessProbe:
             tcpSocket:
               port: 7687
