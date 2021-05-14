@@ -17,4 +17,4 @@ NAMESPACE="${NAMESPACE:-default}"
 
 docker-desktop-configure-kubectl
 kubectl apply -f yaml/neo4j-docker-desktop-storageclass.yaml
-yq --yaml-output "del(.spec.gcePersistentDisk) | .spec.claimRef.namespace=\"${NAMESPACE}\" | .spec.claimRef.name=\"${RELEASE_NAME}-data-${RELEASE_NAME}-0\" | .metadata.labels[\"app\"]=\"${RELEASE_NAME}\" | .spec.storageClassName=\"neo4j-storage\"" yaml/neo4j-persistentvolume.yaml | kubectl create -f -
+# yq --yaml-output "del(.spec.gcePersistentDisk) | .spec.claimRef.namespace=\"${NAMESPACE}\" | .spec.claimRef.name=\"${RELEASE_NAME}-data-${RELEASE_NAME}-0\" | .metadata.labels[\"app\"]=\"${RELEASE_NAME}\" | .spec.storageClassName=\"neo4j-storage\"" yaml/neo4j-persistentvolume.yaml | kubectl create -f -
