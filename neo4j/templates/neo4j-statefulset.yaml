@@ -78,6 +78,7 @@ spec:
                   name: "{{ .Release.Name }}-user-config"
               - configMap:
                   name: "{{ .Release.Name }}-k8s-config"
+        {{ if .Values.ssl.bolt.privateKey.secretName }}
         - name: bolt-cert
           projected:
             sources:
@@ -85,6 +86,8 @@ spec:
                   name: {{ .Values.ssl.bolt.publicCertificate.secretName }}
               - secret:
                   name: {{ .Values.ssl.bolt.privateKey.secretName }}
+        {{ end }}
+        {{ if .Values.ssl.https.privateKey.secretName }}
         - name: https-cert
           projected:
             sources:
@@ -92,6 +95,7 @@ spec:
                   name: {{ .Values.ssl.https.publicCertificate.secretName }}
               - secret:
                   name: {{ .Values.ssl.https.privateKey.secretName }}
+         {{ end }}
   volumeClaimTemplates:
     - metadata:
         name: "{{ .Release.Name }}-data"
