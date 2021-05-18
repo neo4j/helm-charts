@@ -1,26 +1,102 @@
+# Headless service for stable DNS entries of StatefulSet members.
 apiVersion: v1
 kind: Service
 metadata:
-  name: "{{ .Release.Name }}-lb"
+  name: {{ .Release.Name }}
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  clusterIP: None
+  selector:
+    app: {{ .Release.Name }}
+  ports:
+    - protocol: TCP
+      port: 6362
+      targetPort: 6362
+      name: tcp-backup
+    - protocol: TCP
+      port: 7474
+      targetPort: 7474
+      name: tcp-http
+    - protocol: TCP
+      port: 7687
+      targetPort: 7687
+      name: tcp-bolt
+    - protocol: TCP
+      port: 7688
+      targetPort: 7688
+      name: tcp-boltrouting
+    {{- with .Values.internalService.ports }}
+    {{- if .cluster.enabled }}
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+      name: tcp-discovery
+    - protocol: TCP
+      port: 7000
+      targetPort: 7000
+      name: tcp-raft
+    - protocol: TCP
+      port: 6000
+      targetPort: 6000
+      name: tcp-tx
+    {{- end }}
+    {{- if .metrics.prometheus.enabled }}
+    - protocol: TCP
+      port: 2004
+      targetPort: 2004
+      name: tcp-prometheus
+    {{- end }}
+    {{- if .metrics.graphite.enabled }}
+    - protocol: TCP
+      port: 2003
+      targetPort: 2003
+      name: tcp-graphite
+    {{- end }}
+    {{- if .metrics.jmx.enabled }}
+    - protocol: TCP
+      port: 3637
+      targetPort: 3637
+      name: tcp-jmx
+    {{- end }}
+    {{- end }}
+{{- if or (eq .Values.externalService.ports.http.enabled true) (eq .Values.externalService.ports.bolt.enabled true) (eq .Values.externalService.ports.bolt.enabled true) (eq .Values.externalService.ports.backup.enabled true) }}
+---
+# LoadBalancer service to allow access to neo4j from outside K8s
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ .Release.Name }}-external"
   namespace: "{{ .Release.Namespace }}"
 spec:
   type: LoadBalancer
   ports:
+    {{- with .Values.externalService.ports }}
+    {{ if .http.enabled }}
     - protocol: TCP
       port: 7474
       targetPort: 7474
       name: http
+    {{ end }}
+    {{ if .https.enabled }}
     - protocol: TCP
       port: 7473
       targetPort: 7473
       name: https
+    {{ end }}
+    {{ if .bolt.enabled }}
     - protocol: TCP
       port: 7687
       targetPort: 7687
-      name: bolt
+      name: tcp-bolt
+    {{ end }}
+    {{- if .backup.enabled }}
     - protocol: TCP
       port: 6362
       targetPort: 6362
-      name: backup
+      name: tcp-backup
+    {{- end }}
+    {{- end }}
   selector:
-    app: {{ .Release.Name }}
+    app: "{{ .Release.Name }}"
+{{ end }}

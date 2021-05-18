@@ -8,36 +8,36 @@ name: neo4j-db
 # The volumeClaimTemplates will provide stable storage using
 # PersistentVolumes provisioned by a PersistentVolume Provisioner.
 volumeClaimTemplates:
- storageClassName: neo4j-storage
- selector: # adding a selector here ensures that we use only Persistent Volumes that have been created and labelled specifically for neo4j and prevents "helpful" systems creating new Persistent Volumes dynamically
- accessModes: ReadWriteOnce
- storage: 10Gi
+  storageClassName: neo4j-storage
+  selector: # adding a selector here ensures that we use only Persistent Volumes that have been created and labelled specifically for neo4j and prevents "helpful" systems creating new Persistent Volumes dynamically
+  accessModes: ReadWriteOnce
+  storage: 10Gi
 
 # Specs for the Neo4j docker image
 image:
- imagePullPolicy: IfNotPresent
- customImage: "neo4j:4.3-enterprise"
+  imagePullPolicy: IfNotPresent
+  customImage: "neo4j:4.3-enterprise"
 
 ### Neo4j Configuration
 
 # Neo4j configuration (yaml format)
 config:
- dbms.default_database: "neo4j"
- dbms.config.strict_validation: "true"
+  dbms.default_database: "neo4j"
+  dbms.config.strict_validation: "true"
 
 # Neo4j configuration (text format)
 configImport: |
- # neo4j.conf key=value properties file contents can be included here.
- # multi-line text must be indented correctly.
+  # neo4j.conf key=value properties file contents can be included here.
+  # multi-line text must be indented correctly.
 
 
 # securityContext defines privilege and access control settings for a Pod
 # or Container. Making sure that we dont run Neo4j as root user.
 securityContext:
- runAsNonRoot: true
- runAsUser: 7474
- runAsGroup: 7474
- fsGroup: 7474
+  runAsNonRoot: true
+  runAsUser: 7474
+  runAsGroup: 7474
+  fsGroup: 7474
 
 
 # Readiness probes will send a kill signal to the container if
@@ -59,27 +59,54 @@ livenessProbe:
 # Startup probes are used to know when a container application has started.
 # If such a probe is configured, it disables liveness and readiness checks until it succeeds
 startupProbe:
- failureThreshold: 2000
- periodSeconds: 25
+  failureThreshold: 2000
+  periodSeconds: 25
 
 # top level setting called ssl to match the "ssl" from "dbms.ssl.policy"
 ssl:
- # setting per "connector" matching neo4j config
- bolt:
-  privateKey:
-   secretName:  # we set up the template to grab `private.key` from this secret
-  publicCertificate:
-   secretName:  # we set up the template to grab `public.crt` from this secret
-  trustedCerts:
-   sources: [] # a sources array for a projected volume - this allows someone to (relatively) easily mount multiple public certs from multiple secrets for example.
-  revokedCerts:
-   sources: []  # a sources array for a projected volume
- https:
-  privateKey:
-   secretName:
-  publicCertificate:
-   secretName:
-  trustedCerts:
-   sources: []
-  revokedCerts:
-   sources: []
+  # setting per "connector" matching neo4j config
+  bolt:
+    privateKey:
+      secretName:  # we set up the template to grab `private.key` from this secret
+    publicCertificate:
+      secretName:  # we set up the template to grab `public.crt` from this secret
+    trustedCerts:
+      sources: [ ] # a sources array for a projected volume - this allows someone to (relatively) easily mount multiple public certs from multiple secrets for example.
+    revokedCerts:
+      sources: [ ]  # a sources array for a projected volume
+  https:
+    privateKey:
+      secretName:
+    publicCertificate:
+      secretName:
+    trustedCerts:
+      sources: [ ]
+    revokedCerts:
+      sources: [ ]
+
+# Neo4j ports to include in k8s internal service
+internalService:
+  ports:
+    # Ports for Neo4j Cluster
+    cluster:
+      enabled: false
+    # Ports for Neo4j metrics
+    metrics:
+      graphite:
+        enabled: false
+      prometheus:
+        enabled: false
+      jmx:
+        enabled: false
+
+# Neo4j ports to include in external service
+externalService:
+  ports:
+    http:
+      enabled: true #Set this to true to expose HTTP externally
+    https:
+      enabled: true #Set this to true to expose HTTPS externally
+    bolt:
+      enabled: true #Set this to true to expose BOLT externally
+    backup:
+      enabled: false #Set this to true to expose backup port externally (n.b. this could have security implications. Backup is not authenticated by default)
