@@ -13,6 +13,6 @@ spec:
     - ReadWriteOnce
   claimRef:
     namespace: neo4j
-    name: neo4j-data-neo4j-0
+    name: data-neo4j-0
   gcePersistentDisk:
     pdName: neo4j-data-disk

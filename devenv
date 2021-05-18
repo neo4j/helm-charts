@@ -6,6 +6,8 @@ if [ -f ./devenv.local ]; then
     export CLOUDSDK_COMPUTE_ZONE
     export CLOUDSDK_COMPUTE_REGION
     export CLOUDSDK_CONTAINER_CLUSTER
+    export PACKAGE_SIGNING_KEY
+    export PACKAGE_SIGNING_KEYRING
 else
     echo "Couldn't find ./devenv.local."
 fi

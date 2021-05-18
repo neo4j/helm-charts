@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+# This packages helm charts into signed tarballs
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+# Required env vars
+PACKAGE_SIGNING_KEY="${PACKAGE_SIGNING_KEY:?PACKAGE_SIGNING_KEY is required}"
+# to create a keyring try gpg --export-secret-keys "<ID of the key you want to use to sign>" >~/.gnupg/secring.gpg
+PACKAGE_SIGNING_KEYRING="${PACKAGE_SIGNING_KEYRING:?PACKAGE_SIGNING_KEYRING is required}"
+
+# create the package!
+helm package --sign ./neo4j --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}"
+echo "Copying packaged files to ../neo4j-helm-preview/packages/"
+mv *.tgz ../neo4j-helm-preview/packages/
+mv *.tgz.prov ../neo4j-helm-preview/packages/

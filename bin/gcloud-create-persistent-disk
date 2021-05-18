@@ -19,4 +19,4 @@ NAMESPACE="${NAMESPACE:-default}"
 gcloud-configure-kubectl
 gcloud compute disks create --size 10GB --type pd-ssd --zone="${CLOUDSDK_COMPUTE_ZONE}" "${DISK_NAME}"
 kubectl apply -f yaml/neo4j-gce-storageclass.yaml
-yq --yaml-output ".spec.claimRef.namespace=\"${NAMESPACE}\" | .spec.claimRef.name=\"${RELEASE_NAME}-data-${RELEASE_NAME}-0\" | .metadata.labels[\"app\"]=\"${RELEASE_NAME}\" | .spec.gcePersistentDisk.pdName=\"${DISK_NAME}\"" yaml/neo4j-persistentvolume.yaml | kubectl create -f -
+yq --yaml-output ".spec.claimRef.namespace=\"${NAMESPACE}\" | .spec.claimRef.name=\"data-${RELEASE_NAME}-0\" | .metadata.labels[\"app\"]=\"${RELEASE_NAME}\" | .spec.gcePersistentDisk.pdName=\"${DISK_NAME}\"" yaml/neo4j-persistentvolume.yaml | kubectl create -f -

@@ -6,7 +6,7 @@ metadata:
   name: {{ .Release.Name }}
   namespace: {{ .Release.Namespace }}
 spec:
-  serviceName: {{ .Values.serviceName }}
+  serviceName: "{{ .Release.Name }}-lb"
   replicas: 1
   selector:
     matchLabels:
@@ -40,7 +40,7 @@ spec:
             - containerPort: 6362
               name: backup
           volumeMounts:
-            - name: "{{ .Release.Name }}-data"
+            - name: "data"
               mountPath: "/data"
             - name: neo4j-conf
               mountPath: "/config/neo4j.conf"
@@ -102,7 +102,7 @@ spec:
          {{ end }}
   volumeClaimTemplates:
     - metadata:
-        name: "{{ .Release.Name }}-data"
+        name: "data"
       spec:
         storageClassName: "{{ .Values.volumeClaimTemplates.storageClassName }}"
         selector: # adding a selector here ensures that we use only Persistent Volumes that have been created and labelled specifically for neo4j and prevents "helpful" systems creating new Persistent Volumes dynamically

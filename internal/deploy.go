@@ -290,9 +290,10 @@ func InstallNeo4j(zone Zone, project Project) Closeable {
 
 	addCloseable(func() error { return runAll("kubectl", kCleanupCommands, false) })
 	err = runAll("kubectl", kSetupCommands, true)
+	CheckError(err)
+
 	addCloseable(func() error { return runAll("helm", helmCleanupCommands, false) })
 	err = runAll("helm", helmInstallCommands(), true)
-
 	CheckError(err)
 
 	completed = true
