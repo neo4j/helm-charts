@@ -84,8 +84,11 @@ ssl:
     revokedCerts:
       sources: [ ]
 
-# Neo4j ports to include in k8s internal service
+# A headless service
 internalService:
+  # Annotations for the internal service
+  annotations: { }
+  # Neo4j ports to include in k8s internal service
   ports:
     # Ports for Neo4j Cluster
     cluster:
@@ -99,8 +102,10 @@ internalService:
       jmx:
         enabled: false
 
-# Neo4j ports to include in external service
 externalService:
+  # Annotations for the external service
+  annotations: { }
+  # Neo4j ports to include in external service
   ports:
     http:
       enabled: true #Set this to true to expose HTTP externally

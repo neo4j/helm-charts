@@ -3,8 +3,13 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ .Release.Name }}
+  namespace: "{{ .Release.Namespace }}"
   labels:
     app: {{ .Release.Name }}
+  {{- with .Values.internalService.annotations }}
+  annotations:
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   clusterIP: None
   selector:
@@ -68,8 +73,15 @@ kind: Service
 metadata:
   name: "{{ .Release.Name }}-external"
   namespace: "{{ .Release.Namespace }}"
+  labels:
+    app: {{ .Release.Name }}
+  {{- with .Values.externalService.annotations }}
+  annotations:
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   type: LoadBalancer
+  externalTrafficPolicy: Local
   ports:
     {{- with .Values.externalService.ports }}
     {{ if .http.enabled }}
