@@ -150,22 +150,28 @@ func buildCert(random io.Reader, private *ecdsa.PrivateKey, validFrom time.Time,
 	return x509.ParseCertificate(derBytes)
 }
 
+
 func helmInstallCommands() [][]string {
-	generateCerts()
-	err := runAll("kubectl", kCreateSecret, true)
-	if err != nil {
-		fmt.Println("Creating secrets failed:", err)
-	}
-	imageArg := []string{}
-	if value, found := os.LookupEnv("NEO4J_DOCKER_IMG"); found {
-		imageArg = []string{"--set", "image.customImage=" + value}
-	}
 	return [][]string{
-		append([]string{
-			"install", "neo4j", "./neo4j", "--namespace", "neo4j", "--create-namespace", "--wait", "--timeout", "300s",
-			"--set", "ssl.bolt.privateKey.secretName=bolt-key", "--set", "ssl.bolt.publicCertificate.secretName=bolt-cert",
-			"--set", "ssl.https.privateKey.secretName=https-key", "--set", "ssl.https.publicCertificate.secretName=https-cert",}, imageArg...),
+		baseHelmCommand("install"),
 	}
+}
+
+func baseHelmCommand(helmCommand string, extraHelmArguments ...string) []string {
+	var helmArgs = []string{
+		helmCommand, "neo4j", "./neo4j", "--namespace", "neo4j", "--create-namespace", "--wait", "--timeout", "300s",
+		"--set", "ssl.bolt.privateKey.secretName=bolt-key", "--set", "ssl.bolt.publicCertificate.secretName=bolt-cert",
+		"--set", "ssl.https.privateKey.secretName=https-key", "--set", "ssl.https.publicCertificate.secretName=https-cert",
+	}
+	if extraHelmArguments != nil && len(extraHelmArguments) > 0 {
+		helmArgs = append(helmArgs, extraHelmArguments...)
+	}
+
+	if value, found := os.LookupEnv("NEO4J_DOCKER_IMG"); found {
+		helmArgs = append(helmArgs, "--set", "image.customImage="+value)
+	}
+
+	return helmArgs
 }
 
 var kSetupCommands = [][]string{
@@ -290,6 +296,10 @@ func InstallNeo4j(zone Zone, project Project) Closeable {
 
 	addCloseable(func() error { return runAll("kubectl", kCleanupCommands, false) })
 	err = runAll("kubectl", kSetupCommands, true)
+	CheckError(err)
+
+	generateCerts()
+	err = runAll("kubectl", kCreateSecret, true)
 	CheckError(err)
 
 	addCloseable(func() error { return runAll("helm", helmCleanupCommands, false) })

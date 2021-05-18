@@ -30,6 +30,7 @@ func ResourcesCleanup() error {
 }
 
 func ResourcesReinstall() error {
+	generateCerts()
 	err := runAll("kubectl", kCreateSecret, true)
 	if err != nil {
 		fmt.Println("Re-creating secrets failed:", err)

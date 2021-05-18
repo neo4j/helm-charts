@@ -19,6 +19,7 @@ import (
 	"strings"
 	"testing"
 )
+
 func init() {
 	var err error
 	// gets kubeconfig from env variable
@@ -61,8 +62,8 @@ func CheckProbes(t *testing.T) error {
 	pods_map := make(map[string]int32)
 	for _, opt := range pods.Items {
 		for _, container := range opt.Spec.Containers {
-			pods_map[container.Name + "_LivenessProbe"] = container.LivenessProbe.PeriodSeconds
-			pods_map[container.Name + "_ReadinessProbe"] = container.ReadinessProbe.PeriodSeconds
+			pods_map[container.Name+"_LivenessProbe"] = container.LivenessProbe.PeriodSeconds
+			pods_map[container.Name+"_ReadinessProbe"] = container.ReadinessProbe.PeriodSeconds
 		}
 	}
 	podsLiveness := "neo4j_LivenessProbe"
@@ -73,6 +74,65 @@ func CheckProbes(t *testing.T) error {
 	assert.Equal(t, pods_map[podsReadiness], yamlConfigReadiness, "ReadinessProbe mismatch")
 	return nil
 }
+
+func CheckServiceAnnotations(t *testing.T) (err error) {
+	var services = getAllServices(t)
+	assert.Equal(t, 2, len(services.Items))
+
+	// by default they should have no annotations
+	for _, service := range services.Items {
+		assert.Empty(t, getOurAnnotations(service))
+	}
+
+	// when we add annotations via helm
+	err = runAll("helm", [][]string{
+		baseHelmCommand("upgrade",
+			"--set", "externalService.annotations.foo=bar", "--set", "internalService.annotations.foo=bar",
+		),
+	}, true)
+	if err != nil {
+		return err
+	}
+
+	// then the services get annotations
+	services = getAllServices(t)
+	assert.Equal(t, 2, len(services.Items))
+
+	for _, service := range services.Items {
+		assert.Equal(t, "bar", getOurAnnotations(service)["foo"])
+	}
+	return err
+}
+
+func getOurAnnotations(service coreV1.Service) map[string]string {
+	ourAnnotations := map[string]string{}
+	prefixesToIgnore := []string{
+		"cloud.google.com/",
+		"meta.helm.sh/",
+	}
+	for key, value := range service.Annotations {
+		if !matchesAnyPrefix(prefixesToIgnore, key) {
+			ourAnnotations[key] = value
+		}
+	}
+	return ourAnnotations
+}
+
+func matchesAnyPrefix(knownPrefixes []string, key string) bool {
+	for _, prefix := range knownPrefixes {
+		if strings.HasPrefix(key, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func getAllServices(t *testing.T) *coreV1.ServiceList {
+	services, err := Clientset.CoreV1().Services("neo4j").List(context.TODO(), v1.ListOptions{})
+	assert.NoError(t, err)
+	return services
+}
+
 func RunAsNonRoot(t *testing.T) error {
 	pods, err := Clientset.CoreV1().Pods("neo4j").List(context.TODO(), v1.ListOptions{})
 	if err != nil {
@@ -82,7 +142,7 @@ func RunAsNonRoot(t *testing.T) error {
 	for _, opt := range pods.Items {
 		assert.Equal(t, true, *opt.Spec.SecurityContext.RunAsNonRoot)
 	}
-		return nil
+	return nil
 }
 func ExecInPod(t *testing.T) error {
 	cmd := []string{
@@ -91,8 +151,8 @@ func ExecInPod(t *testing.T) error {
 		"id -u",
 	}
 	var (
-	stdout bytes.Buffer
-	stderr bytes.Buffer
+		stdout bytes.Buffer
+		stderr bytes.Buffer
 	)
 	req := Clientset.CoreV1().RESTClient().Post().Resource("pods").Name("neo4j-0").
 		Namespace("neo4j").SubResource("exec")
@@ -121,7 +181,7 @@ func ExecInPod(t *testing.T) error {
 	s := stdout.String()
 	s = strings.TrimSuffix(s, "\n")
 	assert.Equal(t, "7474", s, "UID is different than expected")
-	e :=stderr.String()
+	e := stderr.String()
 	assert.Empty(t, e, "stderr is not empty")
 
 	return nil
