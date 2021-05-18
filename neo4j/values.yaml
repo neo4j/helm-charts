@@ -62,10 +62,6 @@ startupProbe:
  failureThreshold: 2000
  periodSeconds: 25
 
-
-# Set the load balancer name
-serviceName: neo4j-lb
-
 # top level setting called ssl to match the "ssl" from "dbms.ssl.policy"
 ssl:
  # setting per "connector" matching neo4j config
