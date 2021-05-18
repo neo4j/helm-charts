@@ -195,7 +195,7 @@ type Closeable func() error
 
 func proxyBolt() (Closeable, error) {
 
-	cmd := exec.Command("kubectl", "--namespace", "neo4j", "port-forward", "service/neo4j-lb", "7474:7474", "7687:7687")
+	cmd := exec.Command("kubectl", "--namespace", "neo4j", "port-forward", "service/neo4j-external", "7474:7474", "7687:7687")
 	stdout, err := cmd.StdoutPipe()
 	CheckError(err)
 	// Use the same pipe for standard error

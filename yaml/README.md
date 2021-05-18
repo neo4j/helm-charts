@@ -76,7 +76,7 @@ kubectl apply -f neo4j-svc.yaml
 ```
 5. If you want to use Neo4j browser run
  ```shell script
-kubectl --namespace neo4j port-forward service/neo4j-lb 7474:7474 7687:7687
+kubectl --namespace neo4j port-forward service/neo4j-external 7474:7474 7687:7687
 ```
 
 Open localhost:7474 in your favourite browser.

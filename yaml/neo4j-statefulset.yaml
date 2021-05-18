@@ -6,7 +6,7 @@ metadata:
   name: neo4j-db
   namespace: neo4j
 spec:
-  serviceName: neo4j-lb
+  serviceName: neo4j-external
   replicas: 1
   selector:
     matchLabels:

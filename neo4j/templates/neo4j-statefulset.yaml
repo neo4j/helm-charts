@@ -6,7 +6,7 @@ metadata:
   name: {{ .Release.Name }}
   namespace: {{ .Release.Namespace }}
 spec:
-  serviceName: "{{ .Release.Name }}-lb"
+  serviceName: "{{ .Release.Name }}"
   replicas: 1
   selector:
     matchLabels:
