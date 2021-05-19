@@ -1,0 +1,12 @@
+# Default values for Neo4j Disk for Docker Desktop.
+
+neo4j:
+  name: ""
+  # if "manual" is used it's not necessary for the storageClass to exist.
+  storageClassName: "manual"
+
+# Host path should be an absolute path to a directory on the host machine that is shared with Docker Desktop
+# the directory must exist, it will not be created automatically.
+# e.g.
+#   hostPath: /Users/my_username/neo4j/disk1
+hostPath: ""

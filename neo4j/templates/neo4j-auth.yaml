@@ -1,0 +1,22 @@
+{{ $password :=  randAlphaNum 10 | printf "neo4j/%v" | b64enc | quote }}
+
+{{- if .Values.neo4j.password }}
+{{ $password = .Values.neo4j.password | printf "neo4j/%v" | b64enc | quote }}
+{{- end -}}
+
+{{- $name := printf "%s-auth-auth" .Release.Name }}
+{{- $secret := (lookup "v1" "Secret" .Release.Namespace $name) }}
+{{- if $secret }}
+{{ $password = index $secret.data "NEO4J_AUTH" }}
+{{- end -}}
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: "{{ .Release.Name }}-auth"
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app: "{{ .Release.Name }}"
+type: Opaque
+data:
+  NEO4J_AUTH: {{ $password }}
