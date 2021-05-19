@@ -12,6 +12,6 @@ shopt -s inherit_errexit
 KUBECONFIG="${KUBECONFIG:?KUBECONFIG is required}"
 
 # Configure kubectl
-kubectl config set-context docker-desktop
+kubectl config use-context docker-desktop
 
 echo "kubectl configured for $(kubectl config current-context)"

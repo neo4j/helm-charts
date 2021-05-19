@@ -47,7 +47,7 @@ func CheckProbes(t *testing.T) error {
 		} `yaml:"livenessProbe"`
 	}
 
-	var fileName string = "neo4j/values.yaml"
+	var fileName = "neo4j/values.yaml"
 
 	yamlFile, err := ioutil.ReadFile(fileName)
 	if err != nil {
@@ -68,10 +68,11 @@ func CheckProbes(t *testing.T) error {
 	}
 	podsLiveness := "neo4j_LivenessProbe"
 	yamlConfigLiveness := yamlConfig.LivenessProbe.PeriodSeconds
-	assert.Equal(t, pods_map[podsLiveness], yamlConfigLiveness, "LivenessProbe mismatch")
+	// TODO: these assertions seem slightly flaky. I think we might need to wait for the pod to be running before checking them or something
+	assert.Equal(t, yamlConfigLiveness,  pods_map[podsLiveness], "LivenessProbe mismatch")
 	podsReadiness := "neo4j_ReadinessProbe"
 	yamlConfigReadiness := yamlConfig.ReadinessProbe.PeriodSeconds
-	assert.Equal(t, pods_map[podsReadiness], yamlConfigReadiness, "ReadinessProbe mismatch")
+	assert.Equal(t, yamlConfigReadiness, pods_map[podsReadiness], "ReadinessProbe mismatch")
 	return nil
 }
 

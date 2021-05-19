@@ -1,0 +1,18 @@
+kind: "PersistentVolume"
+apiVersion: "v1"
+metadata:
+  name: "{{ .Release.Name }}"
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    type: local
+    # the app name is used to link this persistent volume to the Neo4j StatefulSet
+    app: "{{ required "neo4j.name is required" .Values.neo4j.name }}"
+spec:
+  storageClassName: "{{ .Values.neo4j.storageClassName }}"
+  hostPath:
+    path: "{{ .Values.hostPath }}"
+    type: Directory
+  capacity:
+    storage: 1Ti
+  accessModes:
+    - ReadWriteOnce

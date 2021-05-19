@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 
-# This creates the expected persistent disk
+# This creates the expected persistent disk for docker desktop
+#
+# e.g.
+# docker-desktop-create-persistent-disk neo4j-dev /tmp/neo4j-helm/disk1
 
 # make bash play nicely
 #
@@ -9,12 +12,31 @@ shopt -s inherit_errexit
 [[ -n "${TRACE:-}" ]] && set -o xtrace
 
 # Required env vars
-RELEASE_NAME="${1:?Missing argument. Usage: gcloud-create-persistent-disk <release name>}"
+RELEASE_NAME="${1:?Missing argument. Usage: docker-desktop-create-persistent-disk <release name> /host/path/for/persistent/volume}"
+PERSISTENT_VOLUME_HOST_PATH="${2:?Missing argument. Usage: docker-desktop-create-persistent-disk <release name> /host/path/for/persistent/volume}"
+
+if [ -d "${PERSISTENT_VOLUME_HOST_PATH}" ]; then
+  echo "INFO: Using ${PERSISTENT_VOLUME_HOST_PATH} for neo4j data"
+else
+  echo "INFO: Creating directory ${PERSISTENT_VOLUME_HOST_PATH}"
+  mkdir -p "${PERSISTENT_VOLUME_HOST_PATH}"
+  echo "INFO: Using ${PERSISTENT_VOLUME_HOST_PATH} for neo4j data"
+fi
+
 
 # Local vars
-DISK_NAME="${RELEASE_NAME}-neo4j-data-disk"
+PERSISTENT_VOLUME_NAME="${RELEASE_NAME}-pv"
 NAMESPACE="${NAMESPACE:-default}"
 
 docker-desktop-configure-kubectl
-kubectl apply -f yaml/neo4j-docker-desktop-storageclass.yaml
-# yq --yaml-output "del(.spec.gcePersistentDisk) | .spec.claimRef.namespace=\"${NAMESPACE}\" | .spec.claimRef.name=\"data-${RELEASE_NAME}-0\" | .metadata.labels[\"app\"]=\"${RELEASE_NAME}\" | .spec.storageClassName=\"neo4j-storage\"" yaml/neo4j-persistentvolume.yaml | kubectl create -f -
+
+if helm get all "${PERSISTENT_VOLUME_NAME}" >/dev/null; then
+  echo "WARNING: helm release '${PERSISTENT_VOLUME_NAME}' already exists in namespace '${NAMESPACE}'. Exiting..."
+  exit 1
+else
+  echo "INFO: This will create a helm release called '${PERSISTENT_VOLUME_NAME}' in namespace '${NAMESPACE}'"
+fi
+
+helm install --namespace "${NAMESPACE}" "${PERSISTENT_VOLUME_NAME}" ./neo4j-docker-desktop-pv --set neo4j.name="${RELEASE_NAME}" --set hostPath="${PERSISTENT_VOLUME_HOST_PATH}"
+
+echo "Persistent volume created. To remove the persistent volume run `helm uninstall --namespace "${NAMESPACE}" "${PERSISTENT_VOLUME_NAME}"`"

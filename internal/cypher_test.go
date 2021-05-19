@@ -18,16 +18,8 @@ var user = "neo4j"
 var dbName = "neo4j"
 
 // BEGIN auth stuff
-var foo int
-
 const neo4jConfJvmAdditionalKey = "dbms.jvm.additional"
 
-func init() {
-	foo = 1
-
-}
-
-var defaultPassword = "neo4j"
 var desiredPassword = fmt.Sprintf("%d", RandomIntBetween(100000, 999999999))
 
 // pointer to the auth token that the driver should use

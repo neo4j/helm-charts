@@ -61,7 +61,7 @@ spec:
   - metadata:
       name: neo4j-data
     spec:
-      storageClassName: "neo4j-storage"
+      storageClassName: "manual"
       selector: # adding a selector here ensures that we use only Persistent Volumes that have been created and labelled specifically for neo4j and prevents "helpful" systems creating new Persistent Volumes dynamically
         matchLabels:
           app: neo4j-db

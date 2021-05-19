@@ -157,9 +157,12 @@ func helmInstallCommands() [][]string {
 	}
 }
 
+var defaultPassword = fmt.Sprintf("%d", RandomIntBetween(100000, 999999999))
+
 func baseHelmCommand(helmCommand string, extraHelmArguments ...string) []string {
 	var helmArgs = []string{
 		helmCommand, "neo4j", "./neo4j", "--namespace", "neo4j", "--create-namespace", "--wait", "--timeout", "300s",
+		"--set", "neo4j.password="+defaultPassword,
 		"--set", "ssl.bolt.privateKey.secretName=bolt-key", "--set", "ssl.bolt.publicCertificate.secretName=bolt-cert",
 		"--set", "ssl.https.privateKey.secretName=https-key", "--set", "ssl.https.publicCertificate.secretName=https-cert",
 	}
@@ -175,7 +178,7 @@ func baseHelmCommand(helmCommand string, extraHelmArguments ...string) []string 
 }
 
 var kSetupCommands = [][]string{
-	{"apply", "-f", "yaml/neo4j-gce-storageclass.yaml"},  // it doesnt matter if this already exists currently and it's a PITA to clean up so just apply here
+	//{"apply", "-f", "yaml/neo4j-gce-storageclass.yaml"},  // it doesnt matter if this already exists currently and it's a PITA to clean up so just apply here
 	{"create", "-f", "yaml/neo4j-persistentvolume.yaml"}, // create because if this already exists we run into problems (pv are not namespaced)
 }
 
@@ -193,8 +196,8 @@ var helmCleanupCommands = [][]string{
 
 var kCleanupCommands = [][]string{
 	{"delete", "namespace", "neo4j", "--ignore-not-found"},
-	{"delete", "persistentvolumes", "neo4j-data-storage"},
-	{"delete", "storageclass", "neo4j-storage"},
+	{"delete", "persistentvolumes", "neo4j-pv"},
+	//{"delete", "storageclass", "neo4j-storage"},
 }
 
 type Closeable func() error
