@@ -4,7 +4,6 @@ metadata:
   # n.b. persistent volumes don't seem to belong to namespaces
   name: "{{ .Release.Name }}"
   labels:
-    type: local
     # the app name is used to link this persistent volume to the Neo4j StatefulSet
     app: "{{ template "neo4j.appName" . }}"
 spec:
@@ -12,8 +11,7 @@ spec:
     - ReadWriteOnce
   capacity:
     storage: "{{ required "capacity.storage must be set explicitly" .Values.capacity.storage }}"
-  hostPath:
-    path: "{{ .Values.hostPath }}"
-    type: Directory
+  gcePersistentDisk:
+    pdName: "{{ .Values.gcePersistentDisk }}"
   persistentVolumeReclaimPolicy: Retain
   storageClassName: "{{ .Values.neo4j.storageClassName }}"

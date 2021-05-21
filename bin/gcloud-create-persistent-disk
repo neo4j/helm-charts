@@ -8,14 +8,30 @@ set -o pipefail -o errtrace -o errexit -o nounset
 shopt -s inherit_errexit
 [[ -n "${TRACE:-}" ]] && set -o xtrace
 
+
 # Required env vars
-RELEASE_NAME="${1:?Missing argument. Usage: gcloud-create-persistent-disk <release name>}"
+RELEASE_NAME="${1:?Missing argument. Usage: gcloud-create-persistent-disk <release name> <instance id>}"
+INSTANCE_ID="${2:?Missing argument. Usage: gcloud-create-persistent-disk <release name> <instance id>}"
 CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
 
+
 # Local vars
-DISK_NAME="${RELEASE_NAME}-neo4j-data-disk"
+DISK_NAME="${RELEASE_NAME}-${INSTANCE_ID}-neo4j-data-disk"
+DISK_SIZE="${DISK_SIZE:-100Gi}"
 NAMESPACE="${NAMESPACE:-default}"
 
+
+# Prepare gcloud & create disk
 gcloud-configure-kubectl
-gcloud compute disks create --size 10GB --type pd-ssd --zone="${CLOUDSDK_COMPUTE_ZONE}" "${DISK_NAME}"
-yq --yaml-output ".metadata.labels[\"app\"]=\"${RELEASE_NAME}\" | .spec.gcePersistentDisk.pdName=\"${DISK_NAME}\"" yaml/neo4j-persistentvolume.yaml | kubectl create -f -
+gcloud compute disks create --size "${DISK_SIZE}" --type pd-ssd --zone="${CLOUDSDK_COMPUTE_ZONE}" "${DISK_NAME}"
+
+# TODO: handle existing disk cases ( re use / delete and recreate / other? )
+
+# Local vars
+PERSISTENT_VOLUME_NAME="${RELEASE_NAME}-${INSTANCE_ID}-pv"
+
+
+helm install --namespace "${NAMESPACE}" "${PERSISTENT_VOLUME_NAME}" ./neo4j-gcloud-pv \
+  --set neo4j.name="${RELEASE_NAME}" \
+  --set capacity.storage="${DISK_SIZE}" \
+  --set gcePersistentDisk="${DISK_NAME}"

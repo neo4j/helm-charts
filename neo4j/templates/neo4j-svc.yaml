@@ -1,3 +1,4 @@
+{{- $clusterEnabled := or ( index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" ) ( index .Values.config "dbms.clustering.enable" | default "" | regexMatch "(?i)true|yes" ) }}
 # Headless service for direct bolt / http connections to an instance.
 apiVersion: v1
 kind: Service
@@ -54,10 +55,6 @@ spec:
       targetPort: 6362
       name: tcp-backup
     - protocol: TCP
-      port: 7474
-      targetPort: 7474
-      name: tcp-http
-    - protocol: TCP
       port: 7687
       targetPort: 7687
       name: tcp-bolt
@@ -66,7 +63,7 @@ spec:
       targetPort: 7688
       name: tcp-boltrouting
     {{- with .Values.internalService.ports }}
-    {{- if .cluster.enabled }}
+    {{- if $clusterEnabled }}
     - protocol: TCP
       port: 5000
       targetPort: 5000

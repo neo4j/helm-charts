@@ -10,7 +10,7 @@ shopt -s inherit_errexit
 [[ -n "${TRACE:-}" ]] && set -o xtrace
 
 kubectl delete namespace neo4j --ignore-not-found
-kubectl delete persistentvolume neo4j-pv  --ignore-not-found
+helm uninstall neo4j-pv || echo "not found ?"
 gcloud compute disks delete neo4j-data-disk || true
 
 echo "cleanup complete"

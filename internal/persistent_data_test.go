@@ -21,11 +21,13 @@ func ResourcesCleanup() error {
 		errors = multierror.Append(errors, err)
 		fmt.Println("Namespace Cleanup failed:", err)
 	}
-	err = run("kubectl", "replace", "--force", "-f", "./yaml/neo4j-persistentvolume.yaml")
+
+	err = run("helm", "uninstall", "neo4j-pv")
 	if err != nil {
 		errors = multierror.Append(errors, err)
-		fmt.Println("Replace PV failed:", err)
+		fmt.Println("Remove PV failed:", err)
 	}
+
 	return errors.ErrorOrNil()
 }
 

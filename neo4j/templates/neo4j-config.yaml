@@ -1,3 +1,4 @@
+{{- $clusterEnabled := or ( index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" ) ( index .Values.config "dbms.clustering.enable" | default "" | regexMatch "(?i)true|yes" ) }}
 # Neo4j config values that are required for neo4j to work correctly in Kubernetes, these are not overridden by user-provided values
 apiVersion: v1
 kind: ConfigMap
@@ -46,16 +47,27 @@ metadata:
   namespace: {{ .Release.Namespace }}
 data:
   # Helm defaults
-  dbms.mode: SINGLE
-  dbms.default_advertised_address: "$(bash -c 'echo ${SERVICE_DOMAIN}')"
+  dbms.mode: "{{ index .Values.config "dbms.mode" | default "SINGLE"}}"
+
+  # If we set default advertised address it over-rides the bolt address used to populate the browser in a really annoying way
+  # dbms.default_advertised_address: "$(bash -c 'echo ${SERVICE_DOMAIN}')"
 
   # Other
   dbms.config.strict_validation: "true"
 
+  {{- if $clusterEnabled }}
   # Clustering
   causal_clustering.discovery_type: K8S
   causal_clustering.kubernetes.service_port_name: "tcp-discovery"
   causal_clustering.kubernetes.label_selector: "app={{ template "neo4j.appName" . }},helm.neo4j.com/service=internal,neo4j.com/dbms.mode=CORE"
+
+  # Because "if we set default advertised address it over-rides the bolt address used to populate the browser in a really annoying way" we have to set the
+  # advertised address for each cluster service individually instead
+  causal_clustering.discovery_advertised_address: "$(bash -c 'echo ${SERVICE_DOMAIN}')"
+  causal_clustering.raft_advertised_address: "$(bash -c 'echo ${SERVICE_DOMAIN}')"
+  causal_clustering.transaction_advertised_address: "$(bash -c 'echo ${SERVICE_DOMAIN}')"
+  dbms.routing.advertised_address: "$(bash -c 'echo ${SERVICE_DOMAIN}')"
+  {{- end }}
 
   # Logging
   {{- /* TODO: Figure out a different way to handle logs. I dislike remapping the log location to the data directory like this */}}
