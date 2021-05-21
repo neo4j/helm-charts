@@ -5,6 +5,10 @@ neo4j:
   # if "manual" is used it's not necessary for the storageClass to exist.
   storageClassName: "manual"
 
+# size of disk used by K8s when scheduling and binding, this has to be passed explicitly to K8s, it's not capable of figuring this out for itself.
+capacity:
+  storage: ""
+
 # Host path should be an absolute path to a directory on the host machine that is shared with Docker Desktop
 # the directory must exist, it will not be created automatically.
 # e.g.

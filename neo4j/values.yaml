@@ -15,7 +15,11 @@ volumeClaimTemplates:
   storageClassName: "manual"
   accessModes:
     - ReadWriteOnce
-  request: 1Ti
+  # Amount of disk storage to request. Some cloud providers allocate IOPS proportionally to disk size, if that is the case it may be necessary to set the disk request
+  # to a significantly larger value than is required just to store the database files.
+  # We recommend a disk size of at least 1Ti for performance or load testing and at least 100Gi for development work.
+  request: 100Gi
+
 
 # Specs for the Neo4j docker image
 image:
