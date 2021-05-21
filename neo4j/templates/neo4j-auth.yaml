@@ -16,7 +16,7 @@ metadata:
   name: "{{ .Release.Name }}-auth"
   namespace: "{{ .Release.Namespace }}"
   labels:
-    app: "{{ .Release.Name }}"
+    app: "{{ template "neo4j.appName" . }}"
 type: Opaque
 data:
   NEO4J_AUTH: {{ $password }}

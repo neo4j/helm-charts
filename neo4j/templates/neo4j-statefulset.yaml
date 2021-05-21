@@ -2,7 +2,8 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   labels:
-    app: {{ .Release.Name }}
+    app: "{{ template "neo4j.appName" . }}"
+    helm.neo4j.com/instance: "{{ .Release.Name }}"
   name: {{ .Release.Name }}
   namespace: {{ .Release.Namespace }}
 spec:
@@ -10,14 +11,16 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: {{ .Release.Name }}
+      app: "{{ template "neo4j.appName" . }}"
   template:
     metadata:
       labels:
-        app: {{ .Release.Name }}
+        app: "{{ template "neo4j.appName" . }}"
+        helm.neo4j.com/instance: "{{ .Release.Name }}"
       annotations:
         "checksum/{{ .Release.Name }}-config": {{ include (print $.Template.BasePath "/neo4j-config.yaml") . | sha256sum }}
     spec:
+      serviceAccountName: "{{ .Release.Name }}"
       securityContext: {{toYaml .Values.securityContext | nindent 8 }}
       containers:
         - name: "{{ .Chart.Name }}"
@@ -32,6 +35,13 @@ spec:
                 name: "{{ .Release.Name }}-env"
             - secretRef:
                 name: "{{ .Release.Name }}-auth"
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: SERVICE_DOMAIN
+              value: "{{ .Release.Name }}-internal.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}"
           ports:
             - containerPort: 7474
               name: http
@@ -77,6 +87,7 @@ spec:
         {{- /* neo4j.conf settings. Using a projected volume allows keys defined later in the list of configMaps to override keys defined earlier in the list of configmaps. */}}
         - name: neo4j-conf
           projected:
+            defaultMode: 0440
             sources:
               - configMap:
                   name: "{{ .Release.Name }}-default-config"
@@ -109,7 +120,7 @@ spec:
         storageClassName: "{{ .Values.volumeClaimTemplates.storageClassName }}"
         selector: # adding a selector here helps us to use only Persistent Volumes that have been created and labelled specifically for neo4j
           matchLabels:
-            app: "{{ .Release.Name }}"
+            app: "{{ template "neo4j.appName" . }}"
         accessModes: {{ toYaml .Values.volumeClaimTemplates.accessModes | nindent 10 }}
         resources:
           requests:

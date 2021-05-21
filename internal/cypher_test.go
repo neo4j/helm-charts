@@ -245,7 +245,7 @@ func awaitConnectivity(err error, driver neo4j.Driver) error {
 				return err
 			} else {
 				fmt.Printf("Connectivity check failed (%s), retrying...", err)
-				time.Sleep(time.Second)
+				time.Sleep(5 * time.Second)
 			}
 		}
 	}

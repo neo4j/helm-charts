@@ -39,4 +39,4 @@ fi
 
 helm install --namespace "${NAMESPACE}" "${PERSISTENT_VOLUME_NAME}" ./neo4j-docker-desktop-pv --set neo4j.name="${RELEASE_NAME}" --set hostPath="${PERSISTENT_VOLUME_HOST_PATH}"
 
-echo "Persistent volume created. To remove the persistent volume run `helm uninstall --namespace "${NAMESPACE}" "${PERSISTENT_VOLUME_NAME}"`"
+echo "Persistent volume created. To remove the persistent volume run 'helm uninstall --namespace "${NAMESPACE}" "${PERSISTENT_VOLUME_NAME}"'"

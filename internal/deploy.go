@@ -157,7 +157,7 @@ func helmInstallCommands() [][]string {
 	}
 }
 
-var defaultPassword = fmt.Sprintf("%d", RandomIntBetween(100000, 999999999))
+var defaultPassword = fmt.Sprintf("a%da", RandomIntBetween(100000, 999999999))
 
 func baseHelmCommand(helmCommand string, extraHelmArguments ...string) []string {
 	var helmArgs = []string{

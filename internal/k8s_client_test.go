@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"time"
 
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/remotecommand"
@@ -29,10 +30,7 @@ func init() {
 	CheckError(err)
 }
 func CheckProbes(t *testing.T) error {
-	pods, err := Clientset.CoreV1().Pods("neo4j").List(context.TODO(), v1.ListOptions{})
-	if err != nil {
-		return fmt.Errorf("Failed to get Pods options: %v", err)
-	}
+
 	// getting Probes values from values.yaml
 	type ValuesYaml struct {
 		ReadinessProbe struct {
@@ -60,17 +58,37 @@ func CheckProbes(t *testing.T) error {
 		return fmt.Errorf("Error parsing YAML file: %v", err)
 	}
 	pods_map := make(map[string]int32)
-	for _, opt := range pods.Items {
-		for _, container := range opt.Spec.Containers {
-			pods_map[container.Name+"_LivenessProbe"] = container.LivenessProbe.PeriodSeconds
-			pods_map[container.Name+"_ReadinessProbe"] = container.ReadinessProbe.PeriodSeconds
+
+	podsLiveness := "neo4j_LivenessProbe"
+	podsReadiness := "neo4j_ReadinessProbe"
+
+	for start := time.Now(); time.Since(start) < 60 * time.Second; {
+		pods, err := Clientset.CoreV1().Pods("neo4j").List(context.TODO(), v1.ListOptions{})
+		if err != nil {
+			return fmt.Errorf("Failed to get Pods options: %v", err)
+		}
+
+		var emptyProbesFound = false
+		for _, opt := range pods.Items {
+			for _, container := range opt.Spec.Containers {
+				if container.LivenessProbe.PeriodSeconds == 0 || container.ReadinessProbe.PeriodSeconds == 0 {
+					emptyProbesFound = true
+				}
+				pods_map[container.Name+"_LivenessProbe"] = container.LivenessProbe.PeriodSeconds
+				pods_map[container.Name+"_ReadinessProbe"] = container.ReadinessProbe.PeriodSeconds
+			}
+		}
+		if emptyProbesFound {
+			continue
+		} else {
+			break
 		}
 	}
-	podsLiveness := "neo4j_LivenessProbe"
+
 	yamlConfigLiveness := yamlConfig.LivenessProbe.PeriodSeconds
 	// TODO: these assertions seem slightly flaky. I think we might need to wait for the pod to be running before checking them or something
 	assert.Equal(t, yamlConfigLiveness,  pods_map[podsLiveness], "LivenessProbe mismatch")
-	podsReadiness := "neo4j_ReadinessProbe"
+
 	yamlConfigReadiness := yamlConfig.ReadinessProbe.PeriodSeconds
 	assert.Equal(t, yamlConfigReadiness, pods_map[podsReadiness], "ReadinessProbe mismatch")
 	return nil
@@ -78,7 +96,7 @@ func CheckProbes(t *testing.T) error {
 
 func CheckServiceAnnotations(t *testing.T) (err error) {
 	var services = getAllServices(t)
-	assert.Equal(t, 2, len(services.Items))
+	assert.Equal(t, 3, len(services.Items))
 
 	// by default they should have no annotations
 	for _, service := range services.Items {
@@ -88,7 +106,9 @@ func CheckServiceAnnotations(t *testing.T) (err error) {
 	// when we add annotations via helm
 	err = runAll("helm", [][]string{
 		baseHelmCommand("upgrade",
-			"--set", "externalService.annotations.foo=bar", "--set", "internalService.annotations.foo=bar",
+			"--set", "externalService.annotations.foo=bar",
+			"--set", "internalService.annotations.foo=bar",
+			"--set", "dnsService.annotations.foo=bar",
 		),
 	}, true)
 	if err != nil {
@@ -97,7 +117,7 @@ func CheckServiceAnnotations(t *testing.T) (err error) {
 
 	// then the services get annotations
 	services = getAllServices(t)
-	assert.Equal(t, 2, len(services.Items))
+	assert.Equal(t, 3, len(services.Items))
 
 	for _, service := range services.Items {
 		assert.Equal(t, "bar", getOurAnnotations(service)["foo"])
