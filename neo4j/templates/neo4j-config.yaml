@@ -5,7 +5,6 @@ metadata:
   name: {{ .Release.Name }}-k8s-config
   namespace: {{ .Release.Namespace }}
 data:
-  dbms.mode: SINGLE
   dbms.default_listen_address: "0.0.0.0"
   dbms.ssl.policy.bolt.enabled: "{{ if .Values.ssl.bolt.privateKey.secretName }}true{{ else }}false{{ end }}"
   dbms.ssl.policy.https.enabled: "{{ if .Values.ssl.https.privateKey.secretName }}true{{ else }}false{{ end }}"
@@ -46,7 +45,22 @@ metadata:
   name: {{ .Release.Name }}-default-config
   namespace: {{ .Release.Namespace }}
 data:
+  # Helm defaults
+  dbms.mode: SINGLE
+  dbms.default_advertised_address: "$(bash -c 'echo ${SERVICE_DOMAIN}')"
+
+  # Other
+  dbms.config.strict_validation: "true"
+
+  # Clustering
+  causal_clustering.discovery_type: K8S
+  causal_clustering.kubernetes.service_port_name: "tcp-discovery"
+  causal_clustering.kubernetes.label_selector: "app={{ template "neo4j.appName" . }},helm.neo4j.com/service=internal,neo4j.com/dbms.mode=CORE"
+
+  # Logging
   {{- /* TODO: Figure out a different way to handle logs. I dislike remapping the log location to the data directory like this */}}
   dbms.directories.logs: "/data/logs"
+
+  # Neo4j defaults
   {{- /* TODO: figure out how to use lookup to detect if there is an existing default configMap and require user to explicitly force overwrite */}}
   {{- include "neo4j.configYaml" $confFile | nindent 2 }}

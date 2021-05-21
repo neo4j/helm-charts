@@ -6,7 +6,7 @@ metadata:
   labels:
     type: local
     # the app name is used to link this persistent volume to the Neo4j StatefulSet
-    app: "{{ required "neo4j.name is required" .Values.neo4j.name }}"
+    app: "{{ template "neo4j.appName" . }}"
 spec:
   storageClassName: "{{ .Values.neo4j.storageClassName }}"
   hostPath:

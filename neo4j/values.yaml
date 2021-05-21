@@ -26,7 +26,6 @@ image:
 
 # Neo4j configuration (yaml format)
 config:
-  dbms.default_database: "neo4j"
   dbms.config.strict_validation: "true"
 
 # Neo4j configuration (text format)
@@ -88,6 +87,11 @@ ssl:
     revokedCerts:
       sources: [ ]
 
+# A headless service that ensures the statefulset gets a dns entry
+dnsService:
+  # Annotations for the dns service
+  annotations: { }
+
 # A headless service
 internalService:
   # Annotations for the internal service
@@ -119,3 +123,5 @@ externalService:
       enabled: true #Set this to true to expose BOLT externally
     backup:
       enabled: false #Set this to true to expose backup port externally (n.b. this could have security implications. Backup is not authenticated by default)
+
+clusterDomain: "cluster.local"
