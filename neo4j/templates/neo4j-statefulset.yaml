@@ -40,8 +40,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
-            - name: SERVICE_DOMAIN
-              value: "{{ .Release.Name }}-internal.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}"
+            - name: SERVICE_ADMIN
+              value: "{{ .Release.Name }}-admin.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}"
+            - name: SERVICE_NEO4J
+              value: "{{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}"
           ports:
             - containerPort: 7474
               name: http
@@ -117,10 +119,18 @@ spec:
     - metadata:
         name: "data"
       spec:
+        {{- if .Values.volumeClaimTemplates.useDefaultStorageClass }}
+          {{- if .Values.volumeClaimTemplates.storageClassName }}
+            {{ fail "If useDefaultStorageClass is set true then storageClassName must be null or empty." }}
+          {{- end }}
+        {{- else }}
         storageClassName: "{{ .Values.volumeClaimTemplates.storageClassName }}"
+        {{- end }}
+        {{- if eq "manual" .Values.volumeClaimTemplates.storageClassName | or .Values.volumeClaimTemplates.useVolumeSelector }}
         selector: # adding a selector here helps us to use only Persistent Volumes that have been created and labelled specifically for neo4j
           matchLabels:
             app: "{{ template "neo4j.appName" . }}"
+        {{- end }}
         accessModes: {{ toYaml .Values.volumeClaimTemplates.accessModes | nindent 10 }}
         resources:
           requests:

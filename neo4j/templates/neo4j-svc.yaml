@@ -7,14 +7,15 @@ metadata:
   namespace: "{{ .Release.Namespace }}"
   labels:
     app: "{{ template "neo4j.appName" . }}"
-    helm.neo4j.com/service: "dns"
-  {{- with .Values.dnsService.annotations }}
+    helm.neo4j.com/instance: "{{ .Release.Name }}"
+    helm.neo4j.com/service: "neo4j"
+  {{- with .Values.neo4jService.annotations }}
   annotations:
   {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
   publishNotReadyAddresses: false
-  clusterIP: None
+  type: ClusterIP
   selector:
     app: "{{ template "neo4j.appName" . }}"
     helm.neo4j.com/instance: "{{ .Release.Name }}"
@@ -24,6 +25,10 @@ spec:
       targetPort: 7474
       name: tcp-http
     - protocol: TCP
+      port: 7473
+      targetPort: 7473
+      name: tcp-https
+    - protocol: TCP
       port: 7687
       targetPort: 7687
       name: tcp-bolt
@@ -32,14 +37,14 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: "{{ .Release.Name }}-internal"
+  name: "{{ .Release.Name }}-admin"
   namespace: "{{ .Release.Namespace }}"
   labels:
     helm.neo4j.com/instance: "{{ .Release.Name }}"
     app: "{{ template "neo4j.appName" . }}"
     neo4j.com/dbms.mode: "{{ index .Values.config "dbms.mode" | default "SINGLE" }}"
-    helm.neo4j.com/service: "internal"
-  {{- with .Values.internalService.annotations }}
+    helm.neo4j.com/service: "admin"
+  {{- with .Values.adminService.annotations }}
   annotations:
   {{- toYaml . | nindent 4 }}
   {{- end }}
@@ -59,11 +64,15 @@ spec:
       targetPort: 7687
       name: tcp-bolt
     - protocol: TCP
+      port: 7474
+      targetPort: 7474
+      name: tcp-http
+    {{- with .Values.adminService.ports }}
+    {{- if $clusterEnabled }}
+    - protocol: TCP
       port: 7688
       targetPort: 7688
       name: tcp-boltrouting
-    {{- with .Values.internalService.ports }}
-    {{- if $clusterEnabled }}
     - protocol: TCP
       port: 5000
       targetPort: 5000
@@ -106,14 +115,18 @@ metadata:
   namespace: "{{ .Release.Namespace }}"
   labels:
     app: "{{ template "neo4j.appName" . }}"
-    helm.neo4j.com/instance: "{{ .Release.Name }}"
+    helm.neo4j.com/name: "{{ template "neo4j.appName" . }}"
     helm.neo4j.com/service: "external"
   {{- with .Values.externalService.annotations }}
   annotations:
   {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  type: LoadBalancer
+  type: "LoadBalancer"
+  {{- with .Values.externalService.loadBalancerIP }}
+  loadBalancerIP: "{{ . }}"
+  {{- end }}
+  sessionAffinity: None
   externalTrafficPolicy: Local
   ports:
     {{- with .Values.externalService.ports }}
