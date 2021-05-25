@@ -107,8 +107,8 @@ func CheckServiceAnnotations(t *testing.T) (err error) {
 	err = runAll("helm", [][]string{
 		baseHelmCommand("upgrade",
 			"--set", "externalService.annotations.foo=bar",
-			"--set", "internalService.annotations.foo=bar",
-			"--set", "dnsService.annotations.foo=bar",
+			"--set", "adminService.annotations.foo=bar",
+			"--set", "neo4jService.annotations.foo=bar",
 		),
 	}, true)
 	if err != nil {

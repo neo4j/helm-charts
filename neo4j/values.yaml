@@ -12,6 +12,7 @@ neo4j:
 # The volumeClaimTemplates will provide stable storage
 volumeClaimTemplates:
   # Using "manual" storage class prevents automatic provisioning and only makes use of manually defined PVCs
+  useDefaultStorageClass: false
   storageClassName: "manual"
   accessModes:
     - ReadWriteOnce
@@ -91,16 +92,16 @@ ssl:
     revokedCerts:
       sources: [ ]
 
-# A headless service that ensures the statefulset gets a dns entry
-dnsService:
-  # Annotations for the dns service
+# A ClusterIP service for Neo4j driver applications and Neo4j Browser
+neo4jService:
+  # Annotations for the Neo4j service
   annotations: { }
 
-# A headless service
-internalService:
-  # Annotations for the internal service
+# A headless service (DNS only) for cluster admin and ops tasks
+adminService:
+  # Annotations for the admin service
   annotations: { }
-  # Neo4j ports to include in k8s internal service
+  # Neo4j ports to include in admin service
   ports:
     # Ports for Neo4j Cluster
     cluster:
@@ -108,15 +109,19 @@ internalService:
     # Ports for Neo4j metrics
     metrics:
       graphite:
-        enabled: false
+        enabled: true
       prometheus:
-        enabled: false
+        enabled: true
       jmx:
         enabled: false
 
 externalService:
   # Annotations for the external service
   annotations: { }
+
+  # A reserved/static IP that you want the LoadBalancer to use (usually optional, depending on the load balancer implmentation)
+  loadBalancerIP: NULL
+
   # Neo4j ports to include in external service
   ports:
     http:
