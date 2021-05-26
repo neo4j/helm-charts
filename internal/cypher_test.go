@@ -5,6 +5,7 @@ import (
 	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/ini.v1"
+	"k8s.io/utils/env"
 	"log"
 	"strings"
 	"sync"
@@ -107,7 +108,8 @@ func (c *Neo4jConfiguration) Update(other Neo4jConfiguration) Neo4jConfiguration
 func TestPopulateFromFile(t *testing.T) {
 
 	t.Run("populateFromFile", func(t *testing.T) {
-		conf := (&Neo4jConfiguration{}).PopulateFromFile("neo4j/neo4j.conf")
+		edition := env.GetString("NEO4J_EDITION", "")
+		conf := (&Neo4jConfiguration{}).PopulateFromFile(fmt.Sprintf("neo4j/neo4j-%s.conf", edition))
 		value, found := conf.conf["dbms.windows_service_name"]
 		assert.True(t, found)
 		assert.Equal(t, "neo4j", value)

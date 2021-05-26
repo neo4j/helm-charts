@@ -1,3 +1,4 @@
+{{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -27,7 +28,7 @@ spec:
           {{- if .Values.image.customImage }}
           image: "{{ .Values.image.customImage }}"
           {{- else }}
-          image: "{{ .Chart.Name }}:{{ .Chart.AppVersion }}-enterprise"
+          image: "neo4j:{{ .Chart.AppVersion }}{{ if $isEnterprise }}-enterprise{{ end }}"
           {{- end }}
           imagePullPolicy: "{{ .Values.image.imagePullPolicy }}"
           envFrom:

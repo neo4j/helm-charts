@@ -171,6 +171,10 @@ func baseHelmCommand(helmCommand string, extraHelmArguments ...string) []string 
 		helmArgs = append(helmArgs, "--set", "image.customImage="+value)
 	}
 
+	if value, found := os.LookupEnv("NEO4J_EDITION"); found {
+		helmArgs = append(helmArgs, "--set", "neo4j.edition="+value)
+	}
+
 	return helmArgs
 }
 

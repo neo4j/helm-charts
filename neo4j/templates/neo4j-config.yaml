@@ -1,3 +1,4 @@
+{{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
 {{- $clusterEnabled := or ( index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" ) ( index .Values.config "dbms.clustering.enable" | default "" | regexMatch "(?i)true|yes" ) }}
 # Neo4j config values that are required for neo4j to work correctly in Kubernetes, these are not overridden by user-provided values
 apiVersion: v1
@@ -12,7 +13,11 @@ data:
   dbms.connector.bolt.tls_level: "{{ if .Values.ssl.https.privateKey.secretName }}REQUIRED{{ else }}DISABLED{{ end }}"
   dbms.connector.https.enabled: "{{ if .Values.ssl.https.privateKey.secretName }}true{{ else }}false{{ end }}"
 ---
-{{- $confFile := .Files.Get "neo4j.conf" -}}
+{{- $confFileName := "neo4j-community.conf" -}}
+{{- if $isEnterprise }}
+  {{- $confFileName = "neo4j-enterprise.conf" -}}
+{{- end }}
+{{- $confFile := .Files.Get $confFileName -}}
 {{- $configImport := .Values.configImport -}}
 # User-provided Neo4j config values
 apiVersion: v1
