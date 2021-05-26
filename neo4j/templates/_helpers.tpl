@@ -14,3 +14,14 @@ dbms.jvm.additional: |- {{- range ( regexFindAll "(?m)^\\s*(dbms\\.jvm\\.additio
 {{- define "neo4j.appName" -}}
   {{- .Values.neo4j.name | default .Release.Name }}
 {{- end -}}
+
+{{/*
+If no password is set in `Values.neo4j.password` generates a new random password and modifies Values.neo4j so that the same password is available everywhere
+*/}}
+{{- define "neo4j.password" -}}
+  {{- if not .Values.neo4j.password }}
+    {{- $password :=  randAlphaNum 14 }}
+    {{- $ignored := set .Values.neo4j "password" $password }}
+  {{- end -}}
+  {{- .Values.neo4j.password }}
+{{- end -}}
