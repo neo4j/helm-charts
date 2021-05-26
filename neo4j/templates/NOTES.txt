@@ -1,0 +1,31 @@
+{{- define "namespaceParameter" -}}
+{{ if ne "default" .Release.Namespace }} --namespace "{{.Release.Namespace}}"{{ end }}
+{{- end -}}
+
+{{- if .Release.IsInstall -}}
+Thank you for installing {{ .Chart.Name }}.
+
+Your release "{{ .Release.Name }}" has been installed {{ if ne "default" .Release.Namespace }} in namespace "{{ .Release.Namespace }}"{{ end }}.
+
+To view the progress of the rollout try:
+
+  $ kubectl{{ template "namespaceParameter" . }} rollout status --watch --timeout=600s statefulset/{{ .Release.Name }}
+
+Once rollout is complete you can log in to Neo4j use the username neo4j and the password "{{ template "neo4j.password" . }}". Try:
+
+  $ kubectl run --rm -it{{ template "namespaceParameter" . }} --image "{{ .Values.image.customImage }}" cypher-shell \
+     -- cypher-shell -a {{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }} -u neo4j -p "{{ template "neo4j.password" . }}"
+
+{{- else if .Release.IsUpgrade -}}
+Thank you for using {{ .Chart.Name }}.
+
+To view the status of changes to your release "{{ .Release.Name }}" {{ if ne "default" .Release.Namespace }} in namespace "{{ .Release.Namespace }}"{{ end }}, try:
+
+  $ kubectl{{ template "namespaceParameter" . }} rollout status --watch --timeout=600s statefulset/{{ .Release.Name }}
+
+  $ helm status {{ .Release.Name }}{{ template "namespaceParameter" . }}
+
+{{ else }}
+Thank you for using {{ .Chart.Name }}.
+
+{{- end -}}
