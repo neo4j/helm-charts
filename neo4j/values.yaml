@@ -4,6 +4,7 @@
 neo4j:
   # If not set or empty a random password will be generated
   password: ""
+  edition: "community"
 
 # The volumeClaimTemplates will provide stable storage
 volumeClaimTemplates:
@@ -21,7 +22,6 @@ volumeClaimTemplates:
 # Specs for the Neo4j docker image
 image:
   imagePullPolicy: IfNotPresent
-  customImage: "neo4j:4.3-enterprise"
 
 ### Neo4j Configuration
 
