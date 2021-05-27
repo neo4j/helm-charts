@@ -11,11 +11,14 @@ To view the progress of the rollout try:
 
   $ kubectl{{ template "namespaceParameter" . }} rollout status --watch --timeout=600s statefulset/{{ .Release.Name }}
 
-Once rollout is complete you can log in to Neo4j use the username neo4j and the password "{{ template "neo4j.password" . }}". Try:
+The neo4j user's password has been set to "{{ template "neo4j.password" . }}".
 
-  $ kubectl run --rm -it{{ template "namespaceParameter" . }} --image "{{ .Values.image.customImage }}" cypher-shell \
-     -- cypher-shell -a {{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }} -u neo4j -p "{{ template "neo4j.password" . }}"
+Once rollout is complete you can log in to Neo4j at "neo4j://{{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:7687". Try:
 
+  $ kubectl run --rm -it{{ template "namespaceParameter" . }} --image "{{ template "neo4j.image" . }}" cypher-shell \
+     -- cypher-shell -a "neo4j://{{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:7687" -u neo4j -p "{{ template "neo4j.password" . }}"
+
+Graphs are everywhere!
 {{- else if .Release.IsUpgrade -}}
 Thank you for using {{ .Chart.Name }}.
 
@@ -23,9 +26,12 @@ To view the status of changes to your release "{{ .Release.Name }}" {{ if ne "de
 
   $ kubectl{{ template "namespaceParameter" . }} rollout status --watch --timeout=600s statefulset/{{ .Release.Name }}
 
-  $ helm status {{ .Release.Name }}{{ template "namespaceParameter" . }}
+Once rollout is complete you can log in to Neo4j at "neo4j://{{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}". Try:
 
+  $ kubectl run --rm -it{{ template "namespaceParameter" . }} --image "{{ template "neo4j.image" . }}" cypher-shell \
+     -- cypher-shell -a "neo4j://{{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:7687"
+
+Graphs are everywhere!
 {{ else }}
 Thank you for using {{ .Chart.Name }}.
-
-{{- end -}}
+{{- end }}
