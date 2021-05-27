@@ -1,4 +1,3 @@
-{{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -24,12 +23,8 @@ spec:
       serviceAccountName: "{{ .Release.Name }}"
       securityContext: {{toYaml .Values.securityContext | nindent 8 }}
       containers:
-        - name: "{{ .Chart.Name }}"
-          {{- if .Values.image.customImage }}
-          image: "{{ .Values.image.customImage }}"
-          {{- else }}
-          image: "neo4j:{{ .Chart.AppVersion }}{{ if $isEnterprise }}-enterprise{{ end }}"
-          {{- end }}
+        - name: "neo4j"
+          image: "{{ template "neo4j.image" . }}"
           imagePullPolicy: "{{ .Values.image.imagePullPolicy }}"
           envFrom:
             - configMapRef:

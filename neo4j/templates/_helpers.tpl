@@ -21,7 +21,18 @@ If no password is set in `Values.neo4j.password` generates a new random password
 {{- define "neo4j.password" -}}
   {{- if not .Values.neo4j.password }}
     {{- $password :=  randAlphaNum 14 }}
+    {{- $secretName := printf "%s-auth" .Release.Name }}
+    {{- $secret := (lookup "v1" "Secret" .Release.Namespace $secretName) }}
+
+    {{- if $secret }}
+      {{- $password = index $secret.data "NEO4J_AUTH" | b64dec | trimPrefix "neo4j/" -}}
+    {{- end -}}
     {{- $ignored := set .Values.neo4j "password" $password }}
   {{- end -}}
   {{- .Values.neo4j.password }}
+{{- end -}}
+
+{{- define "neo4j.image" -}}
+{{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
+{{- if .Values.image.customImage }}{{ .Values.image.customImage }}{{ else }}neo4j:{{ .Chart.AppVersion }}{{ if $isEnterprise }}-enterprise{{ end }}{{ end -}}
 {{- end -}}
