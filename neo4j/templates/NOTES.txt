@@ -2,6 +2,8 @@
 {{ if ne "default" .Release.Namespace }} --namespace "{{.Release.Namespace}}"{{ end }}
 {{- end -}}
 
+{{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "" | regexMatch "(?i)no|false" -}}
+
 {{- if .Release.IsInstall -}}
 Thank you for installing {{ .Chart.Name }}.
 
@@ -11,16 +13,25 @@ To view the progress of the rollout try:
 
   $ kubectl{{ template "namespaceParameter" . }} rollout status --watch --timeout=600s statefulset/{{ .Release.Name }}
 
+{{ if $authDisabled }}
+Neo4j user authentication has been disabled, you do not need a username or password to connect to Neo4j in this configuration.
+{{- else }}
 The neo4j user's password has been set to "{{ template "neo4j.password" . }}".
+{{- end }}
 
 Once rollout is complete you can log in to Neo4j at "neo4j://{{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:7687". Try:
 
+
   $ kubectl run --rm -it{{ template "namespaceParameter" . }} --image "{{ template "neo4j.image" . }}" cypher-shell \
-     -- cypher-shell -a "neo4j://{{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:7687" -u neo4j -p "{{ template "neo4j.password" . }}"
+     -- cypher-shell -a "neo4j://{{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:7687"{{ if not $authDisabled }} -u neo4j -p "{{ template "neo4j.password" . }}"{{ end }}
 
 Graphs are everywhere!
 {{- else if .Release.IsUpgrade -}}
 Thank you for using {{ .Chart.Name }}.
+
+{{ if $authDisabled }}
+Neo4j user authentication has been disabled, you do not need a username or password to connect to Neo4j in this configuration.
+{{- end }}
 
 To view the status of changes to your release "{{ .Release.Name }}" {{ if ne "default" .Release.Namespace }} in namespace "{{ .Release.Namespace }}"{{ end }}, try:
 

@@ -1,3 +1,5 @@
+{{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "" | regexMatch "(?i)no|false" -}}
+
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -29,8 +31,10 @@ spec:
           envFrom:
             - configMapRef:
                 name: "{{ .Release.Name }}-env"
+            {{- if not $authDisabled }}
             - secretRef:
                 name: "{{ .Release.Name }}-auth"
+            {{- end }}
           env:
             - name: POD_NAME
               valueFrom:
