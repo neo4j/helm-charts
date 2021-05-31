@@ -1,5 +1,6 @@
-{{ $password := include "neo4j.password" . | printf "neo4j/%v" | b64enc }}
-
+{{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "" | regexMatch "(?i)no|false" -}}
+{{- if not $authDisabled -}}
+{{- $password := include "neo4j.password" . | printf "neo4j/%v" | b64enc -}}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -10,3 +11,4 @@ metadata:
 type: Opaque
 data:
   NEO4J_AUTH: "{{ $password }}"
+{{- end -}}
