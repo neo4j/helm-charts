@@ -18,10 +18,25 @@ spec:
     metadata:
       labels:
         app: "{{ template "neo4j.appName" . }}"
+        helm.neo4j.com/pod_category: "neo4j-instance" # used for anti affinity rules
         helm.neo4j.com/instance: "{{ .Release.Name }}"
       annotations:
         "checksum/{{ .Release.Name }}-config": {{ include (print $.Template.BasePath "/neo4j-config.yaml") . | sha256sum }}
     spec:
+      {{- if .Values.podAntiAffinity }}
+      affinity:
+        {{- if kindIs "bool" .Values.podAntiAffinity }}
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: "{{ template "neo4j.appName" . }}"
+                  helm.neo4j.com/pod_category: "neo4j-instance"
+              topologyKey: kubernetes.io/hostname
+        {{- else }}
+        podAntiAffinity: {{  toYaml .Values.podAntiAffinity | nindent 10 }}
+        {{- end }}
+      {{- end }}
       serviceAccountName: "{{ .Release.Name }}"
       securityContext: {{toYaml .Values.securityContext | nindent 8 }}
       containers:

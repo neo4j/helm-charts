@@ -21,7 +21,7 @@ If no password is set in `Values.neo4j.password` generates a new random password
 {{- define "neo4j.password" -}}
   {{- if not .Values.neo4j.password }}
     {{- $password :=  randAlphaNum 14 }}
-    {{- $secretName := printf "%s-auth" .Release.Name }}
+    {{- $secretName := include "neo4j.appName" . | printf "%s-auth" }}
     {{- $secret := (lookup "v1" "Secret" .Release.Namespace $secretName) }}
 
     {{- if $secret }}
