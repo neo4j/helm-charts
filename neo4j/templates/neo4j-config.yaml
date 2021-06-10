@@ -59,6 +59,7 @@ data:
 
   # Other
   dbms.config.strict_validation: "true"
+  dbms.logs.user.stdout_enabled: "false"
 
   {{- if $clusterEnabled }}
   # Clustering
@@ -72,6 +73,9 @@ data:
   causal_clustering.raft_advertised_address: "$(bash -c 'echo ${SERVICE_ADMIN}')"
   causal_clustering.transaction_advertised_address: "$(bash -c 'echo ${SERVICE_ADMIN}')"
   dbms.routing.advertised_address: "$(bash -c 'echo ${SERVICE_ADMIN}')"
+
+  # Other stuff
+  causal_clustering.server_groups: "$(bash -c 'echo pod-${POD_NAME}')"
   {{- end }}
 
   # Logging

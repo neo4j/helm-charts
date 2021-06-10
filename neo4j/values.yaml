@@ -43,7 +43,6 @@ securityContext:
   runAsGroup: 7474
   fsGroup: 7474
 
-
 # Readiness probes will send a kill signal to the container if
 # it fails enough times.  It's therefore very important
 # that initialDelaySeconds give the cluster time to form, because
@@ -130,3 +129,5 @@ externalService:
       enabled: false #Set this to true to expose backup port externally (n.b. this could have security implications. Backup is not authenticated by default)
 
 clusterDomain: "cluster.local"
+
+podAntiAffinity: true
