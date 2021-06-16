@@ -71,8 +71,10 @@ ssl:
   bolt:
     privateKey:
       secretName:  # we set up the template to grab `private.key` from this secret
+      subPath:  # we specify the privateKey value name to get from the secret
     publicCertificate:
       secretName:  # we set up the template to grab `public.crt` from this secret
+      subPath:  # we specify the publicCertificate value name to get from the secret
     trustedCerts:
       sources: [ ] # a sources array for a projected volume - this allows someone to (relatively) easily mount multiple public certs from multiple secrets for example.
     revokedCerts:
@@ -80,8 +82,10 @@ ssl:
   https:
     privateKey:
       secretName:
+      subPath:
     publicCertificate:
       secretName:
+      subPath:
     trustedCerts:
       sources: [ ]
     revokedCerts:

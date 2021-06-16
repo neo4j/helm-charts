@@ -75,12 +75,22 @@ spec:
               mountPath: "/config/neo4j.conf"
             {{ if .Values.ssl.bolt.privateKey.secretName }}
             - name: bolt-cert
-              mountPath: /var/lib/neo4j/certificates/bolt
+              mountPath: /var/lib/neo4j/certificates/bolt/public.crt
+              subPath: "{{ .Values.ssl.bolt.publicCertificate.subPath | default "public.crt" }}"
+              readOnly: true
+            - name: bolt-key
+              mountPath: /var/lib/neo4j/certificates/bolt/private.key
+              subPath: "{{ .Values.ssl.bolt.privateKey.subPath | default "private.key"  }}"
               readOnly: true
             {{ end }}
             {{ if .Values.ssl.bolt.privateKey.secretName }}
             - name: https-cert
-              mountPath: /var/lib/neo4j/certificates/https
+              mountPath: /var/lib/neo4j/certificates/https/public.crt
+              subPath: "{{ .Values.ssl.https.publicCertificate.subPath | default "public.crt"  }}"
+              readOnly: true
+            - name: https-key
+              mountPath: /var/lib/neo4j/certificates/https/private.key
+              subPath: "{{ .Values.ssl.https.privateKey.subPath | default "private.key" }}"
               readOnly: true
             {{ end }}
           readinessProbe:
@@ -112,24 +122,22 @@ spec:
                   name: "{{ .Release.Name }}-user-config"
               - configMap:
                   name: "{{ .Release.Name }}-k8s-config"
-        {{ if .Values.ssl.bolt.privateKey.secretName }}
+        {{ if ( or .Values.ssl.bolt.privateKey.secretName .Values.ssl.bolt.publicCertificate.secretName ) }}
         - name: bolt-cert
-          projected:
-            sources:
-              - secret:
-                  name: {{ .Values.ssl.bolt.publicCertificate.secretName }}
-              - secret:
-                  name: {{ .Values.ssl.bolt.privateKey.secretName }}
+          secret:
+            secretName: "{{ required "When ssl.bolt.publicCertificate is set then ssl.bolt.privateKey.secretName must also be provided" .Values.ssl.bolt.publicCertificate.secretName }}"
+        - name: bolt-key
+          secret:
+            secretName:  "{{ required "When ssl.bolt.privateKey is set then ssl.bolt.publicCertificate.secretName must also be provided" .Values.ssl.bolt.privateKey.secretName }}"
         {{ end }}
-        {{ if .Values.ssl.https.privateKey.secretName }}
+        {{ if ( or .Values.ssl.https.privateKey.secretName .Values.ssl.https.publicCertificate.secretName ) }}
         - name: https-cert
-          projected:
-            sources:
-              - secret:
-                  name: {{ .Values.ssl.https.publicCertificate.secretName }}
-              - secret:
-                  name: {{ .Values.ssl.https.privateKey.secretName }}
-         {{ end }}
+          secret:
+            secretName: "{{ required "When ssl.https.publicCertificate is set then ssl.https.privateKey.secretName must also be provided" .Values.ssl.https.publicCertificate.secretName }}"
+        - name: https-key
+          secret:
+            secretName: "{{ required "When ssl.https.privateKey is set then ssl.https.publicCertificate.secretName must also be provided" .Values.ssl.https.privateKey.secretName }}"
+        {{ end }}
   volumeClaimTemplates:
     - metadata:
         name: "data"
