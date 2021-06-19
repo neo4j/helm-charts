@@ -1,4 +1,7 @@
+{{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
 {{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "" | regexMatch "(?i)no|false" -}}
+
+{{- template "neo4j.checkLicenseAgreement" . -}}
 
 apiVersion: apps/v1
 kind: StatefulSet

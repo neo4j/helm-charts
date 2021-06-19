@@ -5,8 +5,8 @@ import (
 	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/ini.v1"
-	"k8s.io/utils/env"
 	"log"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -100,16 +100,35 @@ func (c *Neo4jConfiguration) Update(other Neo4jConfiguration) Neo4jConfiguration
 
 	return Neo4jConfiguration{
 		jvmArgs: jvmArgs,
-		conf: c.conf,
+		conf:    c.conf,
 	}
+}
+
+func containsString(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }
 
 // Very quick test to check that no errors are thrown and a couple of values from the default neo4j conf show up
 func TestPopulateFromFile(t *testing.T) {
+	testCases := []string{
+		"enterprise",
+		"community",
+	}
 
-	t.Run("populateFromFile", func(t *testing.T) {
-		edition := env.GetString("NEO4J_EDITION", "")
+	edition, found := os.LookupEnv("NEO4J_EDITION")
+	if found && !containsString(testCases, edition) {
+		testCases = append(testCases, edition)
+	}
+
+	doTestCase := func(t *testing.T, edition string) {
+		t.Parallel()
 		conf := (&Neo4jConfiguration{}).PopulateFromFile(fmt.Sprintf("neo4j/neo4j-%s.conf", edition))
+
 		value, found := conf.conf["dbms.windows_service_name"]
 		assert.True(t, found)
 		assert.Equal(t, "neo4j", value)
@@ -120,14 +139,20 @@ func TestPopulateFromFile(t *testing.T) {
 		assert.Contains(t, conf.jvmArgs, "-XX:+UnlockDiagnosticVMOptions")
 		assert.Contains(t, conf.jvmArgs, "-XX:+DebugNonSafepoints")
 		assert.Greater(t, len(conf.jvmArgs), 1)
-	})
+	}
+
+	for i, testCase := range testCases {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			doTestCase(t, testCase)
+		})
+	}
 }
 
 func CheckNeo4jConfiguration(t *testing.T, expectedConfiguration Neo4jConfiguration) (err error) {
 
 	var runtimeConfig []*neo4j.Record
 	var expectedOverrides = map[string]string{
-		"dbms.connector.https.enabled": "true",
+		"dbms.connector.https.enabled":  "true",
 		"dbms.connector.bolt.tls_level": "REQUIRED",
 	}
 
@@ -203,7 +228,7 @@ func runQuery(cypher string, params map[string]interface{}) ([]*neo4j.Record, er
 	defer cleanupProxy()
 	CheckError(proxyErr)
 
-	driver, err := neo4j.NewDriver(dbUri, *authToUse, func (config *neo4j.Config) {
+	driver, err := neo4j.NewDriver(dbUri, *authToUse, func(config *neo4j.Config) {
 	})
 	// Handle driver lifetime based on your application lifetime requirements  driver's lifetime is usually
 	// bound by the application lifetime, which usually implies one driver instance per application

@@ -57,7 +57,7 @@ func runSubTests(t *testing.T) {
 }
 
 func installNeo4j(t *testing.T) func() {
-	cleanup := InstallNeo4j(CurrentZone, CurrentProject)
+	cleanup := InstallNeo4j(CurrentZone(), CurrentProject())
 
 	return func() {
 		t.Logf("Beginning cleanup of '%s'", t.Name())

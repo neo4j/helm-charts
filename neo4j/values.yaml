@@ -5,6 +5,13 @@ neo4j:
   # If not set or empty a random password will be generated
   password: ""
   edition: "community"
+  # In order to use Neo4j Enterprise Edition you must have a Neo4j license agreement.
+  #
+  # More information is also available at: https://neo4j.com/licensing/
+  # Email inquiries can be directed to: licensing@neo4j.com
+  #
+  # Set acceptLicenseAgreement: "yes" to confirm that you have a Neo4j license agreement.
+  acceptLicenseAgreement: "no"
 
 # The volumeClaimTemplates will provide stable storage
 volumeClaimTemplates:

@@ -27,9 +27,10 @@ import (
 	"sync"
 	"time"
 )
+
 var (
 	Clientset *kubernetes.Clientset
-	Config *restclient.Config
+	Config    *restclient.Config
 )
 
 const storageSize = "10Gi"
@@ -138,7 +139,7 @@ func buildCert(random io.Reader, private *ecdsa.PrivateKey, validFrom time.Time,
 	}
 	template.DNSNames = []string{"localhost", "localhost:7473", "localhost:7687"}
 	template.NotBefore = validFrom
-	template.NotAfter = validFrom.Add(100*time.Hour )
+	template.NotAfter = validFrom.Add(100 * time.Hour)
 	template.KeyUsage = x509.KeyUsageCertSign
 	template.IsCA = true
 	template.BasicConstraintsValid = true
@@ -155,17 +156,20 @@ func buildCert(random io.Reader, private *ecdsa.PrivateKey, validFrom time.Time,
 
 var defaultPassword = fmt.Sprintf("a%da", RandomIntBetween(100000, 999999999))
 
+func minHelmCommand(helmCommand string, releaseName string) []string {
+	return []string{helmCommand, releaseName, "./neo4j"}
+}
+
 func baseHelmCommand(helmCommand string, extraHelmArguments ...string) []string {
-	var helmArgs = []string{
-		helmCommand, "neo4j", "./neo4j", "--namespace", "neo4j", "--create-namespace", "--wait", "--timeout", "300s",
+
+	var helmArgs = minHelmCommand(helmCommand, "neo4j")
+	helmArgs = append(helmArgs,
+		"--namespace", "neo4j", "--create-namespace", "--wait", "--timeout", "300s",
 		"--set", "volumeClaimTemplates.request="+storageSize,
 		"--set", "neo4j.password="+defaultPassword,
 		"--set", "ssl.bolt.privateKey.secretName=bolt-key", "--set", "ssl.bolt.publicCertificate.secretName=bolt-cert",
 		"--set", "ssl.https.privateKey.secretName=https-key", "--set", "ssl.https.publicCertificate.secretName=https-cert",
-	}
-	if extraHelmArguments != nil && len(extraHelmArguments) > 0 {
-		helmArgs = append(helmArgs, extraHelmArguments...)
-	}
+	)
 
 	if value, found := os.LookupEnv("NEO4J_DOCKER_IMG"); found {
 		helmArgs = append(helmArgs, "--set", "image.customImage="+value)
@@ -173,6 +177,13 @@ func baseHelmCommand(helmCommand string, extraHelmArguments ...string) []string 
 
 	if value, found := os.LookupEnv("NEO4J_EDITION"); found {
 		helmArgs = append(helmArgs, "--set", "neo4j.edition="+value)
+		if strings.EqualFold(value, "enterprise") {
+			helmArgs = append(helmArgs, "--set", "neo4j.acceptLicenseAgreement=yes")
+		}
+	}
+
+	if extraHelmArguments != nil && len(extraHelmArguments) > 0 {
+		helmArgs = append(helmArgs, extraHelmArguments...)
 	}
 
 	return helmArgs
@@ -182,7 +193,7 @@ func helmInstallCommands() [][]string {
 	return [][]string{
 		{"install", "neo4j-pv", "./neo4j-gcloud-pv", "--wait", "--timeout", "120s",
 			"--set", "neo4j.name=neo4j",
-			"--set", "capacity.storage="+storageSize,
+			"--set", "capacity.storage=" + storageSize,
 			"--set", "gcePersistentDisk=neo4j-data-disk"},
 		baseHelmCommand("install"),
 	}
@@ -268,7 +279,7 @@ func proxyBolt() (Closeable, error) {
 
 func InstallNeo4j(zone Zone, project Project) Closeable {
 
-	err := run("gcloud", "container", "clusters", "get-credentials", string(CurrentCluster))
+	err := run("gcloud", "container", "clusters", "get-credentials", string(CurrentCluster()))
 	CheckError(err)
 
 	var closeables []Closeable
@@ -316,6 +327,15 @@ func InstallNeo4j(zone Zone, project Project) Closeable {
 	return cleanup
 }
 
+func createDisk(zone Zone, project Project) (Closeable, error) {
+	err := run("gcloud", "compute", "disks", "create", "--size", storageSize, "--type", "pd-ssd", "neo4j-data-disk", "--zone="+string(zone), "--project="+string(project))
+	return func() error { return deleteDisk(zone, project) }, err
+}
+
+func deleteDisk(zone Zone, project Project) error {
+	return run("gcloud", "compute", "disks", "delete", "neo4j-data-disk", "--zone="+string(zone), "--project="+string(project))
+}
+
 func combineErrors(firstOrNil error, second error) error {
 	if firstOrNil == nil {
 		firstOrNil = second
@@ -338,15 +358,6 @@ func runAll(bin string, commands [][]string, failFast bool) error {
 		}
 	}
 	return combinedErrors
-}
-
-func createDisk(zone Zone, project Project) (Closeable, error) {
-	err := run("gcloud", "compute", "disks", "create", "--size", storageSize, "--type", "pd-ssd", "neo4j-data-disk", "--zone="+string(zone), "--project="+string(project))
-	return func() error { return deleteDisk(zone, project) }, err
-}
-
-func deleteDisk(zone Zone, project Project) error {
-	return run("gcloud", "compute", "disks", "delete", "neo4j-data-disk", "--zone="+string(zone), "--project="+string(project))
 }
 
 func run(command string, args ...string) error {
