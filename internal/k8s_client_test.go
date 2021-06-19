@@ -29,7 +29,7 @@ func init() {
 	Clientset, err = kubernetes.NewForConfig(Config)
 	CheckError(err)
 }
-func CheckProbes(t *testing.T) error {
+func CheckProbes(t *testing.T, releaseName *ReleaseName) error {
 
 	// getting Probes values from values.yaml
 	type ValuesYaml struct {
@@ -62,8 +62,8 @@ func CheckProbes(t *testing.T) error {
 	podsLiveness := "neo4j_LivenessProbe"
 	podsReadiness := "neo4j_ReadinessProbe"
 
-	for start := time.Now(); time.Since(start) < 60 * time.Second; {
-		pods, err := Clientset.CoreV1().Pods("neo4j").List(context.TODO(), v1.ListOptions{})
+	for start := time.Now(); time.Since(start) < 60*time.Second; {
+		pods, err := Clientset.CoreV1().Pods(string(releaseName.namespace())).List(context.TODO(), v1.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("Failed to get Pods options: %v", err)
 		}
@@ -87,15 +87,15 @@ func CheckProbes(t *testing.T) error {
 
 	yamlConfigLiveness := yamlConfig.LivenessProbe.PeriodSeconds
 	// TODO: these assertions seem slightly flaky. I think we might need to wait for the pod to be running before checking them or something
-	assert.Equal(t, yamlConfigLiveness,  pods_map[podsLiveness], "LivenessProbe mismatch")
+	assert.Equal(t, yamlConfigLiveness, pods_map[podsLiveness], "LivenessProbe mismatch")
 
 	yamlConfigReadiness := yamlConfig.ReadinessProbe.PeriodSeconds
 	assert.Equal(t, yamlConfigReadiness, pods_map[podsReadiness], "ReadinessProbe mismatch")
 	return nil
 }
 
-func CheckServiceAnnotations(t *testing.T) (err error) {
-	var services = getAllServices(t)
+func CheckServiceAnnotations(t *testing.T, releaseName *ReleaseName) (err error) {
+	var services = getAllServices(t, releaseName)
 	assert.Equal(t, 3, len(services.Items))
 
 	// by default they should have no annotations
@@ -105,7 +105,7 @@ func CheckServiceAnnotations(t *testing.T) (err error) {
 
 	// when we add annotations via helm
 	err = runAll("helm", [][]string{
-		baseHelmCommand("upgrade",
+		baseHelmCommand("upgrade", releaseName,
 			"--set", "externalService.annotations.foo=bar",
 			"--set", "adminService.annotations.foo=bar",
 			"--set", "neo4jService.annotations.foo=bar",
@@ -116,7 +116,7 @@ func CheckServiceAnnotations(t *testing.T) (err error) {
 	}
 
 	// then the services get annotations
-	services = getAllServices(t)
+	services = getAllServices(t, releaseName)
 	assert.Equal(t, 3, len(services.Items))
 
 	for _, service := range services.Items {
@@ -148,14 +148,14 @@ func matchesAnyPrefix(knownPrefixes []string, key string) bool {
 	return false
 }
 
-func getAllServices(t *testing.T) *coreV1.ServiceList {
-	services, err := Clientset.CoreV1().Services("neo4j").List(context.TODO(), v1.ListOptions{})
+func getAllServices(t *testing.T, releaseName *ReleaseName) *coreV1.ServiceList {
+	services, err := Clientset.CoreV1().Services(string(releaseName.namespace())).List(context.TODO(), v1.ListOptions{})
 	assert.NoError(t, err)
 	return services
 }
 
-func RunAsNonRoot(t *testing.T) error {
-	pods, err := Clientset.CoreV1().Pods("neo4j").List(context.TODO(), v1.ListOptions{})
+func RunAsNonRoot(t *testing.T, releaseName *ReleaseName) error {
+	pods, err := Clientset.CoreV1().Pods(string(releaseName.namespace())).List(context.TODO(), v1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to get Pods options: %v", err)
 	}
@@ -165,18 +165,31 @@ func RunAsNonRoot(t *testing.T) error {
 	}
 	return nil
 }
-func ExecInPod(t *testing.T) error {
+
+func CheckExecInPod(t *testing.T, releaseName *ReleaseName) error {
 	cmd := []string{
 		"bash",
 		"-c",
 		"id -u",
 	}
+
+	stdout, stderr, err := ExecInPod(releaseName, cmd)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "7474", stdout, "UID is different than expected")
+	assert.Empty(t, stderr, "stderr is not empty")
+
+	return err
+}
+
+func ExecInPod(releaseName *ReleaseName, cmd []string) (string, string, error) {
+
 	var (
 		stdout bytes.Buffer
 		stderr bytes.Buffer
 	)
-	req := Clientset.CoreV1().RESTClient().Post().Resource("pods").Name("neo4j-0").
-		Namespace("neo4j").SubResource("exec")
+	req := Clientset.CoreV1().RESTClient().Post().Resource("pods").Name(releaseName.podName()).
+		Namespace(string(releaseName.namespace())).SubResource("exec")
 	option := &coreV1.PodExecOptions{
 		Command: cmd,
 		Stdin:   false,
@@ -190,20 +203,17 @@ func ExecInPod(t *testing.T) error {
 	)
 	exec, err := remotecommand.NewSPDYExecutor(Config, "POST", req.URL())
 	if err != nil {
-		return err
+		return "", "", err
 	}
 	err = exec.Stream(remotecommand.StreamOptions{
 		Stdout: &stdout,
 		Stderr: &stderr,
 	})
 	if err != nil {
-		return err
+		return "", "", err
 	}
 	s := stdout.String()
 	s = strings.TrimSuffix(s, "\n")
-	assert.Equal(t, "7474", s, "UID is different than expected")
 	e := stderr.String()
-	assert.Empty(t, e, "stderr is not empty")
-
-	return nil
+	return s, e, nil
 }

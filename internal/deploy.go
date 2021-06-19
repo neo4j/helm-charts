@@ -25,6 +25,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -59,6 +60,12 @@ func init() {
 	CheckError(err)
 }
 
+func CheckError(err error) {
+	if err != nil {
+		log.Panic(err)
+	}
+}
+
 func publicKey(priv interface{}) interface{} {
 	switch k := priv.(type) {
 	case *rsa.PrivateKey:
@@ -86,7 +93,7 @@ func pemBlockForKey(priv interface{}) *pem.Block {
 	}
 }
 
-func generateCerts() {
+func generateCerts(tempDir string) {
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		log.Fatal(err)
@@ -103,7 +110,7 @@ func generateCerts() {
 	out := &bytes.Buffer{}
 	pem.Encode(out, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
 
-	f, err := os.Create("/tmp/public.crt")
+	f, err := os.Create(tempDir + "/public.crt")
 
 	if err != nil {
 		log.Fatal(err)
@@ -117,7 +124,7 @@ func generateCerts() {
 	}
 	out.Reset()
 	pem.Encode(out, pemBlockForKey(priv))
-	f, err = os.Create("/tmp/private.key")
+	f, err = os.Create(tempDir + "/private.key")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -156,15 +163,15 @@ func buildCert(random io.Reader, private *ecdsa.PrivateKey, validFrom time.Time,
 
 var defaultPassword = fmt.Sprintf("a%da", RandomIntBetween(100000, 999999999))
 
-func minHelmCommand(helmCommand string, releaseName string) []string {
-	return []string{helmCommand, releaseName, "./neo4j"}
+func minHelmCommand(helmCommand string, releaseName *ReleaseName) []string {
+	return []string{helmCommand, string(*releaseName), "./neo4j"}
 }
 
-func baseHelmCommand(helmCommand string, extraHelmArguments ...string) []string {
+func baseHelmCommand(helmCommand string, releaseName *ReleaseName, extraHelmArguments ...string) []string {
 
-	var helmArgs = minHelmCommand(helmCommand, "neo4j")
+	var helmArgs = minHelmCommand(helmCommand, releaseName)
 	helmArgs = append(helmArgs,
-		"--namespace", "neo4j", "--create-namespace", "--wait", "--timeout", "300s",
+		"--namespace", string(releaseName.namespace()), "--create-namespace",
 		"--set", "volumeClaimTemplates.request="+storageSize,
 		"--set", "neo4j.password="+defaultPassword,
 		"--set", "ssl.bolt.privateKey.secretName=bolt-key", "--set", "ssl.bolt.publicCertificate.secretName=bolt-cert",
@@ -189,40 +196,51 @@ func baseHelmCommand(helmCommand string, extraHelmArguments ...string) []string 
 	return helmArgs
 }
 
-func helmInstallCommands() [][]string {
+func helmInstallCommands(releaseName *ReleaseName, diskName PersistentDiskName) [][]string {
 	return [][]string{
-		{"install", "neo4j-pv", "./neo4j-gcloud-pv", "--wait", "--timeout", "120s",
-			"--set", "neo4j.name=neo4j",
+		{"install", string(*releaseName+"-pv"), "./neo4j-gcloud-pv", "--wait", "--timeout", "120s",
+			"--set", "neo4j.name="+string(*releaseName),
 			"--set", "capacity.storage=" + storageSize,
-			"--set", "gcePersistentDisk=neo4j-data-disk"},
-		baseHelmCommand("install"),
+			"--set", "gcePersistentDisk="+string(diskName)},
+		baseHelmCommand("install", releaseName, "--wait", "--timeout", "300s"),
 	}
 }
 
-var kCreateSecret = [][]string{
-	{"create", "ns", "neo4j"},
-	{"create", "secret", "-n", "neo4j", "generic", "bolt-cert", "--from-file=/tmp/public.crt"},
-	{"create", "secret", "-n", "neo4j", "generic", "https-cert", "--from-file=/tmp/public.crt"},
-	{"create", "secret", "-n", "neo4j", "generic", "bolt-key", "--from-file=/tmp/private.key"},
-	{"create", "secret", "-n", "neo4j", "generic", "https-key", "--from-file=/tmp/private.key"},
+func kCreateSecret(namespace Namespace) ([][]string, Closeable, error) {
+	tempDir, err := os.MkdirTemp("", string(namespace))
+	generateCerts(tempDir)
+
+	return [][]string{
+		{"create", "secret", "-n", string(namespace), "generic", "bolt-cert", fmt.Sprintf("--from-file=%s/public.crt", tempDir)},
+		{"create", "secret", "-n", string(namespace), "generic", "https-cert", fmt.Sprintf("--from-file=%s/public.crt", tempDir)},
+		{"create", "secret", "-n", string(namespace), "generic", "bolt-key", fmt.Sprintf("--from-file=%s/private.key", tempDir)},
+		{"create", "secret", "-n", string(namespace), "generic", "https-key", fmt.Sprintf("--from-file=%s/private.key", tempDir)},
+	}, func() error { return os.RemoveAll(tempDir) }, err
 }
 
-var helmCleanupCommands = [][]string{
-	{"uninstall", "neo4j", "--namespace", "neo4j"},
-	{"uninstall", "neo4j-pv"},
+func helmCleanupCommands(releaseName *ReleaseName) [][]string {
+	return [][]string{
+		{"uninstall", string(*releaseName), "--namespace", string(releaseName.namespace())},
+		{"uninstall", string(*releaseName) + "-pv"},
+	}
 }
 
-var kCleanupCommands = [][]string{
-	{"delete", "namespace", "neo4j", "--ignore-not-found"},
+func kCleanupCommands(namespace Namespace) [][]string {
+	return [][]string{{"delete", "namespace", string(namespace), "--ignore-not-found"}}
 }
 
 type Closeable func() error
 
-func proxyBolt() (Closeable, error) {
+var portOffset int32 = 0
+func proxyBolt(releaseName *ReleaseName) (int32, Closeable, error) {
+	localHttpPort := 9000 + atomic.AddInt32(&portOffset, 1)
+	localBoltPort := 9100 + atomic.AddInt32(&portOffset, 1)
 
-	cmd := exec.Command("kubectl", "--namespace", "neo4j", "port-forward", "service/neo4j-external", "7474:7474", "7687:7687")
+	cmd := exec.Command("kubectl", "--namespace", string(releaseName.namespace()), "port-forward", fmt.Sprintf("service/%s-external", *releaseName), fmt.Sprintf("%d:7474",localHttpPort), fmt.Sprintf("%d:7687",localBoltPort))
 	stdout, err := cmd.StdoutPipe()
-	CheckError(err)
+	if err != nil {
+		return localBoltPort, nil, err
+	}
 	// Use the same pipe for standard error
 	cmd.Stderr = cmd.Stdout
 
@@ -267,7 +285,7 @@ func proxyBolt() (Closeable, error) {
 		}
 	}
 
-	return func() error {
+	return localBoltPort, func() error {
 		var cmdErr = cmd.Process.Kill()
 		if cmdErr != nil {
 			log.Print("failed to kill process: ", cmdErr)
@@ -277,10 +295,12 @@ func proxyBolt() (Closeable, error) {
 	}, err
 }
 
-func InstallNeo4j(zone Zone, project Project) Closeable {
+func InstallNeo4j(zone Zone, project Project, releaseName *ReleaseName) (Closeable, error) {
 
 	err := run("gcloud", "container", "clusters", "get-credentials", string(CurrentCluster()))
-	CheckError(err)
+	if err != nil {
+		return nil, err
+	}
 
 	var closeables []Closeable
 	addCloseable := func(closeable Closeable) {
@@ -304,36 +324,47 @@ func InstallNeo4j(zone Zone, project Project) Closeable {
 	defer func() (err error) {
 		if !completed {
 			err = cleanup()
-			CheckError(err)
+			log.Print(err)
 		}
 		return err
 	}()
 
-	cleanupDisk, err := createDisk(zone, project)
+	diskName, cleanupDisk, err := createDisk(zone, project, releaseName)
 	addCloseable(cleanupDisk)
-	CheckError(err)
+	if err != nil {
+		return cleanup, err
+	}
 
-	addCloseable(func() error { return runAll("kubectl", kCleanupCommands, false) })
+	cleanupNamespace, err := createNamespace(releaseName)
+	addCloseable(cleanupNamespace)
+	if err != nil {
+		return cleanup, err
+	}
 
-	generateCerts()
-	err = runAll("kubectl", kCreateSecret, true)
-	CheckError(err)
+	createSecretCommands, cleanupCertificates, err := kCreateSecret(releaseName.namespace())
+	addCloseable(cleanupCertificates)
+	if err != nil {
+		return cleanup, err
+	}
 
-	addCloseable(func() error { return runAll("helm", helmCleanupCommands, false) })
-	err = runAll("helm", helmInstallCommands(), true)
-	CheckError(err)
+	err = runAll("kubectl", createSecretCommands, true)
+	if err != nil {
+		return cleanup, err
+	}
+
+	addCloseable(func() error { return runAll("helm", helmCleanupCommands(releaseName), false) })
+	err = runAll("helm", helmInstallCommands(releaseName, diskName), true)
+	if err != nil {
+		return cleanup, err
+	}
+
+	err = run("kubectl", "--namespace", string(releaseName.namespace()), "rollout", "status", "--watch", "--timeout=120s", "statefulset/" + string(*releaseName))
+	if err != nil {
+		return cleanup, err
+	}
 
 	completed = true
-	return cleanup
-}
-
-func createDisk(zone Zone, project Project) (Closeable, error) {
-	err := run("gcloud", "compute", "disks", "create", "--size", storageSize, "--type", "pd-ssd", "neo4j-data-disk", "--zone="+string(zone), "--project="+string(project))
-	return func() error { return deleteDisk(zone, project) }, err
-}
-
-func deleteDisk(zone Zone, project Project) error {
-	return run("gcloud", "compute", "disks", "delete", "neo4j-data-disk", "--zone="+string(zone), "--project="+string(project))
+	return cleanup, err
 }
 
 func combineErrors(firstOrNil error, second error) error {
@@ -358,6 +389,45 @@ func runAll(bin string, commands [][]string, failFast bool) error {
 		}
 	}
 	return combinedErrors
+}
+
+func createDisk(zone Zone, project Project, releaseName *ReleaseName) (PersistentDiskName, Closeable, error) {
+	diskName := releaseName.diskName()
+	err := run("gcloud", "compute", "disks", "create", "--size", storageSize, "--type", "pd-ssd", string(diskName), "--zone="+string(zone), "--project="+string(project))
+	return PersistentDiskName(diskName), func() error { return deleteDisk(zone, project, string(diskName)) }, err
+}
+
+type ReleaseName string
+
+func (r *ReleaseName) namespace() Namespace {
+	return Namespace("neo4j-" + string(*r))
+}
+
+func (r *ReleaseName) diskName() PersistentDiskName {
+	return PersistentDiskName(fmt.Sprintf("neo4j-data-disk-%s", *r))
+}
+
+func (r *ReleaseName) podName() string {
+	return string(*r) + "-0"
+}
+
+func (r *ReleaseName) envConfigMapName() string {
+	return string(*r) + "-env"
+}
+
+
+type Namespace string
+type PersistentDiskName string
+
+func createNamespace(releaseName *ReleaseName) (Closeable, error) {
+	err := run("kubectl", "create", "ns", string(releaseName.namespace()))
+	return func() error {
+		return runAll("kubectl", kCleanupCommands(releaseName.namespace()), false)
+	}, err
+}
+
+func deleteDisk(zone Zone, project Project, diskName string) error {
+	return run("gcloud", "compute", "disks", "delete", diskName, "--zone="+string(zone), "--project="+string(project))
 }
 
 func run(command string, args ...string) error {

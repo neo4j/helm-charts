@@ -6,11 +6,12 @@ import (
 	"os/exec"
 )
 
-const DefaultTemplateReleaseName = "releaseName"
+
+var DefaultHelmTemplateReleaseName = ReleaseName("my-release")
 
 func helmTemplate(helmTemplateArgs ...string) (error, *K8sResources) {
 	if len(helmTemplateArgs) == 0 || helmTemplateArgs[0] != "template" {
-		helmTemplateArgs = append(minHelmCommand("template", DefaultTemplateReleaseName), helmTemplateArgs...)
+		helmTemplateArgs = append(minHelmCommand("template", &DefaultHelmTemplateReleaseName), helmTemplateArgs...)
 	}
 
 	out, err := exec.Command("helm", helmTemplateArgs...).CombinedOutput()

@@ -6,64 +6,21 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/ini.v1"
 	"log"
-	"os"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 )
 
-var dbUri = "neo4j+ssc://localhost:7687"
-var user = "neo4j"
-var dbName = "neo4j"
-
-// BEGIN auth stuff
 const neo4jConfJvmAdditionalKey = "dbms.jvm.additional"
+const dbUri = "neo4j+ssc://localhost"
+const user = "neo4j"
+const dbName = "neo4j"
 
-var desiredPassword = fmt.Sprintf("%d", RandomIntBetween(100000, 999999999))
-
-// pointer to the auth token that the driver should use
-var authToUse *neo4j.AuthToken = nil
-
-// Mutex for operations on the authToUse pointer
-var authLock sync.Mutex
-
-func SetPassword() error {
-	authLock.Lock()
-	defer authLock.Unlock()
-
-	var dbNameBefore = dbName
-	defer func() {
-		dbUri = strings.Replace(dbUri, "bolt+ssc://", "neo4j+ssc://", 1)
-		dbName = dbNameBefore
-	}()
-	dbUri = strings.Replace(dbUri, "neo4j+ssc://", "bolt+ssc://", 1)
-	dbName = "system"
-
-	var auth = neo4j.BasicAuth(user, defaultPassword, "")
-	authToUse = &auth
-	_, err := runQuery(fmt.Sprintf("ALTER CURRENT USER SET PASSWORD FROM '%s' TO '%s'", defaultPassword, desiredPassword), noParams)
-	if err == nil {
-		auth = neo4j.BasicAuth(user, desiredPassword, "")
-		authToUse = &auth
-	} else {
-		authToUse = nil
-	}
-	return err
-}
-
-// Check that we have setup driver auth token
-func checkAuthSet() bool {
-	authLock.Lock()
-	defer authLock.Unlock()
-	return authToUse != nil
-}
-
-// END auth stuff
+var authToUse = neo4j.BasicAuth(user, defaultPassword, "")
 
 // Track the total number of nodes that we've created
-var createdNodes int64 = 0
+var createdNodes map[ReleaseName]*int64 = map[ReleaseName]*int64{}
 
 // empty param map (makes queries without params more readable)
 var noParams = map[string]interface{}{}
@@ -73,18 +30,22 @@ type Neo4jConfiguration struct {
 	jvmArgs []string
 }
 
-func (c *Neo4jConfiguration) PopulateFromFile(filename string) Neo4jConfiguration {
+func (c *Neo4jConfiguration) PopulateFromFile(filename string) (*Neo4jConfiguration, error) {
 	yamlFile, err := ini.ShadowLoad(filename)
-	CheckError(err)
+	if err != nil {
+		return nil, err
+	}
 	defaultSection := yamlFile.Section("")
 
 	jvmAdditional, err := defaultSection.GetKey(neo4jConfJvmAdditionalKey)
-	CheckError(err)
+	if err != nil {
+		return nil, err
+	}
 	c.jvmArgs = jvmAdditional.StringsWithShadows("\n")
 	c.conf = defaultSection.KeysHash()
 	delete(c.conf, neo4jConfJvmAdditionalKey)
 
-	return *c
+	return c, err
 }
 
 func (c *Neo4jConfiguration) Update(other Neo4jConfiguration) Neo4jConfiguration {
@@ -104,51 +65,13 @@ func (c *Neo4jConfiguration) Update(other Neo4jConfiguration) Neo4jConfiguration
 	}
 }
 
-func containsString(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
+func CheckNeo4jConfiguration(t *testing.T, releaseName *ReleaseName, expectedConfigurationFile string) (err error) {
+
+	expectedConfiguration, err := (&Neo4jConfiguration{}).PopulateFromFile(expectedConfigurationFile)
+	if err != nil {
+		assert.NoError(t, err)
+		return err
 	}
-	return false
-}
-
-// Very quick test to check that no errors are thrown and a couple of values from the default neo4j conf show up
-func TestPopulateFromFile(t *testing.T) {
-	testCases := []string{
-		"enterprise",
-		"community",
-	}
-
-	edition, found := os.LookupEnv("NEO4J_EDITION")
-	if found && !containsString(testCases, edition) {
-		testCases = append(testCases, edition)
-	}
-
-	doTestCase := func(t *testing.T, edition string) {
-		t.Parallel()
-		conf := (&Neo4jConfiguration{}).PopulateFromFile(fmt.Sprintf("neo4j/neo4j-%s.conf", edition))
-
-		value, found := conf.conf["dbms.windows_service_name"]
-		assert.True(t, found)
-		assert.Equal(t, "neo4j", value)
-
-		_, jvmKeyFound := conf.conf[neo4jConfJvmAdditionalKey]
-		assert.False(t, jvmKeyFound)
-
-		assert.Contains(t, conf.jvmArgs, "-XX:+UnlockDiagnosticVMOptions")
-		assert.Contains(t, conf.jvmArgs, "-XX:+DebugNonSafepoints")
-		assert.Greater(t, len(conf.jvmArgs), 1)
-	}
-
-	for i, testCase := range testCases {
-		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			doTestCase(t, testCase)
-		})
-	}
-}
-
-func CheckNeo4jConfiguration(t *testing.T, expectedConfiguration Neo4jConfiguration) (err error) {
 
 	var runtimeConfig []*neo4j.Record
 	var expectedOverrides = map[string]string{
@@ -161,8 +84,10 @@ func CheckNeo4jConfiguration(t *testing.T, expectedConfiguration Neo4jConfigurat
 		if !time.Now().Before(deadline) {
 			return fmt.Errorf("timed out fetching config:  %d", len(runtimeConfig))
 		}
-		runtimeConfig, err = runQuery("CALL dbms.listConfig() YIELD name, value", nil)
-		CheckError(err)
+		runtimeConfig, err = runQuery(releaseName, "CALL dbms.listConfig() YIELD name, value", nil)
+		if err != nil {
+			return err
+		}
 		if len(runtimeConfig) >= len(expectedConfiguration.conf) {
 			break
 		}
@@ -175,7 +100,7 @@ func CheckNeo4jConfiguration(t *testing.T, expectedConfiguration Neo4jConfigurat
 		nameUntyped, foundName := record.Get("name")
 		valueUntyped, foundValue := record.Get("value")
 		if !(foundName && foundValue) {
-			panic("record is missing expected name or value")
+			return fmt.Errorf("record is missing expected name or value")
 		}
 
 		name := nameUntyped.(string)
@@ -192,19 +117,23 @@ func CheckNeo4jConfiguration(t *testing.T, expectedConfiguration Neo4jConfigurat
 	return err
 }
 
-func CreateNode() error {
-	_, err := runQuery("CREATE (n:Item { id: $id, name: $name }) RETURN n.id, n.name", map[string]interface{}{
+func CreateNode(releaseName *ReleaseName) error {
+	_, err := runQuery(releaseName, "CREATE (n:Item { id: $id, name: $name }) RETURN n.id, n.name", map[string]interface{}{
 		"id":   1,
 		"name": "Item 1",
 	})
+	if _, found := createdNodes[*releaseName]; !found {
+		var initialValue int64 = 0
+		createdNodes[*releaseName] = &initialValue
+	}
 	if err == nil {
-		atomic.AddInt64(&createdNodes, 1)
+		atomic.AddInt64(createdNodes[*releaseName], 1)
 	}
 	return err
 }
 
-func CheckNodeCount(t *testing.T) error {
-	result, err := runQuery("MATCH (n) RETURN COUNT(n) AS count", noParams)
+func CheckNodeCount(t *testing.T, releaseName *ReleaseName) error {
+	result, err := runQuery(releaseName, "MATCH (n) RETURN COUNT(n) AS count", noParams)
 
 	if err != nil {
 		return err
@@ -212,23 +141,22 @@ func CheckNodeCount(t *testing.T) error {
 
 	if value, found := result[0].Get("count"); found {
 		countedNodes := value.(int64)
-		assert.Equal(t, atomic.LoadInt64(&createdNodes), countedNodes)
+		assert.Equal(t, atomic.LoadInt64(createdNodes[*releaseName]), countedNodes)
 		return err
 	} else {
 		return fmt.Errorf("expected at least one result")
 	}
 }
 
-func runQuery(cypher string, params map[string]interface{}) ([]*neo4j.Record, error) {
-	if authToUse == nil && !checkAuthSet() {
-		return nil, fmt.Errorf("driver's auth token has not yet been set")
+func runQuery(releaseName *ReleaseName, cypher string, params map[string]interface{}) ([]*neo4j.Record, error) {
+
+	boltPort, cleanupProxy, proxyErr := proxyBolt(releaseName)
+	defer cleanupProxy()
+	if proxyErr != nil {
+		return nil, proxyErr
 	}
 
-	cleanupProxy, proxyErr := proxyBolt()
-	defer cleanupProxy()
-	CheckError(proxyErr)
-
-	driver, err := neo4j.NewDriver(dbUri, *authToUse, func(config *neo4j.Config) {
+	driver, err := neo4j.NewDriver(fmt.Sprintf("%s:%d", dbUri, boltPort), authToUse, func(config *neo4j.Config) {
 	})
 	// Handle driver lifetime based on your application lifetime requirements  driver's lifetime is usually
 	// bound by the application lifetime, which usually implies one driver instance per application

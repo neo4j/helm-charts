@@ -103,7 +103,7 @@ func TestDefaultCommunityHelmTemplate(t *testing.T) {
 		assert.NotContains(t, container.Image, "enterprise")
 	}
 
-	envConfigMap := manifest.ofTypeWithName(&v1.ConfigMap{}, DefaultTemplateReleaseName+"-env").(*v1.ConfigMap)
+	envConfigMap := manifest.ofTypeWithName(&v1.ConfigMap{}, DefaultHelmTemplateReleaseName.envConfigMapName()).(*v1.ConfigMap)
 	assert.Equal(t, envConfigMap.Data["NEO4J_EDITION"], "COMMUNITY_K8S")
 }
 
@@ -125,7 +125,7 @@ func TestExplicitCommunityHelmTemplate(t *testing.T) {
 		assert.NotContains(t, container.Image, "enterprise")
 	}
 
-	envConfigMap := manifest.ofTypeWithName(&v1.ConfigMap{}, DefaultTemplateReleaseName+"-env").(*v1.ConfigMap)
+	envConfigMap := manifest.ofTypeWithName(&v1.ConfigMap{}, DefaultHelmTemplateReleaseName.envConfigMapName()).(*v1.ConfigMap)
 	assert.Equal(t, envConfigMap.Data["NEO4J_EDITION"], "COMMUNITY_K8S")
 }
 
@@ -133,7 +133,7 @@ func TestExplicitCommunityHelmTemplate(t *testing.T) {
 func TestBaseHelmTemplate(t *testing.T) {
 	extraArgs := []string{}
 
-	err, _ := helmTemplate(baseHelmCommand("template", extraArgs...)...)
+	err, _ := helmTemplate(baseHelmCommand("template", &DefaultHelmTemplateReleaseName, extraArgs...)...)
 	if !assert.NoError(t, err) {
 		return
 	}
