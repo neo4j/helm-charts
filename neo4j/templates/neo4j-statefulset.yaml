@@ -13,6 +13,7 @@ metadata:
   namespace: "{{ .Release.Namespace }}"
 spec:
   serviceName: "{{ .Release.Name }}"
+  podManagementPolicy: "Parallel" # This setting means that the StatefulSet controller doesn't block applying changes until the existing Pod is READY.
   replicas: 1
   selector:
     matchLabels:
@@ -46,6 +47,12 @@ spec:
         - name: "neo4j"
           image: "{{ template "neo4j.image" . }}"
           imagePullPolicy: "{{ .Values.image.imagePullPolicy }}"
+          {{- if .Values.neo4j.offlineMaintenanceModeEnabled }}
+          command:
+            - "bash"
+            - "-c"
+            - "while true; do echo 'Neo4j is not running. Pod is in offline maintenance mode. Remove neo4j.offlineMaintenanceModeEnabled setting and run `helm upgrade ...` to resume normal operation.'; sleep 60; done"
+          {{- end }}
           envFrom:
             - configMapRef:
                 name: "{{ .Release.Name }}-env"
@@ -102,6 +109,9 @@ spec:
             failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
             timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
             periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          {{- if .Values.neo4j.offlineMaintenanceModeEnabled }}
+          # liveness and startup probes are disabled in offlineMaintenanceMode
+          {{- else }}
           livenessProbe:
             tcpSocket:
               port: 7687
@@ -113,6 +123,7 @@ spec:
               port: 7687
             failureThreshold: {{ .Values.startupProbe.failureThreshold }}
             periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+          {{- end }}
       volumes:
         {{- /* neo4j.conf settings. Using a projected volume allows keys defined later in the list of configMaps to override keys defined earlier in the list of configmaps. */}}
         - name: neo4j-conf

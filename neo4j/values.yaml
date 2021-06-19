@@ -142,3 +142,6 @@ externalService:
 clusterDomain: "cluster.local"
 
 podAntiAffinity: true
+
+# log the neo4j user password set during install
+logInitialPassword: true

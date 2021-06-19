@@ -1,9 +1,25 @@
-{{- define "namespaceParameter" -}}
+{{- define "neo4j.namespaceParameter" -}}
 {{ if ne "default" .Release.Namespace }} --namespace "{{.Release.Namespace}}"{{ end }}
 {{- end -}}
 
-{{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "" | regexMatch "(?i)no|false" -}}
+{{- define "neo4j.logPassword" -}}
+{{ if .Values.logInitialPassword }}{{ template "neo4j.password" . }}{{ else }}**********{{ end }}
+{{- end -}}
 
+{{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "" | regexMatch "(?i)no|false" -}}
+{{- $offlineMaintenanceModeEnabled := .Values.neo4j.offlineMaintenanceModeEnabled }}
+
+{{- if $offlineMaintenanceModeEnabled -}}
+Your "{{ .Release.Name }}" has been placed in offline maintenance mode.
+
+The Neo4j pod is running with a 'dummy' process (it is not running Neo4j).
+In this state the Neo4j pod will never become "READY" in Kubernetes but you can use kubectl exec to execute commands in the Neo4j pod. To get a shell try:
+ $ kubectl exec "{{ .Release.Name }}-0" -it -- bash
+
+To run a long-running command use nohup to ensure that the job keeps running if kubectl exec is disconnected. E.g.
+ $ nohup neo4j-admin check-consistency --database=neo4j &> job.out < /dev/null &
+ $ tail -f job.out
+{{- else -}}
 {{- if .Release.IsInstall -}}
 Thank you for installing {{ .Chart.Name }}.
 
@@ -11,19 +27,18 @@ Your release "{{ .Release.Name }}" has been installed {{ if ne "default" .Releas
 
 To view the progress of the rollout try:
 
-  $ kubectl{{ template "namespaceParameter" . }} rollout status --watch --timeout=600s statefulset/{{ .Release.Name }}
+  $ kubectl{{ template "neo4j.namespaceParameter" . }} rollout status --watch --timeout=600s statefulset/{{ .Release.Name }}
 
 {{ if $authDisabled }}
 Neo4j user authentication has been disabled, you do not need a username or password to connect to Neo4j in this configuration.
 {{- else }}
-The neo4j user's password has been set to "{{ template "neo4j.password" . }}".
+The neo4j user's password has been set to "{{ template "neo4j.logPassword" . }}".
 {{- end }}
 
 Once rollout is complete you can log in to Neo4j at "neo4j://{{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:7687". Try:
 
-
-  $ kubectl run --rm -it{{ template "namespaceParameter" . }} --image "{{ template "neo4j.image" . }}" cypher-shell \
-     -- cypher-shell -a "neo4j://{{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:7687"{{ if not $authDisabled }} -u neo4j -p "{{ template "neo4j.password" . }}"{{ end }}
+  $ kubectl run --rm -it{{ template "neo4j.namespaceParameter" . }} --image "{{ template "neo4j.image" . }}" cypher-shell \
+     -- cypher-shell -a "neo4j://{{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:7687"{{ if not $authDisabled | and .Values.logInitialPassword}} -u neo4j -p "{{ template "neo4j.logPassword" . }}"{{ end }}
 
 Graphs are everywhere!
 {{- else if .Release.IsUpgrade -}}
@@ -35,14 +50,15 @@ Neo4j user authentication has been disabled, you do not need a username or passw
 
 To view the status of changes to your release "{{ .Release.Name }}" {{ if ne "default" .Release.Namespace }} in namespace "{{ .Release.Namespace }}"{{ end }}, try:
 
-  $ kubectl{{ template "namespaceParameter" . }} rollout status --watch --timeout=600s statefulset/{{ .Release.Name }}
+  $ kubectl{{ template "neo4j.namespaceParameter" . }} rollout status --watch --timeout=600s statefulset/{{ .Release.Name }}
 
 Once rollout is complete you can log in to Neo4j at "neo4j://{{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}". Try:
 
-  $ kubectl run --rm -it{{ template "namespaceParameter" . }} --image "{{ template "neo4j.image" . }}" cypher-shell \
+  $ kubectl run --rm -it{{ template "neo4j.namespaceParameter" . }} --image "{{ template "neo4j.image" . }}" cypher-shell \
      -- cypher-shell -a "neo4j://{{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:7687"
 
 Graphs are everywhere!
 {{ else }}
 Thank you for using {{ .Chart.Name }}.
+{{- end }}
 {{- end }}
