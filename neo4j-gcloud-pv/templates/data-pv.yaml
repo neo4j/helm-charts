@@ -6,12 +6,13 @@ metadata:
   labels:
     # the app name is used to link this persistent volume to the Neo4j StatefulSet
     app: "{{ template "neo4j.appName" . }}"
+    helm.neo4j.com/volume-role: "data"
 spec:
   accessModes:
     - ReadWriteOnce
   capacity:
-    storage: "{{ required "capacity.storage must be set explicitly" .Values.capacity.storage }}"
+    storage: "{{ required "data.capacity.storage must be set explicitly" .Values.data.capacity.storage }}"
   gcePersistentDisk:
-    pdName: "{{ .Values.gcePersistentDisk }}"
+    pdName: "{{ required "data.gcePersistentDisk is required (e.g. my-disk)" .Values.data.gcePersistentDisk }}"
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: "{{ .Values.neo4j.storageClassName }}"
+  storageClassName: "{{ .Values.data.storageClassName }}"

@@ -11,4 +11,5 @@ data:
   {{- end }}
   NEO4J_EDITION: "{{ .Values.neo4j.edition | upper }}_K8S"
   NEO4J_CONF: "/config/"
+  K8S_NEO4J_NAME: "{{ template "neo4j.name" . }}"
   EXTENDED_CONF: "yes"

@@ -2,9 +2,11 @@
 # This is a YAML-formatted file.
 
 neo4j:
-  # If not set or empty a random password will be generated
+  # If password is not set or empty a random password will be generated during installation
   password: ""
   edition: "community"
+  # set edition: "enterprise" to use Neo4j Enterprise Edition
+  #
   # In order to use Neo4j Enterprise Edition you must have a Neo4j license agreement.
   #
   # More information is also available at: https://neo4j.com/licensing/
@@ -12,25 +14,103 @@ neo4j:
   #
   # Set acceptLicenseAgreement: "yes" to confirm that you have a Neo4j license agreement.
   acceptLicenseAgreement: "no"
-
-# The volumeClaimTemplates will provide stable storage
-volumeClaimTemplates:
-  # Using "manual" storage class prevents automatic provisioning and only makes use of manually defined PVCs
-  useDefaultStorageClass: false
-  storageClassName: "manual"
-  accessModes:
-    - ReadWriteOnce
-  # Amount of disk storage to request. Some cloud providers allocate IOPS proportionally to disk size, if that is the case it may be necessary to set the disk request
-  # to a significantly larger value than is required just to store the database files.
-  # We recommend a disk size of at least 1Ti for performance or load testing and at least 100Gi for development work.
-  request: 100Gi
+  #
+  # set offlineMaintenanceModeEnabled: true to restart the StatefulSet without the Neo4j process running
+  # this can be used to perform tasks that cannot be performed when Neo4j is running such as `neo4j-admin dump`
+  offlineMaintenanceModeEnabled: false
 
 
-# Specs for the Neo4j docker image
-image:
-  imagePullPolicy: IfNotPresent
+# Additional volumes for Neo4j
+volumes:
+  # REQUIRED: specify a volume to use for data
+  data:
+    # Valid values are share|selector|defaultStorageClass|volume|volumeClaimTemplate|dynamic
+    mode: "selector"
 
-### Neo4j Configuration
+    # Only used if mode is set to "selector"
+    # Will attach to existing volumes that match the selector
+    selector:
+      storageClassName: "manual"
+      accessModes:
+        - ReadWriteOnce
+      requests:
+        storage: 100Gi
+      # A helm template to generate a label selector to match existing volumes n.b. both storageClassName and label selector must match existing volumes
+      selectorTemplate:
+        matchLabels:
+          app: "{{ .Values.neo4j.name }}"
+          helm.neo4j.com/volume-role: "data"
+
+    # Only used if mode is set to "defaultStorageClass"
+    # Dynamic provisioning using the default storageClass
+    defaultStorageClass:
+      accessModes:
+        - ReadWriteOnce
+      requests:
+        storage: 10Gi
+
+    # Only used if mode is set to "dynamic"
+    # Dynamic provisioning using the provided storageClass
+    dynamic:
+      accessModes:
+        - ReadWriteOnce
+      storageClassName: "neo4j"
+      requests:
+        storage: 1Ti
+
+    # Only used if mode is set to "volume"
+    # Provide an explicit volume to use
+    volume:
+      # If set an init container (running as root) will be added that runs:
+      #   `chown -R <securityContext.fsUser>:<securityContext.fsGroup>` AND `chmod -R g+rwx`
+      # on the volume. This is useful for some filesystems (e.g. NFS) where Kubernetes fsUser or fsGroup settings are not respected
+      setOwnerAndGroupWritableFilePermissions: false
+
+    # Only used if mode is set to "volumeClaimTemplate"
+    # Provide an explicit volumeClaimTemplate to use
+    volumeClaimTemplate: {}
+
+  # provide a volume to use for backups
+  # n.b. backups will be written to /backups on the volume
+  # any of the volume modes shown above for data can be used for backups
+  backups:
+    mode: "share" # share an existing volume (e.g. the data volume)
+    share:
+      name: "data"
+
+  # provide a volume to use for logs
+  # n.b. logs will be written to /logs/$(POD_NAME) on the volume
+  # any of the volume modes shown above for data can be used for logs
+  logs:
+    mode: "share" # share an existing volume (e.g. the data volume)
+    share:
+      name: "data"
+
+  # provide a volume to use for metrics
+  # n.b. metrics will be written to /metrics/$(POD_NAME) on the volume
+  # any of the volume modes shown above for data can be used for metrics
+  metrics:
+    mode: "share" # share an existing volume (e.g. the data volume)
+    share:
+      name: "data"
+
+  # provide a volume to use for import storage
+  # n.b. import will be mounted to /import on the underlying volume
+  # any of the volume modes shown above for data can be used for import
+  import:
+    mode: "share" # share an existing volume (e.g. the data volume)
+    share:
+      name: "data"
+
+  # provide a volume to use for licenses
+  # n.b. licenses will be mounted to /licenses on the underlying volume
+  # any of the volume modes shown above for data can be used for licenses
+  licenses:
+    mode: "share" # share an existing volume (e.g. the data volume)
+    share:
+      name: "data"
+
+# Neo4j Configuration
 
 # Neo4j configuration (yaml format)
 config:
@@ -49,6 +129,7 @@ securityContext:
   runAsUser: 7474
   runAsGroup: 7474
   fsGroup: 7474
+  fsGroupChangePolicy: "Always"
 
 # Readiness probes will send a kill signal to the container if
 # it fails enough times.  It's therefore very important
@@ -139,9 +220,17 @@ externalService:
     backup:
       enabled: false #Set this to true to expose backup port externally (n.b. this could have security implications. Backup is not authenticated by default)
 
+# Kubernetes cluster domain suffix
 clusterDomain: "cluster.local"
+
+# Override image settings in Neo4j pod
+image:
+  imagePullPolicy: IfNotPresent
 
 podAntiAffinity: true
 
-# log the neo4j user password set during install
+# initContainers for the Neo4j pod
+initContainers: []
+
+# log the neo4j user password set during `helm install`
 logInitialPassword: true

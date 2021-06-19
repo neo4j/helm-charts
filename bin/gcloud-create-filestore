@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+# This creates the expected persistent disk
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+
+# Required env vars
+FILESTORE_NAME="${1:?Missing argument. Usage: gcloud-create-filestore <filestore name>}"
+CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
+
+
+# Local vars
+FILESTORE_SHARE_CAPACITY="${FILESTORE_SHARE_CAPACITY:-1T}"
+FILESTORE_TIER="${FILESTORE_TIER:-standard}"
+FILESTORE_DESCRIPTION="${FILESTORE_DESCRIPTION:-Neo4j Filestore for backups and logs}"
+FILESTORE_SHARE_NAME="${FILESTORE_SHARE_NAME:-neo4j}"
+FILESTORE_NETWORK_NAME="${FILESTORE_NETWORK_NAME:-default}"
+NAMESPACE="${NAMESPACE:-default}"
+
+
+# Create the filestore
+# TODO: handle existing filestore cases ( re use / delete and recreate / other? )
+gcloud filestore instances describe "${FILESTORE_NAME}" --zone="${CLOUDSDK_COMPUTE_ZONE}" 1>&2 || gcloud filestore instances create "${FILESTORE_NAME}" \
+  --description="${FILESTORE_DESCRIPTION}" \
+  --tier="${FILESTORE_TIER}" \
+  --file-share="name=${FILESTORE_SHARE_NAME},capacity=${FILESTORE_SHARE_CAPACITY}" \
+  --network="name=${FILESTORE_NETWORK_NAME}" --zone="${CLOUDSDK_COMPUTE_ZONE}" \
+  1>&2
+
+# lookup the filestore's assigned IP address
+FILESTORE_IP="$(gcloud filestore instances describe "${FILESTORE_NAME}" --zone="${CLOUDSDK_COMPUTE_ZONE}" --format='get(networks[0].ipAddresses[0])')"
+
+
+# Print the necessary yaml for use with our pv helm charts
+cat << EOF
+logs:
+  capacity:
+    storage: "${FILESTORE_SHARE_CAPACITY}"
+  fileShare: "${FILESTORE_SHARE_NAME}"
+  ipAddress: "${FILESTORE_IP}"
+EOF

@@ -29,7 +29,7 @@ func TestEnterpriseThrowsErrorIfLicenseAgreementNotAccepted(t *testing.T) {
 
 	doTestCase := func(t *testing.T, testCase []string) {
 		t.Parallel()
-		err, _ := helmTemplate(testCase...)
+		err, _ := helmTemplate(t, testCase...)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "to use Neo4j Enterprise Edition you must have a Neo4j license agreement")
 		assert.Contains(t, err.Error(), "Set neo4j.acceptLicenseAgreement: \"yes\" to confirm that you have a Neo4j license agreement.")
@@ -52,7 +52,7 @@ func TestEnterpriseDoesNotThrowErrorIfLicenseAgreementAccepted(t *testing.T) {
 
 	doTestCase := func(t *testing.T, testCase []string) {
 		t.Parallel()
-		err, manifest := helmTemplate(testCase...)
+		err, manifest := helmTemplate(t, testCase...)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -69,7 +69,7 @@ func TestEnterpriseDoesNotThrowErrorIfLicenseAgreementAccepted(t *testing.T) {
 
 // Tests the "default" behaviour that you get if you don't pass in *any* other values and the helm chart defaults are used
 func TestDefaultEnterpriseHelmTemplate(t *testing.T) {
-	err, manifest := helmTemplate(append(useEnterprise, acceptLicenseAgreement...)...)
+	err, manifest := helmTemplate(t, append(useEnterprise, acceptLicenseAgreement...)...)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -87,7 +87,7 @@ func TestDefaultEnterpriseHelmTemplate(t *testing.T) {
 
 // Tests the "default" behaviour that you get if you don't pass in *any* other values and the helm chart defaults are used
 func TestDefaultCommunityHelmTemplate(t *testing.T) {
-	err, manifest := helmTemplate()
+	err, manifest := helmTemplate(t)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -108,8 +108,58 @@ func TestDefaultCommunityHelmTemplate(t *testing.T) {
 }
 
 // Tests the "default" behaviour that you get if you don't pass in *any* other values and the helm chart defaults are used
+func TestChmodInitContainer(t *testing.T) {
+	err, manifest := helmTemplate(t, "-f", "internal/resources/chmodInitContainer.yaml")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	checkNeo4jManifest(t, manifest)
+
+	neo4jStatefulSet := manifest.first(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
+	initContainers := neo4jStatefulSet.Spec.Template.Spec.InitContainers
+	assert.Len(t, initContainers, 1)
+	container := initContainers[0]
+	assert.Equal(t, "set-volume-permissions", container.Name)
+	assert.Len(t, container.VolumeMounts, 6)
+	// Command will chown logs
+	assert.Contains(t, container.Command[2], "chown -R \"7474\" \"/logs\"")
+	assert.Contains(t, container.Command[2], "chgrp -R \"7474\" \"/logs\"")
+	assert.Contains(t, container.Command[2], "chmod -R g+rwx \"/logs\"")
+	// Command will not chown data
+	assert.NotContains(t, container.Command[2], "chown -R \"7474\" \"/data\"")
+	assert.NotContains(t, container.Command[2], "chgrp -R \"7474\" \"/data\"")
+	assert.NotContains(t, container.Command[2], "chmod -R g+rwx \"/data\"")
+}
+
+// Tests the "default" behaviour that you get if you don't pass in *any* other values and the helm chart defaults are used
+func TestChmodInitContainers(t *testing.T) {
+	err, manifest := helmTemplate(t, "-f", "internal/resources/chmodInitContainerAndCustomInitContainer.yaml")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	checkNeo4jManifest(t, manifest)
+
+	neo4jStatefulSet := manifest.first(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
+	initContainers := neo4jStatefulSet.Spec.Template.Spec.InitContainers
+	assert.Len(t, initContainers, 2)
+	container := initContainers[0]
+	assert.Equal(t, "set-volume-permissions", container.Name)
+	assert.Len(t, container.VolumeMounts, 6)
+	// Command will chown logs
+	assert.Contains(t, container.Command[2], "chown -R \"7474\" \"/logs\"")
+	assert.Contains(t, container.Command[2], "chgrp -R \"7474\" \"/logs\"")
+	assert.Contains(t, container.Command[2], "chmod -R g+rwx \"/logs\"")
+	// Command will not chown data
+	assert.NotContains(t, container.Command[2], "chown -R \"7474\" \"/data\"")
+	assert.NotContains(t, container.Command[2], "chgrp -R \"7474\" \"/data\"")
+	assert.NotContains(t, container.Command[2], "chmod -R g+rwx \"/data\"")
+}
+
+// Tests the "default" behaviour that you get if you don't pass in *any* other values and the helm chart defaults are used
 func TestExplicitCommunityHelmTemplate(t *testing.T) {
-	err, manifest := helmTemplate(useCommunity...)
+	err, manifest := helmTemplate(t, useCommunity...)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -133,7 +183,7 @@ func TestExplicitCommunityHelmTemplate(t *testing.T) {
 func TestBaseHelmTemplate(t *testing.T) {
 	extraArgs := []string{}
 
-	err, _ := helmTemplate(baseHelmCommand("template", &DefaultHelmTemplateReleaseName, extraArgs...)...)
+	err, _ := helmTemplate(t, baseHelmCommand("template", &DefaultHelmTemplateReleaseName, extraArgs...)...)
 	if !assert.NoError(t, err) {
 		return
 	}

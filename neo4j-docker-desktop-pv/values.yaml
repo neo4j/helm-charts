@@ -2,8 +2,6 @@
 
 neo4j:
   name: ""
-  # if "manual" is used it's not necessary for the storageClass to exist.
-  storageClassName: "manual"
 
 # size of disk used by K8s when scheduling and binding, this has to be passed explicitly to K8s, it's not capable of figuring this out for itself.
 capacity:

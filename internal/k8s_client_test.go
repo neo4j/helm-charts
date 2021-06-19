@@ -104,7 +104,7 @@ func CheckServiceAnnotations(t *testing.T, releaseName *ReleaseName) (err error)
 	}
 
 	// when we add annotations via helm
-	err = runAll("helm", [][]string{
+	err = runAll(t, "helm", [][]string{
 		baseHelmCommand("upgrade", releaseName,
 			"--set", "externalService.annotations.foo=bar",
 			"--set", "adminService.annotations.foo=bar",

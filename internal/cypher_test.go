@@ -5,7 +5,6 @@ import (
 	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/ini.v1"
-	"log"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -13,10 +12,11 @@ import (
 )
 
 const neo4jConfJvmAdditionalKey = "dbms.jvm.additional"
+
+// Auth stuff
 const dbUri = "neo4j+ssc://localhost"
 const user = "neo4j"
 const dbName = "neo4j"
-
 var authToUse = neo4j.BasicAuth(user, defaultPassword, "")
 
 // Track the total number of nodes that we've created
@@ -84,7 +84,7 @@ func CheckNeo4jConfiguration(t *testing.T, releaseName *ReleaseName, expectedCon
 		if !time.Now().Before(deadline) {
 			return fmt.Errorf("timed out fetching config:  %d", len(runtimeConfig))
 		}
-		runtimeConfig, err = runQuery(releaseName, "CALL dbms.listConfig() YIELD name, value", nil)
+		runtimeConfig, err = runQuery(t, releaseName, "CALL dbms.listConfig() YIELD name, value", nil)
 		if err != nil {
 			return err
 		}
@@ -117,8 +117,8 @@ func CheckNeo4jConfiguration(t *testing.T, releaseName *ReleaseName, expectedCon
 	return err
 }
 
-func CreateNode(releaseName *ReleaseName) error {
-	_, err := runQuery(releaseName, "CREATE (n:Item { id: $id, name: $name }) RETURN n.id, n.name", map[string]interface{}{
+func CreateNode(t *testing.T, releaseName *ReleaseName) error {
+	_, err := runQuery(t, releaseName, "CREATE (n:Item { id: $id, name: $name }) RETURN n.id, n.name", map[string]interface{}{
 		"id":   1,
 		"name": "Item 1",
 	})
@@ -133,7 +133,7 @@ func CreateNode(releaseName *ReleaseName) error {
 }
 
 func CheckNodeCount(t *testing.T, releaseName *ReleaseName) error {
-	result, err := runQuery(releaseName, "MATCH (n) RETURN COUNT(n) AS count", noParams)
+	result, err := runQuery(t, releaseName, "MATCH (n) RETURN COUNT(n) AS count", noParams)
 
 	if err != nil {
 		return err
@@ -148,9 +148,9 @@ func CheckNodeCount(t *testing.T, releaseName *ReleaseName) error {
 	}
 }
 
-func runQuery(releaseName *ReleaseName, cypher string, params map[string]interface{}) ([]*neo4j.Record, error) {
+func runQuery(t *testing.T, releaseName *ReleaseName, cypher string, params map[string]interface{}) ([]*neo4j.Record, error) {
 
-	boltPort, cleanupProxy, proxyErr := proxyBolt(releaseName)
+	boltPort, cleanupProxy, proxyErr := proxyBolt(t, releaseName)
 	defer cleanupProxy()
 	if proxyErr != nil {
 		return nil, proxyErr
@@ -162,7 +162,7 @@ func runQuery(releaseName *ReleaseName, cypher string, params map[string]interfa
 	// bound by the application lifetime, which usually implies one driver instance per application
 	defer driver.Close()
 
-	if err := awaitConnectivity(err, driver); err != nil {
+	if err := awaitConnectivity(t, err, driver); err != nil {
 		return nil, err
 	}
 
@@ -182,24 +182,24 @@ func runQuery(releaseName *ReleaseName, cypher string, params map[string]interfa
 	return result.Collect()
 }
 
-func awaitConnectivity(err error, driver neo4j.Driver) error {
+func awaitConnectivity(t *testing.T, err error, driver neo4j.Driver) error {
 	// This polls verify connectivity until it succeeds or it times out. We should be able to remove this when we have readiness probes (maybe)
 	start := time.Now()
 	timeoutAfter := time.Minute * 3
 	for {
-		fmt.Print("Checking connectivity for ", dbUri)
+		t.Log("Checking connectivity for ", dbUri)
 		err = driver.VerifyConnectivity()
 		if err == nil {
 			return nil
 		} else if neo4j.IsNeo4jError(err) && strings.Contains(err.(*neo4j.Neo4jError).Code, "CredentialsExpired") {
-			log.Printf("recieved CredentialsExpired message from driver. Attempting to proceed")
+			t.Logf("recieved CredentialsExpired message from driver. Attempting to proceed")
 			return nil
 		} else {
 			elapsed := time.Now().Sub(start)
 			if elapsed > timeoutAfter {
 				return err
 			} else {
-				fmt.Printf("Connectivity check failed (%s), retrying...", err)
+				t.Logf("Connectivity check failed (%s), retrying...", err)
 				time.Sleep(5 * time.Second)
 			}
 		}

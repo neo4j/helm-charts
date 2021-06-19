@@ -3,19 +3,35 @@
 neo4j:
   # name of your neo4j deployment
   name: ""
-  # if "manual" is used it's not necessary for the storageClass to exist.
+
+# Neo4j data volume (a Google Cloud Compute Persistent disk)
+data:
+  # gcePersistentDisk should be the name of a Google Cloud Compute Persistent disk that is in a Region/Zone accessible by your GKE cluster.
+  # This persistent disk must already exist and not be in use
+  #
+  # A disk can be created using the gcloud cli:
+  # gcloud compute disks create --size 100Gi --type pd-ssd --zone="${CLOUDSDK_COMPUTE_ZONE}" "${GCE_PERSISTENT_DISK_NAME}"
+  # n.b. in Google Cloud disk IOPS are proportional to disk size. For good performance of Neo4j you may need to specify a disk size significantly larger than the
+  # amount of storage that Neo4j requires.
+  # We recommend a disk size of at least 1Ti for performance or load testing and at least 100Gi for development work.
+  gcePersistentDisk: ""
+
+  # size of disk used by K8s when scheduling and binding, this has to be passed explicitly to K8s, it's not capable of figuring this out for itself.
+  capacity:
+    storage: ""
+
+  # storageClassName to attach to the PersistentVolume in K8s. Can be set to empty string.
   storageClassName: "manual"
 
-# size of disk used by K8s when scheduling and binding, this has to be passed explicitly to K8s, it's not capable of figuring this out for itself.
-capacity:
-  storage: ""
 
-# gcePersistentDisk should the name of a Google Cloud Compute Persistent disk that is in a Region/Zone accessible by your GKE cluster.
-# This persistent disk must already exist and not be in use
-#
-# A disk can be created using the gcloud cli:
-# gcloud compute disks create --size 100Gi --type pd-ssd --zone="${CLOUDSDK_COMPUTE_ZONE}" "${GCE_PERSISTENT_DISK_NAME}"
-# n.b. in Google Cloud disk IOPS are proportional to disk size. For good performance of Neo4j you may need to specify a disk size significantly larger than the
-# amount of storage that Neo4j requires.
-# We recommend a disk size of at least 1Ti for performance or load testing and at least 100Gi for development work.
-gcePersistentDisk: ""
+# Neo4j logs volume (a Google Cloud Filestore File Share)
+logs:
+  # name of the file share to use (do NOT include a leading /)
+  fileShare: ""
+  # IP address of Filestore instance
+  ipAddress: ""
+  # size of disk used by K8s when scheduling and binding, this has to be passed explicitly to K8s, it's not capable of figuring this out for itself.
+  capacity:
+    storage: ""
+
+  storageClassName: ""

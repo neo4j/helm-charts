@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+# This creates the expected persistent disk and filestore in Google Cloud and attaches them to K8s Persistent Volumes
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+# Required env vars
+RELEASE_NAME="${1:?Missing argument. Usage: gcloud-create-persistence <release name>}"
+CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
+
+# Optional env vars
+NAMESPACE="${NAMESPACE:-default}"
+
+# Fixed / derived env vars
+FILESTORE_NAME="${RELEASE_NAME}-filestore"
+PERSISTENT_DISK_NAME="${RELEASE_NAME}-disk"
+PV_HELM_NAME="${RELEASE_NAME}-pv"
+
+# configure kubectl
+gcloud-configure-kubectl 1>&2
+
+( gcloud-create-persistent-disk "${PERSISTENT_DISK_NAME}" & gcloud-create-filestore "${FILESTORE_NAME}" ) | tee >(cat 1>&2) | helm install -f - \
+  --namespace "${NAMESPACE}" "${PV_HELM_NAME}" ./neo4j-gcloud-pv \
+  --set neo4j.name="${RELEASE_NAME}" \
+  1>&2

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/utils/env"
-	"log"
 )
 import "testing"
 
@@ -19,9 +18,9 @@ var neo4jConfFile = fmt.Sprintf("neo4j/neo4j-%s.conf", neo4jEdition)
 func k8sTests(name *ReleaseName) []SubTest{
 	return []SubTest{
 		{name: "Check Neo4j Configuration", test: func(t *testing.T) { assert.NoError(t, CheckNeo4jConfiguration(t, name, neo4jConfFile), "Neo4j Config check should succeed") }},
-		{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, CreateNode(name), "Create Node should succeed") }},
- 		{name: "Delete Resources", test: func(t *testing.T) { assert.NoError(t, ResourcesCleanup(name), "Cleanup Resources should succeed") }},
-		{name: "Reinstall Resources", test: func(t *testing.T) { assert.NoError(t, ResourcesReinstall(name), "Reinstall Resources should succeed") }},
+		{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, CreateNode(t, name), "Create Node should succeed") }},
+ 		{name: "Delete Resources", test: func(t *testing.T) { assert.NoError(t, ResourcesCleanup(t, name), "Cleanup Resources should succeed") }},
+		{name: "Reinstall Resources", test: func(t *testing.T) { assert.NoError(t, ResourcesReinstall(t, name), "Reinstall Resources should succeed") }},
 		{name: "Count Nodes", test: func(t *testing.T) { assert.NoError(t, CheckNodeCount(t, name), "Count Nodes should succeed") }},
 		{name: "Check Probes", test: func(t *testing.T) { assert.NoError(t, CheckProbes(t, name), "Probes Matching should succeed") }},
 		{name: "Check Service Annotations", test: func(t *testing.T) { assert.NoError(t, CheckServiceAnnotations(t, name), "Services should have annotations") }},
@@ -38,8 +37,8 @@ func TestInstallOnGCloudK8s(t *testing.T) {
 	cleanup, err := installNeo4j(t, &releaseName)
 	defer cleanup()
 
-	if err != nil {
-		assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		t.Logf("%#v", err)
 		return
 	}
 
@@ -68,7 +67,7 @@ func runSubTests(t *testing.T, subTests []SubTest) {
 }
 
 func installNeo4j(t *testing.T, releaseName *ReleaseName) (func(), error) {
-	cleanup, err := InstallNeo4j(CurrentZone(), CurrentProject(), releaseName)
+	cleanup, err := InstallNeo4j(t, CurrentZone(), CurrentProject(), releaseName)
 
 	return func() {
 		t.Logf("Beginning cleanup of '%s'", t.Name())
@@ -77,7 +76,7 @@ func installNeo4j(t *testing.T, releaseName *ReleaseName) (func(), error) {
 		if cleanup != nil {
 			err := cleanup()
 			if err != nil {
-				log.Printf("Error during cleanup: %s", err)
+				t.Logf("Error during cleanup: %s", err)
 			}
 		}
 	}, err

@@ -9,8 +9,15 @@ set -o pipefail -o errtrace -o errexit -o nounset
 shopt -s inherit_errexit
 [[ -n "${TRACE:-}" ]] && set -o xtrace
 
+# Delete expected resources
 kubectl delete namespace neo4j --ignore-not-found
 helm uninstall neo4j-pv || echo "not found ?"
 gcloud compute disks delete neo4j-data-disk || true
+gcloud compute disks delete neo4j-disk || true
+
+# Required env var!
+CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
+
+gcloud filestore instances delete "neo4j-filestore" --zone="${CLOUDSDK_COMPUTE_ZONE}" || true
 
 echo "cleanup complete"

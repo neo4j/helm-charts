@@ -26,6 +26,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"testing"
 	"time"
 )
 
@@ -164,15 +165,15 @@ func buildCert(random io.Reader, private *ecdsa.PrivateKey, validFrom time.Time,
 var defaultPassword = fmt.Sprintf("a%da", RandomIntBetween(100000, 999999999))
 
 func minHelmCommand(helmCommand string, releaseName *ReleaseName) []string {
-	return []string{helmCommand, string(*releaseName), "./neo4j"}
+	return []string{helmCommand, string(*releaseName), "./neo4j", "--namespace", string(releaseName.namespace())}
 }
 
 func baseHelmCommand(helmCommand string, releaseName *ReleaseName, extraHelmArguments ...string) []string {
 
 	var helmArgs = minHelmCommand(helmCommand, releaseName)
 	helmArgs = append(helmArgs,
-		"--namespace", string(releaseName.namespace()), "--create-namespace",
-		"--set", "volumeClaimTemplates.request="+storageSize,
+		"--create-namespace",
+		"--set", "volumes.data.selector.requests.storage="+storageSize,
 		"--set", "neo4j.password="+defaultPassword,
 		"--set", "ssl.bolt.privateKey.secretName=bolt-key", "--set", "ssl.bolt.publicCertificate.secretName=bolt-cert",
 		"--set", "ssl.https.privateKey.secretName=https-key", "--set", "ssl.https.publicCertificate.secretName=https-cert",
@@ -198,10 +199,10 @@ func baseHelmCommand(helmCommand string, releaseName *ReleaseName, extraHelmArgu
 
 func helmInstallCommands(releaseName *ReleaseName, diskName PersistentDiskName) [][]string {
 	return [][]string{
-		{"install", string(*releaseName+"-pv"), "./neo4j-gcloud-pv", "--wait", "--timeout", "120s",
-			"--set", "neo4j.name="+string(*releaseName),
-			"--set", "capacity.storage=" + storageSize,
-			"--set", "gcePersistentDisk="+string(diskName)},
+		{"install", string(*releaseName + "-pv"), "./neo4j-gcloud-pv", "--wait", "--timeout", "120s",
+			"--set", "neo4j.name=" + string(*releaseName),
+			"--set", "data.capacity.storage=" + storageSize,
+			"--set", "data.gcePersistentDisk=" + string(diskName)},
 		baseHelmCommand("install", releaseName, "--wait", "--timeout", "300s"),
 	}
 }
@@ -232,11 +233,15 @@ func kCleanupCommands(namespace Namespace) [][]string {
 type Closeable func() error
 
 var portOffset int32 = 0
-func proxyBolt(releaseName *ReleaseName) (int32, Closeable, error) {
+
+func proxyBolt(t *testing.T, releaseName *ReleaseName) (int32, Closeable, error) {
 	localHttpPort := 9000 + atomic.AddInt32(&portOffset, 1)
 	localBoltPort := 9100 + atomic.AddInt32(&portOffset, 1)
 
-	cmd := exec.Command("kubectl", "--namespace", string(releaseName.namespace()), "port-forward", fmt.Sprintf("service/%s-external", *releaseName), fmt.Sprintf("%d:7474",localHttpPort), fmt.Sprintf("%d:7687",localBoltPort))
+	program := "kubectl"
+	args := []string{"--namespace", string(releaseName.namespace()), "port-forward", fmt.Sprintf("service/%s-external", *releaseName), fmt.Sprintf("%d:7474", localHttpPort), fmt.Sprintf("%d:7687", localBoltPort)}
+	t.Logf("running: %s %s\n", program, args)
+	cmd := exec.Command(program, args...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return localBoltPort, nil, err
@@ -264,14 +269,14 @@ func proxyBolt(releaseName *ReleaseName) (int32, Closeable, error) {
 		// Read line by line and process it until we see that Forwarding has begun
 		for scanner.Scan() {
 			line := scanner.Text()
-			log.Print("PortForward:", line)
+			t.Log("PortForward:", line)
 			if strings.HasPrefix(line, "Forwarding from") {
 				once.Do(notifyStarted)
 			}
 		}
 		scannerErr := scanner.Err()
 		if scannerErr != nil {
-			log.Printf("Scanner logged error %s - this is usually expected when the proxy is terminated", scannerErr)
+			t.Logf("Scanner logged error %s - this is usually expected when the proxy is terminated", scannerErr)
 		}
 	}()
 
@@ -288,16 +293,16 @@ func proxyBolt(releaseName *ReleaseName) (int32, Closeable, error) {
 	return localBoltPort, func() error {
 		var cmdErr = cmd.Process.Kill()
 		if cmdErr != nil {
-			log.Print("failed to kill process: ", cmdErr)
+			t.Log("failed to kill process: ", cmdErr)
 		}
 		stdout.Close()
 		return cmdErr
 	}, err
 }
 
-func InstallNeo4j(zone Zone, project Project, releaseName *ReleaseName) (Closeable, error) {
+func InstallNeo4j(t *testing.T, zone Zone, project Project, releaseName *ReleaseName) (Closeable, error) {
 
-	err := run("gcloud", "container", "clusters", "get-credentials", string(CurrentCluster()))
+	err := run(t, "gcloud", "container", "clusters", "get-credentials", string(CurrentCluster()))
 	if err != nil {
 		return nil, err
 	}
@@ -324,18 +329,18 @@ func InstallNeo4j(zone Zone, project Project, releaseName *ReleaseName) (Closeab
 	defer func() (err error) {
 		if !completed {
 			err = cleanup()
-			log.Print(err)
+			t.Log(err)
 		}
 		return err
 	}()
 
-	diskName, cleanupDisk, err := createDisk(zone, project, releaseName)
+	diskName, cleanupDisk, err := createDisk(t, zone, project, releaseName)
 	addCloseable(cleanupDisk)
 	if err != nil {
 		return cleanup, err
 	}
 
-	cleanupNamespace, err := createNamespace(releaseName)
+	cleanupNamespace, err := createNamespace(t, releaseName)
 	addCloseable(cleanupNamespace)
 	if err != nil {
 		return cleanup, err
@@ -347,18 +352,18 @@ func InstallNeo4j(zone Zone, project Project, releaseName *ReleaseName) (Closeab
 		return cleanup, err
 	}
 
-	err = runAll("kubectl", createSecretCommands, true)
+	err = runAll(t, "kubectl", createSecretCommands, true)
 	if err != nil {
 		return cleanup, err
 	}
 
-	addCloseable(func() error { return runAll("helm", helmCleanupCommands(releaseName), false) })
-	err = runAll("helm", helmInstallCommands(releaseName, diskName), true)
+	addCloseable(func() error { return runAll(t, "helm", helmCleanupCommands(releaseName), false) })
+	err = runAll(t, "helm", helmInstallCommands(releaseName, diskName), true)
 	if err != nil {
 		return cleanup, err
 	}
 
-	err = run("kubectl", "--namespace", string(releaseName.namespace()), "rollout", "status", "--watch", "--timeout=120s", "statefulset/" + string(*releaseName))
+	err = run(t, "kubectl", "--namespace", string(releaseName.namespace()), "rollout", "status", "--watch", "--timeout=120s", "statefulset/"+string(*releaseName))
 	if err != nil {
 		return cleanup, err
 	}
@@ -376,25 +381,25 @@ func combineErrors(firstOrNil error, second error) error {
 	return firstOrNil
 }
 
-func runAll(bin string, commands [][]string, failFast bool) error {
+func runAll(t *testing.T, bin string, commands [][]string, failFast bool) error {
 	var combinedErrors error
 	for _, command := range commands {
-		err := run(bin, command...)
+		err := run(t, bin, command...)
 		if err != nil {
 			if failFast {
 				return err
 			} else {
-				combinedErrors = combineErrors(combinedErrors, err)
+				combinedErrors = combineErrors(combinedErrors, fmt.Errorf("error: '%s' running %s %s", err, bin, command))
 			}
 		}
 	}
 	return combinedErrors
 }
 
-func createDisk(zone Zone, project Project, releaseName *ReleaseName) (PersistentDiskName, Closeable, error) {
+func createDisk(t *testing.T, zone Zone, project Project, releaseName *ReleaseName) (PersistentDiskName, Closeable, error) {
 	diskName := releaseName.diskName()
-	err := run("gcloud", "compute", "disks", "create", "--size", storageSize, "--type", "pd-ssd", string(diskName), "--zone="+string(zone), "--project="+string(project))
-	return PersistentDiskName(diskName), func() error { return deleteDisk(zone, project, string(diskName)) }, err
+	err := run(t, "gcloud", "compute", "disks", "create", "--size", storageSize, "--type", "pd-ssd", string(diskName), "--zone="+string(zone), "--project="+string(project))
+	return PersistentDiskName(diskName), func() error { return deleteDisk(t, zone, project, string(diskName)) }, err
 }
 
 type ReleaseName string
@@ -415,26 +420,25 @@ func (r *ReleaseName) envConfigMapName() string {
 	return string(*r) + "-env"
 }
 
-
 type Namespace string
 type PersistentDiskName string
 
-func createNamespace(releaseName *ReleaseName) (Closeable, error) {
-	err := run("kubectl", "create", "ns", string(releaseName.namespace()))
+func createNamespace(t *testing.T, releaseName *ReleaseName) (Closeable, error) {
+	err := run(t, "kubectl", "create", "ns", string(releaseName.namespace()))
 	return func() error {
-		return runAll("kubectl", kCleanupCommands(releaseName.namespace()), false)
+		return runAll(t, "kubectl", kCleanupCommands(releaseName.namespace()), false)
 	}, err
 }
 
-func deleteDisk(zone Zone, project Project, diskName string) error {
-	return run("gcloud", "compute", "disks", "delete", diskName, "--zone="+string(zone), "--project="+string(project))
+func deleteDisk(t *testing.T, zone Zone, project Project, diskName string) error {
+	return run(t, "gcloud", "compute", "disks", "delete", diskName, "--zone="+string(zone), "--project="+string(project))
 }
 
-func run(command string, args ...string) error {
-	log.Print("running: ", command, args)
+func run(t *testing.T, command string, args ...string) error {
+	t.Logf("running: %s %s\n", command, args)
 	out, err := exec.Command(command, args...).CombinedOutput()
 	if out != nil {
-		fmt.Printf("output: %s\n", out)
+		t.Logf("output: %s\n", out)
 	}
 	return err
 }

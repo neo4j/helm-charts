@@ -41,6 +41,10 @@ gcloud container clusters list --filter="createTime<${CUT_OFF_DATE}" --format="g
 gcloud compute disks list --filter="creationTimestamp<${CUT_OFF_DATE}" --format="get(selfLink)" \
   | cut -d'/' -f6- | xargs -I{} gcloud compute disks delete {}
 
+# Google Cloud Filestore instances
+gcloud filestore instances list --filter="createTime<${CUT_OFF_DATE}" --format="get(name)" \
+  | xargs -I{} gcloud filestore instances delete {}
+
 function count_leaked_resources {
   gcloud asset search-all-resources --scope="projects/${CLOUDSDK_CORE_PROJECT}" | wc -l
 }
