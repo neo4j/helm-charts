@@ -4,16 +4,30 @@ metadata:
   # n.b. persistent volumes don't seem to belong to namespaces
   name: "{{ .Release.Name }}"
   labels:
-    type: local
-    # the app name is used to link this persistent volume to the Neo4j StatefulSet
     app: "{{ template "neo4j.appName" . }}"
+    helm.neo4j.com/volume-role: "data"
 spec:
   accessModes:
     - ReadWriteOnce
   capacity:
-    storage: "{{ required "capacity.storage must be set explicitly" .Values.capacity.storage }}"
+    storage: "{{ required "capacity.storage is required (e.g. 10Gi)" .Values.capacity.storage }}"
   hostPath:
-    path: "{{ .Values.hostPath }}"
+    path: "{{ required "hostPath is required (e.g. /tmp/neo4j)" .Values.hostPath }}"
     type: Directory
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: "{{ .Values.neo4j.storageClassName }}"
+  persistentVolumeReclaimPolicy: Delete
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: "{{ .Release.Name }}"
+  labels:
+    app: "{{ template "neo4j.appName" . }}"
+    helm.neo4j.com/volume-role: "data"
+spec:
+  storageClassName: ""
+  volumeName: "{{ .Release.Name }}"
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: "{{ required "capacity.storage is required (e.g. 10Gi)" .Values.capacity.storage }}"

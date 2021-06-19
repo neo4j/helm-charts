@@ -82,8 +82,7 @@ data:
   {{- end }}
 
   # Logging
-  {{- /* TODO: Figure out a different way to handle logs. I dislike remapping the log location to the data directory like this */}}
-  dbms.directories.logs: "/data/logs"
+  dbms.directories.logs: "/logs"
 
   # Neo4j defaults
   {{- /* TODO: figure out how to use lookup to detect if there is an existing default configMap and require user to explicitly force overwrite */}}

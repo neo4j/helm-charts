@@ -16,6 +16,17 @@ dbms.jvm.additional: |- {{- range ( regexFindAll "(?m)^\\s*(dbms\\.jvm\\.additio
 {{- end -}}
 
 {{/*
+If no name is set in `Values.neo4j.name` sets it to release name and modifies Values.neo4j so that the same name is available everywhere
+*/}}
+{{- define "neo4j.name" -}}
+  {{- if not .Values.neo4j.name }}
+    {{- $name := .Release.Name }}
+    {{- $ignored := set .Values.neo4j "name" $name }}
+  {{- end -}}
+  {{- .Values.neo4j.name }}
+{{- end -}}
+
+{{/*
 If no password is set in `Values.neo4j.password` generates a new random password and modifies Values.neo4j so that the same password is available everywhere
 */}}
 {{- define "neo4j.password" -}}

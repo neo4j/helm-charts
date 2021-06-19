@@ -3,6 +3,23 @@
 
 {{- template "neo4j.checkLicenseAgreement" . -}}
 
+{{- range $name, $spec := .Values.volumes -}}
+
+  {{- range $otherName, $otherSpec := $.Values.volumes -}}
+    {{- if ne $otherName $name}}
+      {{- if eq $spec.mode $otherSpec.mode }}
+        {{- if eq $spec.mode "volume" }}
+          {{- if and $spec.volume.persistentVolumeClaim $otherSpec.volume.persistentVolumeClaim }}
+            {{- if eq $spec.volume.persistentVolumeClaim.claimName $otherSpec.volume.persistentVolumeClaim.claimName }}
+              {{ cat "Cannot mount the same persistent volume claim multiple times:" $name "and" $otherName "use the same persistent volume claim!" | fail }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- end}}
+  {{- end }}
+{{- end }}
+
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -42,7 +59,16 @@ spec:
         {{- end }}
       {{- end }}
       serviceAccountName: "{{ .Release.Name }}"
-      securityContext: {{toYaml .Values.securityContext | nindent 8 }}
+      securityContext: {{ toYaml .Values.securityContext | nindent 8 }}
+      {{- $initContainers := .Values.initContainers }}
+      {{- $initChmodContainer := include "neo4j.initChmodContainer" . }}
+      {{- if $initChmodContainer }}{{ $initContainers = fromYaml $initChmodContainer | prepend $initContainers }}{{ end }}
+      {{- with $initContainers }}
+      initContainers:
+        {{- range $i, $initContainer := . }}
+        - {{ $initContainer | toYaml | indent 10 | trimAll " " }}
+        {{- end }}
+      {{- end }}
       containers:
         - name: "neo4j"
           image: "{{ template "neo4j.image" . }}"
@@ -78,12 +104,15 @@ spec:
               name: https
             - containerPort: 6362
               name: backup
+          securityContext: {{ omit .Values.securityContext "fsGroupChangePolicy" "fsGroup" | toYaml  | nindent 14 }}
           volumeMounts:
-            - name: "data"
-              mountPath: "/data"
-            - name: neo4j-conf
-              mountPath: "/config/neo4j.conf"
-            {{ if .Values.ssl.bolt.privateKey.secretName }}
+            {{- include "neo4j.volumeMounts" .Values.volumes | indent 12 }}
+            {{- if .Values.neo4j.offlineMaintenanceModeEnabled }}
+            {{- include "neo4j.maintenanceVolumeMounts" .Values.volumes | indent 12 }}
+            {{- end }}
+            - mountPath: "/config/neo4j.conf"
+              name: neo4j-conf
+            {{- if .Values.ssl.bolt.privateKey.secretName }}
             - name: bolt-cert
               mountPath: /var/lib/neo4j/certificates/bolt/public.crt
               subPath: "{{ .Values.ssl.bolt.publicCertificate.subPath | default "public.crt" }}"
@@ -93,7 +122,7 @@ spec:
               subPath: "{{ .Values.ssl.bolt.privateKey.subPath | default "private.key"  }}"
               readOnly: true
             {{ end }}
-            {{ if .Values.ssl.bolt.privateKey.secretName }}
+            {{- if .Values.ssl.https.privateKey.secretName }}
             - name: https-cert
               mountPath: /var/lib/neo4j/certificates/https/public.crt
               subPath: "{{ .Values.ssl.https.publicCertificate.subPath | default "public.crt"  }}"
@@ -102,7 +131,7 @@ spec:
               mountPath: /var/lib/neo4j/certificates/https/private.key
               subPath: "{{ .Values.ssl.https.privateKey.subPath | default "private.key" }}"
               readOnly: true
-            {{ end }}
+            {{- end }}
           readinessProbe:
             tcpSocket:
               port: 7687
@@ -136,15 +165,15 @@ spec:
                   name: "{{ .Release.Name }}-user-config"
               - configMap:
                   name: "{{ .Release.Name }}-k8s-config"
-        {{ if ( or .Values.ssl.bolt.privateKey.secretName .Values.ssl.bolt.publicCertificate.secretName ) }}
+        {{- if ( or .Values.ssl.bolt.privateKey.secretName .Values.ssl.bolt.publicCertificate.secretName ) }}
         - name: bolt-cert
           secret:
             secretName: "{{ required "When ssl.bolt.publicCertificate is set then ssl.bolt.privateKey.secretName must also be provided" .Values.ssl.bolt.publicCertificate.secretName }}"
         - name: bolt-key
           secret:
             secretName:  "{{ required "When ssl.bolt.privateKey is set then ssl.bolt.publicCertificate.secretName must also be provided" .Values.ssl.bolt.privateKey.secretName }}"
-        {{ end }}
-        {{ if ( or .Values.ssl.https.privateKey.secretName .Values.ssl.https.publicCertificate.secretName ) }}
+        {{- end }}
+        {{- if ( or .Values.ssl.https.privateKey.secretName .Values.ssl.https.publicCertificate.secretName ) }}
         - name: https-cert
           secret:
             secretName: "{{ required "When ssl.https.publicCertificate is set then ssl.https.privateKey.secretName must also be provided" .Values.ssl.https.publicCertificate.secretName }}"
@@ -152,28 +181,7 @@ spec:
           secret:
             secretName: "{{ required "When ssl.https.privateKey is set then ssl.https.publicCertificate.secretName must also be provided" .Values.ssl.https.privateKey.secretName }}"
         {{ end }}
-  volumeClaimTemplates:
-    - metadata:
-        name: "data"
-      spec:
-        {{- if .Values.volumeClaimTemplates.useDefaultStorageClass }}
-          {{- if .Values.volumeClaimTemplates.storageClassName }}
-            {{ fail "If useDefaultStorageClass is set true then storageClassName must be null or empty." }}
-          {{- end }}
-        {{- else }}
-        storageClassName: "{{ .Values.volumeClaimTemplates.storageClassName }}"
-        {{- end }}
-        # Some complicated chart logic here to avoid incompatible type errors if storageClassName is NULL
-        {{ $useSelector := .Values.volumeClaimTemplates.useVolumeSelector }}
-        {{- if not $useSelector | and .Values.volumeClaimTemplates.storageClassName }}
-          {{ $useSelector = eq "manual" .Values.volumeClaimTemplates.storageClassName }}
-        {{- end }}
-        {{- if $useSelector }}
-        selector:
-          matchLabels:
-            app: "{{ template "neo4j.appName" . }}"
-        {{- end }}
-        accessModes: {{ toYaml .Values.volumeClaimTemplates.accessModes | nindent 10 }}
-        resources:
-          requests:
-            storage: {{ .Values.volumeClaimTemplates.request}}
+  {{- $volumeClaimTemplates := include "neo4j.volumeClaimTemplates" .}}
+  {{- if $volumeClaimTemplates }}
+  volumeClaimTemplates: {{ $volumeClaimTemplates | nindent 4 }}
+  {{- end }}
