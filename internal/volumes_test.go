@@ -8,13 +8,28 @@ import (
 )
 import "testing"
 
+var pluginArgs = []string{
+	"-f", "internal/resources/pluginsInitContainer.yaml",
+}
+
 func volumesTests(name *ReleaseName) []SubTest {
 	return []SubTest{
 		{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, CreateNode(t, name), "Create Node should succeed") }},
 		{name: "Check Volumes", test: func(t *testing.T) { assert.NoError(t, CheckVolumes(t, name), "Check volumes") }},
 		{name: "Enter maintenance mode", test: func(t *testing.T) { assert.NoError(t, EnterMaintenanceMode(t, name), "Enter maintenance mode") }},
 		{name: "Check Volumes", test: func(t *testing.T) { assert.NoError(t, CheckVolumes(t, name), "Check volumes") }},
+		{name: "Exit maintenance mode and install plugins", test: func(t *testing.T) { assert.NoError(t, ExitMaintenanceMode(t, name, pluginArgs...), "Exit maintenance mode and install plugins") }},
+		{name: "Check Apoc", test: func(t *testing.T) { assert.NoError(t, CheckApoc(t, name), "Check APOC") }},
 	}
+}
+
+func CheckApoc(t *testing.T, releaseName *ReleaseName) error {
+	results, err := runQuery(t, releaseName, "CALL apoc.help('apoc')", nil)
+	if !assert.NoError(t, err) {
+		return err
+	}
+	assert.Greater(t, len(results), 2, "Apoc help returned %s", results)
+	return err
 }
 
 func checkVolume(t *testing.T, releaseName *ReleaseName, volumePath string, sem chan error) {

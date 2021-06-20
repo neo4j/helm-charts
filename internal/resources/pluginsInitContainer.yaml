@@ -1,3 +1,7 @@
+config:
+  "dbms.security.procedures.unrestricted": "apoc.*"
+  "dbms.directories.plugins": "/plugins"
+
 volumes:
   plugins:
     mode: volume
@@ -6,8 +10,4 @@ volumes:
 
 initContainers:
   - name: init-plugins
-    image: neo4j:4.3.0
     command: ['bash', '-c', "cp /var/lib/neo4j/labs/* /plugins"]
-    volumeMounts:
-      - name: plugins
-        mountPath: /plugins

@@ -12,7 +12,6 @@ func maintenanceTests(name *ReleaseName) []SubTest {
 		{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, CreateNode(t, name), "Create Node should succeed") }},
 		{name: "Maintenance Mode", test: func(t *testing.T) { assert.NoError(t, CheckMaintenanceMode(t, name), "Check maintenance mode") }},
 		{name: "Count Nodes", test: func(t *testing.T) { assert.NoError(t, CheckNodeCount(t, name), "Count Nodes should succeed") }},
-		{name: "Helm uninstall", test: func(t *testing.T) { assert.NoError(t, UninstallRelease(t, name), "Uninstall should succeed") }},
 	}
 }
 
@@ -23,7 +22,7 @@ func CheckMaintenanceMode(t *testing.T, releaseName *ReleaseName) error {
 	}
 
 	err = EnterMaintenanceMode(t, releaseName)
-	if err != nil {
+	if !assert.NoError(t, err) {
 		return err
 	}
 
@@ -32,8 +31,20 @@ func CheckMaintenanceMode(t *testing.T, releaseName *ReleaseName) error {
 		return err
 	}
 
-	err = run(t, "helm", baseHelmCommand("upgrade", releaseName,
-		"--set", "neo4j.offlineMaintenanceModeEnabled=false", "--wait", "--timeout", "300s")...)
+	err = ExitMaintenanceMode(t, releaseName)
+	if !assert.NoError(t, err) {
+		return err
+	}
+
+	return err
+}
+
+func ExitMaintenanceMode(t *testing.T, releaseName *ReleaseName, extraArgs ...string) (error) {
+	err := run(
+		t, "helm", baseHelmCommand("upgrade", releaseName,
+			append(extraArgs, "--set", "neo4j.offlineMaintenanceModeEnabled=false", "--wait", "--timeout", "300s")...
+		)...
+	)
 	if !assert.NoError(t, err) {
 		return err
 	}
@@ -42,7 +53,6 @@ func CheckMaintenanceMode(t *testing.T, releaseName *ReleaseName) error {
 	if !assert.NoError(t, err) {
 		return err
 	}
-
 	return err
 }
 

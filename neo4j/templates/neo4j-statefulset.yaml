@@ -1,5 +1,6 @@
 {{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
 {{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "" | regexMatch "(?i)no|false" -}}
+{{- $neo4jImage := include "neo4j.image" . }}
 
 {{- template "neo4j.checkLicenseAgreement" . -}}
 
@@ -67,11 +68,17 @@ spec:
       initContainers:
         {{- range $i, $initContainer := . }}
         - {{ $initContainer | toYaml | indent 10 | trimAll " " }}
+          {{- if not ( hasKey $initContainer "image") }}
+          image: "{{ $neo4jImage }}"
+          {{- end }}
+          {{- if not ( hasKey $initContainer "volumeMounts") }}
+          volumeMounts: {{ include "neo4j.volumeMounts" ( omit $.Values.volumes "logs" "metrics" ) | nindent 12 }}
+          {{- end }}
         {{- end }}
       {{- end }}
       containers:
         - name: "neo4j"
-          image: "{{ template "neo4j.image" . }}"
+          image: "{{ $neo4jImage }}"
           imagePullPolicy: "{{ .Values.image.imagePullPolicy }}"
           {{- if .Values.neo4j.offlineMaintenanceModeEnabled }}
           command:
@@ -180,7 +187,8 @@ spec:
         - name: https-key
           secret:
             secretName: "{{ required "When ssl.https.privateKey is set then ssl.https.publicCertificate.secretName must also be provided" .Values.ssl.https.privateKey.secretName }}"
-        {{ end }}
+        {{- end }}
+        {{- include "neo4j.volumes" . | nindent 8 }}
   {{- $volumeClaimTemplates := include "neo4j.volumeClaimTemplates" .}}
   {{- if $volumeClaimTemplates }}
   volumeClaimTemplates: {{ $volumeClaimTemplates | nindent 4 }}
