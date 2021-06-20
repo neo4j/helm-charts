@@ -25,9 +25,10 @@ Deep Copy the provided volume object so that we can mutate it safely in this tem
 If defaultStorageClass is chosen overwrite "dynamic" and switch to dynamic mode
 */}}
 {{-  if eq $volume.mode "defaultStorageClass"  -}}
-  {{- $ignored = set $volume "dynamic" .defaultStorageClass -}}
+  {{- $ignored = set $volume "dynamic" $volume.defaultStorageClass -}}
   {{-  if $volume.dynamic.storageClassName -}}
     {{- fail "If using mode defaultStorageClass then storageClassName should not be set" -}}
+
   {{- end -}}
   {{- $ignored = set $volume "mode" "dynamic" -}}
 {{- end -}}
