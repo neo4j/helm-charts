@@ -105,7 +105,8 @@ func checkNeo4jRunning(t *testing.T, releaseName *ReleaseName) error {
 }
 
 func TestMaintenanceInGCloudK8s(t *testing.T) {
-	releaseName := ReleaseName("maintenance")
+
+	releaseName := ReleaseName("maintenance-"+TestRunIdentifier)
 	t.Parallel()
 
 	t.Logf("Starting setup of '%s'", t.Name())

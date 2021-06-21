@@ -1,5 +1,6 @@
 {{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
 {{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "" | regexMatch "(?i)no|false" -}}
+{{- $offlineMaintenanceEnabled :=  .Values.neo4j.offlineMaintenanceModeEnabled }}
 {{- $neo4jImage := include "neo4j.image" . }}
 
 {{- template "neo4j.checkLicenseAgreement" . -}}
@@ -25,6 +26,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   labels:
+    helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" $ }}"
     app: "{{ template "neo4j.appName" . }}"
     helm.neo4j.com/instance: "{{ .Release.Name }}"
   name: "{{ .Release.Name }}"
@@ -45,9 +47,9 @@ spec:
       annotations:
         "checksum/{{ .Release.Name }}-config": {{ include (print $.Template.BasePath "/neo4j-config.yaml") . | sha256sum }}
     spec:
-      {{- if .Values.podAntiAffinity }}
+      {{- if .Values.podSpec.podAntiAffinity }}
       affinity:
-        {{- if kindIs "bool" .Values.podAntiAffinity }}
+        {{- if kindIs "bool" .Values.podSpec.podAntiAffinity | and .Values.podSpec.podAntiAffinity }}
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector:
@@ -56,12 +58,13 @@ spec:
                   helm.neo4j.com/pod_category: "neo4j-instance"
               topologyKey: kubernetes.io/hostname
         {{- else }}
-        podAntiAffinity: {{  toYaml .Values.podAntiAffinity | nindent 10 }}
+        podAntiAffinity: {{ toYaml .Values.podSpec.podAntiAffinity | nindent 10 }}
         {{- end }}
       {{- end }}
       serviceAccountName: "{{ .Release.Name }}"
       securityContext: {{ toYaml .Values.securityContext | nindent 8 }}
-      {{- $initContainers := .Values.initContainers }}
+      terminationGracePeriodSeconds: {{ if $offlineMaintenanceEnabled  }}0{{ else }}{{ .Values.podSpec.terminationGracePeriodSeconds }}{{ end }}
+      {{- $initContainers := .Values.podSpec.initContainers }}
       {{- $initChmodContainer := include "neo4j.initChmodContainer" . }}
       {{- if $initChmodContainer }}{{ $initContainers = fromYaml $initChmodContainer | prepend $initContainers }}{{ end }}
       {{- with $initContainers }}
@@ -80,7 +83,7 @@ spec:
         - name: "neo4j"
           image: "{{ $neo4jImage }}"
           imagePullPolicy: "{{ .Values.image.imagePullPolicy }}"
-          {{- if .Values.neo4j.offlineMaintenanceModeEnabled }}
+          {{- if $offlineMaintenanceEnabled }}
           command:
             - "bash"
             - "-c"
@@ -98,8 +101,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
-            - name: SERVICE_ADMIN
+            - name: SERVICE_NEO4J_ADMIN
               value: "{{ .Release.Name }}-admin.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}"
+            - name: SERVICE_NEO4J_INTERNALS
+              value: "{{ .Release.Name }}-internals.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}"
             - name: SERVICE_NEO4J
               value: "{{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}"
           ports:
@@ -114,7 +119,7 @@ spec:
           securityContext: {{ omit .Values.securityContext "fsGroupChangePolicy" "fsGroup" | toYaml  | nindent 14 }}
           volumeMounts:
             {{- include "neo4j.volumeMounts" .Values.volumes | indent 12 }}
-            {{- if .Values.neo4j.offlineMaintenanceModeEnabled }}
+            {{- if $offlineMaintenanceEnabled  }}
             {{- include "neo4j.maintenanceVolumeMounts" .Values.volumes | indent 12 }}
             {{- end }}
             - mountPath: "/config/neo4j.conf"
@@ -145,7 +150,7 @@ spec:
             failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
             timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
             periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
-          {{- if .Values.neo4j.offlineMaintenanceModeEnabled }}
+          {{- if $offlineMaintenanceEnabled }}
           # liveness and startup probes are disabled in offlineMaintenanceMode
           {{- else }}
           livenessProbe:

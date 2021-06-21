@@ -10,6 +10,7 @@
   {{- end }}
 {{- end }}
 {{- end }}
+
 {{- define "neo4j.licenseAgreementMessage" }}
 
 In order to use Neo4j Enterprise Edition you must have a Neo4j license agreement.

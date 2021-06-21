@@ -6,7 +6,8 @@ volumes:
         claimName: logs-filestore
       setOwnerAndGroupWritableFilePermissions: true
 
-initContainers:
-  - name: init-printenv
-    image: neo4j:4.3.0
-    command: ['sh', '-c', "printenv"]
+podSpec:
+  initContainers:
+    - name: init-printenv
+      image: neo4j:4.3.0
+      command: ['sh', '-c', "printenv"]

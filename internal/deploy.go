@@ -227,7 +227,7 @@ func helmCleanupCommands(releaseName *ReleaseName) [][]string {
 }
 
 func kCleanupCommands(namespace Namespace) [][]string {
-	return [][]string{{"delete", "namespace", string(namespace), "--ignore-not-found"}}
+	return [][]string{{"delete", "namespace", string(namespace), "--ignore-not-found", "--force", "--grace-period=0" }}
 }
 
 type Closeable func() error
@@ -239,7 +239,7 @@ func proxyBolt(t *testing.T, releaseName *ReleaseName) (int32, Closeable, error)
 	localBoltPort := 9100 + atomic.AddInt32(&portOffset, 1)
 
 	program := "kubectl"
-	args := []string{"--namespace", string(releaseName.namespace()), "port-forward", fmt.Sprintf("service/%s-external", *releaseName), fmt.Sprintf("%d:7474", localHttpPort), fmt.Sprintf("%d:7687", localBoltPort)}
+	args := []string{"--namespace", string(releaseName.namespace()), "port-forward", fmt.Sprintf("service/%s", *releaseName), fmt.Sprintf("%d:7474", localHttpPort), fmt.Sprintf("%d:7687", localBoltPort)}
 	t.Logf("running: %s %s\n", program, args)
 	cmd := exec.Command(program, args...)
 	stdout, err := cmd.StdoutPipe()

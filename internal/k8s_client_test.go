@@ -106,9 +106,9 @@ func CheckServiceAnnotations(t *testing.T, releaseName *ReleaseName) (err error)
 	// when we add annotations via helm
 	err = runAll(t, "helm", [][]string{
 		baseHelmCommand("upgrade", releaseName,
-			"--set", "externalService.annotations.foo=bar",
-			"--set", "adminService.annotations.foo=bar",
-			"--set", "neo4jService.annotations.foo=bar",
+			"--set", "services.neo4j.annotations.foo=bar",
+			"--set", "services.admin.annotations.foo=bar",
+			"--set", "services.default.annotations.foo=bar",
 		),
 	}, true)
 	if err != nil {

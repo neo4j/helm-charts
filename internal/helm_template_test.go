@@ -29,7 +29,7 @@ func TestEnterpriseThrowsErrorIfLicenseAgreementNotAccepted(t *testing.T) {
 
 	doTestCase := func(t *testing.T, testCase []string) {
 		t.Parallel()
-		err, _ := helmTemplate(t, testCase...)
+		_, err := helmTemplate(t, testCase...)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "to use Neo4j Enterprise Edition you must have a Neo4j license agreement")
 		assert.Contains(t, err.Error(), "Set neo4j.acceptLicenseAgreement: \"yes\" to confirm that you have a Neo4j license agreement.")
@@ -52,7 +52,7 @@ func TestEnterpriseDoesNotThrowErrorIfLicenseAgreementAccepted(t *testing.T) {
 
 	doTestCase := func(t *testing.T, testCase []string) {
 		t.Parallel()
-		err, manifest := helmTemplate(t, testCase...)
+		manifest, err := helmTemplate(t, testCase...)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -69,7 +69,7 @@ func TestEnterpriseDoesNotThrowErrorIfLicenseAgreementAccepted(t *testing.T) {
 
 // Tests the "default" behaviour that you get if you don't pass in *any* other values and the helm chart defaults are used
 func TestDefaultEnterpriseHelmTemplate(t *testing.T) {
-	err, manifest := helmTemplate(t, append(useEnterprise, acceptLicenseAgreement...)...)
+	manifest, err := helmTemplate(t, append(useEnterprise, acceptLicenseAgreement...)...)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -87,7 +87,7 @@ func TestDefaultEnterpriseHelmTemplate(t *testing.T) {
 
 // Tests the "default" behaviour that you get if you don't pass in *any* other values and the helm chart defaults are used
 func TestDefaultCommunityHelmTemplate(t *testing.T) {
-	err, manifest := helmTemplate(t)
+	manifest, err := helmTemplate(t)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -109,7 +109,7 @@ func TestDefaultCommunityHelmTemplate(t *testing.T) {
 
 // Tests the "default" behaviour that you get if you don't pass in *any* other values and the helm chart defaults are used
 func TestChmodInitContainer(t *testing.T) {
-	err, manifest := helmTemplate(t, "-f", "internal/resources/chmodInitContainer.yaml")
+	manifest, err := helmTemplate(t, "-f", "internal/resources/chmodInitContainer.yaml")
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -134,7 +134,7 @@ func TestChmodInitContainer(t *testing.T) {
 
 // Tests the "default" behaviour that you get if you don't pass in *any* other values and the helm chart defaults are used
 func TestChmodInitContainers(t *testing.T) {
-	err, manifest := helmTemplate(t, "-f", "internal/resources/chmodInitContainerAndCustomInitContainer.yaml")
+	manifest, err := helmTemplate(t, "-f", "internal/resources/chmodInitContainerAndCustomInitContainer.yaml")
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -159,7 +159,7 @@ func TestChmodInitContainers(t *testing.T) {
 
 // Tests the "default" behaviour that you get if you don't pass in *any* other values and the helm chart defaults are used
 func TestExplicitCommunityHelmTemplate(t *testing.T) {
-	err, manifest := helmTemplate(t, useCommunity...)
+	manifest, err := helmTemplate(t, useCommunity...)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -183,7 +183,7 @@ func TestExplicitCommunityHelmTemplate(t *testing.T) {
 func TestBaseHelmTemplate(t *testing.T) {
 	extraArgs := []string{}
 
-	err, _ := helmTemplate(t, baseHelmCommand("template", &DefaultHelmTemplateReleaseName, extraArgs...)...)
+	_, err := helmTemplate(t, baseHelmCommand("template", &DefaultHelmTemplateReleaseName, extraArgs...)...)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -194,6 +194,20 @@ func checkNeo4jManifest(t *testing.T, manifest *K8sResources) {
 	assert.Len(t, manifest.ofType(&appsv1.StatefulSet{}), 1)
 
 	assertOnlyNeo4jImagesUsed(t, manifest)
+
+	assertThreeServices(t, manifest)
+
+	assertFourConfigMaps(t, manifest)
+}
+
+func assertFourConfigMaps(t *testing.T, manifest *K8sResources) {
+	services := manifest.ofType(&v1.ConfigMap{})
+	assert.Len(t, services, 4)
+}
+
+func assertThreeServices(t *testing.T, manifest *K8sResources) {
+	services := manifest.ofType(&v1.Service{})
+	assert.Len(t, services, 3)
 }
 
 func assertOnlyNeo4jImagesUsed(t *testing.T, manifest *K8sResources) {

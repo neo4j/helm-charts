@@ -31,7 +31,7 @@ func k8sTests(name *ReleaseName) []SubTest{
 
 // Install Neo4j on the provided GKE K8s cluster and then run the tests from the table above using it
 func TestInstallOnGCloudK8s(t *testing.T) {
-	releaseName := ReleaseName("install")
+	releaseName := ReleaseName("install-"+TestRunIdentifier)
 	t.Parallel()
 	t.Logf("Starting setup of '%s'", t.Name())
 	cleanup, err := installNeo4j(t, &releaseName)

@@ -90,7 +90,7 @@ func CheckVolumes(t *testing.T, releaseName *ReleaseName) error {
 }
 
 func TestVolumesInGCloudK8s(t *testing.T) {
-	releaseName := ReleaseName("volumes")
+	releaseName := ReleaseName("volumes-"+TestRunIdentifier)
 	t.Parallel()
 
 	t.Logf("Starting setup of '%s'", t.Name())

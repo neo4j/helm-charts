@@ -77,6 +77,9 @@ func CheckNeo4jConfiguration(t *testing.T, releaseName *ReleaseName, expectedCon
 	var expectedOverrides = map[string]string{
 		"dbms.connector.https.enabled":  "true",
 		"dbms.connector.bolt.tls_level": "REQUIRED",
+		"dbms.directories.logs": "/logs",
+		"dbms.directories.metrics": "/metrics",
+		"dbms.directories.import": "/import",
 	}
 
 	deadline := time.Now().Add(3 * time.Minute)
@@ -190,6 +193,7 @@ func awaitConnectivity(t *testing.T, err error, driver neo4j.Driver) error {
 		t.Log("Checking connectivity for ", dbUri)
 		err = driver.VerifyConnectivity()
 		if err == nil {
+			t.Log("Connectivity check passed for ", dbUri)
 			return nil
 		} else if neo4j.IsNeo4jError(err) && strings.Contains(err.(*neo4j.Neo4jError).Code, "CredentialsExpired") {
 			t.Logf("recieved CredentialsExpired message from driver. Attempting to proceed")

@@ -1,0 +1,37 @@
+{{- with .Values.ops }}
+{{- if or .ipAddress .fileShare | or .capacity.storage | or .storageClassName -}}
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  # n.b. persistent volumes don't seem to belong to namespaces
+  name: "{{ $.Release.Name }}-ops"
+  labels:
+    helm.neo4j.com/volume-role: "ops"
+    app: "{{ template "neo4j.appName" $ }}"
+spec:
+  accessModes:
+    - ReadWriteMany
+  capacity:
+    storage: "{{ required "ops.capacity.storage is required (e.g. 1Ti)" .capacity.storage }}"
+  nfs:
+    path: "/{{ required "ops.fileShare is required" .fileShare }}"
+    server: "{{ required "ops.ipAddress is required" .ipAddress }}"
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: "{{ $.Release.Name }}-ops"
+  labels:
+    helm.neo4j.com/volume-role: "ops"
+    app: "{{ template "neo4j.appName" $ }}"
+spec:
+  storageClassName: "{{ .storageClassName }}"
+  volumeName: "{{ $.Release.Name }}-ops"
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: "{{ required "ops.capacity.storage is required (e.g. 1Ti)" .capacity.storage }}"
+{{- end }}
+{{- end }}

@@ -8,6 +8,7 @@ volumes:
     volume:
       emptyDir: {}
 
-initContainers:
-  - name: init-plugins
-    command: ['bash', '-c', "cp /var/lib/neo4j/labs/* /plugins"]
+podSpec:
+  initContainers:
+    - name: init-plugins
+      command: ['bash', '-c', "cp /var/lib/neo4j/labs/* /plugins"]

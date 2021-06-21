@@ -24,9 +24,10 @@ data:
   storageClassName: "manual"
 
 
-# Neo4j logs volume (a Google Cloud Filestore File Share)
-logs:
-  # name of the file share to use (do NOT include a leading /)
+# Neo4j ops volume (a Google Cloud Filestore File Share)
+# not suitable for Neo4j database storage but useful for storing metrics / logs / backups and other operational files.
+ops:
+  # name of the Filestore file share to use (do NOT include a leading /)
   fileShare: ""
   # IP address of Filestore instance
   ipAddress: ""

@@ -1,0 +1,7 @@
+{{- $setName := include "neo4j.name" . }}
+{{- with .Values.services.neo4j }}
+{{- $values := deepCopy . -}}
+{{- $values = set $values "neo4j" $.Values.neo4j }}
+{{- $values = set $values "selector" ( dict "helm.neo4j.com/instance" $.Release.Name ) }}
+{{- dict "Release" $.Release "Values" $values | include "neo4j.services.neo4j" }}
+{{- end }}
