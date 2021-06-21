@@ -1,24 +1,39 @@
-{{- $clusterEnabled := or ( index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" ) ( index .Values.config "dbms.clustering.enable" | default "" | regexMatch "(?i)true|yes" ) }}
-# Headless service for direct bolt / http connections to an instance.
+{{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
+{{- $clusterEnabled := false }}
+{{- $backupEnabled := false }}
+{{- if $isEnterprise }}
+{{- $clusterEnabled = or ( index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" ) ( index .Values.config "dbms.clustering.enable" | default "" | regexMatch "(?i)true|yes" ) }}
+{{- $backupEnabled = index $.Values.config "dbms.backup.enabled" | default "true" | regexMatch "(?i)yes|true" }}
+{{- end }}
+{{- $jmxEnabled := index $.Values.config "metrics.jmx.enabled" | default "" | regexMatch "(?i)yes|true" }}
+{{- $graphiteEnabled := index $.Values.config "metrics.graphite.enabled" | default "" | regexMatch "(?i)yes|true" }}
+{{- $prometheusEnabled := index $.Values.config "metrics.prometheus.enabled" | default "" | regexMatch "(?i)yes|true" }}
+
+# ClusterIP service for bolt / http connections
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Release.Name }}
-  namespace: "{{ .Release.Namespace }}"
+  name: "{{ $.Release.Name }}"
+  namespace: "{{ $.Release.Namespace }}"
   labels:
-    app: "{{ template "neo4j.appName" . }}"
-    helm.neo4j.com/instance: "{{ .Release.Name }}"
-    helm.neo4j.com/service: "neo4j"
-  {{- with .Values.neo4jService.annotations }}
-  annotations: {{- toYaml . | nindent 4 }}
+    helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" $ }}"
+    app: "{{ template "neo4j.appName" $ }}"
+    helm.neo4j.com/instance: "{{ $.Release.Name }}"
+    helm.neo4j.com/service: "default"
+  {{- with .Values.services.default.annotations }}
+  annotations: {{ toYaml . | nindent 4 }}
   {{- end }}
 spec:
   publishNotReadyAddresses: false
   type: ClusterIP
   selector:
-    app: "{{ template "neo4j.appName" . }}"
-    helm.neo4j.com/instance: "{{ .Release.Name }}"
+    app: "{{ template "neo4j.appName" $ }}"
+    helm.neo4j.com/instance: "{{ $.Release.Name }}"
   ports:
+    - protocol: TCP
+      port: 7687
+      targetPort: 7687
+      name: tcp-bolt
     - protocol: TCP
       port: 7474
       targetPort: 7474
@@ -27,32 +42,29 @@ spec:
       port: 7473
       targetPort: 7473
       name: tcp-https
-    - protocol: TCP
-      port: 7687
-      targetPort: 7687
-      name: tcp-bolt
 ---
-# Headless service for internal connections to an instance e.g. for neo4j clustering or monitoring.
+{{- with .Values.services.admin }}
+{{- if .enabled }}
+# ClusterIP service for admin connections to Neo4j inside Kubernetes.
 apiVersion: v1
 kind: Service
 metadata:
-  name: "{{ .Release.Name }}-admin"
-  namespace: "{{ .Release.Namespace }}"
+  name: "{{ $.Release.Name }}-admin"
+  namespace: "{{ $.Release.Namespace }}"
   labels:
-    helm.neo4j.com/instance: "{{ .Release.Name }}"
-    app: "{{ template "neo4j.appName" . }}"
-    neo4j.com/dbms.mode: "{{ index .Values.config "dbms.mode" | default "SINGLE" }}"
+    helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" $ }}"
+    app: "{{ template "neo4j.appName" $ }}"
+    helm.neo4j.com/instance: "{{ $.Release.Name }}"
     helm.neo4j.com/service: "admin"
-  {{- with .Values.adminService.annotations }}
-  annotations:
-  {{- toYaml . | nindent 4 }}
+  {{- with .annotations }}
+  annotations: {{ toYaml . | nindent 4 }}
   {{- end }}
 spec:
   publishNotReadyAddresses: true
-  clusterIP: None
+  type: ClusterIP
   selector:
-    app: "{{ template "neo4j.appName" . }}"
-    helm.neo4j.com/instance: "{{ .Release.Name }}"
+    app: "{{ template "neo4j.appName" $ }}"
+    helm.neo4j.com/instance: "{{ $.Release.Name }}"
   ports:
     - protocol: TCP
       port: 6362
@@ -66,7 +78,71 @@ spec:
       port: 7474
       targetPort: 7474
       name: tcp-http
-    {{- with .Values.adminService.ports }}
+    - protocol: TCP
+      port: 7473
+      targetPort: 7473
+      name: tcp-https
+    {{- if $prometheusEnabled }}
+    - protocol: TCP
+      port: 2004
+      targetPort: 2004
+      name: tcp-prometheus
+    {{- end }}
+    {{- if $graphiteEnabled }}
+    - protocol: TCP
+      port: 2003
+      targetPort: 2003
+      name: tcp-graphite
+    {{- end }}
+    {{- if $jmxEnabled }}
+    - protocol: TCP
+      port: 3637
+      targetPort: 3637
+      name: tcp-jmx
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- with .Values.services.internals }}
+{{- if $clusterEnabled | or .enabled }}
+---
+# Headless service for internal connections to an instance e.g. for neo4j clustering or monitoring.
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ $.Release.Name }}-internals"
+  namespace: "{{ $.Release.Namespace }}"
+  labels:
+    helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" $ }}"
+    helm.neo4j.com/instance: "{{ $.Release.Name }}"
+    app: "{{ template "neo4j.appName" $ }}"
+    helm.neo4j.com/dbms.mode: "{{ index $.Values.config "dbms.mode" | default "SINGLE" }}"
+    helm.neo4j.com/service: "internals"
+  {{- with .annotations }}
+  annotations: {{ toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  publishNotReadyAddresses: true
+  clusterIP: None
+  selector:
+    app: "{{ template "neo4j.appName" $ }}"
+    helm.neo4j.com/instance: "{{ $.Release.Name }}"
+  ports:
+    - protocol: TCP
+      port: 6362
+      targetPort: 6362
+      name: tcp-backup
+    - protocol: TCP
+      port: 7687
+      targetPort: 7687
+      name: tcp-bolt
+    - protocol: TCP
+      port: 7474
+      targetPort: 7474
+      name: tcp-http
+    - protocol: TCP
+      port: 7473
+      targetPort: 7473
+      name: tcp-https
     {{- if $clusterEnabled }}
     - protocol: TCP
       port: 7688
@@ -85,76 +161,23 @@ spec:
       targetPort: 6000
       name: tcp-tx
     {{- end }}
-    {{- if .metrics.prometheus.enabled }}
+    {{- if $prometheusEnabled }}
     - protocol: TCP
       port: 2004
       targetPort: 2004
       name: tcp-prometheus
     {{- end }}
-    {{- if .metrics.graphite.enabled }}
+    {{- if $graphiteEnabled }}
     - protocol: TCP
       port: 2003
       targetPort: 2003
       name: tcp-graphite
     {{- end }}
-    {{- if .metrics.jmx.enabled }}
+    {{- if $jmxEnabled }}
     - protocol: TCP
       port: 3637
       targetPort: 3637
       name: tcp-jmx
     {{- end }}
-    {{- end }}
-{{- if or (eq .Values.externalService.ports.http.enabled true) (eq .Values.externalService.ports.bolt.enabled true) (eq .Values.externalService.ports.bolt.enabled true) (eq .Values.externalService.ports.backup.enabled true) }}
----
-# LoadBalancer service to allow access to neo4j from outside K8s
-apiVersion: v1
-kind: Service
-metadata:
-  name: "{{ .Release.Name }}-external"
-  namespace: "{{ .Release.Namespace }}"
-  labels:
-    app: "{{ template "neo4j.appName" . }}"
-    helm.neo4j.com/name: "{{ template "neo4j.appName" . }}"
-    helm.neo4j.com/service: "external"
-  {{- with .Values.externalService.annotations }}
-  annotations:
-  {{- toYaml . | nindent 4 }}
-  {{- end }}
-spec:
-  type: "LoadBalancer"
-  {{- with .Values.externalService.loadBalancerIP }}
-  loadBalancerIP: "{{ . }}"
-  {{- end }}
-  sessionAffinity: None
-  externalTrafficPolicy: Local
-  ports:
-    {{- with .Values.externalService.ports }}
-    {{- if .http.enabled }}
-    - protocol: TCP
-      port: 7474
-      targetPort: 7474
-      name: http
-    {{- end }}
-    {{- if .https.enabled }}
-    - protocol: TCP
-      port: 7473
-      targetPort: 7473
-      name: https
-    {{- end }}
-    {{- if .bolt.enabled }}
-    - protocol: TCP
-      port: 7687
-      targetPort: 7687
-      name: tcp-bolt
-    {{- end }}
-    {{- if .backup.enabled }}
-    - protocol: TCP
-      port: 6362
-      targetPort: 6362
-      name: tcp-backup
-    {{- end }}
-    {{- end }}
-  selector:
-    app: "{{ template "neo4j.appName" . }}"
-    helm.neo4j.com/instance: "{{ .Release.Name }}"
+{{- end }}
 {{- end }}
