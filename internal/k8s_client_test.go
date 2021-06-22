@@ -45,7 +45,7 @@ func CheckProbes(t *testing.T, releaseName *ReleaseName) error {
 		} `yaml:"livenessProbe"`
 	}
 
-	var fileName = "neo4j/values.yaml"
+	var fileName = "neo4j-standalone/values.yaml"
 
 	yamlFile, err := ioutil.ReadFile(fileName)
 	if err != nil {

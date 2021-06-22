@@ -13,7 +13,7 @@ type SubTest struct {
 }
 
 var neo4jEdition = env.GetString("NEO4J_EDITION", "")
-var neo4jConfFile = fmt.Sprintf("neo4j/neo4j-%s.conf", neo4jEdition)
+var neo4jConfFile = fmt.Sprintf("neo4j-standalone/neo4j-%s.conf", neo4jEdition)
 
 func k8sTests(name *ReleaseName) []SubTest{
 	return []SubTest{

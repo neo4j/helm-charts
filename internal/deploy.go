@@ -165,7 +165,7 @@ func buildCert(random io.Reader, private *ecdsa.PrivateKey, validFrom time.Time,
 var defaultPassword = fmt.Sprintf("a%da", RandomIntBetween(100000, 999999999))
 
 func minHelmCommand(helmCommand string, releaseName *ReleaseName) []string {
-	return []string{helmCommand, string(*releaseName), "./neo4j", "--namespace", string(releaseName.namespace())}
+	return []string{helmCommand, string(*releaseName), "./neo4j-standalone", "--namespace", string(releaseName.namespace())}
 }
 
 func baseHelmCommand(helmCommand string, releaseName *ReleaseName, extraHelmArguments ...string) []string {

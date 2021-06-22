@@ -13,7 +13,7 @@ NEO4J_DOCKER_IMG="${NEO4J_DOCKER_IMG:?NEO4J_DOCKER_IMG is required}"
 NEO4J_EDITION="${NEO4J_EDITION:?NEO4J_EDITION is required}"
 
 function check_conf_using_docker {
-  docker run --entrypoint diff -v "$(pwd)/neo4j/neo4j-${NEO4J_EDITION}.conf":/neo4j.conf "${NEO4J_DOCKER_IMG}" /var/lib/neo4j/conf/neo4j.conf /neo4j.conf
+  docker run --entrypoint diff -v "$(pwd)/neo4j-standalone/neo4j-${NEO4J_EDITION}.conf":/neo4j.conf "${NEO4J_DOCKER_IMG}" /var/lib/neo4j/conf/neo4j.conf /neo4j.conf
 }
 
 if ! check_conf_using_docker ; then

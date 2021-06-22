@@ -30,7 +30,7 @@ func TestPopulateFromFile(t *testing.T) {
 
 	doTestCase := func(t *testing.T, edition string) {
 		t.Parallel()
-		conf, err := (&Neo4jConfiguration{}).PopulateFromFile(fmt.Sprintf("neo4j/neo4j-%s.conf", edition))
+		conf, err := (&Neo4jConfiguration{}).PopulateFromFile(fmt.Sprintf("neo4j-standalone/neo4j-%s.conf", edition))
 		if !assert.NoError(t, err) {
 			return
 		}
