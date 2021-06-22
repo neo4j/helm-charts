@@ -6,7 +6,6 @@
 {{- template "neo4j.checkLicenseAgreement" . -}}
 
 {{- range $name, $spec := .Values.volumes -}}
-
   {{- range $otherName, $otherSpec := $.Values.volumes -}}
     {{- if ne $otherName $name}}
       {{- if eq $spec.mode $otherSpec.mode }}
@@ -18,9 +17,9 @@
           {{- end }}
         {{- end }}
       {{- end }}
-    {{- end}}
+    {{- end }}
   {{- end }}
-{{- end }}
+{{- end -}}
 
 apiVersion: apps/v1
 kind: StatefulSet
@@ -200,7 +199,7 @@ spec:
             secretName: "{{ required "When ssl.https.privateKey is set then ssl.https.publicCertificate.secretName must also be provided" .Values.ssl.https.privateKey.secretName }}"
         {{- end }}
         {{- include "neo4j.volumes" . | nindent 8 }}
-  {{- $volumeClaimTemplates := include "neo4j.volumeClaimTemplates" .}}
+  {{- $volumeClaimTemplates := include "neo4j.volumeClaimTemplates" . }}
   {{- if $volumeClaimTemplates }}
   volumeClaimTemplates: {{ $volumeClaimTemplates | nindent 4 }}
   {{- end }}
