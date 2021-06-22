@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+# This packages helm charts into tarballs
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+# Local env vars
+#
+S3_UPLOAD_TO_SUB_FOLDER="${S3_SUB_FOLDER:-neo4j}"
+
+# Create packages!
+#
+helm package ./neo4j
+helm package ./neo4j-docker-desktop-pv
+helm package ./neo4j-gcloud-pv
+
+# Copy packages
+#
+mkdir -p ./packages
+echo "Copying packaged files to ./packages"
+mv *.tgz ./packages
+
+# Pull existing packages from s3
+#
+mkdir -p ./temp/packages
+aws s3 sync s3://helm.neo4j.com/neo4j ./temp/packages
+cp ./packages/* ./temp/packages/ || echo "nothing to upload in ./packages/"
+
+# Create index.yaml
+#
+helm repo index ./temp/packages/ --url https://s3.amazonaws.com/helm.neo4j.com/$S3_UPLOAD_TO_SUB_FOLDER
+
+# Upload new packages to s3
+#
+aws s3 sync --acl bucket-owner-full-control --cache-control max-age=300 ./temp/packages/ s3://helm.neo4j.com/$S3_UPLOAD_TO_SUB_FOLDER
+
+# Clean up local packages
+rm ./packages/*
