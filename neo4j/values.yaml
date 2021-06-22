@@ -23,6 +23,11 @@ neo4j:
   # set offlineMaintenanceModeEnabled: true to restart the StatefulSet without the Neo4j process running
   # this can be used to perform tasks that cannot be performed when Neo4j is running such as `neo4j-admin dump`
   offlineMaintenanceModeEnabled: false
+  #
+  # set resources for the Neo4j Process. The values set will be used for both "requests" and "limit".
+  resources:
+    cpu: "1000m"
+    memory: "2Gi"
 
 
 # Additional volumes for Neo4j
