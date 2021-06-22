@@ -116,6 +116,12 @@ spec:
               name: https
             - containerPort: 6362
               name: backup
+          {{- with .Values.neo4j.resources }}
+          resources:
+            requests: {{ . | toYaml | nindent 14 }}
+            limits: {{ . | toYaml | nindent 14 }}
+          {{- end }}
+          resources: {}
           securityContext: {{ omit .Values.securityContext "fsGroupChangePolicy" "fsGroup" | toYaml  | nindent 14 }}
           volumeMounts:
             {{- include "neo4j.volumeMounts" .Values.volumes | indent 12 }}
