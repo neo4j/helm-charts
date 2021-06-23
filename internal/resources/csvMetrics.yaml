@@ -1,0 +1,7 @@
+
+config:
+  metrics.enabled: "true"
+  metrics.namespaces.enabled: "true"
+  metrics.csv.interval: "10s"
+  metrics.csv.rotation.keep_number: "2"
+  metrics.csv.rotation.compression: "NONE"

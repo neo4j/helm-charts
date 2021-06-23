@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
   ca-certificates \
   openssl \
   kubectl \
+  awscli \
   && ./tmp/get-helm-3 --no-sudo --version "${HELM_VERSION}" \
   && ./tmp/go_linux_installer -v -version "${GO_VERSION}" \
   && apt-get -y --purge remove curl \
