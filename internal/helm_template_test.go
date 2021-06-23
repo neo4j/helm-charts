@@ -107,6 +107,20 @@ func TestDefaultCommunityHelmTemplate(t *testing.T) {
 	assert.Equal(t, envConfigMap.Data["NEO4J_EDITION"], "COMMUNITY_K8S")
 }
 
+func TestAdditionalEnvVars(t *testing.T) {
+	manifest, err := helmTemplate(t, "--set", "env.FOO=one", "--set", "env.GRAPHS=are everywhere")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	envConfigMap := manifest.ofTypeWithName(&v1.ConfigMap{}, DefaultHelmTemplateReleaseName.envConfigMapName()).(*v1.ConfigMap)
+	assert.Equal(t, envConfigMap.Data["FOO"], "one")
+	assert.Equal(t, envConfigMap.Data["GRAPHS"], "are everywhere")
+
+	checkNeo4jManifest(t, manifest)
+}
+
+
 // Tests the "default" behaviour that you get if you don't pass in *any* other values and the helm chart defaults are used
 func TestChmodInitContainer(t *testing.T) {
 	manifest, err := helmTemplate(t, "-f", "internal/resources/chmodInitContainer.yaml")
