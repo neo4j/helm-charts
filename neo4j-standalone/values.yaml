@@ -245,6 +245,9 @@ image:
   # set a customImage if you want to use your own docker image
   # customImage: my-image:my-tag
 
+# additional environment variables for the Neo4j Container
+env: {}
+
 # Other K8s configuration to apply to the Neo4j pod
 podSpec:
   # Anti Affinity
@@ -252,6 +255,10 @@ podSpec:
   # If set to false then no anti-affinity rules are applied
   # If set to an object then that object is used for the Neo4j podAntiAffinity
   podAntiAffinity: true
+
+  # Name of service account to use for the Neo4j Pod (optional)
+  # this is useful if you want to use Workload Identity to grant permissions to access cloud resources e.g. cloud object storage (AWS S3 etc.)
+  serviceAccountName: ""
 
   # How long the Neo4j pod is permitted to keep running after it has been signalled by Kubernetes to stop. Once this timeout elapses the Neo4j process is forcibly terminated.
   # A large value is used because Neo4j takes time to flush in-memory data to disk on shutdown.

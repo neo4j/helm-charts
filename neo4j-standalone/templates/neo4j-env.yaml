@@ -1,8 +1,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Release.Name }}-env
-  namespace: {{ .Release.Namespace }}
+  name: "{{ .Release.Name }}-env"
+  namespace: "{{ .Release.Namespace }}"
 data:
   # It should not be necessary for neo4j users/administrators to modify this configMap
   # Neo4j configuration is set in the {{ .Release.Name }}-user-config ConfigMap
@@ -13,3 +13,6 @@ data:
   NEO4J_CONF: "/config/"
   K8S_NEO4J_NAME: "{{ template "neo4j.name" . }}"
   EXTENDED_CONF: "yes"
+  {{- if .Values.env }}
+  {{- .Values.env | toYaml | nindent 2 }}
+  {{- end }}
