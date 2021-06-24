@@ -1,5 +1,6 @@
 {{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
 {{- $clusterEnabled := or ( index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" ) ( index .Values.config "dbms.clustering.enable" | default "" | regexMatch "(?i)true|yes" ) }}
+{{- $backupEnabled := index .Values.config "dbms.backup.enabled" | default "" | regexMatch "(?i)yes|true" }}
 
 {{- template "neo4j.checkLicenseAgreement" . -}}
 
@@ -70,6 +71,10 @@ data:
   # Other
   dbms.config.strict_validation: "true"
   dbms.logs.user.stdout_enabled: "false"
+
+  {{- if $backupEnabled }}
+  dbms.backup.listen_address: "0.0.0.0"
+  {{- end }}
 
   {{- if $clusterEnabled }}
   # Clustering
