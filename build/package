@@ -8,15 +8,43 @@ set -o pipefail -o errtrace -o errexit -o nounset
 shopt -s inherit_errexit
 [[ -n "${TRACE:-}" ]] && set -o xtrace
 
+# Local env vars
+#
+BUILD_OUT_DIR="../neo4j-helm-preview/packages/"
+S3_LOCAL_SYNC_DIR="./temp/packages"
+S3_UPLOAD_TO_SUB_FOLDER="${S3_SUB_FOLDER:-neo4j}"
+
 # Required env vars
+#
 PACKAGE_SIGNING_KEY="${PACKAGE_SIGNING_KEY:?PACKAGE_SIGNING_KEY is required}"
 # to create a keyring try gpg --export-secret-keys "<ID of the key you want to use to sign>" >~/.gnupg/secring.gpg
 PACKAGE_SIGNING_KEYRING="${PACKAGE_SIGNING_KEYRING:?PACKAGE_SIGNING_KEYRING is required}"
+PACKAGE_SIGNING_PASSPHRASE="${PACKAGE_SIGNING_PASSPHRASE:?PACKAGE_SIGNING_PASSPHRASE is required}"
 
 # create the package!
-helm package --sign ./neo4j-standalone --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}"
-helm package --sign ./neo4j-docker-desktop-pv --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}"
-helm package --sign ./neo4j-gcloud-pv --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}"
-echo "Copying packaged files to ../neo4j-helm-preview/packages/"
-mv *.tgz ../neo4j-helm-preview/packages/
-mv *.tgz.prov ../neo4j-helm-preview/packages/
+echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-standalone --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
+echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-docker-desktop-pv --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
+echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-gcloud-pv --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
+echo "Copying packaged files to ${BUILD_OUT_DIR}"
+mkdir -p ${BUILD_OUT_DIR}
+mv *.tgz ${BUILD_OUT_DIR}
+mv *.tgz.prov ${BUILD_OUT_DIR}
+
+# Upload packages
+
+# Pull existing packages from s3
+#
+mkdir -p ${S3_LOCAL_SYNC_DIR}
+aws s3 sync s3://helm.neo4j.com/${S3_UPLOAD_TO_SUB_FOLDER} ${S3_LOCAL_SYNC_DIR}
+cp ${BUILD_OUT_DIR}/* ${S3_LOCAL_SYNC_DIR} || echo "nothing to upload in ./packages/"
+
+# Create index.yaml
+#
+helm repo index ${S3_LOCAL_SYNC_DIR} --url https://helm.neo4j.com/${S3_UPLOAD_TO_SUB_FOLDER}
+
+# Upload new packages to s3
+#
+aws s3 sync --acl bucket-owner-full-control --cache-control max-age=300 ${S3_LOCAL_SYNC_DIR} s3://helm.neo4j.com/${S3_UPLOAD_TO_SUB_FOLDER}
+
+# Clean up local packages
+#rm ./packages/*
