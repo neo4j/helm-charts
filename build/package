@@ -10,9 +10,10 @@ shopt -s inherit_errexit
 
 # Local env vars
 #
-BUILD_OUT_DIR="../neo4j-helm-preview/packages/"
-S3_LOCAL_SYNC_DIR="./temp/packages"
+BUILD_OUT_DIR="tmp/new-packages/"
+S3_LOCAL_SYNC_DIR="tmp/release-packages"
 S3_UPLOAD_TO_SUB_FOLDER="${S3_SUB_FOLDER:-neo4j}"
+S3_CACHE_CONTROL_MAX_AGE_SECONDS="${S3_CACHE_CONTROL_MAX_AGE_SECONDS:-300}"
 
 # Required env vars
 #
@@ -44,7 +45,7 @@ helm repo index ${S3_LOCAL_SYNC_DIR} --url https://helm.neo4j.com/${S3_UPLOAD_TO
 
 # Upload new packages to s3
 #
-aws s3 sync --acl bucket-owner-full-control --cache-control max-age=300 ${S3_LOCAL_SYNC_DIR} s3://helm.neo4j.com/${S3_UPLOAD_TO_SUB_FOLDER}
+aws s3 sync --acl bucket-owner-full-control --cache-control max-age=${S3_CACHE_CONTROL_MAX_AGE_SECONDS} ${S3_LOCAL_SYNC_DIR} s3://helm.neo4j.com/${S3_UPLOAD_TO_SUB_FOLDER}
 
 # Clean up local packages
 #rm ./packages/*
