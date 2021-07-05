@@ -8,7 +8,7 @@ Convert a neo4j.conf properties text into valid yaml
 
 {{- define "neo4j.configJvmAdditionalYaml" -}}
   {{- /* This collects together all dbms.jvm.additional entries */}}
-dbms.jvm.additional: |- {{- range ( regexFindAll "(?m)^\\s*(dbms\\.jvm\\.additional=).+" . -1 ) }}{{ trim . | replace "dbms.jvm.additional=" "" | trim | nindent 2 }}{{- end }}
+  {{- range ( regexFindAll "(?m)^\\s*(dbms\\.jvm\\.additional=).+" . -1 ) }}{{ trim . | replace "dbms.jvm.additional=" "" | trim | nindent 2 }}{{- end }}
 {{- end -}}
 
 {{- define "neo4j.appName" -}}

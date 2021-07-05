@@ -12,10 +12,6 @@ metadata:
   namespace: "{{ .Release.Namespace }}"
 data:
   dbms.default_listen_address: "0.0.0.0"
-  dbms.ssl.policy.bolt.enabled: "{{ if .Values.ssl.bolt.privateKey.secretName }}true{{ else }}false{{ end }}"
-  dbms.ssl.policy.https.enabled: "{{ if .Values.ssl.https.privateKey.secretName }}true{{ else }}false{{ end }}"
-  dbms.connector.bolt.tls_level: "{{ if .Values.ssl.https.privateKey.secretName }}REQUIRED{{ else }}DISABLED{{ end }}"
-  dbms.connector.https.enabled: "{{ if .Values.ssl.https.privateKey.secretName }}true{{ else }}false{{ end }}"
 ---
 {{- $confFileName := "neo4j-community.conf" -}}
 {{- if $isEnterprise }}
@@ -31,24 +27,35 @@ metadata:
   namespace: "{{ .Release.Namespace }}"
 data:
   {{- /* imported config first */}}
-  {{- if $configImport }}
-  {{- if regexMatch "dbms\\.jvm\\.additional" .Values.configImport }}
-    {{- fail "dbms.jvm.additional properties are not currently supported in values.configImport" }}
+  {{- with $configImport }}
+  {{- if regexMatch "dbms\\.jvm\\.additional" . }}
+    {{- fail "dbms.jvm.additional properties cannot be set in values.configImport. Set additional JVM arguments in values.jvm.additionalJvmArguments." }}
   {{- end }}
-  {{- include "neo4j.configYaml" $configImport | nindent 2 }}
+  {{- include "neo4j.configYaml" . | nindent 2 }}
   {{- end }}
 
   {{- /* then explicit config - throw an error if it contains jvm additional */}}
-  {{- with toYaml .Values.config }}
-    {{- if regexMatch "dbms\\.jvm\\.additional" . }}
-      {{- fail "dbms.jvm.additional properties are not currently supported in values.config" }}
-    {{- else }}
-      {{- nindent 2 . }}
-    {{- end }}
+
+  {{- with .Values.config }}
+  {{- if hasKey . "dbms.jvm.additional" }}
+    {{- fail "dbms.jvm.additional properties cannot be set in values.config. Set additional JVM arguments in values.jvm.additionalJvmArguments" }}
+  {{- end }}
+  {{- range $key, $value := . }}
+  {{- if not (kindIs "string" $value) }}
+    {{- cat "config values must be strings." $key "value:" $value "type:" (kindOf $value) " (put values in double quotes so they are treated as strings in yaml)" | fail }}
+  {{- end }}
+  {{- end }}
+  {{- toYaml . | nindent 2 }}
   {{- end }}
 
   {{- /* then default jvm config */}}
-  {{- include "neo4j.configJvmAdditionalYaml" $confFile | nindent 2 }}
+  {{- if .Values.jvm.useNeo4jDefaultJvmArguments | or .Values.jvm.additionalJvmArguments }}
+  dbms.jvm.additional: |-
+  {{- if .Values.jvm.useNeo4jDefaultJvmArguments }}{{ include "neo4j.configJvmAdditionalYaml" $confFile | indent 2 }}{{ end }}
+  {{- range $ignored, $argument := .Values.jvm.additionalJvmArguments }}
+  {{- trim $argument | replace "dbms.jvm.additional=" "" | trim | nindent 4 }}
+  {{- end }}
+  {{- end }}
 ---
 # Default Neo4j config values, these are overridden by user-provided values in {{ .Release.Name }}-user-config
 apiVersion: v1
@@ -71,6 +78,7 @@ data:
   # Other
   dbms.config.strict_validation: "true"
   dbms.logs.user.stdout_enabled: "false"
+  unsupported.dbms.ssl.system.ignore_dot_files: "true"
 
   {{- if $backupEnabled }}
   dbms.backup.listen_address: "0.0.0.0"
@@ -82,11 +90,13 @@ data:
   causal_clustering.kubernetes.service_port_name: "tcp-discovery"
   causal_clustering.kubernetes.label_selector: "app={{ template "neo4j.appName" . }},helm.neo4j.com/service=internals,helm.neo4j.com/dbms.mode=CORE"
   dbms.routing.default_router: "SERVER"
+  dbms.routing.client_side.enforce_for_domains: "*.{{ .Values.clusterDomain }}"
   dbms.routing.enabled: "true"
   causal_clustering.server_groups: "$(bash -c 'echo pod-${POD_NAME}')"
 
   # Because "if we set default advertised address it over-rides the bolt address used to populate the browser in a really annoying way" we have to set the
   # advertised address for each cluster service individually instead
+  dbms.connector.bolt.advertised_address: "$(bash -c 'echo ${SERVICE_NEO4J}')"
   causal_clustering.discovery_advertised_address: "$(bash -c 'echo ${SERVICE_NEO4J_INTERNALS}')"
   causal_clustering.raft_advertised_address: "$(bash -c 'echo ${SERVICE_NEO4J_INTERNALS}')"
   causal_clustering.transaction_advertised_address: "$(bash -c 'echo ${SERVICE_NEO4J_INTERNALS}')"
@@ -106,4 +116,24 @@ data:
   {{- if .Values.volumes.import }}
   # Import
   dbms.directories.import: "/import"
+  {{- end }}
+
+  # Use more reliable defaults SSL / TLS settings for K8s
+  dbms.ssl.policy.bolt.client_auth: "NONE"
+  dbms.ssl.policy.https.client_auth: "NONE"
+
+  {{- /* https and bolt+ssl specific settings */}}
+  {{- if .Values.ssl.bolt.privateKey.secretName }}
+  dbms.connector.bolt.tls_level: "REQUIRED"
+  {{- end }}
+
+  {{- if .Values.ssl.https.privateKey.secretName }}
+  dbms.connector.https.enabled: "true"
+  {{- end }}
+
+  {{- range $name, $sslSpec := .Values.ssl }}
+  {{- if $sslSpec.privateKey.secretName }}
+  # Automatically enable SSL policy for {{ $name }} because privateKey secret is present
+  dbms.ssl.policy.{{ $name }}.enabled: "true"
+  {{- end }}
   {{- end }}
