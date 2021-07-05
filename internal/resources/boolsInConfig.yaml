@@ -1,0 +1,3 @@
+
+config:
+  metrics.enabled: true

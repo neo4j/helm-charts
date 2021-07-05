@@ -1,0 +1,6 @@
+jvm:
+  useNeo4jDefaultJvmArguments: true
+  additionalJvmArguments:
+    - "-XX:+HeapDumpOnOutOfMemoryError"
+    - "-XX:HeapDumpPath=./java_pid<pid>.hprof"
+    - "-XX:+UseGCOverheadLimit"

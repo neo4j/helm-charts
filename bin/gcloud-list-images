@@ -15,4 +15,4 @@ GCR_REPO="eu.gcr.io/${CLOUDSDK_CORE_PROJECT}/neo4j-helm-chart"
 gcloud container images list-tags "${GCR_REPO}"
 
 echo "to pull and save use: docker pull ${GCR_REPO}:<TAG>"
-echo "to save use: docker save -o neo4j-enterprise-4.3.0.tar ${GCR_REPO}:<TAG>"
+echo "to save use: docker save -o neo4j-enterprise-X.Y.Z.tar ${GCR_REPO}:<TAG>"

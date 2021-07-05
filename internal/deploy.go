@@ -176,7 +176,9 @@ func baseHelmCommand(helmCommand string, releaseName *ReleaseName, extraHelmArgu
 		"--set", "volumes.data.selector.requests.storage="+storageSize,
 		"--set", "neo4j.password="+defaultPassword,
 		"--set", "ssl.bolt.privateKey.secretName=bolt-key", "--set", "ssl.bolt.publicCertificate.secretName=bolt-cert",
+		"--set", "ssl.bolt.trustedCerts.sources[0].secret.name=bolt-cert",
 		"--set", "ssl.https.privateKey.secretName=https-key", "--set", "ssl.https.publicCertificate.secretName=https-cert",
+		"--set", "ssl.https.trustedCerts.sources[0].secret.name=https-cert",
 	)
 
 	if value, found := os.LookupEnv("NEO4J_DOCKER_IMG"); found {
@@ -418,6 +420,10 @@ func (r *ReleaseName) podName() string {
 
 func (r *ReleaseName) envConfigMapName() string {
 	return string(*r) + "-env"
+}
+
+func (r *ReleaseName) userConfigMapName() string {
+	return string(*r) + "-user-config"
 }
 
 type Namespace string

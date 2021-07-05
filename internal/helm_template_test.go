@@ -1,10 +1,13 @@
 package internal
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	"os"
+	"strings"
 	"testing"
 )
 
@@ -13,6 +16,7 @@ var useCommunity = []string{"--set", "neo4j.edition=community"}
 var acceptLicenseAgreement = []string{"--set", "neo4j.acceptLicenseAgreement=yes"}
 
 func TestEnterpriseThrowsErrorIfLicenseAgreementNotAccepted(t *testing.T) {
+	t.Parallel()
 
 	testCases := [][]string{
 		useEnterprise,
@@ -43,6 +47,7 @@ func TestEnterpriseThrowsErrorIfLicenseAgreementNotAccepted(t *testing.T) {
 }
 
 func TestEnterpriseDoesNotThrowErrorIfLicenseAgreementAccepted(t *testing.T) {
+	t.Parallel()
 
 	testCases := [][]string{
 		append(useEnterprise, "--set", "neo4j.acceptLicenseAgreement=yes"),
@@ -69,6 +74,8 @@ func TestEnterpriseDoesNotThrowErrorIfLicenseAgreementAccepted(t *testing.T) {
 
 // Tests the "default" behaviour that you get if you don't pass in *any* other values and the helm chart defaults are used
 func TestDefaultEnterpriseHelmTemplate(t *testing.T) {
+	t.Parallel()
+
 	manifest, err := helmTemplate(t, append(useEnterprise, acceptLicenseAgreement...)...)
 	if !assert.NoError(t, err) {
 		return
@@ -87,6 +94,8 @@ func TestDefaultEnterpriseHelmTemplate(t *testing.T) {
 
 // Tests the "default" behaviour that you get if you don't pass in *any* other values and the helm chart defaults are used
 func TestDefaultCommunityHelmTemplate(t *testing.T) {
+	t.Parallel()
+
 	manifest, err := helmTemplate(t)
 	if !assert.NoError(t, err) {
 		return
@@ -108,6 +117,8 @@ func TestDefaultCommunityHelmTemplate(t *testing.T) {
 }
 
 func TestAdditionalEnvVars(t *testing.T) {
+	t.Parallel()
+
 	manifest, err := helmTemplate(t, "--set", "env.FOO=one", "--set", "env.GRAPHS=are everywhere")
 	if !assert.NoError(t, err) {
 		return
@@ -120,9 +131,90 @@ func TestAdditionalEnvVars(t *testing.T) {
 	checkNeo4jManifest(t, manifest)
 }
 
+func TestJvmAdditionalConfig(t *testing.T) {
+	t.Parallel()
+
+	testCases := []string{"community", "enterprise"}
+
+	for _, edition := range testCases {
+		t.Run(t.Name() + edition, func(t *testing.T) {
+			manifest, err := helmTemplate(t,
+				"-f", "internal/resources/jvmAdditionalSettings.yaml",
+				"--set", "neo4j.edition="+edition,
+				"--set", "neo4j.acceptLicenseAgreement=yes",
+			)
+			if !assert.NoError(t, err) {
+				return
+			}
+
+			userConfigMap := manifest.ofTypeWithName(&v1.ConfigMap{}, DefaultHelmTemplateReleaseName.userConfigMapName()).(*v1.ConfigMap)
+			assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:+HeapDumpOnOutOfMemoryError")
+			assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:HeapDumpPath=./java_pid<pid>.hprof")
+			assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:+UseGCOverheadLimit")
+
+			err = checkConfigMapContainsJvmAdditionalFromDefaultConf(t, edition, userConfigMap)
+			if !assert.NoError(t, err) {
+				return
+			}
+
+			checkNeo4jManifest(t, manifest)
+		})
+	}
+
+}
+
+func checkConfigMapContainsJvmAdditionalFromDefaultConf(t *testing.T, edition string, userConfigMap *v1.ConfigMap) error {
+	// check that we picked up jvm additional from the conf file
+	file, err := os.Open(fmt.Sprintf("neo4j-standalone/neo4j-%s.conf", edition))
+	defer file.Close()
+	if err != nil {
+		return err
+	}
+
+	n := 0
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanLines)
+	for scanner.Scan() {
+		var line = scanner.Text()
+		if strings.HasPrefix(strings.TrimSpace(line), "dbms.jvm.additional") {
+			line = strings.Replace(line, "dbms.jvm.additional=", "", 1)
+			assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], line)
+			n++
+		}
+		if err != nil {
+			return err
+		}
+
+	}
+	// The conf file should contain at least 4 (this just sanity checks that the scanner and string handling stuff above didn't screw up)
+	assert.GreaterOrEqual(t, n, 4)
+	return nil
+}
+
+func TestBoolsInConfig(t *testing.T) {
+	t.Parallel()
+
+	_, err := helmTemplate(t, "-f", "internal/resources/boolsInConfig.yaml")
+	assert.Error(t, err, "Helm chart should fail if config contains boolean values")
+	assert.Contains(t, err.Error(), "config values must be strings.")
+	assert.Contains(t, err.Error(), "metrics.enabled")
+	assert.Contains(t, err.Error(), "type: bool")
+}
+
+func TestIntsInConfig(t *testing.T) {
+	t.Parallel()
+
+	_, err := helmTemplate(t, "-f", "internal/resources/intsInConfig.yaml")
+	assert.Error(t, err, "Helm chart should fail if config contains int values")
+	assert.Contains(t, err.Error(), "config values must be strings.")
+	assert.Contains(t, err.Error(), "metrics.csv.rotation.keep_number")
+	assert.Contains(t, err.Error(), "type: float64")
+}
 
 // Tests the "default" behaviour that you get if you don't pass in *any* other values and the helm chart defaults are used
 func TestChmodInitContainer(t *testing.T) {
+	t.Parallel()
+
 	manifest, err := helmTemplate(t, "-f", "internal/resources/chmodInitContainer.yaml")
 	if !assert.NoError(t, err) {
 		return
@@ -148,6 +240,8 @@ func TestChmodInitContainer(t *testing.T) {
 
 // Tests the "default" behaviour that you get if you don't pass in *any* other values and the helm chart defaults are used
 func TestChmodInitContainers(t *testing.T) {
+	t.Parallel()
+
 	manifest, err := helmTemplate(t, "-f", "internal/resources/chmodInitContainerAndCustomInitContainer.yaml")
 	if !assert.NoError(t, err) {
 		return
@@ -173,6 +267,8 @@ func TestChmodInitContainers(t *testing.T) {
 
 // Tests the "default" behaviour that you get if you don't pass in *any* other values and the helm chart defaults are used
 func TestExplicitCommunityHelmTemplate(t *testing.T) {
+	t.Parallel()
+
 	manifest, err := helmTemplate(t, useCommunity...)
 	if !assert.NoError(t, err) {
 		return
@@ -195,6 +291,8 @@ func TestExplicitCommunityHelmTemplate(t *testing.T) {
 
 // Tests the "base" helm command used for Integration Tests
 func TestBaseHelmTemplate(t *testing.T) {
+	t.Parallel()
+
 	extraArgs := []string{}
 
 	_, err := helmTemplate(t, baseHelmCommand("template", &DefaultHelmTemplateReleaseName, extraArgs...)...)

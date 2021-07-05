@@ -9,5 +9,5 @@ volumes:
 podSpec:
   initContainers:
     - name: init-printenv
-      image: neo4j:4.3.0
+      image: neo4j:4.3.1
       command: ['sh', '-c', "printenv"]

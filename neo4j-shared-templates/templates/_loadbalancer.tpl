@@ -1,5 +1,21 @@
+{{- define "neo4j.services.neo4j.defaultSpec" -}}
+sessionAffinity: None
+externalTrafficPolicy: Local
+{{- end }}
+
+
+{{- define "neo4j.services.extraSpec" -}}
+{{- if hasKey . "type" }}{{ fail "field 'type' is not supported in Neo4j Helm Chart service.*.spec" }}{{ end }}
+{{- if hasKey . "selector" }}{{ fail "field 'selector' is not supported in Neo4j Helm Chart service.*.spec" }}{{ end }}
+{{- if hasKey . "ports" }}{{ fail "field 'ports' is not supported in Neo4j Helm Chart service.*.spec" }}{{ end }}
+{{- if hasKey . "publishNotReadyAddresses" }}{{ fail "field 'publishNotReadyAddresses' is not supported in Neo4j Helm Chart service.*.spec" }}{{ end }}
+{{ toYaml . }}
+{{- end }}
+
 {{- define "neo4j.services.neo4j" -}}
+{{- $defaultSpec := include "neo4j.services.neo4j.defaultSpec" . | fromYaml }}
 {{- if .Values.enabled }}
+{{- $spec := merge .Values.spec $defaultSpec }}
 # Service for applications that need access to neo4j
 apiVersion: v1
 kind: Service
@@ -14,15 +30,8 @@ metadata:
   annotations: {{ toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  type: "{{ .Values.type }}"
-  {{- with .Values.clusterIP }}
-  clusterIP: "{{ . }}"
-  {{- end }}
-  {{- with .Values.loadBalancerIP }}
-  loadBalancerIP: "{{ . }}"
-  {{- end }}
-  sessionAffinity: None
-  externalTrafficPolicy: Local
+  type: "{{ $spec.type | required "service type must be specified" }}"
+  {{- omit $spec "type" | include "neo4j.services.extraSpec"  | nindent 2 }}
   ports:
     {{- with .Values.ports }}
     {{- if .http.enabled }}
