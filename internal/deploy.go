@@ -36,6 +36,10 @@ var (
 )
 
 const storageSize = "10Gi"
+const cpuRequests = "50m"
+const memoryRequests = "900Mi"
+const cpuLimits = "1500m"
+const memoryLimits = "900Mi"
 
 // This changes the working directory to the parent directory if the current working directory doesn't contain a directory called "yaml"
 func init() {
@@ -175,6 +179,10 @@ func baseHelmCommand(helmCommand string, releaseName *ReleaseName, extraHelmArgu
 		"--create-namespace",
 		"--set", "volumes.data.selector.requests.storage="+storageSize,
 		"--set", "neo4j.password="+defaultPassword,
+		"--set", "neo4j.resources.requests.cpu=" + cpuRequests,
+		"--set", "neo4j.resources.requests.memory=" + memoryRequests,
+		"--set", "neo4j.resources.limits.cpu=" + cpuLimits,
+		"--set", "neo4j.resources.limits.memory=" + memoryLimits,
 		"--set", "ssl.bolt.privateKey.secretName=bolt-key", "--set", "ssl.bolt.publicCertificate.secretName=bolt-cert",
 		"--set", "ssl.bolt.trustedCerts.sources[0].secret.name=bolt-cert",
 		"--set", "ssl.https.privateKey.secretName=https-key", "--set", "ssl.https.publicCertificate.secretName=https-cert",

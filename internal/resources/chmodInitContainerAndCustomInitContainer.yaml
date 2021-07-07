@@ -9,5 +9,8 @@ volumes:
 podSpec:
   initContainers:
     - name: init-printenv
-      image: neo4j:4.3.1
       command: ['sh', '-c', "printenv"]
+
+  containers:
+    - name: maintenance-sidecar
+      command: ['bash', '-c', "while true; do sleep 120; done"]

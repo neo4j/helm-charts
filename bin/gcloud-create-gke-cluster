@@ -24,7 +24,7 @@ RELEASE_CHANNEL="stable"
 gcloud container clusters create "${CLOUDSDK_CONTAINER_CLUSTER}" \
      --release-channel=${RELEASE_CHANNEL} \
      --zone="${CLOUDSDK_COMPUTE_ZONE}" \
-     --num-nodes "1" \
+     --num-nodes "2" \
      --workload-pool="${CLOUDSDK_CORE_PROJECT}.svc.id.goog" \
      --preemptible --machine-type "${NODE_MACHINE}" --image-type "COS_CONTAINERD" \
      --disk-type "pd-ssd" --disk-size "10" \

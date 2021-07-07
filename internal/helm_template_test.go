@@ -72,6 +72,38 @@ func TestEnterpriseDoesNotThrowErrorIfLicenseAgreementAccepted(t *testing.T) {
 	}
 }
 
+// This test is just to check that the produced helm chart doesn't throw any errors
+func TestEnterpriseDoesNotThrowIfSet(t *testing.T) {
+	t.Parallel()
+
+	baseSettings := append(useEnterprise, acceptLicenseAgreement...)
+	testCases := [][]string{
+		baseSettings,
+		append(baseSettings, "--set", "neo4j.resources.requests.cpu=100m"),
+		append(baseSettings, "-f", "internal/resources/apocCorePlugin.yaml"),
+		append(baseSettings, "-f", "internal/resources/csvMetrics.yaml"),
+		append(baseSettings, "-f", "internal/resources/defaultStorageClass.yaml"),
+		append(baseSettings, "-f", "internal/resources/jvmAdditionalSettings.yaml"),
+		append(baseSettings, "-f", "internal/resources/pluginsInitContainer.yaml"),
+	}
+
+	doTestCase := func(t *testing.T, testCase []string) {
+		t.Parallel()
+		manifest, err := helmTemplate(t, testCase...)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		checkNeo4jManifest(t, manifest)
+	}
+
+	for i, testCase := range testCases {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			doTestCase(t, testCase)
+		})
+	}
+}
+
 // Tests the "default" behaviour that you get if you don't pass in *any* other values and the helm chart defaults are used
 func TestDefaultEnterpriseHelmTemplate(t *testing.T) {
 	t.Parallel()
@@ -105,8 +137,11 @@ func TestDefaultCommunityHelmTemplate(t *testing.T) {
 
 	neo4jStatefulSet := manifest.first(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
 	neo4jStatefulSet.GetName()
+	assert.NotEmpty(t, neo4jStatefulSet.Spec.Template.Spec.Containers)
 	for _, container := range neo4jStatefulSet.Spec.Template.Spec.Containers {
 		assert.NotContains(t, container.Image, "enterprise")
+		assert.Equal(t, "1", container.Resources.Requests.Cpu().String())
+		assert.Equal(t, "2Gi", container.Resources.Requests.Memory().String())
 	}
 	for _, container := range neo4jStatefulSet.Spec.Template.Spec.InitContainers {
 		assert.NotContains(t, container.Image, "enterprise")
