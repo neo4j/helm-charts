@@ -265,6 +265,9 @@ podSpec:
   # initContainers for the Neo4j pod
   initContainers: [ ]
 
+  # additional runtime containers for the Neo4j pod
+  containers: [ ]
+
 # print the neo4j user password set during install to the `helm install` log
 logInitialPassword: true
 

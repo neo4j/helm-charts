@@ -72,13 +72,15 @@ spec:
       {{- with $initContainers }}
       initContainers:
         {{- range $i, $initContainer := . }}
-        - {{ $initContainer | toYaml | indent 10 | trimAll " " }}
+        {{- if not $offlineMaintenanceEnabled | or $initContainer.enabledInOfflineMaintenanceMode }}
+        - {{ omit $initContainer "enabledInOfflineMaintenanceMode" | toYaml | indent 10 | trimAll " " }}
           {{- if not ( hasKey $initContainer "image") }}
           image: "{{ $neo4jImage }}"
           {{- end }}
           {{- if not ( hasKey $initContainer "volumeMounts") }}
           volumeMounts: {{ include "neo4j.volumeMounts" ( omit $.Values.volumes "logs" "metrics" ) | nindent 12 }}
           {{- end }}
+        {{- end }}
         {{- end }}
       {{- end }}
       containers:
@@ -124,10 +126,13 @@ spec:
               name: backup
           {{- with .Values.neo4j.resources }}
           resources:
+            {{- if hasKey . "requests" | or (hasKey . "limits") }}
+            {{- omit . "cpu" "memory" | toYaml | nindent 12 }}
+            {{- else }}
             requests: {{ . | toYaml | nindent 14 }}
             limits: {{ . | toYaml | nindent 14 }}
+            {{- end }}
           {{- end }}
-          resources: {}
           securityContext: {{ omit .Values.securityContext "fsGroupChangePolicy" "fsGroup" | toYaml  | nindent 14 }}
           volumeMounts:
             - mountPath: "/config/neo4j.conf"
@@ -158,6 +163,20 @@ spec:
             failureThreshold: {{ .Values.startupProbe.failureThreshold }}
             periodSeconds: {{ .Values.startupProbe.periodSeconds }}
           {{- end }}
+        {{- with .Values.podSpec.containers }}
+        # Extra "sidecar" containers
+        {{- range $i, $extraContainer := . }}
+        {{- if not $offlineMaintenanceEnabled | or $extraContainer.enabledInOfflineMaintenanceMode }}
+        - {{ omit $extraContainer "enabledInOfflineMaintenanceMode" | toYaml | indent 10 | trimAll " " }}
+          {{- if not ( hasKey $extraContainer "image") }}
+          image: "{{ $neo4jImage }}"
+          {{- end }}
+          {{- if not ( hasKey $extraContainer "volumeMounts") }}
+          volumeMounts: {{ include "neo4j.volumeMounts" ( omit $.Values.volumes "logs" "metrics" ) | nindent 12 }}
+          {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
       volumes:
         {{- /* neo4j.conf settings. Using a projected volume allows keys defined later in the list of configMaps to override keys defined earlier in the list of configmaps. */}}
         - name: neo4j-conf
