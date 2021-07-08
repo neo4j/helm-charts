@@ -28,7 +28,15 @@ func RunCommand(c *exec.Cmd) ([]byte, []byte, error) {
 	return a.Bytes(), b.Bytes(), err
 }
 
-func helmTemplate(t *testing.T, helmTemplateArgs ...string) (*K8sResources, error) {
+func helmTemplateFromYamlFile(t *testing.T, filepath string) (*K8sResources, error) {
+	return helmTemplate(t, minHelmCommand("template", &DefaultHelmTemplateReleaseName), "-f", filepath)
+}
+
+func helmTemplate(t *testing.T, helmTemplateArgs []string, moreHelmTemplateArgs ...string) (*K8sResources, error) {
+	if helmTemplateArgs != nil {
+		helmTemplateArgs = append(helmTemplateArgs, moreHelmTemplateArgs...)
+	}
+
 	if len(helmTemplateArgs) == 0 || helmTemplateArgs[0] != "template" {
 		helmTemplateArgs = append(minHelmCommand("template", &DefaultHelmTemplateReleaseName), helmTemplateArgs...)
 	}

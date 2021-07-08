@@ -177,12 +177,13 @@ func baseHelmCommand(helmCommand string, releaseName *ReleaseName, extraHelmArgu
 	var helmArgs = minHelmCommand(helmCommand, releaseName)
 	helmArgs = append(helmArgs,
 		"--create-namespace",
+		"--set", "volumes.data.mode=selector",
 		"--set", "volumes.data.selector.requests.storage="+storageSize,
 		"--set", "neo4j.password="+defaultPassword,
-		"--set", "neo4j.resources.requests.cpu=" + cpuRequests,
-		"--set", "neo4j.resources.requests.memory=" + memoryRequests,
-		"--set", "neo4j.resources.limits.cpu=" + cpuLimits,
-		"--set", "neo4j.resources.limits.memory=" + memoryLimits,
+		"--set", "neo4j.resources.requests.cpu="+cpuRequests,
+		"--set", "neo4j.resources.requests.memory="+memoryRequests,
+		"--set", "neo4j.resources.limits.cpu="+cpuLimits,
+		"--set", "neo4j.resources.limits.memory="+memoryLimits,
 		"--set", "ssl.bolt.privateKey.secretName=bolt-key", "--set", "ssl.bolt.publicCertificate.secretName=bolt-cert",
 		"--set", "ssl.bolt.trustedCerts.sources[0].secret.name=bolt-cert",
 		"--set", "ssl.https.privateKey.secretName=https-key", "--set", "ssl.https.publicCertificate.secretName=https-cert",
@@ -237,7 +238,7 @@ func helmCleanupCommands(releaseName *ReleaseName) [][]string {
 }
 
 func kCleanupCommands(namespace Namespace) [][]string {
-	return [][]string{{"delete", "namespace", string(namespace), "--ignore-not-found", "--force", "--grace-period=0" }}
+	return [][]string{{"delete", "namespace", string(namespace), "--ignore-not-found", "--force", "--grace-period=0"}}
 }
 
 type Closeable func() error

@@ -11,9 +11,38 @@ import (
 	"testing"
 )
 
+var requiredDataMode = []string{"--set", "volumes.data.mode=selector"}
 var useEnterprise = []string{"--set", "neo4j.edition=enterprise"}
 var useCommunity = []string{"--set", "neo4j.edition=community"}
 var acceptLicenseAgreement = []string{"--set", "neo4j.acceptLicenseAgreement=yes"}
+var useEnterpriseAndAcceptLicense = append(useEnterprise, acceptLicenseAgreement...)
+
+func TestErrorThrownIfNoDataVolumeModeChosen(t *testing.T) {
+	t.Parallel()
+	_, err := helmTemplate(t, nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "A volume mode for the Neo4j 'data' volume is required.")
+	assert.Contains(t, err.Error(), "--set volumes.data.mode=defaultStorageClass")
+}
+
+func TestErrorThrownIfNoVolumeSizeChosen(t *testing.T) {
+	t.Parallel()
+
+	dynamicLogsVolume := []string{"--set", "volumes.logs.mode=dynamic"}
+	_, err := helmTemplate(t, requiredDataMode, dynamicLogsVolume...)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Volume logs is missing field: dynamic")
+
+	dynamicLogsVolume = append(dynamicLogsVolume, "--set", "volumes.logs.dynamic.storageClassName=neo4j")
+	_, err = helmTemplate(t, requiredDataMode, dynamicLogsVolume...)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "The storage capacity of volumes.logs must be specified")
+	assert.Contains(t, err.Error(), "Set volumes.logs.dynamic.requests.storage to a suitable value")
+
+	dynamicLogsVolume = append(dynamicLogsVolume, "--set", "volumes.logs.dynamic.requests.storage=10Gi")
+	_, err = helmTemplate(t, requiredDataMode, dynamicLogsVolume...)
+	assert.NoError(t, err)
+}
 
 func TestEnterpriseThrowsErrorIfLicenseAgreementNotAccepted(t *testing.T) {
 	t.Parallel()
@@ -33,7 +62,7 @@ func TestEnterpriseThrowsErrorIfLicenseAgreementNotAccepted(t *testing.T) {
 
 	doTestCase := func(t *testing.T, testCase []string) {
 		t.Parallel()
-		_, err := helmTemplate(t, testCase...)
+		_, err := helmTemplate(t, testCase)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "to use Neo4j Enterprise Edition you must have a Neo4j license agreement")
 		assert.Contains(t, err.Error(), "Set neo4j.acceptLicenseAgreement: \"yes\" to confirm that you have a Neo4j license agreement.")
@@ -57,7 +86,7 @@ func TestEnterpriseDoesNotThrowErrorIfLicenseAgreementAccepted(t *testing.T) {
 
 	doTestCase := func(t *testing.T, testCase []string) {
 		t.Parallel()
-		manifest, err := helmTemplate(t, testCase...)
+		manifest, err := helmTemplate(t, requiredDataMode, testCase...)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -89,7 +118,7 @@ func TestEnterpriseDoesNotThrowIfSet(t *testing.T) {
 
 	doTestCase := func(t *testing.T, testCase []string) {
 		t.Parallel()
-		manifest, err := helmTemplate(t, testCase...)
+		manifest, err := helmTemplate(t, requiredDataMode, testCase...)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -108,7 +137,7 @@ func TestEnterpriseDoesNotThrowIfSet(t *testing.T) {
 func TestDefaultEnterpriseHelmTemplate(t *testing.T) {
 	t.Parallel()
 
-	manifest, err := helmTemplate(t, append(useEnterprise, acceptLicenseAgreement...)...)
+	manifest, err := helmTemplate(t, requiredDataMode, useEnterpriseAndAcceptLicense...)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -128,7 +157,7 @@ func TestDefaultEnterpriseHelmTemplate(t *testing.T) {
 func TestDefaultCommunityHelmTemplate(t *testing.T) {
 	t.Parallel()
 
-	manifest, err := helmTemplate(t)
+	manifest, err := helmTemplate(t, requiredDataMode)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -154,7 +183,7 @@ func TestDefaultCommunityHelmTemplate(t *testing.T) {
 func TestAdditionalEnvVars(t *testing.T) {
 	t.Parallel()
 
-	manifest, err := helmTemplate(t, "--set", "env.FOO=one", "--set", "env.GRAPHS=are everywhere")
+	manifest, err := helmTemplate(t, requiredDataMode, "--set", "env.FOO=one", "--set", "env.GRAPHS=are everywhere")
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -172,8 +201,8 @@ func TestJvmAdditionalConfig(t *testing.T) {
 	testCases := []string{"community", "enterprise"}
 
 	for _, edition := range testCases {
-		t.Run(t.Name() + edition, func(t *testing.T) {
-			manifest, err := helmTemplate(t,
+		t.Run(t.Name()+edition, func(t *testing.T) {
+			manifest, err := helmTemplate(t, requiredDataMode,
 				"-f", "internal/resources/jvmAdditionalSettings.yaml",
 				"--set", "neo4j.edition="+edition,
 				"--set", "neo4j.acceptLicenseAgreement=yes",
@@ -229,7 +258,7 @@ func checkConfigMapContainsJvmAdditionalFromDefaultConf(t *testing.T, edition st
 func TestBoolsInConfig(t *testing.T) {
 	t.Parallel()
 
-	_, err := helmTemplate(t, "-f", "internal/resources/boolsInConfig.yaml")
+	_, err := helmTemplateFromYamlFile(t, "internal/resources/boolsInConfig.yaml")
 	assert.Error(t, err, "Helm chart should fail if config contains boolean values")
 	assert.Contains(t, err.Error(), "config values must be strings.")
 	assert.Contains(t, err.Error(), "metrics.enabled")
@@ -239,7 +268,7 @@ func TestBoolsInConfig(t *testing.T) {
 func TestIntsInConfig(t *testing.T) {
 	t.Parallel()
 
-	_, err := helmTemplate(t, "-f", "internal/resources/intsInConfig.yaml")
+	_, err := helmTemplateFromYamlFile(t, "internal/resources/intsInConfig.yaml")
 	assert.Error(t, err, "Helm chart should fail if config contains int values")
 	assert.Contains(t, err.Error(), "config values must be strings.")
 	assert.Contains(t, err.Error(), "metrics.csv.rotation.keep_number")
@@ -250,7 +279,7 @@ func TestIntsInConfig(t *testing.T) {
 func TestChmodInitContainer(t *testing.T) {
 	t.Parallel()
 
-	manifest, err := helmTemplate(t, "-f", "internal/resources/chmodInitContainer.yaml")
+	manifest, err := helmTemplateFromYamlFile(t, "internal/resources/chmodInitContainer.yaml")
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -277,7 +306,7 @@ func TestChmodInitContainer(t *testing.T) {
 func TestChmodInitContainers(t *testing.T) {
 	t.Parallel()
 
-	manifest, err := helmTemplate(t, "-f", "internal/resources/chmodInitContainerAndCustomInitContainer.yaml")
+	manifest, err := helmTemplateFromYamlFile(t, "internal/resources/chmodInitContainerAndCustomInitContainer.yaml")
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -304,7 +333,7 @@ func TestChmodInitContainers(t *testing.T) {
 func TestExplicitCommunityHelmTemplate(t *testing.T) {
 	t.Parallel()
 
-	manifest, err := helmTemplate(t, useCommunity...)
+	manifest, err := helmTemplate(t, requiredDataMode, useCommunity...)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -330,7 +359,7 @@ func TestBaseHelmTemplate(t *testing.T) {
 
 	extraArgs := []string{}
 
-	_, err := helmTemplate(t, baseHelmCommand("template", &DefaultHelmTemplateReleaseName, extraArgs...)...)
+	_, err := helmTemplate(t, baseHelmCommand("template", &DefaultHelmTemplateReleaseName, extraArgs...))
 	if !assert.NoError(t, err) {
 		return
 	}

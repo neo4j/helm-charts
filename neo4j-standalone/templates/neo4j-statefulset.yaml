@@ -5,22 +5,7 @@
 {{- $neo4jImage := include "neo4j.image" . }}
 
 {{- template "neo4j.checkLicenseAgreement" . -}}
-
-{{- range $name, $spec := .Values.volumes -}}
-  {{- range $otherName, $otherSpec := $.Values.volumes -}}
-    {{- if ne $otherName $name}}
-      {{- if eq $spec.mode $otherSpec.mode }}
-        {{- if eq $spec.mode "volume" }}
-          {{- if and $spec.volume.persistentVolumeClaim $otherSpec.volume.persistentVolumeClaim }}
-            {{- if eq $spec.volume.persistentVolumeClaim.claimName $otherSpec.volume.persistentVolumeClaim.claimName }}
-              {{ cat "Cannot mount the same persistent volume claim multiple times:" $name "and" $otherName "use the same persistent volume claim!" | fail }}
-            {{- end }}
-          {{- end }}
-        {{- end }}
-      {{- end }}
-    {{- end }}
-  {{- end }}
-{{- end -}}
+{{- template "neo4j.volumes.validation" . -}}
 
 apiVersion: apps/v1
 kind: StatefulSet
@@ -189,9 +174,9 @@ spec:
                   name: "{{ .Release.Name }}-user-config"
               - configMap:
                   name: "{{ .Release.Name }}-k8s-config"
-        {{- include "neo4j.ssl.volumesFromSecrets" .Values.ssl | nindent 8 }}
-        {{- include "neo4j.volumes" . | nindent 8 }}
-  {{- $volumeClaimTemplates := include "neo4j.volumeClaimTemplates" . }}
+        {{- with include "neo4j.ssl.volumesFromSecrets" .Values.ssl }}{{ nindent 8 .}}{{ end -}}
+        {{- with include "neo4j.volumes" . }}{{ nindent 8 . }}{{ end -}}
+  {{- $volumeClaimTemplates := include "neo4j.volumeClaimTemplates" . -}}
   {{- if $volumeClaimTemplates }}
   volumeClaimTemplates: {{ $volumeClaimTemplates | nindent 4 }}
   {{- end }}

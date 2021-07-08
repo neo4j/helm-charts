@@ -1,4 +1,7 @@
 volumes:
+  data:
+    mode: "dynamic"
+
   logs:
     mode: volume
     volume:

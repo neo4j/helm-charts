@@ -1,3 +1,13 @@
 volumes:
   data:
     mode: "defaultStorageClass"
+  logs:
+    mode: "defaultStorageClass"
+    defaultStorageClass:
+      requests:
+        storage: 1Gi
+  backups:
+    mode: "defaultStorageClass"
+    defaultStorageClass:
+      requests:
+        storage: 100Gi

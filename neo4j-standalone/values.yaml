@@ -31,10 +31,11 @@ neo4j:
 
 # Volumes for Neo4j
 volumes:
-  # REQUIRED: specify a volume to use for data
   data:
+    # REQUIRED: specify a volume mode to use for data
     # Valid values are share|selector|defaultStorageClass|volume|volumeClaimTemplate|dynamic
-    mode: "selector"
+    # To get up-and-running quickly, for development or testing, use "defaultStorageClass" for a dynamically provisioned volume of the default storage class.
+    mode: ""
 
     # Only used if mode is set to "selector"
     # Will attach to existing volumes that match the selector
@@ -61,11 +62,11 @@ volumes:
     # Only used if mode is set to "dynamic"
     # Dynamic provisioning using the provided storageClass
     dynamic:
+      storageClassName: "neo4j"
       accessModes:
         - ReadWriteOnce
-      storageClassName: "neo4j"
       requests:
-        storage: 1Ti
+        storage: 100Gi
 
     # Only used if mode is set to "volume"
     # Provide an explicit volume to use
@@ -276,7 +277,7 @@ jvm:
   # If true any additional arguments are added after the Neo4j default jvm arguments.
   # If false Neo4j default jvm arguments are not used.
   useNeo4jDefaultJvmArguments: true
-  # additionalJvmArguments is a list of strings. Each jvm argument should be a separate list element (example below)
+  # additionalJvmArguments is a list of strings. Each jvm argument should be a separate element:
   additionalJvmArguments: []
   # - "-XX:+HeapDumpOnOutOfMemoryError"
   # - "-XX:HeapDumpPath=/logs/neo4j.hprof"
