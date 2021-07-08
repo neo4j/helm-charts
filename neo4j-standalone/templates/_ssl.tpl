@@ -13,12 +13,12 @@
     defaultMode: 0440
     {{ $sslSpec.trustedCerts | toYaml | nindent 4 }}
 {{- end }}
-{{- if $sslSpec.revokedCerts.sources }}
+{{- if $sslSpec.revokedCerts.sources -}}
 - name: "{{ $name }}-revoked"
   projected:
     defaultMode: 0440
     {{ $sslSpec.revokedCerts | toYaml | nindent 4 }}
-{{- end -}}
+{{/* blank line, important! */}}{{ end -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}

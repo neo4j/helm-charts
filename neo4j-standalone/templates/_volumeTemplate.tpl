@@ -11,7 +11,7 @@ If "volume" mode is selected nothing is returned.
 */}}
 {{- $ignored := required "Values must be passed in to helm volumeTemplate for use with internal templates" .Values -}}
 {{- $ignored = required "Template must be passed in to helm volumeTemplate so that tpl function works" .Template -}}
-
+{{- $name := required "name must be passed in to helm volumeTemplate so that tpl function works" .name -}}
 {{/*
 Deep Copy the provided volume object so that we can mutate it safely in this template
 */}}
@@ -21,6 +21,8 @@ Deep Copy the provided volume object so that we can mutate it safely in this tem
 {{- if not ( $volume.mode | regexMatch $validModes ) -}}
   {{- fail ( cat "\nUnknown volume mode:" $volume.mode "\nValid modes are: " $validModes ) -}}
 {{- end -}}
+{{- $originalMode := $volume.mode -}}
+{{- $ignored = get $volume $volume.mode | required (cat "Volume" $name "is missing field:" $volume.mode ) -}}
 {{/*
 If defaultStorageClass is chosen overwrite "dynamic" and switch to dynamic mode
 */}}
@@ -42,8 +44,11 @@ If selector is chosen process the selector template and then overwrite "dynamic"
 {{- end -}}
 
 {{- if eq $volume.mode "dynamic" -}}
+    {{- $requests := required ( include "neo4j.volumeClaimTemplate.resourceMissingError" (dict "name" $name "mode" $originalMode) ) $volume.dynamic.requests -}}
+    {{- $ignored := required ( include "neo4j.volumeClaimTemplate.resourceMissingError" (dict "name" $name "mode" $originalMode) ) $requests.storage -}}
+
     {{- $ignored = set $volume "mode" "volumeClaimTemplate" -}}
-    {{- $ignored = dict "requests" $volume.dynamic.requests | set $volume.dynamic "resources" -}}
+    {{- $ignored = dict "requests" $requests | set $volume.dynamic "resources" -}}
     {{- $ignored = set $volume "volumeClaimTemplate" ( omit $volume.dynamic "requests" "selectorTemplate" ) -}}
 {{- end -}}
 
@@ -60,17 +65,21 @@ If selector is chosen process the selector template and then overwrite "dynamic"
 {{- end -}}
 {{- end -}}
 
+{{- define "neo4j.volumeClaimTemplate.resourceMissingError" -}}
+"The storage capacity of volumes.{{ .name }} must be specified when using '{{ .mode }}' mode. Set volumes.{{ .name }}.{{ .mode }}.requests.storage to a suitable value (e.g. 100Gi)"
+{{- end }}
+
 {{- define "neo4j.volumeClaimTemplates" -}}
 {{- $neo4jName := include "neo4j.name" . }}
 {{- $template := .Template -}}
 {{- range $name, $spec := .Values.volumes -}}
 {{- if $spec -}}
-{{- $volumeClaim := dict "Template" $template "Values" $.Values "volume" $spec | include "neo4j.volumeClaimTemplateSpec" -}}
+{{- $volumeClaim := dict "Template" $template "Values" $.Values "volume" $spec "name" $name | include "neo4j.volumeClaimTemplateSpec" -}}
 {{- if $volumeClaim -}}
 - metadata:
     name: "{{ $name }}"
-  spec: {{- $volumeClaim | nindent 4 -}}
-{{- end -}}
+  spec: {{- $volumeClaim | nindent 4 }}
+{{/* blank line, important! */}}{{ end -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
@@ -81,10 +90,10 @@ If selector is chosen process the selector template and then overwrite "dynamic"
 {{- range $name, $spec := .Values.volumes -}}
 {{- if $spec -}}
 {{- $volumeYaml := dict "Template" $template "Values" $.Values "volume" $spec | include "neo4j.volumeSpec" -}}
-{{- if $volumeYaml }}
+{{- if $volumeYaml -}}
 - name: "{{ $name }}"
   {{- $volumeYaml | nindent 2 }}
-{{- end -}}
+{{/* blank line, important! */}}{{ end -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
@@ -153,3 +162,45 @@ chmod -R g+rwx "/{{ $name }}"
 {{- end -}}
 {{- end -}}
 {{- end -}}
+
+{{- define "neo4j.volumes.validation" -}}
+{{- $dataVolume := required (include "neo4j.volumes.data.mustBeSetMessage" .) .Values.volumes.data -}}
+{{- $dataVolumeMode := required (include "neo4j.volumes.data.modeRequiredMessage" .) .Values.volumes.data.mode -}}
+{{- range $name, $spec := .Values.volumes -}}
+  {{- range $otherName, $otherSpec := $.Values.volumes -}}
+    {{- if ne $otherName $name}}
+      {{- if eq $spec.mode $otherSpec.mode }}
+        {{- if eq $spec.mode "volume" }}
+          {{- if and $spec.volume.persistentVolumeClaim $otherSpec.volume.persistentVolumeClaim }}
+            {{- if eq $spec.volume.persistentVolumeClaim.claimName $otherSpec.volume.persistentVolumeClaim.claimName }}
+              {{ cat "Cannot mount the same persistent volume claim multiple times:" $name "and" $otherName "use the same persistent volume claim!" | fail }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end -}}
+{{- end }}
+
+{{- define "neo4j.volumes.data.mustBeSetMessage" }}
+
+A data volume for Neo4j is required.
+
+Set volumes.data and try again.
+
+{{ end -}}
+
+{{- define "neo4j.volumes.data.modeRequiredMessage" }}
+
+A volume mode for the Neo4j 'data' volume is required.
+
+Set volumes.data.mode to one of: "share", "selector", "defaultStorageClass", "volume", "volumeClaimTemplate" or "dynamic".
+
+For details of how to configure volume modes see the Neo4j Helm chart documentation at https://neo4j.com/docs/operations-manual/current/kubernetes
+
+To get up-and-running quickly, for development or testing, use "defaultStorageClass" for a dynamically provisioned volume of the default storage class.
+
+E.g. by adding `--set volumes.data.mode=defaultStorageClass`
+
+{{ end -}}
