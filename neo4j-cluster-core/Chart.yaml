@@ -1,0 +1,21 @@
+apiVersion: v1
+name: neo4j-cluster-core
+home: https://www.neo4j.com
+version: 4.3.2
+appVersion: 4.3.2
+description: Neo4j is the world's leading graph database
+keywords:
+  - graph
+  - database
+  - cypher
+icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
+sources:
+  - https://github.com/neo4j/neo4j
+  - https://github.com/neo4j/docker-neo4j
+maintainers:
+  - name: eastlondoner
+    email: andrew.jefferson@neotechnology.com
+  - name: bfeshti
+    email: bledi.feshti@neotechnology.com
+  - name: jennyowen
+    email: jenny.owen@neotechnology.com
