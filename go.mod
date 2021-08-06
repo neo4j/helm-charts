@@ -6,6 +6,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/neo4j/neo4j-go-driver/v4 v4.2.2
+	github.com/sergi/go-diff v1.1.0
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
