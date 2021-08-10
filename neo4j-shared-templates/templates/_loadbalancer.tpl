@@ -31,7 +31,7 @@ metadata:
   {{- end }}
 spec:
   type: "{{ $spec.type | required "service type must be specified" }}"
-  {{- omit $spec "type" | include "neo4j.services.extraSpec"  | nindent 2 }}
+  {{- omit $spec "type" "ports" "selector" | include "neo4j.services.extraSpec"  | nindent 2 }}
   ports:
     {{- with .Values.ports }}
     {{- if .http.enabled }}

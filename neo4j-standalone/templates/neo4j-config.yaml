@@ -70,7 +70,7 @@ data:
   {{- include "neo4j.configYaml" $confFile | nindent 2 }}
 
   # Helm defaults
-  dbms.mode: "{{ index .Values.config "dbms.mode" | default "SINGLE" }}"
+  dbms.mode: "{{ index .Values.config "dbms.mode" | default "SINGLE" | upper }}"
 
   # Bolt keep alive
   # this helps to ensure that LoadBalancers do not close bolt connections that are in use but appear idle

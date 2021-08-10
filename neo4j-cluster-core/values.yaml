@@ -136,6 +136,9 @@ services:
   neo4j:
     enabled: true
 
+    # if selectCluster is true load balancer will select any instance of the same dbms.mode
+    selectCluster: true
+
     # Annotations for the K8s Service object
     annotations: { }
 
@@ -177,6 +180,7 @@ services:
 config:
   dbms.mode: "CORE"
   dbms.config.strict_validation: "true"
+  causal_clustering.middleware.akka.allow_any_core_to_bootstrap: "true"
 
 # securityContext defines privilege and access control settings for a Pod or Container. Making sure that we dont run Neo4j as root user.
 securityContext:
