@@ -2,6 +2,14 @@
 {{- with .Values.services.neo4j }}
 {{- $values := deepCopy . -}}
 {{- $values = set $values "neo4j" $.Values.neo4j }}
-{{- $values = set $values "selector" ( dict "helm.neo4j.com/instance" $.Release.Name ) }}
+{{- if not $values.selector }}
+{{- $values = set $values "selector" dict }}
+{{- end }}
+{{- if $values.selectCluster }}
+{{- $ignored := set $values.selector "helm.neo4j.com/neo4j.name" ( include "neo4j.name" $ ) }}
+{{- $ignored = set $values.selector "helm.neo4j.com/dbms.mode" ( index $.Values.config "dbms.mode" | default "CORE" | upper ) }}
+{{- else }}
+{{- $ignored := set $values.selector "helm.neo4j.com/instance" $.Release.Name }}
+{{- end }}
 {{- dict "Release" $.Release "Values" $values | include "neo4j.services.neo4j" }}
 {{- end }}

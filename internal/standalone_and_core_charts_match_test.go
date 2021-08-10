@@ -24,6 +24,8 @@ func TestCoreChartMatchesStandalone(t *testing.T) {
 
 var acceptableValuesDifferences = []string{
 	`  dbms.mode: "CORE"` + "\n",
+	`  causal_clustering.middleware.akka.allow_any_core_to_bootstrap: "true"` + "\n",
+	`    # if selectCluster is true load balancer will select any instance of the same dbms.mode`+"\n"+`    selectCluster: true`+"\n\n",
 }
 
 // The values files for Standalone and Core installations must be kept in sync.
