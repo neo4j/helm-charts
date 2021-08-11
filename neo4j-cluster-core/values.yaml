@@ -8,9 +8,8 @@ neo4j:
   # If password is not set or empty a random password will be generated during installation
   password: ""
 
-  # Neo4j Edition to use (community|enterprise)
-  edition: "community"
-  # set edition: "enterprise" to use Neo4j Enterprise Edition
+  # Neo4j Clustering requires Enterprise Edition
+  edition: "enterprise"
   #
   # To use Neo4j Enterprise Edition you must have a Neo4j license agreement.
   #
