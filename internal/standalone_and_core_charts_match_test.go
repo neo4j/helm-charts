@@ -23,6 +23,8 @@ func TestCoreChartMatchesStandalone(t *testing.T) {
 }
 
 var acceptableValuesDifferences = []string{
+	`  # Neo4j Clustering requires Enterprise Edition`+"\n"+`  edition: "enterprise"` + "\n",
+	`  # Neo4j Edition to use (community|enterprise)`+"\n"+`  edition: "community"`+"\n"+`  # set edition: "enterprise" to use Neo4j Enterprise Edition` + "\n",
 	`  dbms.mode: "CORE"` + "\n",
 	`  causal_clustering.middleware.akka.allow_any_core_to_bootstrap: "true"` + "\n",
 	`    # if selectCluster is true load balancer will select any instance of the same dbms.mode`+"\n"+`    selectCluster: true`+"\n\n",
