@@ -1,0 +1,33 @@
+
+# Shared neo4j object
+neo4j:
+  # neo4j.name is required and must match the name of the neo4j instances this service should use
+  name: "neo4j-helm"
+
+# neo4j.conf
+config: { }
+
+# Annotations for the external service
+annotations: { }
+
+# A reserved/static IP that you want the LoadBalancer to use (usually optional, depending on the load balancer implmentation)
+loadBalancerIP: NULL
+
+# Neo4j ports to include in external service
+ports:
+  http:
+    enabled: true #Set this to true to expose HTTP externally
+  https:
+    enabled: true #Set this to true to expose HTTPS externally
+  bolt:
+    enabled: true #Set this to true to expose BOLT externally
+  backup:
+    enabled: false #Set this to true to expose backup port externally (n.b. this could have security implications. Backup is not authenticated by default)
+
+# A "helm.neo4j.com/neo4j.name" will be applied automatically. Specify *additional* selectors to apply here (generally not required)
+# if you do not want the automatic selector then rename selector to selectorOverride.
+selector: {}
+
+# Add additional Service.spec here
+spec:
+  type: LoadBalancer

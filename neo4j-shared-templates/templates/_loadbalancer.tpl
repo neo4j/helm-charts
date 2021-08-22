@@ -36,25 +36,32 @@ spec:
     {{- with .Values.ports }}
     {{- if .http.enabled }}
     - protocol: TCP
-      port: 7474
+      port: {{ .http.port | default 7474 }}
       targetPort: 7474
       name: http
     {{- end }}
     {{- if .https.enabled }}
     - protocol: TCP
-      port: 7473
+      port: {{ .https.port | default 7473 }}
       targetPort: 7473
       name: https
     {{- end }}
     {{- if .bolt.enabled }}
     - protocol: TCP
-      port: 7687
+      port: {{ .bolt.port | default 7687 }}
       targetPort: 7687
       name: tcp-bolt
     {{- end }}
+    {{ with .backup }}
+    {{- if .enabled }}
+    - protocol: TCP
+      port: {{ .port | default 6362 }}
+      targetPort: 6362
+      name: tcp-backup
+    {{- end }}
+    {{- end }}
     {{- end }}
   selector:
-    app: "{{ template "neo4j.appName" . | required "neo4j.name must be specified" }}"
     {{- with .Values.selector }}
     {{- . | toYaml | nindent 4 }}
     {{- end }}
