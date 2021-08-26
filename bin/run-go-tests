@@ -14,4 +14,15 @@ shopt -s inherit_errexit
 # run go test and format the output for junit consumption
 #
 mkdir -p output
-go test -v -count ${GO_TEST_COUNT:-1} -timeout "${GO_TEST_TIMEOUT:-10}m" ./internal | tee output/go-test.log
+
+# unit tests
+go test -c ./internal/unit_tests/
+go test -c ./internal/integration_tests/
+
+if [[ "${GO_TEST_FORMAT}" == "json" ]]; then
+  go tool test2json -t ./unit_tests.test -test.v --test.count ${GO_TEST_COUNT:-1} --test.timeout "${GO_TEST_TIMEOUT:-10m}" "$@" | tee output/go-unit-test.json
+  go tool test2json -t ./integration_tests.test -test.v --test.count ${GO_TEST_COUNT:-1} --test.timeout "${GO_TEST_TIMEOUT:-10m}" "$@" | tee output/go-integration-test.json
+else
+  ./unit_tests.test -test.v --test.count ${GO_TEST_COUNT:-1} --test.timeout "${GO_TEST_TIMEOUT:-10m}" "$@" | tee output/go-unit-test.log
+  ./integration_tests.test -test.v --test.count ${GO_TEST_COUNT:-1} --test.timeout "${GO_TEST_TIMEOUT:-10m}" "$@" | tee output/go-integration-test.log
+fi

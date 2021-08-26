@@ -1,4 +1,4 @@
-package internal
+package unit_tests
 
 import (
 	"bufio"
@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	"neo4j.com/helm-charts-tests/internal/model"
 	"os"
 	"strings"
 	"testing"
@@ -19,7 +20,7 @@ var useEnterpriseAndAcceptLicense = append(useEnterprise, acceptLicenseAgreement
 
 func TestErrorThrownIfNoDataVolumeModeChosen(t *testing.T) {
 	t.Parallel()
-	_, err := helmTemplate(t, nil)
+	_, err := model.HelmTemplate(t, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "A volume mode for the Neo4j 'data' volume is required.")
 	assert.Contains(t, err.Error(), "--set volumes.data.mode=defaultStorageClass")
@@ -29,18 +30,18 @@ func TestErrorThrownIfNoVolumeSizeChosen(t *testing.T) {
 	t.Parallel()
 
 	dynamicLogsVolume := []string{"--set", "volumes.logs.mode=dynamic"}
-	_, err := helmTemplate(t, requiredDataMode, dynamicLogsVolume...)
+	_, err := model.HelmTemplate(t, requiredDataMode, dynamicLogsVolume...)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Volume logs is missing field: dynamic")
 
 	dynamicLogsVolume = append(dynamicLogsVolume, "--set", "volumes.logs.dynamic.storageClassName=neo4j")
-	_, err = helmTemplate(t, requiredDataMode, dynamicLogsVolume...)
+	_, err = model.HelmTemplate(t, requiredDataMode, dynamicLogsVolume...)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "The storage capacity of volumes.logs must be specified")
 	assert.Contains(t, err.Error(), "Set volumes.logs.dynamic.requests.storage to a suitable value")
 
 	dynamicLogsVolume = append(dynamicLogsVolume, "--set", "volumes.logs.dynamic.requests.storage=10Gi")
-	_, err = helmTemplate(t, requiredDataMode, dynamicLogsVolume...)
+	_, err = model.HelmTemplate(t, requiredDataMode, dynamicLogsVolume...)
 	assert.NoError(t, err)
 }
 
@@ -62,7 +63,7 @@ func TestEnterpriseThrowsErrorIfLicenseAgreementNotAccepted(t *testing.T) {
 
 	doTestCase := func(t *testing.T, testCase []string) {
 		t.Parallel()
-		_, err := helmTemplate(t, testCase)
+		_, err := model.HelmTemplate(t, testCase)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "to use Neo4j Enterprise Edition you must have a Neo4j license agreement")
 		assert.Contains(t, err.Error(), "Set neo4j.acceptLicenseAgreement: \"yes\" to confirm that you have a Neo4j license agreement.")
@@ -86,7 +87,7 @@ func TestEnterpriseDoesNotThrowErrorIfLicenseAgreementAccepted(t *testing.T) {
 
 	doTestCase := func(t *testing.T, testCase []string) {
 		t.Parallel()
-		manifest, err := helmTemplate(t, requiredDataMode, testCase...)
+		manifest, err := model.HelmTemplate(t, requiredDataMode, testCase...)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -118,7 +119,7 @@ func TestEnterpriseDoesNotThrowIfSet(t *testing.T) {
 
 	doTestCase := func(t *testing.T, testCase []string) {
 		t.Parallel()
-		manifest, err := helmTemplate(t, requiredDataMode, testCase...)
+		manifest, err := model.HelmTemplate(t, requiredDataMode, testCase...)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -137,14 +138,14 @@ func TestEnterpriseDoesNotThrowIfSet(t *testing.T) {
 func TestDefaultEnterpriseHelmTemplate(t *testing.T) {
 	t.Parallel()
 
-	manifest, err := helmTemplate(t, requiredDataMode, useEnterpriseAndAcceptLicense...)
+	manifest, err := model.HelmTemplate(t, requiredDataMode, useEnterpriseAndAcceptLicense...)
 	if !assert.NoError(t, err) {
 		return
 	}
 
 	checkNeo4jManifest(t, manifest)
 
-	neo4jStatefulSet := manifest.first(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
+	neo4jStatefulSet := manifest.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
 	for _, container := range neo4jStatefulSet.Spec.Template.Spec.Containers {
 		assert.Contains(t, container.Image, "enterprise")
 	}
@@ -157,14 +158,14 @@ func TestDefaultEnterpriseHelmTemplate(t *testing.T) {
 func TestDefaultCommunityHelmTemplate(t *testing.T) {
 	t.Parallel()
 
-	manifest, err := helmTemplate(t, requiredDataMode)
+	manifest, err := model.HelmTemplate(t, requiredDataMode)
 	if !assert.NoError(t, err) {
 		return
 	}
 
 	checkNeo4jManifest(t, manifest)
 
-	neo4jStatefulSet := manifest.first(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
+	neo4jStatefulSet := manifest.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
 	neo4jStatefulSet.GetName()
 	assert.NotEmpty(t, neo4jStatefulSet.Spec.Template.Spec.Containers)
 	for _, container := range neo4jStatefulSet.Spec.Template.Spec.Containers {
@@ -176,19 +177,19 @@ func TestDefaultCommunityHelmTemplate(t *testing.T) {
 		assert.NotContains(t, container.Image, "enterprise")
 	}
 
-	envConfigMap := manifest.ofTypeWithName(&v1.ConfigMap{}, DefaultHelmTemplateReleaseName.envConfigMapName()).(*v1.ConfigMap)
+	envConfigMap := manifest.OfTypeWithName(&v1.ConfigMap{}, model.DefaultHelmTemplateReleaseName.EnvConfigMapName()).(*v1.ConfigMap)
 	assert.Equal(t, envConfigMap.Data["NEO4J_EDITION"], "COMMUNITY_K8S")
 }
 
 func TestAdditionalEnvVars(t *testing.T) {
 	t.Parallel()
 
-	manifest, err := helmTemplate(t, requiredDataMode, "--set", "env.FOO=one", "--set", "env.GRAPHS=are everywhere")
+	manifest, err := model.HelmTemplate(t, requiredDataMode, "--set", "env.FOO=one", "--set", "env.GRAPHS=are everywhere")
 	if !assert.NoError(t, err) {
 		return
 	}
 
-	envConfigMap := manifest.ofTypeWithName(&v1.ConfigMap{}, DefaultHelmTemplateReleaseName.envConfigMapName()).(*v1.ConfigMap)
+	envConfigMap := manifest.OfTypeWithName(&v1.ConfigMap{}, model.DefaultHelmTemplateReleaseName.EnvConfigMapName()).(*v1.ConfigMap)
 	assert.Equal(t, envConfigMap.Data["FOO"], "one")
 	assert.Equal(t, envConfigMap.Data["GRAPHS"], "are everywhere")
 
@@ -202,7 +203,7 @@ func TestJvmAdditionalConfig(t *testing.T) {
 
 	for _, edition := range testCases {
 		t.Run(t.Name()+edition, func(t *testing.T) {
-			manifest, err := helmTemplate(t, requiredDataMode,
+			manifest, err := model.HelmTemplate(t, requiredDataMode,
 				"-f", "internal/resources/jvmAdditionalSettings.yaml",
 				"--set", "neo4j.edition="+edition,
 				"--set", "neo4j.acceptLicenseAgreement=yes",
@@ -211,7 +212,7 @@ func TestJvmAdditionalConfig(t *testing.T) {
 				return
 			}
 
-			userConfigMap := manifest.ofTypeWithName(&v1.ConfigMap{}, DefaultHelmTemplateReleaseName.userConfigMapName()).(*v1.ConfigMap)
+			userConfigMap := manifest.OfTypeWithName(&v1.ConfigMap{}, model.DefaultHelmTemplateReleaseName.UserConfigMapName()).(*v1.ConfigMap)
 			assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:+HeapDumpOnOutOfMemoryError")
 			assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:HeapDumpPath=./java_pid<pid>.hprof")
 			assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:+UseGCOverheadLimit")
@@ -258,7 +259,7 @@ func checkConfigMapContainsJvmAdditionalFromDefaultConf(t *testing.T, edition st
 func TestBoolsInConfig(t *testing.T) {
 	t.Parallel()
 
-	_, err := helmTemplateFromYamlFile(t, "internal/resources/boolsInConfig.yaml")
+	_, err := model.HelmTemplateFromYamlFile(t, "internal/resources/boolsInConfig.yaml")
 	assert.Error(t, err, "Helm chart should fail if config contains boolean values")
 	assert.Contains(t, err.Error(), "config values must be strings.")
 	assert.Contains(t, err.Error(), "metrics.enabled")
@@ -268,7 +269,7 @@ func TestBoolsInConfig(t *testing.T) {
 func TestIntsInConfig(t *testing.T) {
 	t.Parallel()
 
-	_, err := helmTemplateFromYamlFile(t, "internal/resources/intsInConfig.yaml")
+	_, err := model.HelmTemplateFromYamlFile(t, "internal/resources/intsInConfig.yaml")
 	assert.Error(t, err, "Helm chart should fail if config contains int values")
 	assert.Contains(t, err.Error(), "config values must be strings.")
 	assert.Contains(t, err.Error(), "metrics.csv.rotation.keep_number")
@@ -279,14 +280,14 @@ func TestIntsInConfig(t *testing.T) {
 func TestChmodInitContainer(t *testing.T) {
 	t.Parallel()
 
-	manifest, err := helmTemplateFromYamlFile(t, "internal/resources/chmodInitContainer.yaml")
+	manifest, err := model.HelmTemplateFromYamlFile(t, "internal/resources/chmodInitContainer.yaml")
 	if !assert.NoError(t, err) {
 		return
 	}
 
 	checkNeo4jManifest(t, manifest)
 
-	neo4jStatefulSet := manifest.first(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
+	neo4jStatefulSet := manifest.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
 	initContainers := neo4jStatefulSet.Spec.Template.Spec.InitContainers
 	assert.Len(t, initContainers, 1)
 	container := initContainers[0]
@@ -306,14 +307,14 @@ func TestChmodInitContainer(t *testing.T) {
 func TestChmodInitContainers(t *testing.T) {
 	t.Parallel()
 
-	manifest, err := helmTemplateFromYamlFile(t, "internal/resources/chmodInitContainerAndCustomInitContainer.yaml")
+	manifest, err := model.HelmTemplateFromYamlFile(t, "internal/resources/chmodInitContainerAndCustomInitContainer.yaml")
 	if !assert.NoError(t, err) {
 		return
 	}
 
 	checkNeo4jManifest(t, manifest)
 
-	neo4jStatefulSet := manifest.first(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
+	neo4jStatefulSet := manifest.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
 	initContainers := neo4jStatefulSet.Spec.Template.Spec.InitContainers
 	assert.Len(t, initContainers, 2)
 	container := initContainers[0]
@@ -333,14 +334,14 @@ func TestChmodInitContainers(t *testing.T) {
 func TestExplicitCommunityHelmTemplate(t *testing.T) {
 	t.Parallel()
 
-	manifest, err := helmTemplate(t, requiredDataMode, useCommunity...)
+	manifest, err := model.HelmTemplate(t, requiredDataMode, useCommunity...)
 	if !assert.NoError(t, err) {
 		return
 	}
 
 	checkNeo4jManifest(t, manifest)
 
-	neo4jStatefulSet := manifest.first(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
+	neo4jStatefulSet := manifest.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
 	neo4jStatefulSet.GetName()
 	for _, container := range neo4jStatefulSet.Spec.Template.Spec.Containers {
 		assert.NotContains(t, container.Image, "enterprise")
@@ -349,7 +350,7 @@ func TestExplicitCommunityHelmTemplate(t *testing.T) {
 		assert.NotContains(t, container.Image, "enterprise")
 	}
 
-	envConfigMap := manifest.ofTypeWithName(&v1.ConfigMap{}, DefaultHelmTemplateReleaseName.envConfigMapName()).(*v1.ConfigMap)
+	envConfigMap := manifest.OfTypeWithName(&v1.ConfigMap{}, model.DefaultHelmTemplateReleaseName.EnvConfigMapName()).(*v1.ConfigMap)
 	assert.Equal(t, envConfigMap.Data["NEO4J_EDITION"], "COMMUNITY_K8S")
 }
 
@@ -359,15 +360,15 @@ func TestBaseHelmTemplate(t *testing.T) {
 
 	extraArgs := []string{}
 
-	_, err := helmTemplate(t, baseHelmCommand("template", &DefaultHelmTemplateReleaseName, extraArgs...))
+	_, err := model.HelmTemplate(t, model.BaseHelmCommand("template", &model.DefaultHelmTemplateReleaseName, extraArgs...))
 	if !assert.NoError(t, err) {
 		return
 	}
 }
 
-func checkNeo4jManifest(t *testing.T, manifest *K8sResources) {
+func checkNeo4jManifest(t *testing.T, manifest *model.K8sResources) {
 	// should contain exactly one StatefulSet
-	assert.Len(t, manifest.ofType(&appsv1.StatefulSet{}), 1)
+	assert.Len(t, manifest.OfType(&appsv1.StatefulSet{}), 1)
 
 	assertOnlyNeo4jImagesUsed(t, manifest)
 
@@ -376,18 +377,18 @@ func checkNeo4jManifest(t *testing.T, manifest *K8sResources) {
 	assertFourConfigMaps(t, manifest)
 }
 
-func assertFourConfigMaps(t *testing.T, manifest *K8sResources) {
-	services := manifest.ofType(&v1.ConfigMap{})
+func assertFourConfigMaps(t *testing.T, manifest *model.K8sResources) {
+	services := manifest.OfType(&v1.ConfigMap{})
 	assert.Len(t, services, 4)
 }
 
-func assertThreeServices(t *testing.T, manifest *K8sResources) {
-	services := manifest.ofType(&v1.Service{})
+func assertThreeServices(t *testing.T, manifest *model.K8sResources) {
+	services := manifest.OfType(&v1.Service{})
 	assert.Len(t, services, 3)
 }
 
-func assertOnlyNeo4jImagesUsed(t *testing.T, manifest *K8sResources) {
-	for _, neo4jStatefulSet := range manifest.ofType(&appsv1.StatefulSet{}) {
+func assertOnlyNeo4jImagesUsed(t *testing.T, manifest *model.K8sResources) {
+	for _, neo4jStatefulSet := range manifest.OfType(&appsv1.StatefulSet{}) {
 		assertOnlyNeo4jImagesUsedInStatefulSet(t, neo4jStatefulSet.(*appsv1.StatefulSet))
 	}
 	//TODO: add checks on Pods, Jobs, CronJobs, ReplicaSets, Deployments and anything else that can contain an image

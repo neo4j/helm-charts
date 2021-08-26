@@ -1,9 +1,11 @@
-package internal
+package integration_tests
 
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/utils/env"
+	"neo4j.com/helm-charts-tests/internal/integration_tests/gcloud"
+	"neo4j.com/helm-charts-tests/internal/model"
 )
 import "testing"
 
@@ -12,14 +14,14 @@ type SubTest struct {
 	test func(*testing.T)
 }
 
-var neo4jEdition = env.GetString("NEO4J_EDITION", "")
+var neo4jEdition = env.GetString("NEO4J_EDITION", "enterprise")
 var neo4jConfFile = fmt.Sprintf("neo4j-standalone/neo4j-%s.conf", neo4jEdition)
 
-func k8sTests(name *ReleaseName) []SubTest{
+func k8sTests(name *model.ReleaseName) []SubTest {
 	return []SubTest{
 		{name: "Check Neo4j Configuration", test: func(t *testing.T) { assert.NoError(t, CheckNeo4jConfiguration(t, name, neo4jConfFile), "Neo4j Config check should succeed") }},
 		{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, CreateNode(t, name), "Create Node should succeed") }},
- 		{name: "Delete Resources", test: func(t *testing.T) { assert.NoError(t, ResourcesCleanup(t, name), "Cleanup Resources should succeed") }},
+		{name: "Delete Resources", test: func(t *testing.T) { assert.NoError(t, ResourcesCleanup(t, name), "Cleanup Resources should succeed") }},
 		{name: "Reinstall Resources", test: func(t *testing.T) { assert.NoError(t, ResourcesReinstall(t, name), "Reinstall Resources should succeed") }},
 		{name: "Count Nodes", test: func(t *testing.T) { assert.NoError(t, CheckNodeCount(t, name), "Count Nodes should succeed") }},
 		{name: "Check Probes", test: func(t *testing.T) { assert.NoError(t, CheckProbes(t, name), "Probes Matching should succeed") }},
@@ -31,7 +33,7 @@ func k8sTests(name *ReleaseName) []SubTest{
 
 // Install Neo4j on the provided GKE K8s cluster and then run the tests from the table above using it
 func TestInstallOnGCloudK8s(t *testing.T) {
-	releaseName := ReleaseName("install-"+TestRunIdentifier)
+	releaseName := model.ReleaseName("install-" + TestRunIdentifier)
 	t.Parallel()
 	t.Logf("Starting setup of '%s'", t.Name())
 	cleanup, err := installNeo4j(t, &releaseName)
@@ -66,8 +68,8 @@ func runSubTests(t *testing.T, subTests []SubTest) {
 	}
 }
 
-func installNeo4j(t *testing.T, releaseName *ReleaseName) (func(), error) {
-	cleanup, err := InstallNeo4j(t, CurrentZone(), CurrentProject(), releaseName)
+func installNeo4j(t *testing.T, releaseName *model.ReleaseName) (func(), error) {
+	cleanup, err := InstallNeo4jInGcloud(t, gcloud.CurrentZone(), gcloud.CurrentProject(), releaseName)
 
 	return func() {
 		t.Logf("Beginning cleanup of '%s'", t.Name())
@@ -82,6 +84,6 @@ func installNeo4j(t *testing.T, releaseName *ReleaseName) (func(), error) {
 	}, err
 }
 
-func configureNeo4j(releaseName *ReleaseName) error {
+func configureNeo4j(releaseName *model.ReleaseName) error {
 	return nil
 }

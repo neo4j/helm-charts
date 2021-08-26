@@ -1,8 +1,9 @@
-package internal
+package unit_tests
 
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"neo4j.com/helm-charts-tests/internal/model"
 	"os"
 	"testing"
 )
@@ -30,21 +31,21 @@ func TestPopulateFromFile(t *testing.T) {
 
 	doTestCase := func(t *testing.T, edition string) {
 		t.Parallel()
-		conf, err := (&Neo4jConfiguration{}).PopulateFromFile(fmt.Sprintf("neo4j-standalone/neo4j-%s.conf", edition))
+		conf, err := (&model.Neo4jConfiguration{}).PopulateFromFile(fmt.Sprintf("neo4j-standalone/neo4j-%s.conf", edition))
 		if !assert.NoError(t, err) {
 			return
 		}
 
-		value, found := conf.conf["dbms.windows_service_name"]
+		value, found := conf.Conf()["dbms.windows_service_name"]
 		assert.True(t, found)
 		assert.Equal(t, "neo4j", value)
 
-		_, jvmKeyFound := conf.conf[neo4jConfJvmAdditionalKey]
+		_, jvmKeyFound := conf.Conf()["dbms.jvm.additional"]
 		assert.False(t, jvmKeyFound)
 
-		assert.Contains(t, conf.jvmArgs, "-XX:+UnlockDiagnosticVMOptions")
-		assert.Contains(t, conf.jvmArgs, "-XX:+DebugNonSafepoints")
-		assert.Greater(t, len(conf.jvmArgs), 1)
+		assert.Contains(t, conf.JvmArgs(), "-XX:+UnlockDiagnosticVMOptions")
+		assert.Contains(t, conf.JvmArgs(), "-XX:+DebugNonSafepoints")
+		assert.Greater(t, len(conf.JvmArgs()), 1)
 	}
 
 	for i, testCase := range testCases {

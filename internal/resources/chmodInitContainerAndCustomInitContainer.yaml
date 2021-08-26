@@ -12,8 +12,8 @@ volumes:
 podSpec:
   initContainers:
     - name: init-printenv
-      command: ['sh', '-c', "printenv"]
+      command: [ 'sh', '-c', "printenv" ]
 
   containers:
     - name: maintenance-sidecar
-      command: ['bash', '-c', "while true; do sleep 120; done"]
+      command: [ 'bash', '-c', "while true; do sleep 120; done" ]

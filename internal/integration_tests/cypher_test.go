@@ -1,73 +1,32 @@
-package internal
+package integration_tests
 
 import (
 	"fmt"
 	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/ini.v1"
+	"neo4j.com/helm-charts-tests/internal/model"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 )
 
-const neo4jConfJvmAdditionalKey = "dbms.jvm.additional"
-
 // Auth stuff
 const dbUri = "neo4j+ssc://localhost"
 const user = "neo4j"
 const dbName = "neo4j"
-var authToUse = neo4j.BasicAuth(user, defaultPassword, "")
+
+var authToUse = neo4j.BasicAuth(user, model.DefaultPassword, "")
 
 // Track the total number of nodes that we've created
-var createdNodes map[ReleaseName]*int64 = map[ReleaseName]*int64{}
+var createdNodes = map[model.ReleaseName]*int64{}
 
 // empty param map (makes queries without params more readable)
 var noParams = map[string]interface{}{}
 
-type Neo4jConfiguration struct {
-	conf    map[string]string
-	jvmArgs []string
-}
+func CheckNeo4jConfiguration(t *testing.T, releaseName *model.ReleaseName, expectedConfigurationFile string) (err error) {
 
-func (c *Neo4jConfiguration) PopulateFromFile(filename string) (*Neo4jConfiguration, error) {
-	yamlFile, err := ini.ShadowLoad(filename)
-	if err != nil {
-		return nil, err
-	}
-	defaultSection := yamlFile.Section("")
-
-	jvmAdditional, err := defaultSection.GetKey(neo4jConfJvmAdditionalKey)
-	if err != nil {
-		return nil, err
-	}
-	c.jvmArgs = jvmAdditional.StringsWithShadows("\n")
-	c.conf = defaultSection.KeysHash()
-	delete(c.conf, neo4jConfJvmAdditionalKey)
-
-	return c, err
-}
-
-func (c *Neo4jConfiguration) Update(other Neo4jConfiguration) Neo4jConfiguration {
-	var jvmArgs []string
-	if len(other.jvmArgs) > 0 {
-		jvmArgs = other.jvmArgs
-	} else {
-		jvmArgs = c.jvmArgs
-	}
-	for k, v := range other.conf {
-		c.conf[k] = v
-	}
-
-	return Neo4jConfiguration{
-		jvmArgs: jvmArgs,
-		conf:    c.conf,
-	}
-}
-
-func CheckNeo4jConfiguration(t *testing.T, releaseName *ReleaseName, expectedConfigurationFile string) (err error) {
-
-	expectedConfiguration, err := (&Neo4jConfiguration{}).PopulateFromFile(expectedConfigurationFile)
+	expectedConfiguration, err := (&model.Neo4jConfiguration{}).PopulateFromFile(expectedConfigurationFile)
 	if err != nil {
 		assert.NoError(t, err)
 		return err
@@ -77,9 +36,9 @@ func CheckNeo4jConfiguration(t *testing.T, releaseName *ReleaseName, expectedCon
 	var expectedOverrides = map[string]string{
 		"dbms.connector.https.enabled":  "true",
 		"dbms.connector.bolt.tls_level": "REQUIRED",
-		"dbms.directories.logs": "/logs",
-		"dbms.directories.metrics": "/metrics",
-		"dbms.directories.import": "/import",
+		"dbms.directories.logs":         "/logs",
+		"dbms.directories.metrics":      "/metrics",
+		"dbms.directories.import":       "/import",
 	}
 
 	deadline := time.Now().Add(3 * time.Minute)
@@ -91,12 +50,12 @@ func CheckNeo4jConfiguration(t *testing.T, releaseName *ReleaseName, expectedCon
 		if err != nil {
 			return err
 		}
-		if len(runtimeConfig) >= len(expectedConfiguration.conf) {
+		if len(runtimeConfig) >= len(expectedConfiguration.Conf()) {
 			break
 		}
 	}
 	for key, value := range expectedOverrides {
-		expectedConfiguration.conf[key] = value
+		expectedConfiguration.Conf()[key] = value
 	}
 
 	for _, record := range runtimeConfig {
@@ -108,19 +67,19 @@ func CheckNeo4jConfiguration(t *testing.T, releaseName *ReleaseName, expectedCon
 
 		name := nameUntyped.(string)
 		value := valueUntyped.(string)
-		if expectedValue, found := expectedConfiguration.conf[name]; found {
+		if expectedValue, found := expectedConfiguration.Conf()[name]; found {
 			assert.Equal(t, strings.ToLower(expectedValue), strings.ToLower(value),
 				"Expected runtime config for %s to match provided value", name)
 		}
 		if name == "dbms.jvm.additional" {
-			assert.Equal(t, expectedConfiguration.jvmArgs, strings.Split(value, "\n"))
+			assert.Equal(t, expectedConfiguration.JvmArgs(), strings.Split(value, "\n"))
 		}
 	}
 
 	return err
 }
 
-func CreateNode(t *testing.T, releaseName *ReleaseName) error {
+func CreateNode(t *testing.T, releaseName *model.ReleaseName) error {
 	_, err := runQuery(t, releaseName, "CREATE (n:Item { id: $id, name: $name }) RETURN n.id, n.name", map[string]interface{}{
 		"id":   1,
 		"name": "Item 1",
@@ -135,7 +94,7 @@ func CreateNode(t *testing.T, releaseName *ReleaseName) error {
 	return err
 }
 
-func CheckNodeCount(t *testing.T, releaseName *ReleaseName) error {
+func CheckNodeCount(t *testing.T, releaseName *model.ReleaseName) error {
 	result, err := runQuery(t, releaseName, "MATCH (n) RETURN COUNT(n) AS count", noParams)
 
 	if err != nil {
@@ -151,7 +110,7 @@ func CheckNodeCount(t *testing.T, releaseName *ReleaseName) error {
 	}
 }
 
-func runQuery(t *testing.T, releaseName *ReleaseName, cypher string, params map[string]interface{}) ([]*neo4j.Record, error) {
+func runQuery(t *testing.T, releaseName *model.ReleaseName, cypher string, params map[string]interface{}) ([]*neo4j.Record, error) {
 
 	boltPort, cleanupProxy, proxyErr := proxyBolt(t, releaseName)
 	defer cleanupProxy()

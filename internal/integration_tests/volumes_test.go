@@ -1,9 +1,10 @@
-package internal
+package integration_tests
 
 import (
 	"fmt"
 	"github.com/hashicorp/go-multierror"
 	"github.com/stretchr/testify/assert"
+	"neo4j.com/helm-charts-tests/internal/model"
 	"strings"
 )
 import "testing"
@@ -12,7 +13,7 @@ var pluginArgs = []string{
 	"-f", "internal/resources/pluginsInitContainer.yaml",
 }
 
-func volumesTests(name *ReleaseName) []SubTest {
+func volumesTests(name *model.ReleaseName) []SubTest {
 	return []SubTest{
 		{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, CreateNode(t, name), "Create Node should succeed") }},
 		{name: "Check Volumes", test: func(t *testing.T) { assert.NoError(t, CheckVolumes(t, name), "Check volumes") }},
@@ -23,7 +24,7 @@ func volumesTests(name *ReleaseName) []SubTest {
 	}
 }
 
-func CheckApoc(t *testing.T, releaseName *ReleaseName) error {
+func CheckApoc(t *testing.T, releaseName *model.ReleaseName) error {
 	results, err := runQuery(t, releaseName, "CALL apoc.help('apoc')", nil)
 	if !assert.NoError(t, err) {
 		return err
@@ -32,7 +33,7 @@ func CheckApoc(t *testing.T, releaseName *ReleaseName) error {
 	return err
 }
 
-func checkVolume(t *testing.T, releaseName *ReleaseName, volumePath string, sem chan error) {
+func checkVolume(t *testing.T, releaseName *model.ReleaseName, volumePath string, sem chan error) {
 	cmd := []string{"ls", "-1a", volumePath}
 
 	stdout, stderr, err := ExecInPod(releaseName, cmd)
@@ -46,7 +47,7 @@ func checkVolume(t *testing.T, releaseName *ReleaseName, volumePath string, sem 
 
 }
 
-func CheckVolumes(t *testing.T, releaseName *ReleaseName) error {
+func CheckVolumes(t *testing.T, releaseName *model.ReleaseName) error {
 	volumePathsThatShouldContainFiles := []string{
 		"/logs",
 		"/data",
@@ -90,7 +91,7 @@ func CheckVolumes(t *testing.T, releaseName *ReleaseName) error {
 }
 
 func TestVolumesInGCloudK8s(t *testing.T) {
-	releaseName := ReleaseName("volumes-"+TestRunIdentifier)
+	releaseName := model.ReleaseName("volumes-" + TestRunIdentifier)
 	t.Parallel()
 
 	t.Logf("Starting setup of '%s'", t.Name())

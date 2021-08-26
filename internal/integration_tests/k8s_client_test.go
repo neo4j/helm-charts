@@ -1,4 +1,4 @@
-package internal
+package integration_tests
 
 import (
 	"bytes"
@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"neo4j.com/helm-charts-tests/internal/model"
 	"time"
 
 	"k8s.io/client-go/tools/clientcmd"
@@ -29,7 +30,7 @@ func init() {
 	Clientset, err = kubernetes.NewForConfig(Config)
 	CheckError(err)
 }
-func CheckProbes(t *testing.T, releaseName *ReleaseName) error {
+func CheckProbes(t *testing.T, releaseName *model.ReleaseName) error {
 
 	// getting Probes values from values.yaml
 	type ValuesYaml struct {
@@ -63,7 +64,7 @@ func CheckProbes(t *testing.T, releaseName *ReleaseName) error {
 	podsReadiness := "neo4j_ReadinessProbe"
 
 	for start := time.Now(); time.Since(start) < 60*time.Second; {
-		pods, err := Clientset.CoreV1().Pods(string(releaseName.namespace())).List(context.TODO(), v1.ListOptions{})
+		pods, err := Clientset.CoreV1().Pods(string(releaseName.Namespace())).List(context.TODO(), v1.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("Failed to get Pods options: %v", err)
 		}
@@ -94,7 +95,7 @@ func CheckProbes(t *testing.T, releaseName *ReleaseName) error {
 	return nil
 }
 
-func CheckServiceAnnotations(t *testing.T, releaseName *ReleaseName) (err error) {
+func CheckServiceAnnotations(t *testing.T, releaseName *model.ReleaseName) (err error) {
 	var services = getAllServices(t, releaseName)
 	assert.Equal(t, 3, len(services.Items))
 
@@ -105,7 +106,7 @@ func CheckServiceAnnotations(t *testing.T, releaseName *ReleaseName) (err error)
 
 	// when we add annotations via helm
 	err = runAll(t, "helm", [][]string{
-		baseHelmCommand("upgrade", releaseName,
+		model.BaseHelmCommand("upgrade", releaseName,
 			"--set", "services.neo4j.annotations.foo=bar",
 			"--set", "services.admin.annotations.foo=bar",
 			"--set", "services.default.annotations.foo=bar",
@@ -148,14 +149,14 @@ func matchesAnyPrefix(knownPrefixes []string, key string) bool {
 	return false
 }
 
-func getAllServices(t *testing.T, releaseName *ReleaseName) *coreV1.ServiceList {
-	services, err := Clientset.CoreV1().Services(string(releaseName.namespace())).List(context.TODO(), v1.ListOptions{})
+func getAllServices(t *testing.T, releaseName *model.ReleaseName) *coreV1.ServiceList {
+	services, err := Clientset.CoreV1().Services(string(releaseName.Namespace())).List(context.TODO(), v1.ListOptions{})
 	assert.NoError(t, err)
 	return services
 }
 
-func RunAsNonRoot(t *testing.T, releaseName *ReleaseName) error {
-	pods, err := Clientset.CoreV1().Pods(string(releaseName.namespace())).List(context.TODO(), v1.ListOptions{})
+func RunAsNonRoot(t *testing.T, releaseName *model.ReleaseName) error {
+	pods, err := Clientset.CoreV1().Pods(string(releaseName.Namespace())).List(context.TODO(), v1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to get Pods options: %v", err)
 	}
@@ -166,7 +167,7 @@ func RunAsNonRoot(t *testing.T, releaseName *ReleaseName) error {
 	return nil
 }
 
-func CheckExecInPod(t *testing.T, releaseName *ReleaseName) error {
+func CheckExecInPod(t *testing.T, releaseName *model.ReleaseName) error {
 	cmd := []string{
 		"bash",
 		"-c",
@@ -182,14 +183,14 @@ func CheckExecInPod(t *testing.T, releaseName *ReleaseName) error {
 	return err
 }
 
-func ExecInPod(releaseName *ReleaseName, cmd []string) (string, string, error) {
+func ExecInPod(releaseName *model.ReleaseName, cmd []string) (string, string, error) {
 
 	var (
 		stdout bytes.Buffer
 		stderr bytes.Buffer
 	)
-	req := Clientset.CoreV1().RESTClient().Post().Resource("pods").Name(releaseName.podName()).
-		Namespace(string(releaseName.namespace())).SubResource("exec")
+	req := Clientset.CoreV1().RESTClient().Post().Resource("pods").Name(releaseName.PodName()).
+		Namespace(string(releaseName.Namespace())).SubResource("exec")
 	option := &coreV1.PodExecOptions{
 		Command: cmd,
 		Stdin:   false,
