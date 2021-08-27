@@ -1,14 +1,43 @@
-{{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "" | regexMatch "(?i)no|false" -}}
-{{- if not $authDisabled -}}
+{{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "true" | regexMatch "(?i)no|false" -}}
+{{- if $authDisabled -}}
+  {{- if .Values.neo4j.password -}}
+    {{ fail "unsupported State: Cannot set neo4j.password when Neo4j authis disabled (dbms.security.auth_enabled=false). Either remove neo4j.password setting or enable Neo4j auth" }}
+  {{- end -}}
+{{- else -}}
+
+{{- $secretName := include "neo4j.appName" . | printf "%s-auth" }}
+{{- $secret := (lookup "v1" "Secret" .Release.Namespace $secretName) }}
+{{- $secretExists := $secret | all }}
+
+{{- $secretBelongsToSomeoneElse := false }}
+{{- if $secretExists }}
+  {{- $secretBelongsToSomeoneElse = index $secret.metadata.annotations "meta.helm.sh/release-name" | eq .Release.Name | not }}
+{{- end }}
+
+{{- if $secretBelongsToSomeoneElse | and .Values.neo4j.password }}
+
+  {{- $expectedPassword := .Values.neo4j.password | printf "neo4j/%v" | b64enc }}
+  {{- $existingPassword := index $secret.data "NEO4J_AUTH" -}}
+
+  {{- if not ( eq $existingPassword $expectedPassword ) -}}
+    {{ fail "The desired password does not match the password stored in the Kubernetes Secret " $secretName " For details on how to change the neo4j password via helm check the Neo4j Operations Manual." }}
+  {{- else -}}
+    # Using the existing Kubernetes Secret {{ $secretName }} for the neo4j password.
+  {{- end -}}
+
+{{- else -}}
+
 {{- $password := include "neo4j.password" . | printf "neo4j/%v" | b64enc -}}
 apiVersion: v1
 kind: Secret
 metadata:
-  name: "{{ .Release.Name }}-auth"
+  name: "{{ $secretName }}"
   namespace: "{{ .Release.Namespace }}"
   labels:
     app: "{{ template "neo4j.appName" . }}"
 type: Opaque
 data:
   NEO4J_AUTH: "{{ $password }}"
+{{- end -}}
+
 {{- end -}}
