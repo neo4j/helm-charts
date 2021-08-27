@@ -5,7 +5,7 @@ import (
 	. "neo4j.com/helm-charts-tests/internal/helpers"
 )
 
-var DefaultPassword = fmt.Sprintf("a%da", RandomIntBetween(100000, 999999999))
+var DefaultPassword = fmt.Sprintf("defaulthelmpassword%da", RandomIntBetween(100000, 999999999))
 
 const StorageSize = "10Gi"
 const cpuRequests = "50m"

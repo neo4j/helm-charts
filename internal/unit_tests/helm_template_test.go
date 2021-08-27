@@ -2,6 +2,7 @@ package unit_tests
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
@@ -201,31 +202,37 @@ func TestJvmAdditionalConfig(t *testing.T) {
 
 	testCases := []string{"community", "enterprise"}
 
-	for _, edition := range testCases {
-		t.Run(t.Name()+edition, func(t *testing.T) {
-			manifest, err := model.HelmTemplate(t, requiredDataMode,
-				"-f", "internal/resources/jvmAdditionalSettings.yaml",
-				"--set", "neo4j.edition="+edition,
-				"--set", "neo4j.acceptLicenseAgreement=yes",
-			)
-			if !assert.NoError(t, err) {
-				return
-			}
+	doTestCase := func(t *testing.T, testCase string) {
+		var edition = testCase
+		t.Parallel()
 
-			userConfigMap := manifest.OfTypeWithName(&v1.ConfigMap{}, model.DefaultHelmTemplateReleaseName.UserConfigMapName()).(*v1.ConfigMap)
-			assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:+HeapDumpOnOutOfMemoryError")
-			assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:HeapDumpPath=./java_pid<pid>.hprof")
-			assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:+UseGCOverheadLimit")
+		manifest, err := model.HelmTemplate(t, requiredDataMode,
+			"-f", "internal/resources/jvmAdditionalSettings.yaml",
+			"--set", "neo4j.edition="+edition,
+			"--set", "neo4j.acceptLicenseAgreement=yes",
+		)
+		if !assert.NoError(t, err) {
+			return
+		}
 
-			err = checkConfigMapContainsJvmAdditionalFromDefaultConf(t, edition, userConfigMap)
-			if !assert.NoError(t, err) {
-				return
-			}
+		userConfigMap := manifest.OfTypeWithName(&v1.ConfigMap{}, model.DefaultHelmTemplateReleaseName.UserConfigMapName()).(*v1.ConfigMap)
+		assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:+HeapDumpOnOutOfMemoryError")
+		assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:HeapDumpPath=./java_pid<pid>.hprof")
+		assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:+UseGCOverheadLimit")
 
-			checkNeo4jManifest(t, manifest)
-		})
+		err = checkConfigMapContainsJvmAdditionalFromDefaultConf(t, edition, userConfigMap)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		checkNeo4jManifest(t, manifest)
 	}
 
+	for i, testCase := range testCases {
+		t.Run(fmt.Sprintf("%d edition:%s", i, testCase), func(t *testing.T) {
+			doTestCase(t, testCase)
+		})
+	}
 }
 
 func checkConfigMapContainsJvmAdditionalFromDefaultConf(t *testing.T, edition string, userConfigMap *v1.ConfigMap) error {
@@ -363,6 +370,120 @@ func TestBaseHelmTemplate(t *testing.T) {
 	_, err := model.HelmTemplate(t, model.BaseHelmCommand("template", &model.DefaultHelmTemplateReleaseName, extraArgs...))
 	if !assert.NoError(t, err) {
 		return
+	}
+}
+
+type authSecretTest struct {
+	edition        string
+	setPassword    bool
+	password       *string
+	expectedResult authSecretExpectation
+}
+
+type authSecretExpectation struct {
+	helmFailsWithError     error
+	authSecretCreated      bool
+	randomPasswordAssigned bool
+}
+
+func (a authSecretTest) PasswordFlag() string {
+	if a.setPassword == true {
+		return `true`
+	}
+	return `false`
+}
+
+func (a authSecretTest) String() (str string) {
+	str = fmt.Sprintf("edition:%s;setPassword:%v;password:", a.edition, a.setPassword)
+	if a.password == nil {
+		return str + "nil"
+	}
+
+	return str + *a.password
+}
+
+func getNeo4jPassword(authSecret *v1.Secret) string {
+	b64Value := authSecret.Data["NEO4J_AUTH"]
+	return string(b64Value)
+}
+
+var emptyString = ""
+
+func TestAuthSecrets(t *testing.T) {
+	t.Parallel()
+
+	testCases := []authSecretTest{
+		{"community", false, nil, authSecretExpectation{authSecretCreated: false}},
+		{"enterprise", false, nil, authSecretExpectation{authSecretCreated: false}},
+		{"community", false, &emptyString, authSecretExpectation{authSecretCreated: false}},
+		{"enterprise", false, &emptyString, authSecretExpectation{authSecretCreated: false}},
+		{"community", true, &model.DefaultPassword, authSecretExpectation{authSecretCreated: true}},
+		{"enterprise", true, &model.DefaultPassword, authSecretExpectation{authSecretCreated: true}},
+		{"community", true, nil, authSecretExpectation{authSecretCreated: true, randomPasswordAssigned: true}},
+		{"enterprise", true, nil, authSecretExpectation{authSecretCreated: true, randomPasswordAssigned: true}},
+		{"community", true, &emptyString, authSecretExpectation{authSecretCreated: true, randomPasswordAssigned: true}},
+		{"enterprise", true, &emptyString, authSecretExpectation{authSecretCreated: true, randomPasswordAssigned: true}},
+		{"community", false, &model.DefaultPassword, authSecretExpectation{helmFailsWithError: errors.New("unsupported State: Cannot set neo4j.password when Neo4j authis disabled (dbms.security.auth_enabled=false). Either remove neo4j.password setting or enable Neo4j auth")}},
+		{"enterprise", false, &model.DefaultPassword, authSecretExpectation{helmFailsWithError: errors.New("unsupported State: Cannot set neo4j.password when Neo4j authis disabled (dbms.security.auth_enabled=false). Either remove neo4j.password setting or enable Neo4j auth")}},
+	}
+
+	doTestCase := func(t *testing.T, testCase authSecretTest) {
+		t.Parallel()
+		expectation := testCase.expectedResult
+
+		helmArgs := []string{
+			"--set", "neo4j.edition=" + testCase.edition,
+			"--set-string", `config.dbms\.security\.auth_enabled=` + testCase.PasswordFlag(),
+		}
+
+		if testCase.password != nil {
+			helmArgs = append(helmArgs, "--set", "neo4j.password="+*testCase.password)
+		}
+
+		if testCase.edition == "enterprise" {
+			helmArgs = append(helmArgs, "--set", "neo4j.acceptLicenseAgreement=yes")
+		}
+
+		manifest, err := model.HelmTemplate(t, requiredDataMode, helmArgs...)
+
+		if expectation.helmFailsWithError != nil {
+			assert.Contains(t, err.Error(), expectation.helmFailsWithError.Error())
+			return
+		}
+
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		secrets := manifest.OfType(&v1.Secret{})
+
+		if expectation.authSecretCreated {
+			assert.Len(t, secrets, 1)
+			authSecret := secrets[0].(*v1.Secret)
+			assert.Equal(t, "my-release-auth", authSecret.Name)
+
+			password := getNeo4jPassword(authSecret)
+			defaultHelmPasswordPrefix := "neo4j/defaulthelmpassword"
+			if expectation.randomPasswordAssigned {
+				assert.Equal(t, "neo4j/", password[0:6])
+				assert.Greater(t, len(password), len("neo4j/123"))
+				assert.NotContains(t, password, defaultHelmPasswordPrefix)
+			} else {
+				assert.Equal(t, "neo4j/"+*testCase.password, password)
+				assert.Contains(t, password, defaultHelmPasswordPrefix)
+			}
+
+		} else {
+			assert.Len(t, secrets, 0)
+		}
+
+		checkNeo4jManifest(t, manifest)
+	}
+
+	for i, testCase := range testCases {
+		t.Run(fmt.Sprintf("%d %s", i, testCase), func(t *testing.T) {
+			doTestCase(t, testCase)
+		})
 	}
 }
 

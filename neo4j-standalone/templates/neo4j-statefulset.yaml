@@ -86,7 +86,7 @@ spec:
                 name: "{{ .Release.Name }}-env"
             {{- if not $authDisabled }}
             - secretRef:
-                name: "{{ .Release.Name }}-auth"
+                name: "{{ template "neo4j.appName" . }}-auth"
             {{- end }}
           env:
             - name: HELM_NEO4J_VERSION
