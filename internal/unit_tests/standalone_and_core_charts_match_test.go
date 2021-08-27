@@ -1,15 +1,17 @@
-package internal_test
+package unit_tests_test
 
 import (
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
+	"regexp"
+	"strings"
 	"testing"
 )
 
 var acceptableChartsDifferences = []string{
-	"name: neo4j-standalone\n",
-	"name: neo4j-cluster-core\n",
+	"name: neo4j-standalone",
+	"name: neo4j-cluster-core",
 }
 
 // The charts files for Standalone and Core installations must be kept in sync.
@@ -23,11 +25,13 @@ func TestCoreChartMatchesStandalone(t *testing.T) {
 }
 
 var acceptableValuesDifferences = []string{
-	`  # Neo4j Clustering requires Enterprise Edition`+"\n"+`  edition: "enterprise"` + "\n",
-	`  # Neo4j Edition to use (community|enterprise)`+"\n"+`  edition: "community"`+"\n"+`  # set edition: "enterprise" to use Neo4j Enterprise Edition` + "\n",
-	`  dbms.mode: "CORE"` + "\n",
-	`  causal_clustering.middleware.akka.allow_any_core_to_bootstrap: "true"` + "\n",
-	`    # if selectCluster is true load balancer will select any instance of the same dbms.mode`+"\n"+`    selectCluster: true`+"\n\n",
+	`name: "neo4j-cluster"`,
+	`name: ""`,
+	`edition: "enterprise"`,
+	`edition: "community"`,
+	`dbms.mode: "CORE"`,
+	`causal_clustering.middleware.akka.allow_any_core_to_bootstrap: "true"`,
+	`selectCluster: true`,
 }
 
 // The values files for Standalone and Core installations must be kept in sync.
@@ -49,6 +53,9 @@ func TestCoreEnterpriseConfMatchesStandalone(t *testing.T) {
 	assertDiffIsAcceptable(t, standaloneValuesFile, clusterCoreValuesFile, nil)
 }
 
+var blankLines = regexp.MustCompile(`(?m)^\s*$`)
+var commentsOnly = regexp.MustCompile(`(?m)^\s*#.*$`)
+
 func assertDiffIsAcceptable(t *testing.T, standaloneChartFile string, clusterChartFile string, acceptableDifferences []string) {
 	if !assert.NotEqual(t, standaloneChartFile, clusterChartFile) {
 		return
@@ -64,14 +71,19 @@ func assertDiffIsAcceptable(t *testing.T, standaloneChartFile string, clusterCha
 	}
 
 	dmp := diffmatchpatch.New()
-	c1, c2, lineArray := dmp.DiffLinesToChars(string(standaloneBytes), string(clusterCoreBytes))
+	c1, c2, lineArray := dmp.DiffLinesToChars(clean(standaloneBytes), clean(clusterCoreBytes))
 
 	diffs := dmp.DiffMain(c1, c2, true)
 	result := dmp.DiffCharsToLines(diffs, lineArray)
 
 	for _, diff := range dmp.DiffCleanupSemanticLossless(result) {
 		if diff.Type != diffmatchpatch.DiffEqual {
-			assert.Contains(t, acceptableDifferences, diff.Text)
+			assert.Contains(t, acceptableDifferences, strings.TrimSpace(diff.Text))
 		}
 	}
+}
+
+func clean(standaloneBytes []byte) string {
+	cleaned := string(commentsOnly.ReplaceAllLiteral(blankLines.ReplaceAllLiteral(standaloneBytes, nil), nil))
+	return cleaned
 }

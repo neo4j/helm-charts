@@ -1,13 +1,14 @@
-package internal
+package integration_tests
 
 import (
 	"github.com/stretchr/testify/assert"
+	"neo4j.com/helm-charts-tests/internal/model"
 	"strings"
 	"time"
 )
 import "testing"
 
-func maintenanceTests(name *ReleaseName) []SubTest {
+func maintenanceTests(name *model.ReleaseName) []SubTest {
 	return []SubTest{
 		{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, CreateNode(t, name), "Create Node should succeed") }},
 		{name: "Maintenance Mode", test: func(t *testing.T) { assert.NoError(t, CheckMaintenanceMode(t, name), "Check maintenance mode") }},
@@ -15,7 +16,7 @@ func maintenanceTests(name *ReleaseName) []SubTest {
 	}
 }
 
-func CheckMaintenanceMode(t *testing.T, releaseName *ReleaseName) error {
+func CheckMaintenanceMode(t *testing.T, releaseName *model.ReleaseName) error {
 	err := checkNeo4jRunning(t, releaseName)
 	if err != nil {
 		return err
@@ -39,32 +40,32 @@ func CheckMaintenanceMode(t *testing.T, releaseName *ReleaseName) error {
 	return err
 }
 
-func ExitMaintenanceMode(t *testing.T, releaseName *ReleaseName, extraArgs ...string) (error) {
+func ExitMaintenanceMode(t *testing.T, releaseName *model.ReleaseName, extraArgs ...string) error {
 	err := run(
-		t, "helm", baseHelmCommand("upgrade", releaseName,
-			append(extraArgs, "--set", "neo4j.offlineMaintenanceModeEnabled=false", "--wait", "--timeout", "300s")...
-		)...
+		t, "helm", model.BaseHelmCommand("upgrade", releaseName,
+			append(extraArgs, "--set", "neo4j.offlineMaintenanceModeEnabled=false", "--wait", "--timeout", "300s")...,
+		)...,
 	)
 	if !assert.NoError(t, err) {
 		return err
 	}
 
-	err = run(t, "kubectl", "--namespace", string(releaseName.namespace()), "rollout", "status", "--watch", "--timeout=120s", "statefulset/"+string(*releaseName))
+	err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()), "rollout", "status", "--watch", "--timeout=120s", "statefulset/"+string(*releaseName))
 	if !assert.NoError(t, err) {
 		return err
 	}
 	return err
 }
 
-func EnterMaintenanceMode(t *testing.T, releaseName *ReleaseName) error {
-	err := run(t, "helm", baseHelmCommand("upgrade", releaseName, "--set", "neo4j.offlineMaintenanceModeEnabled=true")...)
+func EnterMaintenanceMode(t *testing.T, releaseName *model.ReleaseName) error {
+	err := run(t, "helm", model.BaseHelmCommand("upgrade", releaseName, "--set", "neo4j.offlineMaintenanceModeEnabled=true")...)
 
 	if !assert.NoError(t, err) {
 		return err
 	}
 
 	time.Sleep(30 * time.Second)
-	err = run(t, "kubectl", "--namespace", string(releaseName.namespace()), "wait", "--for=condition=Initialized", "pod/"+releaseName.podName())
+	err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()), "wait", "--for=condition=Initialized", "--timeout=300s", "pod/"+releaseName.PodName())
 
 	if !assert.NoError(t, err) {
 		return err
@@ -74,11 +75,11 @@ func EnterMaintenanceMode(t *testing.T, releaseName *ReleaseName) error {
 	return err
 }
 
-func UninstallRelease(t *testing.T, releaseName *ReleaseName) error {
-	return run(t, "helm", "uninstall", string(*releaseName), "--namespace", string(releaseName.namespace()))
+func UninstallRelease(t *testing.T, releaseName *model.ReleaseName) error {
+	return run(t, "helm", "uninstall", string(*releaseName), "--namespace", string(releaseName.Namespace()))
 }
 
-func checkNeo4jNotRunning(t *testing.T, releaseName *ReleaseName) error {
+func checkNeo4jNotRunning(t *testing.T, releaseName *model.ReleaseName) error {
 	cmd := []string{
 		"jps",
 	}
@@ -90,7 +91,7 @@ func checkNeo4jNotRunning(t *testing.T, releaseName *ReleaseName) error {
 	return err
 }
 
-func checkNeo4jRunning(t *testing.T, releaseName *ReleaseName) error {
+func checkNeo4jRunning(t *testing.T, releaseName *model.ReleaseName) error {
 	cmd := []string{
 		"jps",
 	}
@@ -106,7 +107,7 @@ func checkNeo4jRunning(t *testing.T, releaseName *ReleaseName) error {
 
 func TestMaintenanceInGCloudK8s(t *testing.T) {
 
-	releaseName := ReleaseName("maintenance-"+TestRunIdentifier)
+	releaseName := model.ReleaseName("maintenance-" + TestRunIdentifier)
 	t.Parallel()
 
 	t.Logf("Starting setup of '%s'", t.Name())

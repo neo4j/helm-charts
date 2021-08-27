@@ -1,0 +1,7 @@
+volumes:
+  data:
+    mode: "volume"
+    volume:
+      emptyDir:
+        medium: Memory
+        sizeLimit: 1Gi

@@ -1,4 +1,4 @@
-package internal
+package model
 
 import (
 	"bytes"
@@ -39,7 +39,7 @@ type K8sResources struct {
 	schemas []schema.GroupVersionKind
 }
 
-func (k *K8sResources) first(i runtime.Object) runtime.Object {
+func (k *K8sResources) First(i runtime.Object) runtime.Object {
 
 	for _, o := range k.objects {
 		if reflect.TypeOf(i) == reflect.TypeOf(o) {
@@ -49,7 +49,7 @@ func (k *K8sResources) first(i runtime.Object) runtime.Object {
 	return nil
 }
 
-func (k *K8sResources) ofTypeWithName(i metav1.Object, name string) metav1.Object {
+func (k *K8sResources) OfTypeWithName(i metav1.Object, name string) metav1.Object {
 
 	for _, o := range k.objects {
 		if reflect.TypeOf(i) == reflect.TypeOf(o) {
@@ -62,7 +62,7 @@ func (k *K8sResources) ofTypeWithName(i metav1.Object, name string) metav1.Objec
 	return nil
 }
 
-func (k *K8sResources) ofType(i runtime.Object) (out []runtime.Object) {
+func (k *K8sResources) OfType(i runtime.Object) (out []runtime.Object) {
 
 	for _, o := range k.objects {
 		if reflect.TypeOf(i) == reflect.TypeOf(o) {
