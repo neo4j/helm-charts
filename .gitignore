@@ -3,3 +3,4 @@ temp/
 devenv.local
 .idea/
 .kube/
+*.test

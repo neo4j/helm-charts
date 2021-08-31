@@ -20,6 +20,7 @@ metadata:
     app: "{{ template "neo4j.appName" $ }}"
     helm.neo4j.com/instance: "{{ $.Release.Name }}"
     helm.neo4j.com/service: "default"
+    {{- include "neo4j.labels" $.Values.neo4j | nindent 4 }}
   {{- with .Values.services.default.annotations }}
   annotations: {{ toYaml . | nindent 4 }}
   {{- end }}
@@ -57,6 +58,7 @@ metadata:
     app: "{{ template "neo4j.appName" $ }}"
     helm.neo4j.com/instance: "{{ $.Release.Name }}"
     helm.neo4j.com/service: "admin"
+    {{- include "neo4j.labels" $.Values.neo4j | nindent 4 }}
   {{- with .annotations }}
   annotations: {{ toYaml . | nindent 4 }}
   {{- end }}

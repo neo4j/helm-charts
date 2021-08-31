@@ -30,7 +30,7 @@ func init() {
 	Clientset, err = kubernetes.NewForConfig(Config)
 	CheckError(err)
 }
-func CheckProbes(t *testing.T, releaseName *model.ReleaseName) error {
+func CheckProbes(t *testing.T, releaseName model.ReleaseName) error {
 
 	// getting Probes values from values.yaml
 	type ValuesYaml struct {
@@ -95,7 +95,7 @@ func CheckProbes(t *testing.T, releaseName *model.ReleaseName) error {
 	return nil
 }
 
-func CheckServiceAnnotations(t *testing.T, releaseName *model.ReleaseName) (err error) {
+func CheckServiceAnnotations(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart) (err error) {
 	var services = getAllServices(t, releaseName)
 	assert.Equal(t, 3, len(services.Items))
 
@@ -105,8 +105,9 @@ func CheckServiceAnnotations(t *testing.T, releaseName *model.ReleaseName) (err 
 	}
 
 	// when we add annotations via helm
+	diskName := releaseName.DiskName()
 	err = runAll(t, "helm", [][]string{
-		model.BaseHelmCommand("upgrade", releaseName,
+		model.BaseHelmCommand("upgrade", releaseName, chart, &diskName,
 			"--set", "services.neo4j.annotations.foo=bar",
 			"--set", "services.admin.annotations.foo=bar",
 			"--set", "services.default.annotations.foo=bar",
@@ -149,13 +150,13 @@ func matchesAnyPrefix(knownPrefixes []string, key string) bool {
 	return false
 }
 
-func getAllServices(t *testing.T, releaseName *model.ReleaseName) *coreV1.ServiceList {
+func getAllServices(t *testing.T, releaseName model.ReleaseName) *coreV1.ServiceList {
 	services, err := Clientset.CoreV1().Services(string(releaseName.Namespace())).List(context.TODO(), v1.ListOptions{})
 	assert.NoError(t, err)
 	return services
 }
 
-func RunAsNonRoot(t *testing.T, releaseName *model.ReleaseName) error {
+func RunAsNonRoot(t *testing.T, releaseName model.ReleaseName) error {
 	pods, err := Clientset.CoreV1().Pods(string(releaseName.Namespace())).List(context.TODO(), v1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to get Pods options: %v", err)
@@ -167,7 +168,7 @@ func RunAsNonRoot(t *testing.T, releaseName *model.ReleaseName) error {
 	return nil
 }
 
-func CheckExecInPod(t *testing.T, releaseName *model.ReleaseName) error {
+func CheckExecInPod(t *testing.T, releaseName model.ReleaseName) error {
 	cmd := []string{
 		"bash",
 		"-c",
@@ -183,7 +184,7 @@ func CheckExecInPod(t *testing.T, releaseName *model.ReleaseName) error {
 	return err
 }
 
-func ExecInPod(releaseName *model.ReleaseName, cmd []string) (string, string, error) {
+func ExecInPod(releaseName model.ReleaseName, cmd []string) (string, string, error) {
 
 	var (
 		stdout bytes.Buffer

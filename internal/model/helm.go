@@ -5,21 +5,31 @@ import (
 	"fmt"
 	"github.com/hashicorp/go-multierror"
 	. "neo4j.com/helm-charts-tests/internal/helpers"
+	"neo4j.com/helm-charts-tests/internal/resources"
 	"os"
 	"os/exec"
 	"strings"
 	"testing"
 )
 
-var DefaultHelmTemplateReleaseName = ReleaseName("my-release")
+var DefaultHelmTemplateReleaseName = releaseName("my-release")
 
-func HelmTemplate(t *testing.T, helmTemplateArgs []string, moreHelmTemplateArgs ...string) (*K8sResources, error) {
-	if helmTemplateArgs != nil {
+func HelmTemplate(t *testing.T, chart HelmChart, helmTemplateArgs []string, moreHelmTemplateArgs ...string) (*K8sResources, error) {
+
+	helmTemplateArgs = append(minHelmCommand("template", &DefaultHelmTemplateReleaseName, chart), helmTemplateArgs...)
+
+	return RunHelmCommand(t, helmTemplateArgs, moreHelmTemplateArgs...)
+}
+
+func RunHelmCommand(t *testing.T, helmTemplateArgs []string, moreHelmTemplateArgs ...string) (*K8sResources, error) {
+	if helmTemplateArgs != nil && moreHelmTemplateArgs != nil {
 		helmTemplateArgs = append(helmTemplateArgs, moreHelmTemplateArgs...)
+	} else if helmTemplateArgs == nil {
+		helmTemplateArgs = moreHelmTemplateArgs
 	}
 
-	if len(helmTemplateArgs) == 0 || helmTemplateArgs[0] != "template" {
-		helmTemplateArgs = append(minHelmCommand("template", &DefaultHelmTemplateReleaseName), helmTemplateArgs...)
+	if helmTemplateArgs == nil {
+		helmTemplateArgs = make([]string, 0)
 	}
 
 	program := "helm"
@@ -33,17 +43,16 @@ func HelmTemplate(t *testing.T, helmTemplateArgs []string, moreHelmTemplateArgs 
 	return decodeK8s(stdout)
 }
 
-func minHelmCommand(helmCommand string, releaseName *ReleaseName) []string {
-	return []string{helmCommand, string(*releaseName), "./neo4j-standalone", "--namespace", string(releaseName.Namespace())}
+func minHelmCommand(helmCommand string, releaseName ReleaseName, chart HelmChart) []string {
+	return []string{helmCommand, releaseName.String(), chart.getPath(), "--namespace", string(releaseName.Namespace())}
 }
 
-func BaseHelmCommand(helmCommand string, releaseName *ReleaseName, extraHelmArguments ...string) []string {
+func BaseHelmCommand(helmCommand string, releaseName ReleaseName, chart Neo4jHelmChart, diskName *PersistentDiskName, extraHelmArguments ...string) []string {
 
-	var helmArgs = minHelmCommand(helmCommand, releaseName)
+	var helmArgs = minHelmCommand(helmCommand, releaseName, chart)
 	helmArgs = append(helmArgs,
-		"--create-namespace",
-		"--set", "volumes.data.mode=selector",
-		"--set", "volumes.data.selector.requests.storage="+StorageSize,
+		"--set", "volumes.data.mode=volume",
+		"--set", "volumes.data.volume.gcePersistentDisk.pdName="+string(*diskName),
 		"--set", "neo4j.password="+DefaultPassword,
 		"--set", "neo4j.resources.requests.cpu="+cpuRequests,
 		"--set", "neo4j.resources.requests.memory="+memoryRequests,
@@ -73,6 +82,23 @@ func BaseHelmCommand(helmCommand string, releaseName *ReleaseName, extraHelmArgu
 	return helmArgs
 }
 
-func HelmTemplateFromYamlFile(t *testing.T, filepath string) (*K8sResources, error) {
-	return HelmTemplate(t, minHelmCommand("template", &DefaultHelmTemplateReleaseName), "-f", filepath)
+func HelmTemplateFromYamlFile(t *testing.T, chart HelmChart, values resources.YamlFile, extraHelmArgs ...string) (*K8sResources, error) {
+	args := minHelmCommand("template", &DefaultHelmTemplateReleaseName, chart)
+	return RunHelmCommand(t, args, append(extraHelmArgs, values.HelmArgs()...)...)
+}
+
+func LoadBalancerHelmCommand(helmCommand string, releaseName ReleaseName, extraHelmArguments ...string) []string {
+
+	var helmArgs []string
+	if helmCommand == "uninstall" {
+		helmArgs = []string{"uninstall", releaseName.String(), "--namespace", string(releaseName.Namespace())}
+	} else {
+		helmArgs = minHelmCommand(helmCommand, releaseName, LoadBalancerHelmChart)
+	}
+
+	if extraHelmArguments != nil && len(extraHelmArguments) > 0 {
+		helmArgs = append(helmArgs, extraHelmArguments...)
+	}
+
+	return helmArgs
 }

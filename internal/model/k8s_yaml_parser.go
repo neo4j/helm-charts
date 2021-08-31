@@ -62,6 +62,22 @@ func (k *K8sResources) OfTypeWithName(i metav1.Object, name string) metav1.Objec
 	return nil
 }
 
+func (k *K8sResources) All() (out []runtime.Object) {
+
+	return k.objects
+}
+
+func (k *K8sResources) AllWithMetadata() (out []metav1.Object) {
+
+	for _, o := range k.objects {
+		meta, ok := o.(metav1.Object)
+		if ok {
+			out = append(out, meta)
+		}
+	}
+	return out
+}
+
 func (k *K8sResources) OfType(i runtime.Object) (out []runtime.Object) {
 
 	for _, o := range k.objects {

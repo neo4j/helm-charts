@@ -174,20 +174,9 @@ func kCreateSecret(namespace model.Namespace) ([][]string, Closeable, error) {
 	}, func() error { return os.RemoveAll(tempDir) }, err
 }
 
-func helmInstallCommands(releaseName *model.ReleaseName, diskName model.PersistentDiskName) [][]string {
+func helmCleanupCommands(releaseName model.ReleaseName) [][]string {
 	return [][]string{
-		{"install", string(*releaseName + "-pv"), "./neo4j-gcloud-pv", "--wait", "--timeout", "120s",
-			"--set", "neo4j.name=" + string(*releaseName),
-			"--set", "data.capacity.storage=" + model.StorageSize,
-			"--set", "data.gcePersistentDisk=" + string(diskName)},
-		model.BaseHelmCommand("install", releaseName, "--wait", "--timeout", "300s"),
-	}
-}
-
-func helmCleanupCommands(releaseName *model.ReleaseName) [][]string {
-	return [][]string{
-		{"uninstall", string(*releaseName), "--namespace", string(releaseName.Namespace())},
-		{"uninstall", string(*releaseName) + "-pv"},
+		{"uninstall", releaseName.String(), "--namespace", string(releaseName.Namespace())},
 	}
 }
 
@@ -197,12 +186,12 @@ func kCleanupCommands(namespace model.Namespace) [][]string {
 
 var portOffset int32 = 0
 
-func proxyBolt(t *testing.T, releaseName *model.ReleaseName) (int32, Closeable, error) {
+func proxyBolt(t *testing.T, releaseName model.ReleaseName) (int32, Closeable, error) {
 	localHttpPort := 9000 + atomic.AddInt32(&portOffset, 1)
 	localBoltPort := 9100 + atomic.AddInt32(&portOffset, 1)
 
 	program := "kubectl"
-	args := []string{"--namespace", string(releaseName.Namespace()), "port-forward", fmt.Sprintf("service/%s", *releaseName), fmt.Sprintf("%d:7474", localHttpPort), fmt.Sprintf("%d:7687", localBoltPort)}
+	args := []string{"--namespace", string(releaseName.Namespace()), "port-forward", fmt.Sprintf("service/%s-neo4j", releaseName), fmt.Sprintf("%d:7474", localHttpPort), fmt.Sprintf("%d:7687", localBoltPort)}
 	t.Logf("running: %s %s\n", program, args)
 	cmd := exec.Command(program, args...)
 	stdout, err := cmd.StdoutPipe()
@@ -278,7 +267,7 @@ func runAll(t *testing.T, bin string, commands [][]string, failFast bool) error 
 	return combinedErrors
 }
 
-func createNamespace(t *testing.T, releaseName *model.ReleaseName) (Closeable, error) {
+func createNamespace(t *testing.T, releaseName model.ReleaseName) (Closeable, error) {
 	err := run(t, "kubectl", "create", "ns", string(releaseName.Namespace()))
 	return func() error {
 		return runAll(t, "kubectl", kCleanupCommands(releaseName.Namespace()), false)
@@ -294,14 +283,8 @@ func run(t *testing.T, command string, args ...string) error {
 	return err
 }
 
-func InstallNeo4jInGcloud(t *testing.T, zone gcloud.Zone, project gcloud.Project, releaseName *model.ReleaseName) (Closeable, error) {
-
-	var closeables []Closeable
-	addCloseable := func(closeable Closeable) {
-		closeables = append([]Closeable{closeable}, closeables...)
-	}
-
-	cleanup := func() error {
+func AsCloseable(closeables []Closeable) Closeable {
+	return func() error {
 		var combinedErrors error
 		if closeables != nil {
 			for _, closeable := range closeables {
@@ -313,11 +296,20 @@ func InstallNeo4jInGcloud(t *testing.T, zone gcloud.Zone, project gcloud.Project
 		}
 		return combinedErrors
 	}
+}
+
+func InstallNeo4jInGcloud(t *testing.T, zone gcloud.Zone, project gcloud.Project, releaseName model.ReleaseName, chart model.Neo4jHelmChart, extraHelmInstallArgs ...string) (Closeable, error) {
+
+	var closeables []Closeable
+	addCloseable := func(closeable Closeable) {
+		closeables = append([]Closeable{closeable}, closeables...)
+	}
 
 	completed := false
+	// This is here to ensure that closeables are closed if there is a panic
 	defer func() (err error) {
 		if !completed {
-			err = cleanup()
+			err = AsCloseable(closeables)()
 			t.Log(err)
 		}
 		return err
@@ -326,37 +318,49 @@ func InstallNeo4jInGcloud(t *testing.T, zone gcloud.Zone, project gcloud.Project
 	cleanupGcloud, diskName, err := gcloud.InstallGcloud(t, zone, project, releaseName)
 	addCloseable(cleanupGcloud)
 	if err != nil {
-		return cleanup, err
+		return AsCloseable(closeables), err
+	}
+
+	addCloseable(func() error { return runAll(t, "helm", helmCleanupCommands(releaseName), false) })
+	// delete the statefulset like this otherwise the pods will hang around for their termination grace period
+	addCloseable(func() error {
+		return runAll(t, "kubectl", [][]string{
+			{"delete", "statefulset", releaseName.String(), "--namespace", string(releaseName.Namespace()), "--grace-period=0", "--force", "--ignore-not-found"},
+			{"delete", "pod", releaseName.PodName(), "--namespace", string(releaseName.Namespace()), "--grace-period=0", "--wait", "--timeout=120s", "--ignore-not-found"},
+		}, false)
+	})
+	err = run(t, "helm", model.BaseHelmCommand("install", releaseName, chart, diskName, extraHelmInstallArgs...)...)
+
+	if err != nil {
+		return AsCloseable(closeables), err
+	}
+
+	completed = true
+	return AsCloseable(closeables), err
+}
+
+func prepareK8s(t *testing.T, releaseName model.ReleaseName) (Closeable, error) {
+	var closeables []Closeable
+	addCloseable := func(closeable Closeable) {
+		closeables = append([]Closeable{closeable}, closeables...)
 	}
 
 	cleanupNamespace, err := createNamespace(t, releaseName)
 	addCloseable(cleanupNamespace)
 	if err != nil {
-		return cleanup, err
+		return AsCloseable(closeables), err
 	}
 
 	createSecretCommands, cleanupCertificates, err := kCreateSecret(releaseName.Namespace())
 	addCloseable(cleanupCertificates)
 	if err != nil {
-		return cleanup, err
+		return AsCloseable(closeables), err
 	}
 
 	err = runAll(t, "kubectl", createSecretCommands, true)
 	if err != nil {
-		return cleanup, err
+		return AsCloseable(closeables), err
 	}
 
-	addCloseable(func() error { return runAll(t, "helm", helmCleanupCommands(releaseName), false) })
-	err = runAll(t, "helm", helmInstallCommands(releaseName, *diskName), true)
-	if err != nil {
-		return cleanup, err
-	}
-
-	err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()), "rollout", "status", "--watch", "--timeout=120s", "statefulset/"+string(*releaseName))
-	if err != nil {
-		return cleanup, err
-	}
-
-	completed = true
-	return cleanup, err
+	return AsCloseable(closeables), nil
 }

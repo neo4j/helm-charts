@@ -3,6 +3,9 @@ kind: ConfigMap
 metadata:
   name: "{{ .Release.Name }}-env"
   namespace: "{{ .Release.Namespace }}"
+  labels:
+    app: "{{ template "neo4j.appName" $ }}"
+    {{- include "neo4j.labels" $.Values.neo4j | nindent 4 }}
 data:
   # It should not be necessary for neo4j users/administrators to modify this configMap
   # Neo4j configuration is set in the {{ .Release.Name }}-user-config ConfigMap

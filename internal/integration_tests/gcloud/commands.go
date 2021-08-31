@@ -5,9 +5,10 @@ import (
 	"neo4j.com/helm-charts-tests/internal/model"
 	"os/exec"
 	"testing"
+	"time"
 )
 
-func InstallGcloud(t *testing.T, zone Zone, project Project, releaseName *model.ReleaseName) (Closeable, *model.PersistentDiskName, error) {
+func InstallGcloud(t *testing.T, zone Zone, project Project, releaseName model.ReleaseName) (Closeable, *model.PersistentDiskName, error) {
 
 	err := run(t, "gcloud", "container", "clusters", "get-credentials", string(CurrentCluster()))
 	if err != nil {
@@ -31,12 +32,29 @@ func run(t *testing.T, command string, args ...string) error {
 	return err
 }
 
-func createDisk(t *testing.T, zone Zone, project Project, releaseName *model.ReleaseName) (model.PersistentDiskName, Closeable, error) {
+func createDisk(t *testing.T, zone Zone, project Project, releaseName model.ReleaseName) (model.PersistentDiskName, Closeable, error) {
 	diskName := releaseName.DiskName()
 	err := run(t, "gcloud", "compute", "disks", "create", "--size", model.StorageSize, "--type", "pd-ssd", string(diskName), "--zone="+string(zone), "--project="+string(project))
 	return model.PersistentDiskName(diskName), func() error { return deleteDisk(t, zone, project, string(diskName)) }, err
 }
 
 func deleteDisk(t *testing.T, zone Zone, project Project, diskName string) error {
-	return run(t, "gcloud", "compute", "disks", "delete", diskName, "--zone="+string(zone), "--project="+string(project))
+	delete := func() error {
+		return run(t, "gcloud", "compute", "disks", "delete", diskName, "--zone="+string(zone), "--project="+string(project))
+	}
+	err := delete()
+	if err != nil {
+		timeout := time.After(1 * time.Minute)
+		for {
+			select {
+			case <-timeout:
+				return err
+			default:
+				if err = delete(); err == nil {
+					return err
+				}
+			}
+		}
+	}
+	return err
 }

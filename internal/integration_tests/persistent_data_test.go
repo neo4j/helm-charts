@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func ResourcesCleanup(t *testing.T, releaseName *model.ReleaseName) error {
+func ResourcesCleanup(t *testing.T, releaseName model.ReleaseName) error {
 	//patch := exec.Command("kubectl", "patch", "pv", "neo4j-data-disk", "-p", "'{\"spec\":{\"persistentVolumeReclaimPolicy\":\"Retain\"}}'")
 	//t.Log("patch:", patch)
 	var errors *multierror.Error
@@ -24,12 +24,12 @@ func ResourcesCleanup(t *testing.T, releaseName *model.ReleaseName) error {
 	}
 
 	// This value is set manually
-	tasksToRun := 3
+	tasksToRun := 2
 	// semaphore
 	sem := make(chan error, tasksToRun)
 
 	go func() {
-		err = run(t, "helm", "uninstall", string(*releaseName), "--namespace", string(releaseName.Namespace()))
+		err = run(t, "helm", "uninstall", releaseName.String(), "--namespace", string(releaseName.Namespace()))
 		if err != nil {
 			t.Log("Helm Cleanup failed:", err)
 		}
@@ -38,14 +38,6 @@ func ResourcesCleanup(t *testing.T, releaseName *model.ReleaseName) error {
 		err = run(t, "kubectl", "delete", "namespace", string(releaseName.Namespace()), "--ignore-not-found")
 		if err != nil {
 			t.Log("Namespace Cleanup failed:", err)
-		}
-		sem <- err
-	}()
-
-	go func() {
-		err = run(t, "helm", "uninstall", string(*releaseName)+"-pv")
-		if err != nil {
-			t.Log("Remove PV failed:", err)
 		}
 		sem <- err
 	}()
@@ -60,7 +52,7 @@ func ResourcesCleanup(t *testing.T, releaseName *model.ReleaseName) error {
 	return errors.ErrorOrNil()
 }
 
-func ResourcesReinstall(t *testing.T, releaseName *model.ReleaseName) error {
+func ResourcesReinstall(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart) error {
 	_, err := createNamespace(t, releaseName)
 	if err != nil {
 		t.Log("Creating namespace failed:", err)
@@ -79,12 +71,14 @@ func ResourcesReinstall(t *testing.T, releaseName *model.ReleaseName) error {
 		t.Log("Re-creating secrets failed:", err)
 		return err
 	}
-	err = runAll(t, "helm", helmInstallCommands(releaseName, releaseName.DiskName()), true)
+
+	diskName := releaseName.DiskName()
+	err = run(t, "helm", model.BaseHelmCommand("install", releaseName, chart, &diskName, "--wait", "--timeout", "300s")...)
 	if err != nil {
 		t.Log("Helm Install failed:", err)
 		return err
 	}
-	err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()), "rollout", "status", "--watch", "--timeout=120s", "statefulset/"+string(*releaseName))
+	err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()), "rollout", "status", "--watch", "--timeout=120s", "statefulset/"+releaseName.String())
 	if err != nil {
 		t.Log("Helm Install failed:", err)
 		return err

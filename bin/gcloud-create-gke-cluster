@@ -15,6 +15,7 @@ CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is require
 
 # Parameters
 NODE_MACHINE="e2-medium"
+NUM_NODES="${NUM_NODES:-2}"
 
 # For more info on release channels see https://cloud.google.com/kubernetes-engine/docs/concepts/release-channels
 RELEASE_CHANNEL="stable"
@@ -24,7 +25,7 @@ RELEASE_CHANNEL="stable"
 gcloud container clusters create "${CLOUDSDK_CONTAINER_CLUSTER}" \
      --release-channel=${RELEASE_CHANNEL} \
      --zone="${CLOUDSDK_COMPUTE_ZONE}" \
-     --num-nodes "2" \
+     --num-nodes "${NUM_NODES}" \
      --workload-pool="${CLOUDSDK_CORE_PROJECT}.svc.id.goog" \
      --preemptible --machine-type "${NODE_MACHINE}" --image-type "COS_CONTAINERD" \
      --disk-type "pd-ssd" --disk-size "10" \

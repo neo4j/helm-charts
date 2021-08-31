@@ -10,6 +10,9 @@ kind: ConfigMap
 metadata:
   name: "{{ .Release.Name }}-k8s-config"
   namespace: "{{ .Release.Namespace }}"
+  labels:
+    app: "{{ template "neo4j.appName" $ }}"
+    {{- include "neo4j.labels" $.Values.neo4j | nindent 4 }}
 data:
   dbms.default_listen_address: "0.0.0.0"
 ---
@@ -25,6 +28,9 @@ kind: ConfigMap
 metadata:
   name: "{{ .Release.Name }}-user-config"
   namespace: "{{ .Release.Namespace }}"
+  labels:
+    app: "{{ template "neo4j.appName" $ }}"
+    {{- include "neo4j.labels" $.Values.neo4j | nindent 4 }}
 data:
   {{- /* imported config first */}}
   {{- with $configImport }}
@@ -63,6 +69,9 @@ kind: ConfigMap
 metadata:
   name: "{{ .Release.Name }}-default-config"
   namespace: "{{ .Release.Namespace }}"
+  labels:
+    app: "{{ template "neo4j.appName" $ }}"
+    {{- include "neo4j.labels" $.Values.neo4j | nindent 4 }}
 data:
 
   # Neo4j defaults

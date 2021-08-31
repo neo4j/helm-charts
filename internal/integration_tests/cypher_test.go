@@ -1,6 +1,7 @@
 package integration_tests
 
 import (
+	"errors"
 	"fmt"
 	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 	"github.com/stretchr/testify/assert"
@@ -24,13 +25,7 @@ var createdNodes = map[model.ReleaseName]*int64{}
 // empty param map (makes queries without params more readable)
 var noParams = map[string]interface{}{}
 
-func CheckNeo4jConfiguration(t *testing.T, releaseName *model.ReleaseName, expectedConfigurationFile string) (err error) {
-
-	expectedConfiguration, err := (&model.Neo4jConfiguration{}).PopulateFromFile(expectedConfigurationFile)
-	if err != nil {
-		assert.NoError(t, err)
-		return err
-	}
+func CheckNeo4jConfiguration(t *testing.T, releaseName model.ReleaseName, expectedConfiguration *model.Neo4jConfiguration) (err error) {
 
 	var runtimeConfig []*neo4j.Record
 	var expectedOverrides = map[string]string{
@@ -44,7 +39,9 @@ func CheckNeo4jConfiguration(t *testing.T, releaseName *model.ReleaseName, expec
 	deadline := time.Now().Add(3 * time.Minute)
 	for true {
 		if !time.Now().Before(deadline) {
-			return fmt.Errorf("timed out fetching config:  %d", len(runtimeConfig))
+			msg := fmt.Sprintf("timed out fetching config:  %d", len(runtimeConfig))
+			t.Error(msg)
+			return errors.New(msg)
 		}
 		runtimeConfig, err = runQuery(t, releaseName, "CALL dbms.listConfig() YIELD name, value", nil)
 		if err != nil {
@@ -76,25 +73,28 @@ func CheckNeo4jConfiguration(t *testing.T, releaseName *model.ReleaseName, expec
 		}
 	}
 
+	if err == nil {
+		t.Log("Configuration check passed for:", releaseName.String())
+	}
 	return err
 }
 
-func CreateNode(t *testing.T, releaseName *model.ReleaseName) error {
+func CreateNode(t *testing.T, releaseName model.ReleaseName) error {
 	_, err := runQuery(t, releaseName, "CREATE (n:Item { id: $id, name: $name }) RETURN n.id, n.name", map[string]interface{}{
 		"id":   1,
 		"name": "Item 1",
 	})
-	if _, found := createdNodes[*releaseName]; !found {
+	if _, found := createdNodes[releaseName]; !found {
 		var initialValue int64 = 0
-		createdNodes[*releaseName] = &initialValue
+		createdNodes[releaseName] = &initialValue
 	}
 	if err == nil {
-		atomic.AddInt64(createdNodes[*releaseName], 1)
+		atomic.AddInt64(createdNodes[releaseName], 1)
 	}
 	return err
 }
 
-func CheckNodeCount(t *testing.T, releaseName *model.ReleaseName) error {
+func CheckNodeCount(t *testing.T, releaseName model.ReleaseName) error {
 	result, err := runQuery(t, releaseName, "MATCH (n) RETURN COUNT(n) AS count", noParams)
 
 	if err != nil {
@@ -103,14 +103,14 @@ func CheckNodeCount(t *testing.T, releaseName *model.ReleaseName) error {
 
 	if value, found := result[0].Get("count"); found {
 		countedNodes := value.(int64)
-		assert.Equal(t, atomic.LoadInt64(createdNodes[*releaseName]), countedNodes)
+		assert.Equal(t, atomic.LoadInt64(createdNodes[releaseName]), countedNodes)
 		return err
 	} else {
 		return fmt.Errorf("expected at least one result")
 	}
 }
 
-func runQuery(t *testing.T, releaseName *model.ReleaseName, cypher string, params map[string]interface{}) ([]*neo4j.Record, error) {
+func runQuery(t *testing.T, releaseName model.ReleaseName, cypher string, params map[string]interface{}) ([]*neo4j.Record, error) {
 
 	boltPort, cleanupProxy, proxyErr := proxyBolt(t, releaseName)
 	defer cleanupProxy()

@@ -5,26 +5,23 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/stretchr/testify/assert"
 	"neo4j.com/helm-charts-tests/internal/model"
+	"neo4j.com/helm-charts-tests/internal/resources"
 	"strings"
 )
 import "testing"
 
-var pluginArgs = []string{
-	"-f", "internal/resources/pluginsInitContainer.yaml",
-}
-
-func volumesTests(name *model.ReleaseName) []SubTest {
+func volumesTests(name model.ReleaseName, chart model.Neo4jHelmChart) []SubTest {
 	return []SubTest{
 		{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, CreateNode(t, name), "Create Node should succeed") }},
 		{name: "Check Volumes", test: func(t *testing.T) { assert.NoError(t, CheckVolumes(t, name), "Check volumes") }},
-		{name: "Enter maintenance mode", test: func(t *testing.T) { assert.NoError(t, EnterMaintenanceMode(t, name), "Enter maintenance mode") }},
+		{name: "Enter maintenance mode", test: func(t *testing.T) { assert.NoError(t, EnterMaintenanceMode(t, name, chart), "Enter maintenance mode") }},
 		{name: "Check Volumes", test: func(t *testing.T) { assert.NoError(t, CheckVolumes(t, name), "Check volumes") }},
-		{name: "Exit maintenance mode and install plugins", test: func(t *testing.T) { assert.NoError(t, ExitMaintenanceMode(t, name, pluginArgs...), "Exit maintenance mode and install plugins") }},
+		{name: "Exit maintenance mode and install plugins", test: func(t *testing.T) { assert.NoError(t, ExitMaintenanceMode(t, name, chart, resources.PluginsInitContainer.HelmArgs()...), "Exit maintenance mode and install plugins") }},
 		{name: "Check Apoc", test: func(t *testing.T) { assert.NoError(t, CheckApoc(t, name), "Check APOC") }},
 	}
 }
 
-func CheckApoc(t *testing.T, releaseName *model.ReleaseName) error {
+func CheckApoc(t *testing.T, releaseName model.ReleaseName) error {
 	results, err := runQuery(t, releaseName, "CALL apoc.help('apoc')", nil)
 	if !assert.NoError(t, err) {
 		return err
@@ -33,7 +30,7 @@ func CheckApoc(t *testing.T, releaseName *model.ReleaseName) error {
 	return err
 }
 
-func checkVolume(t *testing.T, releaseName *model.ReleaseName, volumePath string, sem chan error) {
+func checkVolume(t *testing.T, releaseName model.ReleaseName, volumePath string, sem chan error) {
 	cmd := []string{"ls", "-1a", volumePath}
 
 	stdout, stderr, err := ExecInPod(releaseName, cmd)
@@ -47,7 +44,7 @@ func checkVolume(t *testing.T, releaseName *model.ReleaseName, volumePath string
 
 }
 
-func CheckVolumes(t *testing.T, releaseName *model.ReleaseName) error {
+func CheckVolumes(t *testing.T, releaseName model.ReleaseName) error {
 	volumePathsThatShouldContainFiles := []string{
 		"/logs",
 		"/data",
@@ -91,23 +88,19 @@ func CheckVolumes(t *testing.T, releaseName *model.ReleaseName) error {
 }
 
 func TestVolumesInGCloudK8s(t *testing.T) {
-	releaseName := model.ReleaseName("volumes-" + TestRunIdentifier)
+	chart := model.StandaloneHelmChart
+	releaseName := model.NewReleaseName("volumes-" + TestRunIdentifier)
 	t.Parallel()
 
 	t.Logf("Starting setup of '%s'", t.Name())
-	cleanup, err := installNeo4j(t, &releaseName)
-	defer cleanup()
+	cleanup, err := installNeo4j(t, releaseName, chart, resources.TestAntiAffinityRule.HelmArgs()...)
+	t.Cleanup(func() { cleanupTest(t, cleanup) })
 
 	if !assert.NoError(t, err) {
 		return
 	}
 
-	if err := configureNeo4j(&releaseName); err != nil {
-		assert.NoError(t, err)
-		return
-	}
-
 	t.Logf("Succeeded with setup of '%s'", t.Name())
 
-	runSubTests(t, volumesTests(&releaseName))
+	runSubTests(t, volumesTests(releaseName, chart))
 }

@@ -1,6 +1,9 @@
 package model
 
-import "gopkg.in/ini.v1"
+import (
+	"gopkg.in/ini.v1"
+	"strings"
+)
 
 const neo4jConfJvmAdditionalKey = "dbms.jvm.additional"
 
@@ -35,19 +38,48 @@ func (c *Neo4jConfiguration) PopulateFromFile(filename string) (*Neo4jConfigurat
 	return c, err
 }
 
-func (c *Neo4jConfiguration) Update(other Neo4jConfiguration) Neo4jConfiguration {
-	var jvmArgs []string
+func (c *Neo4jConfiguration) Update(other Neo4jConfiguration, appendJvmArgs bool) Neo4jConfiguration {
+	var jvmArgs = c.jvmArgs
 	if len(other.jvmArgs) > 0 {
-		jvmArgs = other.jvmArgs
-	} else {
-		jvmArgs = c.jvmArgs
+		if appendJvmArgs {
+			jvmArgs = append(jvmArgs, other.jvmArgs...)
+		} else {
+			jvmArgs = other.jvmArgs
+		}
 	}
+
 	for k, v := range other.conf {
 		c.conf[k] = v
 	}
+	c.jvmArgs = jvmArgs
 
 	return Neo4jConfiguration{
-		jvmArgs: jvmArgs,
+		jvmArgs: c.jvmArgs,
+		conf:    c.conf,
+	}
+}
+
+func (c *Neo4jConfiguration) UpdateFromMap(other map[string]string, appendJvmArgs bool) Neo4jConfiguration {
+	var jvmArgs = c.jvmArgs
+	if otherArgsString, found := other["jvmArgs"]; found {
+		otherJvmArgs := []string{}
+		for _, arg := range strings.Split(otherArgsString, "\n") {
+			otherJvmArgs = append(otherJvmArgs, strings.TrimSpace(arg))
+		}
+		if appendJvmArgs {
+			jvmArgs = append(jvmArgs, otherJvmArgs...)
+		} else {
+			jvmArgs = otherJvmArgs
+		}
+		delete(other, "jvmArgs")
+	}
+	for k, v := range other {
+		c.conf[k] = v
+	}
+	c.jvmArgs = jvmArgs
+
+	return Neo4jConfiguration{
+		jvmArgs: c.jvmArgs,
 		conf:    c.conf,
 	}
 }

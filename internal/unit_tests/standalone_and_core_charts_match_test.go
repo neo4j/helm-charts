@@ -25,13 +25,14 @@ func TestCoreChartMatchesStandalone(t *testing.T) {
 }
 
 var acceptableValuesDifferences = []string{
-	`name: "neo4j-cluster"`,
 	`name: ""`,
-	`edition: "enterprise"`,
+	`name: "neo4j-cluster"`,
 	`edition: "community"`,
+	`edition: "enterprise"`,
+	"enabled: true",
+	"enabled: false\n\n\n    selectCluster: false",
 	`dbms.mode: "CORE"`,
 	`causal_clustering.middleware.akka.allow_any_core_to_bootstrap: "true"`,
-	`selectCluster: true`,
 }
 
 // The values files for Standalone and Core installations must be kept in sync.
@@ -77,8 +78,10 @@ func assertDiffIsAcceptable(t *testing.T, standaloneChartFile string, clusterCha
 	result := dmp.DiffCharsToLines(diffs, lineArray)
 
 	for _, diff := range dmp.DiffCleanupSemanticLossless(result) {
-		if diff.Type != diffmatchpatch.DiffEqual {
-			assert.Contains(t, acceptableDifferences, strings.TrimSpace(diff.Text))
+		text := strings.TrimSpace(diff.Text)
+		if diff.Type != diffmatchpatch.DiffEqual && text != "" {
+			assert.Contains(t, acceptableDifferences, text)
+			t.Log("acceptable diff", text)
 		}
 	}
 }
