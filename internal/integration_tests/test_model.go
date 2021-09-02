@@ -3,7 +3,7 @@ package integration_tests
 import (
 	"fmt"
 	"k8s.io/utils/env"
-	. "neo4j.com/helm-charts-tests/internal/helpers"
+	. "github.com/neo-technology/neo4j-helm-charts/internal/helpers"
 	"strings"
 	"testing"
 	"time"

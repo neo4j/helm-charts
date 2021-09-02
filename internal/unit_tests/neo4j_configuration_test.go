@@ -3,7 +3,7 @@ package unit_tests
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
-	"neo4j.com/helm-charts-tests/internal/model"
+	"github.com/neo-technology/neo4j-helm-charts/internal/model"
 	"os"
 	"testing"
 )

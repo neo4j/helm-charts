@@ -1,4 +1,4 @@
-module neo4j.com/helm-charts-tests
+module github.com/neo-technology/neo4j-helm-charts
 
 go 1.15
 

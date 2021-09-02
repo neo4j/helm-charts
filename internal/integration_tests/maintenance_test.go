@@ -2,8 +2,8 @@ package integration_tests
 
 import (
 	"github.com/stretchr/testify/assert"
-	"neo4j.com/helm-charts-tests/internal/model"
-	"neo4j.com/helm-charts-tests/internal/resources"
+	"github.com/neo-technology/neo4j-helm-charts/internal/model"
+	"github.com/neo-technology/neo4j-helm-charts/internal/resources"
 	"strings"
 	"time"
 )

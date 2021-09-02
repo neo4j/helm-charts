@@ -3,9 +3,9 @@ package integration_tests
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
-	. "neo4j.com/helm-charts-tests/internal/helpers"
-	"neo4j.com/helm-charts-tests/internal/integration_tests/gcloud"
-	"neo4j.com/helm-charts-tests/internal/model"
+	. "github.com/neo-technology/neo4j-helm-charts/internal/helpers"
+	"github.com/neo-technology/neo4j-helm-charts/internal/integration_tests/gcloud"
+	"github.com/neo-technology/neo4j-helm-charts/internal/model"
 	"testing"
 )
 

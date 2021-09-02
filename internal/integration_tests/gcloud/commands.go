@@ -1,8 +1,8 @@
 package gcloud
 
 import (
-	. "neo4j.com/helm-charts-tests/internal/helpers"
-	"neo4j.com/helm-charts-tests/internal/model"
+	. "github.com/neo-technology/neo4j-helm-charts/internal/helpers"
+	"github.com/neo-technology/neo4j-helm-charts/internal/model"
 	"os/exec"
 	"testing"
 	"time"
