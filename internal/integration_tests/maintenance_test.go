@@ -1,9 +1,9 @@
 package integration_tests
 
 import (
-	"github.com/stretchr/testify/assert"
 	"github.com/neo-technology/neo4j-helm-charts/internal/model"
 	"github.com/neo-technology/neo4j-helm-charts/internal/resources"
+	"github.com/stretchr/testify/assert"
 	"strings"
 	"time"
 )
@@ -44,7 +44,7 @@ func CheckMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart mod
 func ExitMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart, extraArgs ...string) error {
 	diskName := releaseName.DiskName()
 	err := run(
-		t, "helm", model.BaseHelmCommand("upgrade", releaseName, chart, &diskName,
+		t, "helm", model.BaseHelmCommand("upgrade", releaseName, chart, model.Neo4jEdition, &diskName,
 			append(extraArgs, "--set", "neo4j.offlineMaintenanceModeEnabled=false", "--wait", "--timeout", "300s")...,
 		)...,
 	)
@@ -61,7 +61,7 @@ func ExitMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart mode
 
 func EnterMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart) error {
 	diskName := releaseName.DiskName()
-	err := run(t, "helm", model.BaseHelmCommand("upgrade", releaseName, chart, &diskName, "--set", "neo4j.offlineMaintenanceModeEnabled=true")...)
+	err := run(t, "helm", model.BaseHelmCommand("upgrade", releaseName, chart, model.Neo4jEdition, &diskName, "--set", "neo4j.offlineMaintenanceModeEnabled=true")...)
 
 	if !assert.NoError(t, err) {
 		return err

@@ -2,10 +2,12 @@ package integration_tests
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	. "github.com/neo-technology/neo4j-helm-charts/internal/helpers"
 	"github.com/neo-technology/neo4j-helm-charts/internal/integration_tests/gcloud"
 	"github.com/neo-technology/neo4j-helm-charts/internal/model"
+	"github.com/stretchr/testify/assert"
+	v1 "k8s.io/api/core/v1"
+	"strings"
 	"testing"
 )
 
@@ -58,10 +60,60 @@ func clusterTests(loadBalancerName model.ReleaseName) ([]SubTest, error) {
 	expectedConfiguration = addExpectedClusterConfiguration(expectedConfiguration)
 
 	return []SubTest{
+		{name: "Check K8s", test: func(t *testing.T) { assert.NoError(t, CheckK8s(t, loadBalancerName), "Neo4j Config check should succeed") }},
 		{name: "Check Neo4j Configuration", test: func(t *testing.T) { assert.NoError(t, CheckNeo4jConfiguration(t, loadBalancerName, expectedConfiguration), "Neo4j Config check should succeed") }},
 		{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, CreateNode(t, loadBalancerName), "Create Node should succeed") }},
 		{name: "Count Nodes", test: func(t *testing.T) { assert.NoError(t, CheckNodeCount(t, loadBalancerName), "Count Nodes should succeed") }},
 	}, err
+}
+
+func CheckK8s(t *testing.T, name model.ReleaseName) error {
+	t.Run("check pods", func(t *testing.T) {
+		t.Parallel()
+		CheckPods(t, name)
+	})
+	t.Run("check lb", func(t *testing.T) {
+		t.Parallel()
+		CheckLoadBalancerService(t, name)
+	})
+	return nil
+}
+
+func CheckLoadBalancerService(t *testing.T, name model.ReleaseName) {
+	manifest, err := getManifest(name.Namespace())
+	if assert.NoError(t, err) {
+		return
+	}
+
+	services := manifest.OfType(&v1.Service{})
+	var lbService *v1.Service
+	for _, service := range services {
+		if strings.HasSuffix(service.(*v1.Service).Name, "-neo4j") {
+			if !assert.Nil(t, lbService, "There should only be one -neo4j service in this namespace") {
+				return
+			}
+			lbService = service.(*v1.Service)
+		}
+	}
+
+	lbEndpoints := manifest.OfTypeWithName(&v1.Endpoints{}, lbService.Name).(*v1.Endpoints)
+	assert.Len(t, lbEndpoints.Subsets, 3)
+}
+
+func CheckPods(t *testing.T, name model.ReleaseName) error {
+	pods, err := getAllPods(name.Namespace())
+	if !assert.NoError(t, err) {
+		return err
+	}
+
+	assert.Len(t, pods.Items, 3)
+	for _, pod := range pods.Items {
+		if assert.Contains(t, pod.Labels, "app") {
+			assert.Equal(t, "neo4j-cluster", pod.Labels["app"])
+		}
+	}
+
+	return err
 }
 
 func addExpectedClusterConfiguration(configuration *model.Neo4jConfiguration) *model.Neo4jConfiguration {
@@ -77,7 +129,7 @@ func addExpectedClusterConfiguration(configuration *model.Neo4jConfiguration) *m
 }
 
 func TestInstallNeo4jClusterInGcloud(t *testing.T) {
-	if Neo4jEdition != "enterprise" {
+	if model.Neo4jEdition != "enterprise" {
 		t.Skip()
 		return
 	}

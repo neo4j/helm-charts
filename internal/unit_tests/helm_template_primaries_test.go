@@ -1,17 +1,15 @@
 package unit_tests
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
+	"github.com/neo-technology/neo4j-helm-charts/internal/helpers"
+	"github.com/neo-technology/neo4j-helm-charts/internal/model"
+	"github.com/neo-technology/neo4j-helm-charts/internal/resources"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"github.com/neo-technology/neo4j-helm-charts/internal/helpers"
-	"github.com/neo-technology/neo4j-helm-charts/internal/model"
-	"github.com/neo-technology/neo4j-helm-charts/internal/resources"
-	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -24,6 +22,9 @@ var useEnterprise = []string{"--set", "neo4j.edition=enterprise"}
 var useCommunity = []string{"--set", "neo4j.edition=community"}
 var useEnterpriseAndAcceptLicense = append(useEnterprise, acceptLicenseAgreement...)
 
+// forEachPrimaryChart runs the given test on each helm chart that represents a Neo4j "Primary instance".
+// Primary instances are Standalone instances, the primary instance in a Primary+Read Replica(s) configuration and Neo4j Causal Cluster Cores.
+// n.b. forEachPrimaryChart runs the tests in parallel.
 func forEachPrimaryChart(t *testing.T, test func(*testing.T, model.Neo4jHelmChart)) {
 	doTestCase := func(t *testing.T, chart model.Neo4jHelmChart) {
 		t.Parallel()
@@ -37,6 +38,10 @@ func forEachPrimaryChart(t *testing.T, test func(*testing.T, model.Neo4jHelmChar
 	}
 }
 
+// forEachSupportedEdition runs the given test on each Neo4j edition supported by the provided Helm Chart.
+// Neo4j editions are "community" and "enterprise". Some helm charts support multiple editions (e.g. neo4j-standalone) and others only support one edition
+// (e.g. neo4j-cluster-core only supports Neo4j enterprise edition)
+// n.b. forEachSupportedEdition runs the tests in parallel.
 func forEachSupportedEdition(t *testing.T, chart model.Neo4jHelmChart, test func(*testing.T, model.Neo4jHelmChart, string)) {
 	doTestCase := func(t *testing.T, edition string) {
 		t.Parallel()
@@ -219,33 +224,6 @@ func TestDefaultEnterpriseHelmTemplate(t *testing.T) {
 	})
 }
 
-// Tests the "default" behaviour that you get if you don't pass in *any* other values and the helm chart defaults are used
-func TestDefaultCommunityHelmTemplate(t *testing.T) {
-	t.Parallel()
-
-	manifest, err := model.HelmTemplate(t, model.StandaloneHelmChart, requiredDataMode)
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	checkNeo4jManifest(t, manifest)
-
-	neo4jStatefulSet := manifest.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
-	neo4jStatefulSet.GetName()
-	assert.NotEmpty(t, neo4jStatefulSet.Spec.Template.Spec.Containers)
-	for _, container := range neo4jStatefulSet.Spec.Template.Spec.Containers {
-		assert.NotContains(t, container.Image, "enterprise")
-		assert.Equal(t, "1", container.Resources.Requests.Cpu().String())
-		assert.Equal(t, "2Gi", container.Resources.Requests.Memory().String())
-	}
-	for _, container := range neo4jStatefulSet.Spec.Template.Spec.InitContainers {
-		assert.NotContains(t, container.Image, "enterprise")
-	}
-
-	envConfigMap := manifest.OfTypeWithName(&v1.ConfigMap{}, model.DefaultHelmTemplateReleaseName.EnvConfigMapName()).(*v1.ConfigMap)
-	assert.Equal(t, envConfigMap.Data["NEO4J_EDITION"], "COMMUNITY_K8S")
-}
-
 func TestAdditionalEnvVars(t *testing.T) {
 	t.Parallel()
 
@@ -268,62 +246,6 @@ func TestAdditionalEnvVars(t *testing.T) {
 
 			checkNeo4jManifest(t, manifest)
 		}))
-}
-
-func TestJvmAdditionalConfig(t *testing.T) {
-	t.Parallel()
-
-	doTestCase := func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
-		manifest, err := model.HelmTemplate(t, chart, useDataModeAndAcceptLicense,
-			"-f", "internal/resources/jvmAdditionalSettings.yaml",
-			"--set", "neo4j.edition="+edition,
-		)
-		if !assert.NoError(t, err) {
-			return
-		}
-
-		userConfigMap := manifest.OfTypeWithName(&v1.ConfigMap{}, model.DefaultHelmTemplateReleaseName.UserConfigMapName()).(*v1.ConfigMap)
-		assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:+HeapDumpOnOutOfMemoryError")
-		assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:HeapDumpPath=./java_pid<pid>.hprof")
-		assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:+UseGCOverheadLimit")
-
-		err = checkConfigMapContainsJvmAdditionalFromDefaultConf(t, edition, userConfigMap)
-		if !assert.NoError(t, err) {
-			return
-		}
-
-		checkNeo4jManifest(t, manifest)
-	}
-
-	forEachPrimaryChart(t, andEachSupportedEdition(doTestCase))
-}
-
-func checkConfigMapContainsJvmAdditionalFromDefaultConf(t *testing.T, edition string, userConfigMap *v1.ConfigMap) error {
-	// check that we picked up jvm additional from the conf file
-	file, err := os.Open(fmt.Sprintf("neo4j-standalone/neo4j-%s.conf", edition))
-	defer file.Close()
-	if err != nil {
-		return err
-	}
-
-	n := 0
-	scanner := bufio.NewScanner(file)
-	scanner.Split(bufio.ScanLines)
-	for scanner.Scan() {
-		var line = scanner.Text()
-		if strings.HasPrefix(strings.TrimSpace(line), "dbms.jvm.additional") {
-			line = strings.Replace(line, "dbms.jvm.additional=", "", 1)
-			assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], line)
-			n++
-		}
-		if err != nil {
-			return err
-		}
-
-	}
-	// The conf file should contain at least 4 (this just sanity checks that the scanner and string handling stuff above didn't screw up)
-	assert.GreaterOrEqual(t, n, 4)
-	return nil
 }
 
 func TestBoolsInConfig(t *testing.T) {
@@ -408,40 +330,13 @@ func TestChmodInitContainers(t *testing.T) {
 	}))
 }
 
-func TestExplicitCommunityHelmTemplate(t *testing.T) {
-	t.Parallel()
-
-	manifest, err := model.HelmTemplate(t, model.StandaloneHelmChart, requiredDataMode, useCommunity...)
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	checkNeo4jManifest(t, manifest)
-
-	neo4jStatefulSet := manifest.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
-	neo4jStatefulSet.GetName()
-	for _, container := range neo4jStatefulSet.Spec.Template.Spec.Containers {
-		assert.NotContains(t, container.Image, "enterprise")
-	}
-	for _, container := range neo4jStatefulSet.Spec.Template.Spec.InitContainers {
-		assert.NotContains(t, container.Image, "enterprise")
-	}
-
-	envConfigMap := manifest.OfTypeWithName(&v1.ConfigMap{}, model.DefaultHelmTemplateReleaseName.EnvConfigMapName()).(*v1.ConfigMap)
-	assert.Equal(t, envConfigMap.Data["NEO4J_EDITION"], "COMMUNITY_K8S")
-}
-
 // Tests the "base" helm command used for Integration Tests
 func TestBaseHelmTemplate(t *testing.T) {
 	t.Parallel()
 
 	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
-		extraArgs := []string{}
-		if edition == "enterprise" {
-			extraArgs = acceptLicenseAgreement
-		}
 		diskName := model.DefaultHelmTemplateReleaseName.DiskName()
-		_, err := model.RunHelmCommand(t, model.BaseHelmCommand("template", &model.DefaultHelmTemplateReleaseName, chart, &diskName), extraArgs...)
+		_, err := model.RunHelmCommand(t, model.BaseHelmCommand("template", &model.DefaultHelmTemplateReleaseName, chart, edition, &diskName))
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -540,6 +435,9 @@ func TestAuthSecrets(t *testing.T) {
 		if expectation.authSecretCreated {
 			assert.Len(t, secrets, 1)
 			authSecret := secrets[0].(*v1.Secret)
+
+			// Slightly complicated set of rules here. The reason is neo4j-cluster charts default neo4j.name to 'neo4j-cluster' but the neo4j-standalone chart
+			// defaults the neo4j.name to the name of the release.
 			if testCase.neo4jName != nil {
 				assert.Equal(t, *testCase.neo4jName+"-auth", authSecret.Name)
 			} else if chart.Name() == "neo4j-standalone" {
@@ -575,23 +473,56 @@ func TestAuthSecrets(t *testing.T) {
 	}))
 }
 
-func TestExtraLabels(t *testing.T) {
+func TestDefaultLabels(t *testing.T) {
 	t.Parallel()
 
 	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
-		labelValue := strconv.Itoa(helpers.RandomIntBetween(0, 1000))
-		manifest, err := model.HelmTemplate(t, model.StandaloneHelmChart, useDataModeAndAcceptLicense,
-			"--set-string", fmt.Sprintf("neo4j.labels.testlabel=%s", labelValue))
+		neo4jName := strings.ToLower(t.Name())
+		expectedLabels := map[string]string{
+			"app": neo4jName,
+		}
+
+		manifest, err := model.HelmTemplate(t, chart, useDataModeAndAcceptLicense,
+			"--set", "neo4j.name="+neo4jName)
 		if !assert.NoError(t, err) {
 			return
 		}
 
-		for _, object := range manifest.AllWithMetadata() {
-			if value, ok := object.GetLabels()["testlabel"]; !ok || value != labelValue {
-				t.Log("noooo")
+		metadata := manifest.AllWithMetadata()
+		if chart == model.ClusterCoreHelmChart {
+			assert.Len(t, metadata, 12)
+		} else {
+			assert.Len(t, metadata, 9)
+		}
+
+		for _, object := range metadata {
+			actualLabels := object.GetLabels()
+			for key, expectedValue := range expectedLabels {
+				assert.Contains(t, actualLabels, key, fmt.Sprintf("K8s %s object '%s' is missing expected label %s", object.(runtime.Object).GetObjectKind(), object.GetName(), key))
+				actualValue := actualLabels[key]
+				assert.Equal(t, expectedValue, actualValue, fmt.Sprintf("K8s %s object '%s' has unexpected value for label '%s'. expected: %s; actual: %s;", object.(runtime.Object).GetObjectKind(), object.GetName(), key, expectedValue, actualValue))
 			}
-			assert.Contains(t, object.GetLabels(), "testlabel")
-			assert.Equal(t, labelValue, object.GetLabels()["testlabel"], fmt.Sprintf("K8s %s object '%s' is missing expected label", object.(runtime.Object).GetObjectKind(), object.GetName()))
+		}
+	}))
+}
+
+func TestExtraLabels(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+		expectedValue := strconv.Itoa(helpers.RandomIntBetween(0, 1000))
+		manifest, err := model.HelmTemplate(t, chart, useDataModeAndAcceptLicense,
+			"--set-string", fmt.Sprintf("neo4j.labels.testlabel=%s", expectedValue))
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		testLabel := "testlabel"
+		for _, object := range manifest.AllWithMetadata() {
+			actualLabels := object.GetLabels()
+			assert.Contains(t, actualLabels, testLabel, fmt.Sprintf("K8s %s object '%s' is missing expected label %s", object.(runtime.Object).GetObjectKind(), object.GetName(), testLabel))
+			actualValue := actualLabels[testLabel]
+			assert.Equal(t, expectedValue, actualValue, fmt.Sprintf("K8s %s object '%s' has unexpected value for label '%s'. expected: %s; actual: %s;", object.(runtime.Object).GetObjectKind(), object.GetName(), testLabel, expectedValue, actualValue))
 		}
 	}))
 }

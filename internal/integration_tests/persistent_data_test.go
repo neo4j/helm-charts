@@ -73,7 +73,7 @@ func ResourcesReinstall(t *testing.T, releaseName model.ReleaseName, chart model
 	}
 
 	diskName := releaseName.DiskName()
-	err = run(t, "helm", model.BaseHelmCommand("install", releaseName, chart, &diskName, "--wait", "--timeout", "300s")...)
+	err = run(t, "helm", model.BaseHelmCommand("install", releaseName, chart, model.Neo4jEdition, &diskName, "--wait", "--timeout", "300s")...)
 	if err != nil {
 		t.Log("Helm Install failed:", err)
 		return err

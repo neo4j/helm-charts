@@ -2,8 +2,8 @@ package integration_tests
 
 import (
 	"fmt"
-	"k8s.io/utils/env"
 	. "github.com/neo-technology/neo4j-helm-charts/internal/helpers"
+	"github.com/neo-technology/neo4j-helm-charts/internal/model"
 	"strings"
 	"testing"
 	"time"
@@ -13,8 +13,7 @@ var (
 	TestRunIdentifier string
 )
 
-var Neo4jEdition = strings.ToLower(env.GetString("NEO4J_EDITION", "enterprise"))
-var Neo4jConfFile = fmt.Sprintf("neo4j-standalone/neo4j-%s.conf", Neo4jEdition)
+var Neo4jConfFile = fmt.Sprintf("neo4j-standalone/neo4j-%s.conf", model.Neo4jEdition)
 
 func init() {
 	dt := time.Now()

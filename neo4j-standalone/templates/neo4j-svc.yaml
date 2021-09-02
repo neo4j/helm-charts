@@ -122,6 +122,7 @@ metadata:
     app: "{{ template "neo4j.appName" $ }}"
     helm.neo4j.com/dbms.mode: "{{ index $.Values.config "dbms.mode" | default "SINGLE" | upper }}"
     helm.neo4j.com/service: "internals"
+    {{- include "neo4j.labels" $.Values.neo4j | nindent 4 }}
   {{- with .annotations }}
   annotations: {{ toYaml . | nindent 4 }}
   {{- end }}

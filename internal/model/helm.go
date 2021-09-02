@@ -6,19 +6,76 @@ import (
 	"github.com/hashicorp/go-multierror"
 	. "github.com/neo-technology/neo4j-helm-charts/internal/helpers"
 	"github.com/neo-technology/neo4j-helm-charts/internal/resources"
+	"io/ioutil"
+	"k8s.io/utils/env"
+	"log"
 	"os"
 	"os/exec"
+	"path"
+	"runtime"
 	"strings"
 	"testing"
 )
 
+func CheckError(err error) {
+	if err != nil {
+		log.Panic(err)
+	}
+}
+
+// This changes the working directory to the parent directory if the current working directory doesn't contain a directory called "internal"
+func setWorkingDir() {
+
+	var _, thisFile, _, _ = runtime.Caller(0)
+	var thisDir = path.Dir(thisFile)
+
+	files, err := ioutil.ReadDir(".")
+	CheckError(err)
+	for _, file := range files {
+		if file.Name() == "internal" {
+			return
+		}
+	}
+
+	files, err = ioutil.ReadDir(thisDir)
+	CheckError(err)
+	for _, file := range files {
+		if file.Name() == "internal" {
+			return
+		}
+	}
+	dir := path.Join(thisDir, "../..")
+	err = os.Chdir(dir)
+	CheckError(err)
+	files, err = ioutil.ReadDir(".")
+	CheckError(err)
+	for _, file := range files {
+		if file.Name() == "internal" {
+			return
+		}
+	}
+	panic("unable to set current dir correctly")
+}
+
+func init() {
+	setWorkingDir()
+
+	os.Setenv("KUBECONFIG", ".kube/config")
+}
+
 var DefaultHelmTemplateReleaseName = releaseName("my-release")
+var Neo4jEdition = strings.ToLower(env.GetString("NEO4J_EDITION", "enterprise"))
+
+func HelmTemplateForRelease(t *testing.T, releaseName ReleaseName, chart HelmChart, helmTemplateArgs []string, moreHelmTemplateArgs ...string) (*K8sResources, error) {
+
+	helmTemplateArgs = append(minHelmCommand("template", releaseName, chart), helmTemplateArgs...)
+
+	return RunHelmCommand(t, helmTemplateArgs, moreHelmTemplateArgs...)
+}
 
 func HelmTemplate(t *testing.T, chart HelmChart, helmTemplateArgs []string, moreHelmTemplateArgs ...string) (*K8sResources, error) {
 
-	helmTemplateArgs = append(minHelmCommand("template", &DefaultHelmTemplateReleaseName, chart), helmTemplateArgs...)
-
-	return RunHelmCommand(t, helmTemplateArgs, moreHelmTemplateArgs...)
+	return HelmTemplateForRelease(t, &DefaultHelmTemplateReleaseName, chart, helmTemplateArgs, moreHelmTemplateArgs...)
 }
 
 func RunHelmCommand(t *testing.T, helmTemplateArgs []string, moreHelmTemplateArgs ...string) (*K8sResources, error) {
@@ -47,7 +104,7 @@ func minHelmCommand(helmCommand string, releaseName ReleaseName, chart HelmChart
 	return []string{helmCommand, releaseName.String(), chart.getPath(), "--namespace", string(releaseName.Namespace())}
 }
 
-func BaseHelmCommand(helmCommand string, releaseName ReleaseName, chart Neo4jHelmChart, diskName *PersistentDiskName, extraHelmArguments ...string) []string {
+func BaseHelmCommand(helmCommand string, releaseName ReleaseName, chart Neo4jHelmChart, edition string, diskName *PersistentDiskName, extraHelmArguments ...string) []string {
 
 	var helmArgs = minHelmCommand(helmCommand, releaseName, chart)
 	helmArgs = append(helmArgs,
@@ -68,11 +125,15 @@ func BaseHelmCommand(helmCommand string, releaseName ReleaseName, chart Neo4jHel
 		helmArgs = append(helmArgs, "--set", "image.customImage="+value)
 	}
 
-	if value, found := os.LookupEnv("NEO4J_EDITION"); found {
-		helmArgs = append(helmArgs, "--set", "neo4j.edition="+value)
-		if strings.EqualFold(value, "enterprise") {
-			helmArgs = append(helmArgs, "--set", "neo4j.acceptLicenseAgreement=yes")
+	if edition != "" {
+		if !chart.SupportsEdition(edition) {
+			panic(fmt.Sprintf("Helm chart %s does not support neo4j edition %s", chart.Name(), edition))
 		}
+		helmArgs = append(helmArgs, "--set", "neo4j.edition="+edition)
+	}
+
+	if strings.EqualFold(edition, "enterprise") {
+		helmArgs = append(helmArgs, "--set", "neo4j.acceptLicenseAgreement=yes")
 	}
 
 	if extraHelmArguments != nil && len(extraHelmArguments) > 0 {

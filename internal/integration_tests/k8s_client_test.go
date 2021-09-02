@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/neo-technology/neo4j-helm-charts/internal/model"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	coreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	"github.com/neo-technology/neo4j-helm-charts/internal/model"
 	"time"
 
 	"k8s.io/client-go/tools/clientcmd"
@@ -96,7 +97,10 @@ func CheckProbes(t *testing.T, releaseName model.ReleaseName) error {
 }
 
 func CheckServiceAnnotations(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart) (err error) {
-	var services = getAllServices(t, releaseName)
+	services, err := getAllServices(releaseName.Namespace())
+	if err != nil {
+		return err
+	}
 	assert.Equal(t, 3, len(services.Items))
 
 	// by default they should have no annotations
@@ -107,7 +111,7 @@ func CheckServiceAnnotations(t *testing.T, releaseName model.ReleaseName, chart 
 	// when we add annotations via helm
 	diskName := releaseName.DiskName()
 	err = runAll(t, "helm", [][]string{
-		model.BaseHelmCommand("upgrade", releaseName, chart, &diskName,
+		model.BaseHelmCommand("upgrade", releaseName, chart, model.Neo4jEdition, &diskName,
 			"--set", "services.neo4j.annotations.foo=bar",
 			"--set", "services.admin.annotations.foo=bar",
 			"--set", "services.default.annotations.foo=bar",
@@ -118,7 +122,11 @@ func CheckServiceAnnotations(t *testing.T, releaseName model.ReleaseName, chart 
 	}
 
 	// then the services get annotations
-	services = getAllServices(t, releaseName)
+	services, err = getAllServices(releaseName.Namespace())
+	if err != nil {
+		return err
+	}
+
 	assert.Equal(t, 3, len(services.Items))
 
 	for _, service := range services.Items {
@@ -150,10 +158,46 @@ func matchesAnyPrefix(knownPrefixes []string, key string) bool {
 	return false
 }
 
-func getAllServices(t *testing.T, releaseName model.ReleaseName) *coreV1.ServiceList {
-	services, err := Clientset.CoreV1().Services(string(releaseName.Namespace())).List(context.TODO(), v1.ListOptions{})
-	assert.NoError(t, err)
-	return services
+func getAllPods(namespace model.Namespace) (*coreV1.PodList, error) {
+	return Clientset.CoreV1().Pods(string(namespace)).List(context.TODO(), v1.ListOptions{})
+}
+
+func getManifest(namespace model.Namespace) (*model.K8sResources, error) {
+
+	pods, err := getAllPods(namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	services, err := getAllServices(namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	endpoints, err := getAllEndpoints(namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	manifest := model.NewK8sResources(nil, []schema.GroupVersionKind{
+		pods.GroupVersionKind(),
+		services.GroupVersionKind(),
+		endpoints.GroupVersionKind(),
+	})
+
+	manifest.AddPods(pods.Items)
+	manifest.AddServices(services.Items)
+	manifest.AddEndpoints(endpoints.Items)
+
+	return manifest, err
+}
+
+func getAllEndpoints(namespace model.Namespace) (*coreV1.EndpointsList, error) {
+	return Clientset.CoreV1().Endpoints(string(namespace)).List(context.TODO(), v1.ListOptions{})
+}
+
+func getAllServices(namespace model.Namespace) (*coreV1.ServiceList, error) {
+	return Clientset.CoreV1().Services(string(namespace)).List(context.TODO(), v1.ListOptions{})
 }
 
 func RunAsNonRoot(t *testing.T, releaseName model.ReleaseName) error {

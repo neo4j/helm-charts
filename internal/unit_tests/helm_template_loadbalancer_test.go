@@ -1,9 +1,9 @@
 package unit_tests
 
 import (
+	"github.com/neo-technology/neo4j-helm-charts/internal/model"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
-	"github.com/neo-technology/neo4j-helm-charts/internal/model"
 	"testing"
 )
 

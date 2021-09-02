@@ -3,9 +3,9 @@ package integration_tests
 import (
 	"errors"
 	"fmt"
+	"github.com/neo-technology/neo4j-helm-charts/internal/model"
 	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 	"github.com/stretchr/testify/assert"
-	"github.com/neo-technology/neo4j-helm-charts/internal/model"
 	"strings"
 	"sync/atomic"
 	"testing"

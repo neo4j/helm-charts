@@ -3,14 +3,19 @@ package model
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
+	"runtime"
 )
 
-var LoadBalancerHelmChart = newHelmChart("./neo4j-loadbalancer")
+var _, thisFile, _, _ = runtime.Caller(0)
+var modelDir = path.Dir(thisFile)
 
-var StandaloneHelmChart = newNeo4jHelmChart("./neo4j-standalone", []string{"community", "enterprise"})
+var LoadBalancerHelmChart = newHelmChart("neo4j-loadbalancer")
 
-var ClusterCoreHelmChart = newNeo4jHelmChart("./neo4j-cluster-core", []string{"enterprise"})
+var StandaloneHelmChart = newNeo4jHelmChart("neo4j-standalone", []string{"community", "enterprise"})
+
+var ClusterCoreHelmChart = newNeo4jHelmChart("neo4j-cluster-core", []string{"enterprise"})
 
 var PrimaryHelmCharts = []Neo4jHelmChart{StandaloneHelmChart, ClusterCoreHelmChart}
 
@@ -27,14 +32,11 @@ type HelmChart interface {
 type Neo4jHelmChart interface {
 	HelmChart
 	GetEditions() []string
+	SupportsEdition(edition string) bool
 }
 
 func (h *helmChart) getPath() string {
 	return h.path
-}
-
-func (h *helmChart) GetEditions() []string {
-	return h.editions
 }
 
 func (h *helmChart) Name() string {
@@ -44,6 +46,19 @@ func (h *helmChart) Name() string {
 	} else {
 		return dir
 	}
+}
+
+func (h *helmChart) GetEditions() []string {
+	return h.editions
+}
+
+func (h *helmChart) SupportsEdition(edition string) bool {
+	for _, supportedEdition := range h.editions {
+		if edition == supportedEdition {
+			return true
+		}
+	}
+	return false
 }
 
 func chartExistsAt(path string) (bool, error) {
@@ -60,16 +75,18 @@ func chartExistsAt(path string) (bool, error) {
 	}
 }
 
-func newHelmChart(path string) HelmChart {
-	if exists, err := chartExistsAt(path); err != nil || !exists {
+func newHelmChart(helmChartName string) HelmChart {
+	filepath := path.Join(path.Join(modelDir, "../.."), helmChartName)
+	if exists, err := chartExistsAt(filepath); err != nil || !exists {
 		panic(err)
 	}
-	return &helmChart{path, nil}
+	return &helmChart{filepath, nil}
 }
 
-func newNeo4jHelmChart(path string, editions []string) Neo4jHelmChart {
-	if exists, err := chartExistsAt(path); err != nil || !exists {
+func newNeo4jHelmChart(helmChartName string, editions []string) Neo4jHelmChart {
+	filepath := path.Join(path.Join(modelDir, "../.."), helmChartName)
+	if exists, err := chartExistsAt(filepath); err != nil || !exists {
 		panic(err)
 	}
-	return &helmChart{path, editions}
+	return &helmChart{filepath, editions}
 }

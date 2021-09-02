@@ -4,6 +4,7 @@ import (
 	. "github.com/neo-technology/neo4j-helm-charts/internal/helpers"
 	"github.com/neo-technology/neo4j-helm-charts/internal/model"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 )
@@ -51,6 +52,8 @@ func deleteDisk(t *testing.T, zone Zone, project Project, diskName string) error
 				return err
 			default:
 				if err = delete(); err == nil {
+					return err
+				} else if strings.Contains(err.Error(), "was not found") {
 					return err
 				}
 			}

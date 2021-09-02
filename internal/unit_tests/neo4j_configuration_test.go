@@ -1,10 +1,13 @@
 package unit_tests
 
 import (
+	"bufio"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"github.com/neo-technology/neo4j-helm-charts/internal/model"
+	"github.com/stretchr/testify/assert"
+	v1 "k8s.io/api/core/v1"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -53,4 +56,60 @@ func TestPopulateFromFile(t *testing.T) {
 			doTestCase(t, testCase)
 		})
 	}
+}
+
+func TestJvmAdditionalConfig(t *testing.T) {
+	t.Parallel()
+
+	doTestCase := func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+		manifest, err := model.HelmTemplate(t, chart, useDataModeAndAcceptLicense,
+			"-f", "internal/resources/jvmAdditionalSettings.yaml",
+			"--set", "neo4j.edition="+edition,
+		)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		userConfigMap := manifest.OfTypeWithName(&v1.ConfigMap{}, model.DefaultHelmTemplateReleaseName.UserConfigMapName()).(*v1.ConfigMap)
+		assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:+HeapDumpOnOutOfMemoryError")
+		assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:HeapDumpPath=./java_pid<pid>.hprof")
+		assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:+UseGCOverheadLimit")
+
+		err = checkConfigMapContainsJvmAdditionalFromDefaultConf(t, edition, userConfigMap)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		checkNeo4jManifest(t, manifest)
+	}
+
+	forEachPrimaryChart(t, andEachSupportedEdition(doTestCase))
+}
+
+func checkConfigMapContainsJvmAdditionalFromDefaultConf(t *testing.T, edition string, userConfigMap *v1.ConfigMap) error {
+	// check that we picked up jvm additional from the conf file
+	file, err := os.Open(fmt.Sprintf("neo4j-standalone/neo4j-%s.conf", edition))
+	defer file.Close()
+	if err != nil {
+		return err
+	}
+
+	n := 0
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanLines)
+	for scanner.Scan() {
+		var line = scanner.Text()
+		if strings.HasPrefix(strings.TrimSpace(line), "dbms.jvm.additional") {
+			line = strings.Replace(line, "dbms.jvm.additional=", "", 1)
+			assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], line)
+			n++
+		}
+		if err != nil {
+			return err
+		}
+
+	}
+	// The conf file should contain at least 4 (this just sanity checks that the scanner and string handling stuff above didn't screw up)
+	assert.GreaterOrEqual(t, n, 4)
+	return nil
 }

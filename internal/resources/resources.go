@@ -3,22 +3,26 @@ package resources
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
+	"runtime"
 )
 
-var TestAntiAffinityRule = newYamlFile("./internal/resources/testAntiAffinityRule.yaml")
-var PluginsInitContainer = newYamlFile("./internal/resources/pluginsInitContainer.yaml")
-var AcceptLicenseAgreementBoolYes = newYamlFile("internal/resources/acceptLicenseAgreementBoolYes.yaml")
-var AcceptLicenseAgreementBoolTrue = newYamlFile("internal/resources/acceptLicenseAgreementBoolTrue.yaml")
-var AcceptLicenseAgreement = newYamlFile("internal/resources/acceptLicenseAgreement.yaml")
-var ApocCorePlugin = newYamlFile("internal/resources/apocCorePlugin.yaml")
-var CsvMetrics = newYamlFile("internal/resources/csvMetrics.yaml")
-var DefaultStorageClass = newYamlFile("internal/resources/defaultStorageClass.yaml")
-var JvmAdditionalSettings = newYamlFile("internal/resources/jvmAdditionalSettings.yaml")
-var BoolsInConfig = newYamlFile("internal/resources/boolsInConfig.yaml")
-var IntsInConfig = newYamlFile("internal/resources/intsInConfig.yaml")
-var ChmodInitContainer = newYamlFile("internal/resources/chmodInitContainer.yaml")
-var ChmodInitContainerAndCustomInitContainer = newYamlFile("internal/resources/chmodInitContainerAndCustomInitContainer.yaml")
+var _, thisFile, _, _ = runtime.Caller(0)
+var resourcesDir = path.Dir(thisFile)
+var TestAntiAffinityRule = newYamlFile("testAntiAffinityRule.yaml")
+var PluginsInitContainer = newYamlFile("pluginsInitContainer.yaml")
+var AcceptLicenseAgreementBoolYes = newYamlFile("acceptLicenseAgreementBoolYes.yaml")
+var AcceptLicenseAgreementBoolTrue = newYamlFile("acceptLicenseAgreementBoolTrue.yaml")
+var AcceptLicenseAgreement = newYamlFile("acceptLicenseAgreement.yaml")
+var ApocCorePlugin = newYamlFile("apocCorePlugin.yaml")
+var CsvMetrics = newYamlFile("csvMetrics.yaml")
+var DefaultStorageClass = newYamlFile("defaultStorageClass.yaml")
+var JvmAdditionalSettings = newYamlFile("jvmAdditionalSettings.yaml")
+var BoolsInConfig = newYamlFile("boolsInConfig.yaml")
+var IntsInConfig = newYamlFile("intsInConfig.yaml")
+var ChmodInitContainer = newYamlFile("chmodInitContainer.yaml")
+var ChmodInitContainerAndCustomInitContainer = newYamlFile("chmodInitContainerAndCustomInitContainer.yaml")
 
 type YamlFile interface {
 	Path() string
@@ -48,9 +52,10 @@ func resourceExistsAt(path string) (bool, error) {
 	}
 }
 
-func newYamlFile(path string) YamlFile {
-	if exists, err := resourceExistsAt(path); err != nil || !exists {
+func newYamlFile(filename string) YamlFile {
+	fullPath := path.Join(resourcesDir, filename)
+	if exists, err := resourceExistsAt(fullPath); err != nil || !exists {
 		panic(err)
 	}
-	return &yamlFile{path}
+	return &yamlFile{fullPath}
 }

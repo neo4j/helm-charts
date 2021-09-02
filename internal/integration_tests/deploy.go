@@ -11,20 +11,17 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
+	. "github.com/neo-technology/neo4j-helm-charts/internal/helpers"
+	"github.com/neo-technology/neo4j-helm-charts/internal/integration_tests/gcloud"
+	"github.com/neo-technology/neo4j-helm-charts/internal/model"
 	"io"
-	"io/ioutil"
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"log"
 	"math/big"
-	. "github.com/neo-technology/neo4j-helm-charts/internal/helpers"
-	"github.com/neo-technology/neo4j-helm-charts/internal/integration_tests/gcloud"
-	"github.com/neo-technology/neo4j-helm-charts/internal/model"
 	"os"
 	"os/exec"
-	"path"
-	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -32,39 +29,25 @@ import (
 	"time"
 )
 
+func CheckError(err error) {
+	if err != nil {
+		log.Panic(err)
+	}
+}
+
 var (
 	Clientset *kubernetes.Clientset
 	Config    *restclient.Config
 )
 
-// This changes the working directory to the parent directory if the current working directory doesn't contain a directory called "yaml"
 func init() {
-	_, filename, _, _ := runtime.Caller(0)
-	currentDir := path.Dir(filename)
-	files, err := ioutil.ReadDir(currentDir)
-	CheckError(err)
-	for _, file := range files {
-		if file.Name() == "yaml" {
-			return
-		}
-	}
-	dir := path.Join(currentDir, "../..")
-	err = os.Chdir(dir)
-	CheckError(err)
-
-	os.Setenv("KUBECONFIG", path.Join(dir, ".kube/config"))
-
+	os.Setenv("KUBECONFIG", ".kube/config")
+	var err error
 	// gets kubeconfig from env variable
 	Config, err = clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	CheckError(err)
 	Clientset, err = kubernetes.NewForConfig(Config)
 	CheckError(err)
-}
-
-func CheckError(err error) {
-	if err != nil {
-		log.Panic(err)
-	}
 }
 
 func publicKey(priv interface{}) interface{} {
@@ -329,7 +312,7 @@ func InstallNeo4jInGcloud(t *testing.T, zone gcloud.Zone, project gcloud.Project
 			{"delete", "pod", releaseName.PodName(), "--namespace", string(releaseName.Namespace()), "--grace-period=0", "--wait", "--timeout=120s", "--ignore-not-found"},
 		}, false)
 	})
-	err = run(t, "helm", model.BaseHelmCommand("install", releaseName, chart, diskName, extraHelmInstallArgs...)...)
+	err = run(t, "helm", model.BaseHelmCommand("install", releaseName, chart, model.Neo4jEdition, diskName, extraHelmInstallArgs...)...)
 
 	if err != nil {
 		return AsCloseable(closeables), err
