@@ -82,3 +82,30 @@ func TestLoadBalancerPorts(t *testing.T) {
 
 	checkPortsMatchExpected(t, expectedPorts, service)
 }
+
+func TestOverrideLoadBalancerDefaultSettings(t *testing.T) {
+	t.Parallel()
+
+	// When no extra args are set...
+	k8s, err := model.HelmTemplate(t, model.LoadBalancerHelmChart, nil)
+	if !assert.NoError(t, err){
+		return
+	}
+	// Our "default" settings (externalTrafficPolicy: local) are applied
+	service := k8s.OfTypeWithName(&v1.Service{}, "my-release-neo4j").(*v1.Service)
+	assert.Equal(t, v1.ServiceExternalTrafficPolicyTypeLocal, service.Spec.ExternalTrafficPolicy)
+
+	// When user sets them explicitly
+	extraHelmArgs := []string{
+		"--set", "spec.externalTrafficPolicy="+string(v1.ServiceExternalTrafficPolicyTypeCluster),
+	}
+
+	k8s, err = model.HelmTemplate(t, model.LoadBalancerHelmChart, extraHelmArgs)
+	if !assert.NoError(t, err){
+		return
+	}
+
+	// Our "default" settings are overridden
+	service = k8s.OfTypeWithName(&v1.Service{}, "my-release-neo4j").(*v1.Service)
+	assert.Equal(t, v1.ServiceExternalTrafficPolicyTypeCluster, service.Spec.ExternalTrafficPolicy)
+}

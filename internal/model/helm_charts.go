@@ -13,6 +13,8 @@ var modelDir = path.Dir(thisFile)
 
 var LoadBalancerHelmChart = newHelmChart("neo4j-loadbalancer")
 
+var HeadlessServiceHelmChart = newHelmChart("neo4j-headless-service")
+
 var StandaloneHelmChart = newNeo4jHelmChart("neo4j-standalone", []string{"community", "enterprise"})
 
 var ClusterCoreHelmChart = newNeo4jHelmChart("neo4j-cluster-core", []string{"enterprise"})
