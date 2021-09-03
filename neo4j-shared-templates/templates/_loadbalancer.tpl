@@ -1,6 +1,12 @@
 {{- define "neo4j.services.neo4j.defaultSpec" -}}
-sessionAffinity: None
-externalTrafficPolicy: Local
+ClusterIP:
+  sessionAffinity: None
+NodePort:
+  sessionAffinity: None
+  externalTrafficPolicy: Local
+LoadBalancer:
+  sessionAffinity: None
+  externalTrafficPolicy: Local
 {{- end }}
 
 
@@ -15,7 +21,7 @@ externalTrafficPolicy: Local
 {{- define "neo4j.services.neo4j" -}}
 {{- $defaultSpec := include "neo4j.services.neo4j.defaultSpec" . | fromYaml }}
 {{- if .Values.enabled }}
-{{- $spec := merge .Values.spec $defaultSpec }}
+{{- $spec := get $defaultSpec .Values.spec.type | merge .Values.spec  }}
 # Service for applications that need access to neo4j
 apiVersion: v1
 kind: Service
