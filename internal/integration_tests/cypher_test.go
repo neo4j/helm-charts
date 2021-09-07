@@ -95,6 +95,19 @@ func CreateNode(t *testing.T, releaseName model.ReleaseName) error {
 }
 
 
+func CheckReadReplicaConfiguration(t *testing.T, releaseName model.ReleaseName) error {
+	result, err := runReadOnlyQuery(t, releaseName, "CALL dbms.listConfig(\"dbms.mode\") YIELD value", noParams)
+	if err != nil {
+		return err
+	}
+	if value, found := result[0].Get("value"); found {
+		assert.Equal(t, value, "READ_REPLICA")
+		return nil
+	}
+
+	return fmt.Errorf("expected dbms.mode to be READ_REPLICA")
+}
+
 
 func CheckNodeCount(t *testing.T, releaseName model.ReleaseName) error {
 	result, err := runQuery(t, releaseName, "MATCH (n) RETURN COUNT(n) AS count", noParams)
@@ -114,7 +127,7 @@ func CheckNodeCount(t *testing.T, releaseName model.ReleaseName) error {
 
 func runQuery(t *testing.T, releaseName model.ReleaseName, cypher string, params map[string]interface{}) ([]*neo4j.Record, error) {
 
-	boltPort, cleanupProxy, proxyErr := proxyBolt(t, releaseName)
+	boltPort, cleanupProxy, proxyErr := proxyBolt(t, releaseName,false)
 	defer cleanupProxy()
 	if proxyErr != nil {
 		return nil, proxyErr
@@ -145,6 +158,51 @@ func runQuery(t *testing.T, releaseName model.ReleaseName, cypher string, params
 
 	return result.Collect()
 }
+
+
+func runReadOnlyQuery(t *testing.T, releaseName model.ReleaseName, cypher string, params map[string]interface{}) ([]*neo4j.Record, error) {
+
+	boltPort, cleanupProxy, proxyErr := proxyBolt(t, releaseName,true)
+	defer cleanupProxy()
+	if proxyErr != nil {
+		return nil, proxyErr
+	}
+
+	driver, err := neo4j.NewDriver(fmt.Sprintf("%s:%d", dbUri, boltPort), authToUse, func(config *neo4j.Config) {
+	})
+	// Handle driver lifetime based on your application lifetime requirements  driver's lifetime is usually
+	// bound by the application lifetime, which usually implies one driver instance per application
+	defer driver.Close()
+
+	if err := awaitConnectivity(t, err, driver); err != nil {
+		return nil, err
+	}
+
+	// Sessions are shortlived, cheap to create and NOT thread safe. Typically create one or more sessions
+	// per request in your web application. Make sure to call Close on the session when done.
+	// For multidatabase support, set sessionConfig.DatabaseName to requested database
+	// Session config will default to write mode, if only reads are to be used configure session for
+	// read mode.
+	session := driver.NewSession(neo4j.SessionConfig{DatabaseName: dbName})
+	defer session.Close()
+
+
+	transactionWork := func(tx neo4j.Transaction) (interface{}, error) {
+		result, err :=  tx.Run(cypher,params)
+		if err != nil {
+			return nil,err
+		}
+		return result.Collect()
+	}
+
+	result, err := session.ReadTransaction(transactionWork)
+	if err != nil {
+		return nil, err
+	}
+
+	return result.([]*neo4j.Record),nil
+}
+
 
 func awaitConnectivity(t *testing.T, err error, driver neo4j.Driver) error {
 	// This polls verify connectivity until it succeeds or it times out. We should be able to remove this when we have readiness probes (maybe)

@@ -87,7 +87,8 @@ func clusterTests(loadBalancerName model.ReleaseName) ([]SubTest, error) {
 func CheckReadReplica(t *testing.T) error {
 
 	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
-	readReplica := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName, 1)}
+	readReplicaReleaseName := model.NewReadReplicaReleaseName(clusterReleaseName, 1)
+	readReplica := clusterReadReplica{readReplicaReleaseName}
 
 	t.Logf("Starting setup of '%s'", t.Name())
 
@@ -108,6 +109,11 @@ func CheckReadReplica(t *testing.T) error {
 	}
 
 	t.Logf("Succeeded with read replica setup of '%s'", t.Name())
+
+	err = CheckReadReplicaConfiguration(t,readReplicaReleaseName)
+	if !assert.NoError(t, err) {
+		return err
+	}
 	return nil
 }
 
