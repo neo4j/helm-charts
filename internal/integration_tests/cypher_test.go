@@ -94,6 +94,8 @@ func CreateNode(t *testing.T, releaseName model.ReleaseName) error {
 	return err
 }
 
+
+
 func CheckNodeCount(t *testing.T, releaseName model.ReleaseName) error {
 	result, err := runQuery(t, releaseName, "MATCH (n) RETURN COUNT(n) AS count", noParams)
 
