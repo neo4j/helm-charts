@@ -49,6 +49,11 @@ func NewCoreReleaseName(clusterName ReleaseName, number int) ReleaseName {
 	return &r
 }
 
+func NewReadReplicaReleaseName(clusterName ReleaseName, number int) ReleaseName {
+	r := clusterMemberReleaseName{clusterName, releaseName(fmt.Sprintf("%s-read-replica-%d", clusterName, number))}
+	return &r
+}
+
 func NewLoadBalancerReleaseName(clusterName ReleaseName) ReleaseName {
 	r := clusterMemberReleaseName{clusterName, releaseName(fmt.Sprintf("%s-loadbalancer", clusterName))}
 	return &r

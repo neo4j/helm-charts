@@ -48,3 +48,18 @@ If no password is set in `Values.neo4j.password` generates a new random password
 {{- template "neo4j.checkLicenseAgreement" . -}}
 {{- if .Values.image.customImage }}{{ .Values.image.customImage }}{{ else }}neo4j:{{ .Chart.AppVersion }}{{ if $isEnterprise }}-enterprise{{ end }}{{ end -}}
 {{- end -}}
+
+{{- define "podSpec.checkLoadBalancerParam" }}
+{{- $isLoadBalancerValuePresent := required (include "podSpec.loadBalancer.mustBeSetMessage" .) .Values.podSpec.loadbalancer | regexMatch "(?i)include$|(?i)exclude$" -}}
+{{- if not $isLoadBalancerValuePresent }}
+{{- include "podSpec.loadBalancer.mustBeSetMessage" . | fail -}}
+{{- end }}
+{{- end }}
+
+{{- define "podSpec.loadBalancer.mustBeSetMessage" }}
+
+Set podSpec.loadbalancer to one of: "include", "exclude".
+
+E.g. by adding `--set podSpec.loadbalancer=include`
+
+{{ end -}}

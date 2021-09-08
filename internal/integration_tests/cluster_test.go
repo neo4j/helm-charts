@@ -36,6 +36,22 @@ func (c clusterCore) Install(t *testing.T, clusterName model.ReleaseName) parall
 	return parallelResult{cleanup, err}
 }
 
+type clusterReadReplica struct {
+	name model.ReleaseName
+}
+
+func (c clusterReadReplica) Name() model.ReleaseName {
+	return c.name
+}
+
+func (c clusterReadReplica) Install(t *testing.T, clusterName model.ReleaseName) parallelResult {
+	var err error
+	var cleanup Closeable
+	cleanup, err = InstallNeo4jInGcloud(t, gcloud.CurrentZone(), gcloud.CurrentProject(), c.name, model.ClusterReadReplicaHelmChart)
+	return parallelResult{cleanup, err}
+}
+
+
 type clusterLoadBalancer struct {
 	name model.ReleaseName
 }
@@ -64,8 +80,43 @@ func clusterTests(loadBalancerName model.ReleaseName) ([]SubTest, error) {
 		{name: "Check Neo4j Configuration", test: func(t *testing.T) { assert.NoError(t, CheckNeo4jConfiguration(t, loadBalancerName, expectedConfiguration), "Neo4j Config check should succeed") }},
 		{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, CreateNode(t, loadBalancerName), "Create Node should succeed") }},
 		{name: "Count Nodes", test: func(t *testing.T) { assert.NoError(t, CheckNodeCount(t, loadBalancerName), "Count Nodes should succeed") }},
+		{name: "Check Read Replica", test: func(t *testing.T) { assert.NoError(t, CheckReadReplica(t), "Creates Read Replica and should succeed") }},
 	}, err
 }
+
+func CheckReadReplica(t *testing.T) error {
+
+	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
+	readReplicaReleaseName := model.NewReadReplicaReleaseName(clusterReleaseName, 1)
+	readReplica := clusterReadReplica{readReplicaReleaseName}
+
+	t.Logf("Starting setup of '%s'", t.Name())
+
+	// Install one replica synchronously, if all replicas are installed simultaneously they run into conflicts all trying to create a -auth secret
+	result := readReplica.Install(t, clusterReleaseName)
+
+	defer func() {
+		cleanupTest(t, result.Closeable)
+	}()
+
+	if !assert.NoError(t, result.error) {
+		return result.error
+	}
+
+	err := run(t, "kubectl", "--namespace", string(readReplica.Name().Namespace()), "rollout", "status", "--watch", "--timeout=180s", "statefulset/"+readReplica.Name().String())
+	if !assert.NoError(t, err) {
+		return err
+	}
+
+	t.Logf("Succeeded with read replica setup of '%s'", t.Name())
+
+	err = CheckReadReplicaConfiguration(t,readReplicaReleaseName)
+	if !assert.NoError(t, err) {
+		return err
+	}
+	return nil
+}
+
 
 func CheckK8s(t *testing.T, name model.ReleaseName) error {
 	t.Run("check pods", func(t *testing.T) {

@@ -169,12 +169,17 @@ func kCleanupCommands(namespace model.Namespace) [][]string {
 
 var portOffset int32 = 0
 
-func proxyBolt(t *testing.T, releaseName model.ReleaseName) (int32, Closeable, error) {
+func proxyBolt(t *testing.T, releaseName model.ReleaseName, connectToPod bool) (int32, Closeable, error) {
 	localHttpPort := 9000 + atomic.AddInt32(&portOffset, 1)
 	localBoltPort := 9100 + atomic.AddInt32(&portOffset, 1)
 
 	program := "kubectl"
-	args := []string{"--namespace", string(releaseName.Namespace()), "port-forward", fmt.Sprintf("service/%s-neo4j", releaseName), fmt.Sprintf("%d:7474", localHttpPort), fmt.Sprintf("%d:7687", localBoltPort)}
+
+	args := []string{"--namespace", string(releaseName.Namespace()), "port-forward", fmt.Sprintf("pod/%s", releaseName.PodName()), fmt.Sprintf("%d:7474", localHttpPort), fmt.Sprintf("%d:7687", localBoltPort)}
+	if !connectToPod {
+		args = []string{"--namespace", string(releaseName.Namespace()), "port-forward", fmt.Sprintf("service/%s-neo4j", releaseName), fmt.Sprintf("%d:7474", localHttpPort), fmt.Sprintf("%d:7687", localBoltPort)}
+	}
+
 	t.Logf("running: %s %s\n", program, args)
 	cmd := exec.Command(program, args...)
 	stdout, err := cmd.StdoutPipe()

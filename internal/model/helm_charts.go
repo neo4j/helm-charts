@@ -19,6 +19,8 @@ var StandaloneHelmChart = newNeo4jHelmChart("neo4j-standalone", []string{"commun
 
 var ClusterCoreHelmChart = newNeo4jHelmChart("neo4j-cluster-core", []string{"enterprise"})
 
+var ClusterReadReplicaHelmChart = newNeo4jHelmChart("neo4j-cluster-read-replica", []string{"enterprise"})
+
 var PrimaryHelmCharts = []Neo4jHelmChart{StandaloneHelmChart, ClusterCoreHelmChart}
 
 type helmChart struct {

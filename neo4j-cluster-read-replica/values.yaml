@@ -2,15 +2,16 @@
 # This is a YAML-formatted file.
 
 neo4j:
-  # Name of your cluster
-  name: ""
+  # A common name for all helm deployments that are part of the same Neo4j Cluster
+  # To deploy multiple Neo4j clusters in the same Kubernetes namespace each Neo4j cluster should have a different name.
+  name: "neo4j-cluster"
 
   # If password is not set or empty a random password will be generated during installation
   password: ""
 
-  # Neo4j Edition to use (community|enterprise)
-  edition: "community"
-  # set edition: "enterprise" to use Neo4j Enterprise Edition
+  # Neo4j Clustering requires Enterprise Edition
+  edition: "enterprise"
+
   #
   # To use Neo4j Enterprise Edition you must have a Neo4j license agreement.
   #
@@ -134,7 +135,11 @@ services:
 
   # A LoadBalancer Service for external Neo4j driver applications and Neo4j Browser
   neo4j:
-    enabled: true
+    enabled: false
+
+    # if selectCluster=true the neo4j service will select any Neo4j instance with the same neo4j.name and dbms.mode.
+    # if selectCluster=false the neo4j service will only select this Neo4j instance.
+    selectCluster: false
 
     # Annotations for the K8s Service object
     annotations: { }
@@ -150,20 +155,12 @@ services:
     ports:
       http:
         enabled: true #Set this to false to remove HTTP from this service (this does not affect whether http is enabled for the neo4j process)
-        # uncomment to publish http on port 80 (neo4j default is 7474)
-        # port: 80
       https:
         enabled: true #Set this to false to remove HTTPS from this service (this does not affect whether https is enabled for the neo4j process)
-        # uncomment to publish http on port 443 (neo4j default is 7474)
-        # port: 443
       bolt:
         enabled: true #Set this to false to remove BOLT from this service (this does not affect whether https is enabled for the neo4j process)
-        # Uncomment to explicitly specify the port to publish Neo4j Bolt (7687 is the default)
-        # port: 7687
       backup:
         enabled: false #Set this to true to expose backup port externally (n.b. this could have security implications. Backup is not authenticated by default)
-        # Uncomment to explicitly specify the port to publish Neo4j Backup (6362 is the default)
-        # port: 6362
 
   # A service for admin/ops tasks including taking backups
   # This service is available even if the deployment is not "ready"
@@ -185,6 +182,7 @@ services:
 
 # Neo4j Configuration (yaml format)
 config:
+  dbms.mode: "READ_REPLICA"
   dbms.config.strict_validation: "true"
 
 # securityContext defines privilege and access control settings for a Pod or Container. Making sure that we dont run Neo4j as root user.
