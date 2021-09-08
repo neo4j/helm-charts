@@ -100,9 +100,9 @@ func CheckReadReplicaConfiguration(t *testing.T, releaseName model.ReleaseName) 
 	if err != nil {
 		return err
 	}
-	
+
 	if !assert.Equal(t, len(result),1) {
-		return fmt.Errorf("unexpected results from cypher")
+		return fmt.Errorf("unexpected results from cypher query")
 	}
 
 	if value, found := result[0].Get("value"); found {
