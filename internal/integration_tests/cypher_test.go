@@ -100,7 +100,11 @@ func CheckReadReplicaConfiguration(t *testing.T, releaseName model.ReleaseName) 
 	if err != nil {
 		return err
 	}
-	assert.Equal(t, len(result),1)
+	
+	if !assert.Equal(t, len(result),1) {
+		return fmt.Errorf("unexpected results from cypher")
+	}
+
 	if value, found := result[0].Get("value"); found {
 		assert.Equal(t, value, "READ_REPLICA")
 		return nil
