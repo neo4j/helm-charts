@@ -100,12 +100,13 @@ func CheckReadReplicaConfiguration(t *testing.T, releaseName model.ReleaseName) 
 	if err != nil {
 		return err
 	}
+	assert.Equal(t, len(result),1)
 	if value, found := result[0].Get("value"); found {
 		assert.Equal(t, value, "READ_REPLICA")
 		return nil
 	}
 
-	return fmt.Errorf("expected dbms.mode to be READ_REPLICA")
+	return fmt.Errorf("unable to get dbms.mode using cypher")
 }
 
 

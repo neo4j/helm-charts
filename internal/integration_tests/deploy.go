@@ -169,7 +169,7 @@ func kCleanupCommands(namespace model.Namespace) [][]string {
 
 var portOffset int32 = 0
 
-func proxyBolt(t *testing.T, releaseName model.ReleaseName,connectToPod bool) (int32, Closeable, error) {
+func proxyBolt(t *testing.T, releaseName model.ReleaseName, connectToPod bool) (int32, Closeable, error) {
 	localHttpPort := 9000 + atomic.AddInt32(&portOffset, 1)
 	localBoltPort := 9100 + atomic.AddInt32(&portOffset, 1)
 

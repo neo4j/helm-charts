@@ -92,9 +92,9 @@ func CheckReadReplica(t *testing.T) error {
 
 	t.Logf("Starting setup of '%s'", t.Name())
 
-	// Install one core synchronously, if all cores are installed simultaneously they run into conflicts all trying to create a -auth secret
+	// Install one replica synchronously, if all replicas are installed simultaneously they run into conflicts all trying to create a -auth secret
 	result := readReplica.Install(t, clusterReleaseName)
-	//addCloseable(result.Closeable)
+
 	defer func() {
 		cleanupTest(t, result.Closeable)
 	}()
