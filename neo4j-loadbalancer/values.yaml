@@ -36,6 +36,7 @@ selector:
   # To load balance over all Neo4j instances remove this setting.
   # To only route to Neo4j Read Replicas change the value to "READ_REPLICA"
   "helm.neo4j.com/dbms.mode": "CORE"
+  "helm.neo4j.com/neo4j.loadbalancer": "include"
 
 # Add additional Service.spec here if needed
 spec:

@@ -4,8 +4,10 @@
 {{- $offlineMaintenanceEnabled :=  .Values.neo4j.offlineMaintenanceModeEnabled }}
 {{- $neo4jImage := include "neo4j.image" . }}
 
+{{- template "podSpec.checkLoadBalancerParam" . -}}
 {{- template "neo4j.checkLicenseAgreement" . -}}
 {{- template "neo4j.volumes.validation" . -}}
+
 
 apiVersion: apps/v1
 kind: StatefulSet
@@ -33,6 +35,7 @@ spec:
         helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" $ }}"
         helm.neo4j.com/dbms.mode: "{{ index $.Values.config "dbms.mode" | default "SINGLE" | upper }}"
         helm.neo4j.com/pod_category: "neo4j-instance" # used for anti affinity rules
+        helm.neo4j.com/neo4j.loadbalancer: "{{ $.Values.podSpec.loadbalancer }}"
         helm.neo4j.com/instance: "{{ .Release.Name }}"
         {{- include "neo4j.labels" $.Values.neo4j | nindent 8 }}
       annotations:
