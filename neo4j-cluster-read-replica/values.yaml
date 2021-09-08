@@ -11,6 +11,7 @@ neo4j:
 
   # Neo4j Clustering requires Enterprise Edition
   edition: "enterprise"
+
   #
   # To use Neo4j Enterprise Edition you must have a Neo4j license agreement.
   #
@@ -261,6 +262,9 @@ podSpec:
   # If set to false then no anti-affinity rules are applied
   # If set to an object then that object is used for the Neo4j podAntiAffinity
   podAntiAffinity: true
+
+  #This indicates that the neo4j instance be included to the loadbalancer. Can be set to exclude to not add the stateful set to loadbalancer
+  loadbalancer: "include"
 
   # Name of service account to use for the Neo4j Pod (optional)
   # this is useful if you want to use Workload Identity to grant permissions to access cloud resources e.g. cloud object storage (AWS S3 etc.)
