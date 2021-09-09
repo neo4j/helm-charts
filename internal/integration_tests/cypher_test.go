@@ -120,8 +120,8 @@ func CheckReadReplicaServerGroupsConfiguration(t *testing.T, releaseName model.R
 	}
 
 	//if result is empty throw error
-	if !assert.NotEqual(t, len(result), 0) {
-		return fmt.Errorf("unexpected results from cypher query")
+	if !assert.NotEmpty(t, result) {
+		return fmt.Errorf("No results received from cypher query for read replica server groups")
 	}
 
 	var readReplicasCount int
