@@ -20,6 +20,6 @@ func TestHeadlessServiceDefaults(t *testing.T) {
 	assert.Len(t, services, 1)
 
 	service := services[0].(*v1.Service)
-	assert.Equal(t, v1.ServiceType("ClusterIP"), service.Spec.Type )
+	assert.Equal(t, v1.ServiceType("ClusterIP"), service.Spec.Type)
 	assert.Equal(t, service.Spec.ClusterIP, "None")
 }

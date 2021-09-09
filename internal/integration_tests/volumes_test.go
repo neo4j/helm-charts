@@ -16,7 +16,9 @@ func volumesTests(name model.ReleaseName, chart model.Neo4jHelmChart) []SubTest 
 		{name: "Check Volumes", test: func(t *testing.T) { assert.NoError(t, CheckVolumes(t, name), "Check volumes") }},
 		{name: "Enter maintenance mode", test: func(t *testing.T) { assert.NoError(t, EnterMaintenanceMode(t, name, chart), "Enter maintenance mode") }},
 		{name: "Check Volumes", test: func(t *testing.T) { assert.NoError(t, CheckVolumes(t, name), "Check volumes") }},
-		{name: "Exit maintenance mode and install plugins", test: func(t *testing.T) { assert.NoError(t, ExitMaintenanceMode(t, name, chart, resources.PluginsInitContainer.HelmArgs()...), "Exit maintenance mode and install plugins") }},
+		{name: "Exit maintenance mode and install plugins", test: func(t *testing.T) {
+			assert.NoError(t, ExitMaintenanceMode(t, name, chart, resources.PluginsInitContainer.HelmArgs()...), "Exit maintenance mode and install plugins")
+		}},
 		{name: "Check Apoc", test: func(t *testing.T) { assert.NoError(t, CheckApoc(t, name), "Check APOC") }},
 	}
 }
