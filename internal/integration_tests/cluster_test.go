@@ -119,6 +119,11 @@ func CheckReadReplica(t *testing.T) error {
 	if !assert.NoError(t, err) {
 		return err
 	}
+
+	err = CheckReadReplicaServerGroupsConfiguration(t, readReplicaReleaseName)
+	if !assert.NoError(t, err) {
+		return err
+	}
 	return nil
 }
 
