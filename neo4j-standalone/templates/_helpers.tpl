@@ -15,10 +15,12 @@ Convert a neo4j.conf properties text into valid yaml
   {{- .Values.neo4j.name | default .Release.Name }}
 {{- end -}}
 
-{{- define "read-replicas.server_groups" -}}
+{{- define "neo4j.cluster.server_groups" -}}
   {{- $replicaEnabled := index .Values.config "dbms.mode" | default "" | regexMatch "(?i)READ_REPLICA$" }}
   {{- if $replicaEnabled }}
-       {{- ",read-replicas" }}
+       {{- "read-replicas" }}
+  {{ else }}
+       {{- "cores" }}
   {{- end -}}
 {{- end -}}
 
