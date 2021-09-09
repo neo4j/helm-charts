@@ -51,7 +51,6 @@ func (c clusterReadReplica) Install(t *testing.T, clusterName model.ReleaseName)
 	return parallelResult{cleanup, err}
 }
 
-
 type clusterLoadBalancer struct {
 	name model.ReleaseName
 }
@@ -76,10 +75,16 @@ func clusterTests(loadBalancerName model.ReleaseName) ([]SubTest, error) {
 	expectedConfiguration = addExpectedClusterConfiguration(expectedConfiguration)
 
 	return []SubTest{
-		{name: "Check K8s", test: func(t *testing.T) { assert.NoError(t, CheckK8s(t, loadBalancerName), "Neo4j Config check should succeed") }},
-		{name: "Check Neo4j Configuration", test: func(t *testing.T) { assert.NoError(t, CheckNeo4jConfiguration(t, loadBalancerName, expectedConfiguration), "Neo4j Config check should succeed") }},
+		{name: "Check K8s", test: func(t *testing.T) {
+			assert.NoError(t, CheckK8s(t, loadBalancerName), "Neo4j Config check should succeed")
+		}},
+		{name: "Check Neo4j Configuration", test: func(t *testing.T) {
+			assert.NoError(t, CheckNeo4jConfiguration(t, loadBalancerName, expectedConfiguration), "Neo4j Config check should succeed")
+		}},
 		{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, CreateNode(t, loadBalancerName), "Create Node should succeed") }},
-		{name: "Count Nodes", test: func(t *testing.T) { assert.NoError(t, CheckNodeCount(t, loadBalancerName), "Count Nodes should succeed") }},
+		{name: "Count Nodes", test: func(t *testing.T) {
+			assert.NoError(t, CheckNodeCount(t, loadBalancerName), "Count Nodes should succeed")
+		}},
 		{name: "Check Read Replica", test: func(t *testing.T) { assert.NoError(t, CheckReadReplica(t), "Creates Read Replica and should succeed") }},
 	}, err
 }
@@ -110,13 +115,12 @@ func CheckReadReplica(t *testing.T) error {
 
 	t.Logf("Succeeded with read replica setup of '%s'", t.Name())
 
-	err = CheckReadReplicaConfiguration(t,readReplicaReleaseName)
+	err = CheckReadReplicaConfiguration(t, readReplicaReleaseName)
 	if !assert.NoError(t, err) {
 		return err
 	}
 	return nil
 }
-
 
 func CheckK8s(t *testing.T, name model.ReleaseName) error {
 	t.Run("check pods", func(t *testing.T) {

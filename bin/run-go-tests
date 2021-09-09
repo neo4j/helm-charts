@@ -11,6 +11,19 @@ shopt -s inherit_errexit
 
 # TODO: assert that kubernetes and gcloud are correctly configured?
 
+echo "Checking Go code formatting !!!"
+#perform gofmt and store the output in an array
+status_code=($(gofmt -l ./internal/))
+
+#if any elements found in array it means go code is not formatted and we should exit
+# we could have also used a single line test -z $(gofmt -l ./internal) but it would just exit because of errexit
+if [ "${#status_code[@]}" != 0 ]; then
+   echo "*********** PLEASE FORMAT YOUR GO CODE !! ***********"
+   exit 1
+fi
+
+exit
+
 # run go test and format the output for junit consumption
 #
 mkdir -p output

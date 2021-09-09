@@ -32,10 +32,10 @@ func TestLoadBalancerDefaults(t *testing.T) {
 	assert.Len(t, selector, 4)
 	assert.Equal(t,
 		map[string]string{
-		"app": "neo4j-cluster",
-		"helm.neo4j.com/neo4j.name": "neo4j-cluster",
-		"helm.neo4j.com/dbms.mode": "CORE",
-		"helm.neo4j.com/neo4j.loadbalancer": "include",
+			"app":                               "neo4j-cluster",
+			"helm.neo4j.com/neo4j.name":         "neo4j-cluster",
+			"helm.neo4j.com/dbms.mode":          "CORE",
+			"helm.neo4j.com/neo4j.loadbalancer": "include",
 		},
 		selector)
 
@@ -87,9 +87,9 @@ func TestLoadBalancerPorts(t *testing.T) {
 	assert.Len(t, selector, 4)
 	assert.Equal(t,
 		map[string]string{
-			"app": "neo4j-cluster",
-			"helm.neo4j.com/neo4j.name": "neo4j-cluster",
-			"helm.neo4j.com/dbms.mode": "CORE",
+			"app":                               "neo4j-cluster",
+			"helm.neo4j.com/neo4j.name":         "neo4j-cluster",
+			"helm.neo4j.com/dbms.mode":          "CORE",
 			"helm.neo4j.com/neo4j.loadbalancer": "include",
 		},
 		selector)
@@ -102,7 +102,7 @@ func TestOverrideLoadBalancerDefaultSettings(t *testing.T) {
 
 	// When no extra args are set...
 	k8s, err := model.HelmTemplate(t, model.LoadBalancerHelmChart, nil)
-	if !assert.NoError(t, err){
+	if !assert.NoError(t, err) {
 		return
 	}
 	// Our "default" settings (externalTrafficPolicy: local) are applied
@@ -111,11 +111,11 @@ func TestOverrideLoadBalancerDefaultSettings(t *testing.T) {
 
 	// When user sets them explicitly
 	extraHelmArgs := []string{
-		"--set", "spec.externalTrafficPolicy="+string(v1.ServiceExternalTrafficPolicyTypeCluster),
+		"--set", "spec.externalTrafficPolicy=" + string(v1.ServiceExternalTrafficPolicyTypeCluster),
 	}
 
 	k8s, err = model.HelmTemplate(t, model.LoadBalancerHelmChart, extraHelmArgs)
-	if !assert.NoError(t, err){
+	if !assert.NoError(t, err) {
 		return
 	}
 

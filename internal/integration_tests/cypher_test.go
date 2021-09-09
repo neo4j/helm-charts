@@ -94,14 +94,13 @@ func CreateNode(t *testing.T, releaseName model.ReleaseName) error {
 	return err
 }
 
-
 func CheckReadReplicaConfiguration(t *testing.T, releaseName model.ReleaseName) error {
 	result, err := runReadOnlyQuery(t, releaseName, "CALL dbms.listConfig(\"dbms.mode\") YIELD value", noParams)
 	if err != nil {
 		return err
 	}
 
-	if !assert.Equal(t, len(result),1) {
+	if !assert.Equal(t, len(result), 1) {
 		return fmt.Errorf("unexpected results from cypher query")
 	}
 
@@ -112,7 +111,6 @@ func CheckReadReplicaConfiguration(t *testing.T, releaseName model.ReleaseName) 
 
 	return fmt.Errorf("unable to get dbms.mode using cypher")
 }
-
 
 func CheckNodeCount(t *testing.T, releaseName model.ReleaseName) error {
 	result, err := runQuery(t, releaseName, "MATCH (n) RETURN COUNT(n) AS count", noParams)
@@ -132,7 +130,7 @@ func CheckNodeCount(t *testing.T, releaseName model.ReleaseName) error {
 
 func runQuery(t *testing.T, releaseName model.ReleaseName, cypher string, params map[string]interface{}) ([]*neo4j.Record, error) {
 
-	boltPort, cleanupProxy, proxyErr := proxyBolt(t, releaseName,false)
+	boltPort, cleanupProxy, proxyErr := proxyBolt(t, releaseName, false)
 	defer cleanupProxy()
 	if proxyErr != nil {
 		return nil, proxyErr
@@ -164,10 +162,9 @@ func runQuery(t *testing.T, releaseName model.ReleaseName, cypher string, params
 	return result.Collect()
 }
 
-
 func runReadOnlyQuery(t *testing.T, releaseName model.ReleaseName, cypher string, params map[string]interface{}) ([]*neo4j.Record, error) {
 
-	boltPort, cleanupProxy, proxyErr := proxyBolt(t, releaseName,true)
+	boltPort, cleanupProxy, proxyErr := proxyBolt(t, releaseName, true)
 	defer cleanupProxy()
 	if proxyErr != nil {
 		return nil, proxyErr
@@ -191,11 +188,10 @@ func runReadOnlyQuery(t *testing.T, releaseName model.ReleaseName, cypher string
 	session := driver.NewSession(neo4j.SessionConfig{DatabaseName: dbName})
 	defer session.Close()
 
-
 	transactionWork := func(tx neo4j.Transaction) (interface{}, error) {
-		result, err :=  tx.Run(cypher,params)
+		result, err := tx.Run(cypher, params)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
 		return result.Collect()
 	}
@@ -205,9 +201,8 @@ func runReadOnlyQuery(t *testing.T, releaseName model.ReleaseName, cypher string
 		return nil, err
 	}
 
-	return result.([]*neo4j.Record),nil
+	return result.([]*neo4j.Record), nil
 }
-
 
 func awaitConnectivity(t *testing.T, err error, driver neo4j.Driver) error {
 	// This polls verify connectivity until it succeeds or it times out. We should be able to remove this when we have readiness probes (maybe)
