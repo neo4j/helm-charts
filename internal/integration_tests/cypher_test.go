@@ -112,6 +112,38 @@ func CheckReadReplicaConfiguration(t *testing.T, releaseName model.ReleaseName) 
 	return fmt.Errorf("unable to get dbms.mode using cypher")
 }
 
+//CheckReadReplicaServerGroupsConfiguration checks if the server_groups config contains "read-replicas" or not for read replica cluster
+func CheckReadReplicaServerGroupsConfiguration(t *testing.T, releaseName model.ReleaseName) error {
+	result, err := runReadOnlyQuery(t, releaseName, "CALL dbms.cluster.overview() YIELD groups", noParams)
+	if err != nil {
+		return err
+	}
+
+	//if result is empty throw error
+	if !assert.NotEmpty(t, result) {
+		return fmt.Errorf("No results received from cypher query for read replica server groups")
+	}
+
+	var readReplicasCount int
+	for _, resultRow := range result {
+		if rowValues, found := resultRow.Get("groups"); found {
+			for _, value := range rowValues.([]interface{}) {
+				if groupName, ok := value.(string); ok {
+					if groupName == "read-replicas" {
+						readReplicasCount++
+					}
+				}
+			}
+		}
+	}
+
+	if !assert.Equal(t, readReplicasCount, 1) {
+		return fmt.Errorf("unable to get any group from dbms.cluster.overview() containing read-replicas using cypher")
+	}
+
+	return nil
+}
+
 func CheckNodeCount(t *testing.T, releaseName model.ReleaseName) error {
 	result, err := runQuery(t, releaseName, "MATCH (n) RETURN COUNT(n) AS count", noParams)
 

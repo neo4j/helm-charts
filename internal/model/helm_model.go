@@ -11,6 +11,8 @@ type ReleaseName interface {
 	PodName() string
 	EnvConfigMapName() string
 	UserConfigMapName() string
+	InternalServiceName() string
+	DefaultConfigMapName() string
 }
 
 func NewReleaseName(name string) ReleaseName {
@@ -40,8 +42,16 @@ func (r *releaseName) EnvConfigMapName() string {
 	return string(*r) + "-env"
 }
 
+func (r *releaseName) DefaultConfigMapName() string {
+	return string(*r) + "-default-config"
+}
+
 func (r *releaseName) UserConfigMapName() string {
 	return string(*r) + "-user-config"
+}
+
+func (r *releaseName) InternalServiceName() string {
+	return string(*r) + "-internals"
 }
 
 func NewCoreReleaseName(clusterName ReleaseName, number int) ReleaseName {
@@ -86,6 +96,14 @@ func (r *clusterMemberReleaseName) EnvConfigMapName() string {
 
 func (r *clusterMemberReleaseName) UserConfigMapName() string {
 	return r.memberName.UserConfigMapName()
+}
+
+func (r *clusterMemberReleaseName) InternalServiceName() string {
+	return r.memberName.InternalServiceName()
+}
+
+func (r *clusterMemberReleaseName) DefaultConfigMapName() string {
+	return r.memberName.DefaultConfigMapName()
 }
 
 type Namespace string
