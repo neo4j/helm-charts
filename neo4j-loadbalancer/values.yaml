@@ -32,11 +32,13 @@ ports:
 # Specify *additional* selectors to apply here (generally not required).
 # If you do not want the automatic selector rename to "selectorOverride" and no "helm.neo4j.com/neo4j.name" will be applied.
 selector:
-  # By default the load balancer will only match Neo4j Cluster Cores.
-  # To load balance over all Neo4j instances remove this setting.
-  # To only route to Neo4j Read Replicas change the value to "READ_REPLICA"
-  "helm.neo4j.com/dbms.mode": "CORE"
   "helm.neo4j.com/neo4j.loadbalancer": "include"
+  # By default the load balancer will match all Neo4j instance types.
+  # When Neo4j drivers connect from outside K8s using the load balancer they will not fetch a routing table.
+  # In this case drivers can only use instances included in the load balancer.
+  # To only include Neo4j Core instances uncomment the setting below.
+  # To only route to Neo4j Read Replicas uncomment the setting and change the value to "READ_REPLICA"
+  # "helm.neo4j.com/dbms.mode": "CORE"
 
 # Add additional Service.spec here if needed
 spec:
