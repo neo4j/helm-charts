@@ -1,8 +1,10 @@
 {{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
 {{- $clusterEnabled := false }}
 {{- $backupEnabled := false }}
+{{- $replicaEnabled := false }}
 {{- if $isEnterprise }}
 {{- $clusterEnabled = or ( index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" ) ( index .Values.config "dbms.clustering.enable" | default "" | regexMatch "(?i)true|yes" ) }}
+{{- $replicaEnabled = index .Values.config "dbms.mode" | default "" | regexMatch "(?i)READ_REPLICA$" }}
 {{- $backupEnabled = index $.Values.config "dbms.backup.enabled" | default "true" | regexMatch "(?i)yes|true" }}
 {{- end }}
 {{- $jmxEnabled := index $.Values.config "metrics.jmx.enabled" | default "" | regexMatch "(?i)yes|true" }}
@@ -150,7 +152,19 @@ spec:
       port: 7473
       targetPort: 7473
       name: tcp-https
-    {{- if $clusterEnabled }}
+    {{- if $replicaEnabled }}
+    #enable the ports 7688 , 6000 only for Read Replicas
+    - protocol: TCP
+      port: 7688
+      targetPort: 7688
+      name: tcp-boltrouting
+    - protocol: TCP
+      port: 6000
+      targetPort: 6000
+      name: tcp-tx
+    {{- end }}
+    {{- if and (not $replicaEnabled ) $clusterEnabled }}
+    #enable the ports for non Read Replicas
     - protocol: TCP
       port: 7688
       targetPort: 7688
