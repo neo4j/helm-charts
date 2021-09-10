@@ -96,44 +96,6 @@ func clusterTests(loadBalancerName model.ReleaseName, readReplicaName model.Rele
 	}, err
 }
 
-//func CheckReadReplica(t *testing.T) error {
-//
-//	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
-//	readReplicaReleaseName := model.NewReadReplicaReleaseName(clusterReleaseName, 1)
-//	readReplica := clusterReadReplica{readReplicaReleaseName}
-//
-//	t.Logf("Starting setup of '%s'", t.Name())
-//
-//	// Install one replica synchronously, if all replicas are installed simultaneously they run into conflicts all trying to create a -auth secret
-//	result := readReplica.Install(t)
-//
-//	defer func() {
-//		cleanupTest(t, result.Closeable)
-//	}()
-//
-//	if !assert.NoError(t, result.error) {
-//		return result.error
-//	}
-//
-//	err := run(t, "kubectl", "--namespace", string(readReplica.Name().Namespace()), "rollout", "status", "--watch", "--timeout=180s", "statefulset/"+readReplica.Name().String())
-//	if !assert.NoError(t, err) {
-//		return err
-//	}
-//
-//	t.Logf("Succeeded with read replica setup of '%s'", t.Name())
-//
-//	err = CheckReadReplicaConfiguration(t, readReplicaReleaseName)
-//	if !assert.NoError(t, err) {
-//		return err
-//	}
-//
-//	err = CheckReadReplicaServerGroupsConfiguration(t, readReplicaReleaseName)
-//	if !assert.NoError(t, err) {
-//		return err
-//	}
-//	return nil
-//}
-
 func CheckK8s(t *testing.T, name model.ReleaseName) error {
 	t.Run("check pods", func(t *testing.T) {
 		t.Parallel()
