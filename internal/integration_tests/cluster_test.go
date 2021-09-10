@@ -18,7 +18,7 @@ type parallelResult struct {
 
 type helmComponent interface {
 	Name() model.ReleaseName
-	Install(t *testing.T, clusterName model.ReleaseName) parallelResult
+	Install(t *testing.T) parallelResult
 }
 
 type clusterCore struct {
@@ -29,7 +29,7 @@ func (c clusterCore) Name() model.ReleaseName {
 	return c.name
 }
 
-func (c clusterCore) Install(t *testing.T, clusterName model.ReleaseName) parallelResult {
+func (c clusterCore) Install(t *testing.T) parallelResult {
 	var err error
 	var cleanup Closeable
 	cleanup, err = InstallNeo4jInGcloud(t, gcloud.CurrentZone(), gcloud.CurrentProject(), c.name, model.ClusterCoreHelmChart)
@@ -44,7 +44,7 @@ func (c clusterReadReplica) Name() model.ReleaseName {
 	return c.name
 }
 
-func (c clusterReadReplica) Install(t *testing.T, clusterName model.ReleaseName) parallelResult {
+func (c clusterReadReplica) Install(t *testing.T) parallelResult {
 	var err error
 	var cleanup Closeable
 	cleanup, err = InstallNeo4jInGcloud(t, gcloud.CurrentZone(), gcloud.CurrentProject(), c.name, model.ClusterReadReplicaHelmChart)
@@ -59,7 +59,7 @@ func (c clusterLoadBalancer) Name() model.ReleaseName {
 	return c.name
 }
 
-func (c clusterLoadBalancer) Install(t *testing.T, clusterName model.ReleaseName) parallelResult {
+func (c clusterLoadBalancer) Install(t *testing.T) parallelResult {
 	var err error
 	var cleanup Closeable
 	cleanup = func() error { return run(t, "helm", model.LoadBalancerHelmCommand("uninstall", c.name)...) }
@@ -98,7 +98,7 @@ func CheckReadReplica(t *testing.T) error {
 	t.Logf("Starting setup of '%s'", t.Name())
 
 	// Install one replica synchronously, if all replicas are installed simultaneously they run into conflicts all trying to create a -auth secret
-	result := readReplica.Install(t, clusterReleaseName)
+	result := readReplica.Install(t)
 
 	defer func() {
 		cleanupTest(t, result.Closeable)
@@ -197,6 +197,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 
 	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
 	loadBalancer := clusterLoadBalancer{model.NewLoadBalancerReleaseName(clusterReleaseName)}
+	readReplica := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName,1)}
 	core1 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 1)}
 	core2 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 2)}
 	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3)}
@@ -218,7 +219,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	}
 
 	// Install one core synchronously, if all cores are installed simultaneously they run into conflicts all trying to create a -auth secret
-	result := core1.Install(t, clusterReleaseName)
+	result := core1.Install(t)
 	addCloseable(result.Closeable)
 	if !assert.NoError(t, result.error) {
 		return
@@ -229,6 +230,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 		core2,
 		core3,
 		loadBalancer,
+		readReplica,
 	}
 	results := make(chan parallelResult)
 	for _, component := range componentsToParallelInstall {
@@ -272,6 +274,6 @@ func backgroundInstall(t *testing.T, results chan parallelResult, component helm
 			error:     fmt.Errorf("illegal state: background install did not take place for %s in %s", component.Name(), clusterName),
 		}
 		defer func() { results <- parallelResult }()
-		parallelResult = component.Install(t, clusterName)
+		parallelResult = component.Install(t)
 	}()
 }
