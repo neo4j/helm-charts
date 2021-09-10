@@ -32,8 +32,11 @@ ports:
 # Specify *additional* selectors to apply here (generally not required).
 # If you do not want the automatic selector rename to "selectorOverride" and no "helm.neo4j.com/neo4j.name" will be applied.
 selector:
-  # By default the load balancer will only match Neo4j Cluster Cores.
-  # To load balance over all Neo4j instances remove this setting.
+  "helm.neo4j.com/neo4j.loadbalancer": "include"
+  # By default the headless service will only match Neo4j Cluster Cores.
+  # When using the headless service Neo4j drivers should fetch a routing table that includes read replicas and will connect to them directly for reads so it is
+  # not necessary to include them in this headless service.
+  # To include all Neo4j instances anyway remove this setting.
   # To only route to Neo4j Read Replicas change the value to "READ_REPLICA"
   "helm.neo4j.com/dbms.mode": "CORE"
 
