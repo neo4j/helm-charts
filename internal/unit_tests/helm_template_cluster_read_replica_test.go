@@ -94,7 +94,7 @@ func TestReadReplicaAntiAffinityRuleDoesNotExists(t *testing.T) {
 		readReplica,
 		model.ClusterReadReplicaHelmChart,
 		useDataModeAndAcceptLicense,
-		"--set","podSpec.podAntiAffinity=false",
+		"--set", "podSpec.podAntiAffinity=false",
 	)
 	if !assert.NoError(t, err) {
 		return
