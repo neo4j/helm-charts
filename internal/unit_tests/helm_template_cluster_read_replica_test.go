@@ -67,3 +67,39 @@ func TestReadReplicaServerGroups(t *testing.T) {
 	assert.Contains(t, defaultConfigMap.Data, "causal_clustering.server_groups")
 	assert.Contains(t, defaultConfigMap.Data["causal_clustering.server_groups"], "read-replicas")
 }
+
+//TestReadReplicaAntiAffinityRule checks if the podSpec.podAntiAffinity rule exists under statefulset or not
+func TestReadReplicaAntiAffinityRuleExists(t *testing.T) {
+	t.Parallel()
+
+	readReplica := model.NewReleaseName("foo")
+
+	readReplicaManifest, err := model.HelmTemplateForRelease(t, readReplica, model.ClusterReadReplicaHelmChart, useDataModeAndAcceptLicense)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	statefulSet := readReplicaManifest.Only(t, &appsv1.StatefulSet{}).(*appsv1.StatefulSet)
+	assert.NotEqual(t, statefulSet.Spec.Template.Spec.Affinity.PodAntiAffinity, nil)
+}
+
+//TestReadReplicaAntiAffinityRule checks that podAntiAffinity rule should not exist when --set podSpec.podAntiAffinity=false is passed
+func TestReadReplicaAntiAffinityRuleDoesNotExists(t *testing.T) {
+	t.Parallel()
+
+	readReplica := model.NewReleaseName("foo")
+
+	readReplicaManifest, err := model.HelmTemplateForRelease(
+		t,
+		readReplica,
+		model.ClusterReadReplicaHelmChart,
+		useDataModeAndAcceptLicense,
+		[]string{"--set", "podSpec.podAntiAffinity=false"}...,
+	)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	statefulSet := readReplicaManifest.Only(t, &appsv1.StatefulSet{}).(*appsv1.StatefulSet)
+	assert.Empty(t, statefulSet.Spec.Template.Spec.Affinity)
+}
