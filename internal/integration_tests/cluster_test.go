@@ -18,7 +18,7 @@ type parallelResult struct {
 
 type helmComponent interface {
 	Name() model.ReleaseName
-	Install(t *testing.T, clusterName model.ReleaseName) parallelResult
+	Install(t *testing.T) parallelResult
 }
 
 type clusterCore struct {
@@ -29,7 +29,7 @@ func (c clusterCore) Name() model.ReleaseName {
 	return c.name
 }
 
-func (c clusterCore) Install(t *testing.T, clusterName model.ReleaseName) parallelResult {
+func (c clusterCore) Install(t *testing.T) parallelResult {
 	var err error
 	var cleanup Closeable
 	cleanup, err = InstallNeo4jInGcloud(t, gcloud.CurrentZone(), gcloud.CurrentProject(), c.name, model.ClusterCoreHelmChart)
@@ -44,7 +44,7 @@ func (c clusterReadReplica) Name() model.ReleaseName {
 	return c.name
 }
 
-func (c clusterReadReplica) Install(t *testing.T, clusterName model.ReleaseName) parallelResult {
+func (c clusterReadReplica) Install(t *testing.T) parallelResult {
 	var err error
 	var cleanup Closeable
 	cleanup, err = InstallNeo4jInGcloud(t, gcloud.CurrentZone(), gcloud.CurrentProject(), c.name, model.ClusterReadReplicaHelmChart)
@@ -59,7 +59,7 @@ func (c clusterLoadBalancer) Name() model.ReleaseName {
 	return c.name
 }
 
-func (c clusterLoadBalancer) Install(t *testing.T, clusterName model.ReleaseName) parallelResult {
+func (c clusterLoadBalancer) Install(t *testing.T) parallelResult {
 	var err error
 	var cleanup Closeable
 	cleanup = func() error { return run(t, "helm", model.LoadBalancerHelmCommand("uninstall", c.name)...) }
@@ -67,7 +67,7 @@ func (c clusterLoadBalancer) Install(t *testing.T, clusterName model.ReleaseName
 	return parallelResult{cleanup, err}
 }
 
-func clusterTests(loadBalancerName model.ReleaseName) ([]SubTest, error) {
+func clusterTests(loadBalancerName model.ReleaseName, readReplicaName model.ReleaseName) ([]SubTest, error) {
 	expectedConfiguration, err := (&model.Neo4jConfiguration{}).PopulateFromFile(Neo4jConfFile)
 	if err != nil {
 		return nil, err
@@ -81,50 +81,19 @@ func clusterTests(loadBalancerName model.ReleaseName) ([]SubTest, error) {
 		{name: "Check Neo4j Configuration", test: func(t *testing.T) {
 			assert.NoError(t, CheckNeo4jConfiguration(t, loadBalancerName, expectedConfiguration), "Neo4j Config check should succeed")
 		}},
-		{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, CreateNode(t, loadBalancerName), "Create Node should succeed") }},
+		{name: "Create Node", test: func(t *testing.T) {
+			assert.NoError(t, CreateNode(t, loadBalancerName), "Create Node should succeed")
+		}},
 		{name: "Count Nodes", test: func(t *testing.T) {
 			assert.NoError(t, CheckNodeCount(t, loadBalancerName), "Count Nodes should succeed")
 		}},
-		{name: "Check Read Replica", test: func(t *testing.T) { assert.NoError(t, CheckReadReplica(t), "Creates Read Replica and should succeed") }},
+		{name: "Check Read Replica Configuration", test: func(t *testing.T) {
+			assert.NoError(t, CheckReadReplicaConfiguration(t, readReplicaName), "Checks Read Replica Configuration")
+		}},
+		{name: "Check Read Replica Server Groups", test: func(t *testing.T) {
+			assert.NoError(t, CheckReadReplicaServerGroupsConfiguration(t, readReplicaName), "Checks Read Replica Server Groups contains read-replicas or not")
+		}},
 	}, err
-}
-
-func CheckReadReplica(t *testing.T) error {
-
-	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
-	readReplicaReleaseName := model.NewReadReplicaReleaseName(clusterReleaseName, 1)
-	readReplica := clusterReadReplica{readReplicaReleaseName}
-
-	t.Logf("Starting setup of '%s'", t.Name())
-
-	// Install one replica synchronously, if all replicas are installed simultaneously they run into conflicts all trying to create a -auth secret
-	result := readReplica.Install(t, clusterReleaseName)
-
-	defer func() {
-		cleanupTest(t, result.Closeable)
-	}()
-
-	if !assert.NoError(t, result.error) {
-		return result.error
-	}
-
-	err := run(t, "kubectl", "--namespace", string(readReplica.Name().Namespace()), "rollout", "status", "--watch", "--timeout=180s", "statefulset/"+readReplica.Name().String())
-	if !assert.NoError(t, err) {
-		return err
-	}
-
-	t.Logf("Succeeded with read replica setup of '%s'", t.Name())
-
-	err = CheckReadReplicaConfiguration(t, readReplicaReleaseName)
-	if !assert.NoError(t, err) {
-		return err
-	}
-
-	err = CheckReadReplicaServerGroupsConfiguration(t, readReplicaReleaseName)
-	if !assert.NoError(t, err) {
-		return err
-	}
-	return nil
 }
 
 func CheckK8s(t *testing.T, name model.ReleaseName) error {
@@ -157,7 +126,8 @@ func CheckLoadBalancerService(t *testing.T, name model.ReleaseName) {
 	}
 
 	lbEndpoints := manifest.OfTypeWithName(&v1.Endpoints{}, lbService.Name).(*v1.Endpoints)
-	assert.Len(t, lbEndpoints.Subsets, 3)
+	//4 = 3 cluster core + 1 read replica
+	assert.Len(t, lbEndpoints.Subsets, 4)
 }
 
 func CheckPods(t *testing.T, name model.ReleaseName) error {
@@ -166,7 +136,8 @@ func CheckPods(t *testing.T, name model.ReleaseName) error {
 		return err
 	}
 
-	assert.Len(t, pods.Items, 3)
+	//4 = 3 cores + 1 read replica
+	assert.Len(t, pods.Items, 4)
 	for _, pod := range pods.Items {
 		if assert.Contains(t, pod.Labels, "app") {
 			assert.Equal(t, "neo4j-cluster", pod.Labels["app"])
@@ -197,6 +168,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 
 	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
 	loadBalancer := clusterLoadBalancer{model.NewLoadBalancerReleaseName(clusterReleaseName)}
+	readReplica := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName, 1)}
 	core1 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 1)}
 	core2 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 2)}
 	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3)}
@@ -218,7 +190,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	}
 
 	// Install one core synchronously, if all cores are installed simultaneously they run into conflicts all trying to create a -auth secret
-	result := core1.Install(t, clusterReleaseName)
+	result := core1.Install(t)
 	addCloseable(result.Closeable)
 	if !assert.NoError(t, result.error) {
 		return
@@ -229,6 +201,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 		core2,
 		core3,
 		loadBalancer,
+		readReplica,
 	}
 	results := make(chan parallelResult)
 	for _, component := range componentsToParallelInstall {
@@ -256,7 +229,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 
 	t.Logf("Succeeded with setup of '%s'", t.Name())
 
-	subTests, err := clusterTests(loadBalancer.Name())
+	subTests, err := clusterTests(loadBalancer.Name(), readReplica.Name())
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -272,6 +245,6 @@ func backgroundInstall(t *testing.T, results chan parallelResult, component helm
 			error:     fmt.Errorf("illegal state: background install did not take place for %s in %s", component.Name(), clusterName),
 		}
 		defer func() { results <- parallelResult }()
-		parallelResult = component.Install(t, clusterName)
+		parallelResult = component.Install(t)
 	}()
 }
