@@ -23,6 +23,7 @@ var BoolsInConfig = newYamlFile("boolsInConfig.yaml")
 var IntsInConfig = newYamlFile("intsInConfig.yaml")
 var ChmodInitContainer = newYamlFile("chmodInitContainer.yaml")
 var ChmodInitContainerAndCustomInitContainer = newYamlFile("chmodInitContainerAndCustomInitContainer.yaml")
+var ReadReplicaUpstreamStrategy = newYamlFile("read_replica_upstream_selection_strategy.yaml")
 
 type YamlFile interface {
 	Path() string

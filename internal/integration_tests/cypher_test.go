@@ -43,7 +43,7 @@ func CheckNeo4jConfiguration(t *testing.T, releaseName model.ReleaseName, expect
 			t.Error(msg)
 			return errors.New(msg)
 		}
-		runtimeConfig, err = runQuery(t, releaseName, "CALL dbms.listConfig() YIELD name, value", nil)
+		runtimeConfig, err = runQuery(t, releaseName, "CALL dbms.listConfig() YIELD name, value", nil, false)
 		if err != nil {
 			return err
 		}
@@ -83,7 +83,8 @@ func CreateNode(t *testing.T, releaseName model.ReleaseName) error {
 	_, err := runQuery(t, releaseName, "CREATE (n:Item { id: $id, name: $name }) RETURN n.id, n.name", map[string]interface{}{
 		"id":   1,
 		"name": "Item 1",
-	})
+	},
+		false)
 	if _, found := createdNodes[releaseName]; !found {
 		var initialValue int64 = 0
 		createdNodes[releaseName] = &initialValue
@@ -94,6 +95,26 @@ func CreateNode(t *testing.T, releaseName model.ReleaseName) error {
 	return err
 }
 
+//CreateNodeOnReadReplica fires a cypher query to create a node
+//It's a way to check write requests to read replica are routed to the cluster core since read replica DOES NOT perform writes
+func CreateNodeOnReadReplica(t *testing.T, releaseName model.ReleaseName) error {
+	_, err := runQuery(t, releaseName, "CREATE (n:Item { id: $id, name: $name }) RETURN n.id, n.name", map[string]interface{}{
+		"id":   1,
+		"name": "Item 1",
+	},
+		true)
+	if _, found := createdNodes[releaseName]; !found {
+		var initialValue int64 = 0
+		createdNodes[releaseName] = &initialValue
+	}
+	if err == nil {
+		atomic.AddInt64(createdNodes[releaseName], 1)
+	}
+	return err
+}
+
+//CheckReadReplicaConfiguration checks runs a cypher query to check the read replica configuration
+// the configuration dbms.mode so retrieved must contain the value READ_REPLICA
 func CheckReadReplicaConfiguration(t *testing.T, releaseName model.ReleaseName) error {
 	result, err := runReadOnlyQuery(t, releaseName, "CALL dbms.listConfig(\"dbms.mode\") YIELD value", noParams)
 	if err != nil {
@@ -137,15 +158,16 @@ func CheckReadReplicaServerGroupsConfiguration(t *testing.T, releaseName model.R
 		}
 	}
 
-	if !assert.Equal(t, readReplicasCount, 1) {
+	if !assert.Equal(t, readReplicasCount, 2) {
 		return fmt.Errorf("unable to get any group from dbms.cluster.overview() containing read-replicas using cypher")
 	}
 
 	return nil
 }
 
+//CheckNodeCount runs the cypher query to get the number of nodes on a cluster core
 func CheckNodeCount(t *testing.T, releaseName model.ReleaseName) error {
-	result, err := runQuery(t, releaseName, "MATCH (n) RETURN COUNT(n) AS count", noParams)
+	result, err := runQuery(t, releaseName, "MATCH (n) RETURN COUNT(n) AS count", noParams, false)
 
 	if err != nil {
 		return err
@@ -160,9 +182,62 @@ func CheckNodeCount(t *testing.T, releaseName model.ReleaseName) error {
 	}
 }
 
-func runQuery(t *testing.T, releaseName model.ReleaseName, cypher string, params map[string]interface{}) ([]*neo4j.Record, error) {
+//UpdateReadReplicaConfigWithUpstreamStrategy updates the read replica upstream strategy on the provided chart
+func UpdateReadReplicaConfigWithUpstreamStrategy(t *testing.T, releaseName model.ReleaseName, extraArgs ...string) error {
+	chart := model.ClusterReadReplicaHelmChart
+	diskName := releaseName.DiskName()
+	err := run(
+		t, "helm", model.BaseHelmCommand("upgrade", releaseName, chart, model.Neo4jEdition, &diskName,
+			append(extraArgs, "--wait", "--timeout", "300s")...,
+		)...,
+	)
+	if !assert.NoError(t, err) {
+		return err
+	}
 
-	boltPort, cleanupProxy, proxyErr := proxyBolt(t, releaseName, false)
+	err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()), "rollout", "status", "--watch", "--timeout=120s", "statefulset/"+releaseName.String())
+	if !assert.NoError(t, err) {
+		return err
+	}
+	return nil
+}
+
+//CheckNodeCountOnReadReplica performs a cypher query to check node count.
+/*We are not using here createdNodes Map since it does not contain the correct count of nodes retrieved via read replica
+as readreplica DOES NOT perform any writes...its routes it to the core*/
+func CheckNodeCountOnReadReplica(t *testing.T, releaseName model.ReleaseName, expectedCount int64) error {
+
+	countnodes := func() ([]*neo4j.Record, error) {
+		return runQuery(t, releaseName, "MATCH (n) RETURN COUNT(n) AS count", noParams, true)
+	}
+
+	timeout := time.After(2 * time.Minute)
+	for {
+		select {
+		case <-timeout:
+			return fmt.Errorf("timeout reached while counting nodes on read replica")
+		default:
+			var result []*neo4j.Record
+			var err error
+			if result, err = countnodes(); err != nil {
+				return fmt.Errorf("Missing count from cypher query %s", err)
+			}
+
+			if value, found := result[0].Get("count"); found {
+				countedNodes := value.(int64)
+				if expectedCount != countedNodes {
+					continue
+				}
+				return nil
+			}
+			return fmt.Errorf("count key is not received from read replica")
+		}
+	}
+}
+
+func runQuery(t *testing.T, releaseName model.ReleaseName, cypher string, params map[string]interface{}, connectToPod bool) ([]*neo4j.Record, error) {
+
+	boltPort, cleanupProxy, proxyErr := proxyBolt(t, releaseName, connectToPod)
 	defer cleanupProxy()
 	if proxyErr != nil {
 		return nil, proxyErr
@@ -194,6 +269,7 @@ func runQuery(t *testing.T, releaseName model.ReleaseName, cypher string, params
 	return result.Collect()
 }
 
+//runReadOnlyQuery triggers a read only cypher query used by read replica
 func runReadOnlyQuery(t *testing.T, releaseName model.ReleaseName, cypher string, params map[string]interface{}) ([]*neo4j.Record, error) {
 
 	boltPort, cleanupProxy, proxyErr := proxyBolt(t, releaseName, true)

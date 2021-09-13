@@ -16,4 +16,4 @@ CLOUDSDK_CONTAINER_CLUSTER="${CLOUDSDK_CONTAINER_CLUSTER:?CLOUDSDK_CONTAINER_CLU
 #
 gcloud container clusters delete --zone="${CLOUDSDK_COMPUTE_ZONE}" "${CLOUDSDK_CONTAINER_CLUSTER}"
 
-echo "This does not clean up any persistent disks that mioght have been created by this GKE cluster - those have to be cleaned up separately"
+echo "This does not clean up any persistent disks that might have been created by this GKE cluster - those have to be cleaned up separately"

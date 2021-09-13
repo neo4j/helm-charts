@@ -5,6 +5,7 @@ import (
 	. "github.com/neo-technology/neo4j-helm-charts/internal/helpers"
 	"github.com/neo-technology/neo4j-helm-charts/internal/integration_tests/gcloud"
 	"github.com/neo-technology/neo4j-helm-charts/internal/model"
+	"github.com/neo-technology/neo4j-helm-charts/internal/resources"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	"strings"
@@ -67,7 +68,7 @@ func (c clusterLoadBalancer) Install(t *testing.T) parallelResult {
 	return parallelResult{cleanup, err}
 }
 
-func clusterTests(loadBalancerName model.ReleaseName, readReplicaName model.ReleaseName) ([]SubTest, error) {
+func clusterTests(loadBalancerName model.ReleaseName, readReplica1Name model.ReleaseName, readReplica2Name model.ReleaseName) ([]SubTest, error) {
 	expectedConfiguration, err := (&model.Neo4jConfiguration{}).PopulateFromFile(Neo4jConfFile)
 	if err != nil {
 		return nil, err
@@ -88,10 +89,22 @@ func clusterTests(loadBalancerName model.ReleaseName, readReplicaName model.Rele
 			assert.NoError(t, CheckNodeCount(t, loadBalancerName), "Count Nodes should succeed")
 		}},
 		{name: "Check Read Replica Configuration", test: func(t *testing.T) {
-			assert.NoError(t, CheckReadReplicaConfiguration(t, readReplicaName), "Checks Read Replica Configuration")
+			assert.NoError(t, CheckReadReplicaConfiguration(t, readReplica1Name), "Checks Read Replica Configuration")
 		}},
 		{name: "Check Read Replica Server Groups", test: func(t *testing.T) {
-			assert.NoError(t, CheckReadReplicaServerGroupsConfiguration(t, readReplicaName), "Checks Read Replica Server Groups contains read-replicas or not")
+			assert.NoError(t, CheckReadReplicaServerGroupsConfiguration(t, readReplica1Name), "Checks Read Replica Server Groups contains read-replicas or not")
+		}},
+		{name: "Update Read Replica With Upstream Strategy on Read Replica 2", test: func(t *testing.T) {
+			assert.NoError(t, UpdateReadReplicaConfigWithUpstreamStrategy(t, readReplica2Name, resources.ReadReplicaUpstreamStrategy.HelmArgs()...), "Count Nodes on read replica should succeed")
+		}},
+		{name: "Create Node on Read Replica 1", test: func(t *testing.T) {
+			assert.NoError(t, CreateNodeOnReadReplica(t, readReplica1Name), "Create Node on read replica should be redirected to the cluster code")
+		}},
+		{name: "Count Nodes on Read Replica 1", test: func(t *testing.T) {
+			assert.NoError(t, CheckNodeCountOnReadReplica(t, readReplica1Name, 2), "Count Nodes on read replica should succeed")
+		}},
+		{name: "Count Nodes on Read Replica 2 Via Upstream Strategy", test: func(t *testing.T) {
+			assert.NoError(t, CheckNodeCountOnReadReplica(t, readReplica2Name, 2), "Count Nodes on read replica2 should succeed by fetching it from read replica 1")
 		}},
 	}, err
 }
@@ -99,7 +112,7 @@ func clusterTests(loadBalancerName model.ReleaseName, readReplicaName model.Rele
 func CheckK8s(t *testing.T, name model.ReleaseName) error {
 	t.Run("check pods", func(t *testing.T) {
 		t.Parallel()
-		CheckPods(t, name)
+		assert.NoError(t, CheckPods(t, name))
 	})
 	t.Run("check lb", func(t *testing.T) {
 		t.Parallel()
@@ -126,8 +139,8 @@ func CheckLoadBalancerService(t *testing.T, name model.ReleaseName) {
 	}
 
 	lbEndpoints := manifest.OfTypeWithName(&v1.Endpoints{}, lbService.Name).(*v1.Endpoints)
-	//4 = 3 cluster core + 1 read replica
-	assert.Len(t, lbEndpoints.Subsets, 4)
+	//5 = 3 cluster core + 2 read replica
+	assert.Len(t, lbEndpoints.Subsets, 5)
 }
 
 func CheckPods(t *testing.T, name model.ReleaseName) error {
@@ -136,8 +149,8 @@ func CheckPods(t *testing.T, name model.ReleaseName) error {
 		return err
 	}
 
-	//4 = 3 cores + 1 read replica
-	assert.Len(t, pods.Items, 4)
+	//5 = 3 cores + 2 read replica
+	assert.Len(t, pods.Items, 5)
 	for _, pod := range pods.Items {
 		if assert.Contains(t, pod.Labels, "app") {
 			assert.Equal(t, "neo4j-cluster", pod.Labels["app"])
@@ -168,7 +181,8 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 
 	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
 	loadBalancer := clusterLoadBalancer{model.NewLoadBalancerReleaseName(clusterReleaseName)}
-	readReplica := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName, 1)}
+	readReplica1 := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName, 1)}
+	readReplica2 := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName, 2)}
 	core1 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 1)}
 	core2 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 2)}
 	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3)}
@@ -201,7 +215,8 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 		core2,
 		core3,
 		loadBalancer,
-		readReplica,
+		readReplica1,
+		readReplica2,
 	}
 	results := make(chan parallelResult)
 	for _, component := range componentsToParallelInstall {
@@ -229,7 +244,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 
 	t.Logf("Succeeded with setup of '%s'", t.Name())
 
-	subTests, err := clusterTests(loadBalancer.Name(), readReplica.Name())
+	subTests, err := clusterTests(loadBalancer.Name(), readReplica1.Name(), readReplica2.Name())
 	if !assert.NoError(t, err) {
 		return
 	}
