@@ -29,12 +29,11 @@ func TestLoadBalancerDefaults(t *testing.T) {
 	assert.Equal(t, "my-release-neo4j", service.Name)
 
 	selector := service.Spec.Selector
-	assert.Len(t, selector, 4)
+	assert.Len(t, selector, 3)
 	assert.Equal(t,
 		map[string]string{
 			"app":                               "neo4j-cluster",
 			"helm.neo4j.com/neo4j.name":         "neo4j-cluster",
-			"helm.neo4j.com/dbms.mode":          "CORE",
 			"helm.neo4j.com/neo4j.loadbalancer": "include",
 		},
 		selector)
@@ -84,12 +83,11 @@ func TestLoadBalancerPorts(t *testing.T) {
 	assert.Equal(t, "my-release-neo4j", service.Name)
 
 	selector := service.Spec.Selector
-	assert.Len(t, selector, 4)
+	assert.Len(t, selector, 3)
 	assert.Equal(t,
 		map[string]string{
 			"app":                               "neo4j-cluster",
 			"helm.neo4j.com/neo4j.name":         "neo4j-cluster",
-			"helm.neo4j.com/dbms.mode":          "CORE",
 			"helm.neo4j.com/neo4j.loadbalancer": "include",
 		},
 		selector)
