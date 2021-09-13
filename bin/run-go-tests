@@ -22,8 +22,6 @@ if [ "${#status_code[@]}" != 0 ]; then
    exit 1
 fi
 
-exit
-
 # run go test and format the output for junit consumption
 #
 mkdir -p output
