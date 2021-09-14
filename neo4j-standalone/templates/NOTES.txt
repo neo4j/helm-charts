@@ -9,6 +9,7 @@
 {{- $clusterEnabled := index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" -}}
 {{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "" | regexMatch "(?i)no|false" -}}
 {{- $offlineMaintenanceModeEnabled := .Values.neo4j.offlineMaintenanceModeEnabled }}
+{{- $isReadReplica := index .Values.config "dbms.mode" | default "" | regexMatch "(?i)READ_REPLICA$" }}
 
 {{- if $offlineMaintenanceModeEnabled -}}
 Your "{{ .Release.Name }}" has been placed in offline maintenance mode.
@@ -44,6 +45,22 @@ Once rollout is complete you can log in to Neo4j at "neo4j://{{ .Release.Name }}
      -- cypher-shell -a "neo4j://{{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:7687"{{ if not $authDisabled | and .Values.logInitialPassword}} -u neo4j -p "{{ template "neo4j.logPassword" . }}"{{ end }}
 {{- end }}
 
+{{- if and $clusterEnabled (not $isReadReplica ) }}
+
+This release creates a single Neo4j Core instance. It  will not become ready until it is able to form a working Neo4j cluster by joining other Neo4j Core instances. To create a working cluster requires at least 3 Core instances.
+
+Once you have a working Neo4j cluster you must install at least one Neo4j Service before you can connect applications to Neo4j. Available Neo4j services are:
+  neo4j-headless-service - for connecting applications running inside Kubernetes to Neo4j
+  neo4j-loadbalancer - for connecting applications running outside Kubernetes to Neo4j
+
+{{- end }}
+
+{{- if $isReadReplica }}
+
+This release creates a single Neo4j Read Replica instance. It  will not become ready until it is able to join a working Neo4j cluster.
+
+{{- end }}
+
 Graphs are everywhere!
 
 {{- else if .Release.IsUpgrade -}}
@@ -53,7 +70,7 @@ Thank you for using {{ .Chart.Name }}.
 Neo4j user authentication has been disabled, you do not need a username or password to connect to Neo4j in this configuration.
 {{- end }}
 
-{{- if not $clusterEnabled -}}
+{{- if not $clusterEnabled }}
 To view the status of changes to your release "{{ .Release.Name }}" {{ if ne "default" .Release.Namespace }} in namespace "{{ .Release.Namespace }}"{{ end }}, try:
 
   $ kubectl{{ template "neo4j.namespaceParameter" . }} rollout status --watch --timeout=600s statefulset/{{ .Release.Name }}
