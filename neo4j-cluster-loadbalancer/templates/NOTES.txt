@@ -1,0 +1,32 @@
+{{- define "neo4j.namespaceParameter" -}}
+{{ if ne "default" .Release.Namespace }} --namespace "{{.Release.Namespace}}"{{ end }}
+{{- end -}}
+
+{{- define "neo4j.logPassword" -}}
+{{ if .Values.logInitialPassword }}{{ .Values.neo4j.password }}{{ else }}**********{{ end }}
+{{- end -}}
+
+{{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "" | regexMatch "(?i)no|false" -}}
+{{- $boltPort := .Values.ports.bolt.port | default "7687" }}
+{{- $ignored := set .Values.neo4j "acceptLicenseAgreement" "yes" }}
+
+{{- if .Release.IsInstall -}}
+
+Thank you for installing {{ .Chart.Name }}.
+
+Your release "{{ .Release.Name }}" has been installed in namespace "{{ .Release.Namespace }}".
+
+{{ else -}}
+
+You have updated {{ .Chart.Name }} in namespace "{{ .Release.Namespace }}".
+
+{{ end -}}
+
+To view the status of your Load Balancer service you can use
+  $ kubectl get service{{ template "neo4j.namespaceParameter" . }} {{ .Release.Name }}-neo4j
+
+Once your Load Balancer has an External-IP assigned you can connect to your Neo4j cluster using "neo4j://<EXTERNAL-IP>:{{ $boltPort }}". Try:
+
+  $ cypher-shell -a "neo4j://<EXTERNAL-IP>:{{ $boltPort }}"{{ if not $authDisabled | and .Values.neo4j.password |and .Values.logInitialPassword }} -u neo4j -p "{{ template "neo4j.logPassword" . }}"{{ end }}
+
+Graphs are everywhere!

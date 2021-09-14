@@ -53,12 +53,6 @@ If no password is set in `Values.neo4j.password` generates a new random password
   {{- .Values.neo4j.password }}
 {{- end -}}
 
-{{- define "neo4j.image" -}}
-{{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
-{{- template "neo4j.checkLicenseAgreement" . -}}
-{{- if .Values.image.customImage }}{{ .Values.image.customImage }}{{ else }}neo4j:{{ .Chart.AppVersion }}{{ if $isEnterprise }}-enterprise{{ end }}{{ end -}}
-{{- end -}}
-
 {{- define "podSpec.checkLoadBalancerParam" }}
 {{- $isLoadBalancerValuePresent := required (include "podSpec.loadBalancer.mustBeSetMessage" .) .Values.podSpec.loadbalancer | regexMatch "(?i)include$|(?i)exclude$" -}}
 {{- if not $isLoadBalancerValuePresent }}

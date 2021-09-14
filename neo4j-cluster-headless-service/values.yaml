@@ -2,6 +2,7 @@
 neo4j:
   # neo4j.name is required and must match the name of the neo4j instances this service should use
   name: "neo4j-cluster"
+  edition: "enterprise"
 
 # Annotations for the external service
 annotations: { }
@@ -33,13 +34,20 @@ ports:
 # If you do not want the automatic selector rename to "selectorOverride" and no "helm.neo4j.com/neo4j.name" will be applied.
 selector:
   "helm.neo4j.com/neo4j.loadbalancer": "include"
-  # By default the load balancer will match all Neo4j instance types.
-  # When Neo4j drivers connect from outside K8s using the load balancer they will not fetch a routing table.
-  # In this case drivers can only use instances included in the load balancer.
-  # To only include Neo4j Core instances uncomment the setting below.
-  # To only route to Neo4j Read Replicas uncomment the setting and change the value to "READ_REPLICA"
-  # "helm.neo4j.com/dbms.mode": "CORE"
+  # By default the headless service will only match Neo4j Cluster Cores.
+  # When using the headless service Neo4j drivers should fetch a routing table that includes read replicas and will connect to them directly for reads so it is
+  # not necessary to include them in this headless service.
+  # To include all Neo4j instances anyway remove this setting.
+  # To only route to Neo4j Read Replicas change the value to "READ_REPLICA"
+  "helm.neo4j.com/dbms.mode": "CORE"
 
 # Add additional Service.spec here if needed
 spec:
-  type: LoadBalancer
+  type: ClusterIP
+  clusterIP: None
+
+# Kubernetes cluster domain suffix
+clusterDomain: "cluster.local"
+
+# Neo4j.conf
+config: {}
