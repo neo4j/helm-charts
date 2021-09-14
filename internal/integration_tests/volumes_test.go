@@ -24,7 +24,7 @@ func volumesTests(name model.ReleaseName, chart model.Neo4jHelmChart) []SubTest 
 }
 
 func CheckApoc(t *testing.T, releaseName model.ReleaseName) error {
-	results, err := runQuery(t, releaseName, "CALL apoc.help('apoc')", nil)
+	results, err := runQuery(t, releaseName, "CALL apoc.help('apoc')", nil, false)
 	if !assert.NoError(t, err) {
 		return err
 	}
