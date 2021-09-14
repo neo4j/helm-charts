@@ -15,7 +15,7 @@ CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is require
 # Params
 cluster_name_prefix="tc-${TEAMCITY_PROJECT_NAME}"
 # number of GKE cluster nodes
-export NUM_NODES=4
+export NUM_NODES=5
 
 CLOUDSDK_CONTAINER_CLUSTER="${cluster_name_prefix}-$(date +%s)-helm"
 export CLOUDSDK_CONTAINER_CLUSTER="$(echo "${CLOUDSDK_CONTAINER_CLUSTER}" | sed 's/\./-/g' )"
