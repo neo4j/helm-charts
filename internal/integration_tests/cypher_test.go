@@ -203,8 +203,7 @@ func UpdateReadReplicaConfigWithUpstreamStrategy(t *testing.T, releaseName model
 }
 
 //CheckNodeCountOnReadReplica performs a cypher query to check node count.
-/*We are not using here createdNodes Map since it does not contain the correct count of nodes retrieved via read replica
-as readreplica DOES NOT perform any writes...its routes it to the core*/
+//We are not using here createdNodes Map since it does not contain the correct count of nodes retrieved via read replica
 func CheckNodeCountOnReadReplica(t *testing.T, releaseName model.ReleaseName, expectedCount int64) error {
 
 	countnodes := func() ([]*neo4j.Record, error) {
