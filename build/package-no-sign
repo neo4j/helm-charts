@@ -16,9 +16,9 @@ S3_UPLOAD_TO_SUB_FOLDER="${S3_SUB_FOLDER:-neo4j}"
 #
 helm package ./neo4j-standalone
 helm package ./neo4j-cluster-core
-helm package ./neo4j-loadbalancer
+helm package ./neo4j-cluster-loadbalancer
 helm package ./neo4j-cluster-read-replica
-helm package ./neo4j-headless-service
+helm package ./neo4j-cluster-headless-service
 # helm package ./neo4j-docker-desktop-pv
 # helm package ./neo4j-gcloud-pv
 
