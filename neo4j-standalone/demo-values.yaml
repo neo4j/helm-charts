@@ -1,0 +1,26 @@
+neo4j:
+  # If password is not set or empty a random password will be generated during installation
+  password: ""
+
+  # Neo4j Edition to use (community|enterprise)
+  edition: "community"
+
+  # Set acceptLicenseAgreement: "yes" to confirm that you have a Neo4j license agreement.
+  acceptLicenseAgreement: "no"
+
+# Volumes for Neo4j
+volumes:
+  data:
+    mode: "defaultStorageClass"
+
+# Services for Neo4j
+services:
+  # A LoadBalancer Service for external Neo4j driver applications and Neo4j Browser
+  neo4j:
+    enabled: true
+
+# Neo4j Configuration (yaml format)
+config:
+  dbms.config.strict_validation: "true"
+  dbms.security.procedures.unrestricted: "apoc.*"
+
