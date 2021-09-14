@@ -92,10 +92,10 @@ func clusterTests(loadBalancerName model.ReleaseName, readReplica1Name model.Rel
 			assert.NoError(t, CheckReadReplicaConfiguration(t, readReplica1Name), "Checks Read Replica Configuration")
 		}},
 		{name: "Check Read Replica Server Groups", test: func(t *testing.T) {
-			assert.NoError(t, CheckReadReplicaServerGroupsConfiguration(t, readReplica1Name), "Checks Read Replica Server Groups contains read-replicas or not")
+			assert.NoError(t, CheckReadReplicaServerGroupsConfiguration(t, readReplica1Name), "Checks Read Replica Server Groups config contains read-replicas or not")
 		}},
 		{name: "Update Read Replica With Upstream Strategy on Read Replica 2", test: func(t *testing.T) {
-			assert.NoError(t, UpdateReadReplicaConfigWithUpstreamStrategy(t, readReplica2Name, resources.ReadReplicaUpstreamStrategy.HelmArgs()...), "Count Nodes on read replica should succeed")
+			assert.NoError(t, UpdateReadReplicaConfigWithUpstreamStrategy(t, readReplica2Name, resources.ReadReplicaUpstreamStrategy.HelmArgs()...), "Adds upstream strategy on read replica")
 		}},
 		{name: "Create Node on Read Replica 1", test: func(t *testing.T) {
 			assert.NoError(t, CreateNodeOnReadReplica(t, readReplica1Name), "Create Node on read replica should be redirected to the cluster code")
