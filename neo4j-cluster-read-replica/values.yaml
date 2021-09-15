@@ -19,7 +19,7 @@ neo4j:
   # Email inquiries can be directed to: licensing@neo4j.com
   #
   # Set acceptLicenseAgreement: "yes" to confirm that you have a Neo4j license agreement.
-  acceptLicenseAgreement: "no"
+  acceptLicenseAgreement: "yes"
   #
   # set offlineMaintenanceModeEnabled: true to restart the StatefulSet without the Neo4j process running
   # this can be used to perform tasks that cannot be performed when Neo4j is running such as `neo4j-admin dump`

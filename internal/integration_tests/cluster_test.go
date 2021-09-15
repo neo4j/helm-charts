@@ -95,7 +95,7 @@ func clusterTests(loadBalancerName model.ReleaseName, readReplica1Name model.Rel
 			assert.NoError(t, CheckReadReplicaServerGroupsConfiguration(t, readReplica1Name), "Checks Read Replica Server Groups config contains read-replicas or not")
 		}},
 		{name: "Update Read Replica With Upstream Strategy on Read Replica 2", test: func(t *testing.T) {
-			assert.NoError(t, UpdateReadReplicaConfigWithUpstreamStrategy(t, readReplica2Name, resources.ReadReplicaUpstreamStrategy.HelmArgs()...), "Adds upstream strategy on read replica")
+			assert.NoError(t, UpdateReadReplicaConfig(t, readReplica2Name, resources.ReadReplicaUpstreamStrategy.HelmArgs()...), "Adds upstream strategy on read replica")
 		}},
 		{name: "Create Node on Read Replica 1", test: func(t *testing.T) {
 			assert.NoError(t, CreateNodeOnReadReplica(t, readReplica1Name), "Create Node on read replica should be redirected to the cluster code")
@@ -106,7 +106,50 @@ func clusterTests(loadBalancerName model.ReleaseName, readReplica1Name model.Rel
 		{name: "Count Nodes on Read Replica 2 Via Upstream Strategy", test: func(t *testing.T) {
 			assert.NoError(t, CheckNodeCountOnReadReplica(t, readReplica2Name, 2), "Count Nodes on read replica2 should succeed by fetching it from read replica 1")
 		}},
+		{name: "Update Read Replica 2 to exclude from load balancer", test: func(t *testing.T) {
+			assert.NoError(t, UpdateReadReplicaConfig(t, readReplica2Name, resources.ExcludeLoadBalancer.HelmArgs()...), "Performs helm upgrade on read replica 2 to exclude it from loadbalancer")
+		}},
+		{name: "Check Load Balancer Exclusion Property", test: func(t *testing.T) {
+			assert.NoError(t, CheckLoadBalancerExclusion(t, readReplica2Name, loadBalancerName), "LoadBalancer Exclusion Test should succeed")
+		}},
 	}, err
+}
+
+//CheckLoadBalancerExclusion updates the label on the provided read replica to excluded it from loadbalancer
+/*We check for two things : the loadbalancer count should be 4 (3 cores + 1 rr) and the loadbalancer endpoints list should not
+contain the given read replica pod ip*/
+func CheckLoadBalancerExclusion(t *testing.T, readReplicaName model.ReleaseName, loadBalancerName model.ReleaseName) error {
+
+	////updating the read replica to exclude itself from loadbalancer
+	if !assert.NoError(t, UpdateReadReplicaConfig(t, readReplicaName, resources.ExcludeLoadBalancer.HelmArgs()...)) {
+		return fmt.Errorf("error seen while updating read replica config")
+	}
+
+	manifest, err := getManifest(loadBalancerName.Namespace())
+	if !assert.Nil(t, err) {
+		return err
+	}
+
+	services := manifest.OfType(&v1.Service{})
+	var lbService *v1.Service
+	for _, service := range services {
+		if strings.HasSuffix(service.(*v1.Service).Name, "-neo4j") {
+			lbService = service.(*v1.Service)
+			break
+		}
+	}
+
+	if !assert.NotNil(t, lbService) {
+		return fmt.Errorf("loadbalancer service not found")
+	}
+	readReplicaPod := manifest.OfTypeWithName(&v1.Pod{}, readReplicaName.PodName()).(*v1.Pod)
+	lbEndpoints := manifest.OfTypeWithName(&v1.Endpoints{}, lbService.Name).(*v1.Endpoints)
+
+	assert.Len(t, lbEndpoints.Subsets, 1)
+	assert.Len(t, lbEndpoints.Subsets[0].Addresses, 4)
+	assert.NotContains(t, lbEndpoints.Subsets[0].Addresses, readReplicaPod.Status.PodIP)
+
+	return nil
 }
 
 func CheckK8s(t *testing.T, name model.ReleaseName) error {
@@ -116,15 +159,17 @@ func CheckK8s(t *testing.T, name model.ReleaseName) error {
 	})
 	t.Run("check lb", func(t *testing.T) {
 		t.Parallel()
-		CheckLoadBalancerService(t, name)
+		assert.NoError(t, CheckLoadBalancerService(t, name, 5))
 	})
 	return nil
 }
 
-func CheckLoadBalancerService(t *testing.T, name model.ReleaseName) {
+//CheckLoadBalancerService checks whether the loadbalancer exists or not
+//It also checks that the number of endpoints should match with the given number of expected endpoints
+func CheckLoadBalancerService(t *testing.T, name model.ReleaseName, expectedEndPoints int) error {
 	manifest, err := getManifest(name.Namespace())
-	if assert.NoError(t, err) {
-		return
+	if !assert.NoError(t, err) {
+		return err
 	}
 
 	services := manifest.OfType(&v1.Service{})
@@ -132,17 +177,20 @@ func CheckLoadBalancerService(t *testing.T, name model.ReleaseName) {
 	for _, service := range services {
 		if strings.HasSuffix(service.(*v1.Service).Name, "-neo4j") {
 			if !assert.Nil(t, lbService, "There should only be one -neo4j service in this namespace") {
-				return
+				return fmt.Errorf("There should only be one -neo4j service in this namespace")
 			}
 			lbService = service.(*v1.Service)
+			break
 		}
 	}
 
 	lbEndpoints := manifest.OfTypeWithName(&v1.Endpoints{}, lbService.Name).(*v1.Endpoints)
-	//5 = 3 cluster core + 2 read replica
-	assert.Len(t, lbEndpoints.Subsets, 5)
+	assert.Len(t, lbEndpoints.Subsets, 1)
+	assert.Len(t, lbEndpoints.Subsets[0].Addresses, expectedEndPoints)
+	return nil
 }
 
+//CheckPods checks for the number of pods which should be 5 (3 cluster core + 2 read replica)
 func CheckPods(t *testing.T, name model.ReleaseName) error {
 	pods, err := getAllPods(name.Namespace())
 	if !assert.NoError(t, err) {

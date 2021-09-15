@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
+	appsv1 "k8s.io/api/apps/v1"
 	coreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -160,6 +161,14 @@ func matchesAnyPrefix(knownPrefixes []string, key string) bool {
 
 func getAllPods(namespace model.Namespace) (*coreV1.PodList, error) {
 	return Clientset.CoreV1().Pods(string(namespace)).List(context.TODO(), v1.ListOptions{})
+}
+
+func getPod(namespace model.Namespace, podName string) (*coreV1.Pod, error) {
+	return Clientset.CoreV1().Pods(string(namespace)).Get(context.TODO(), podName, v1.GetOptions{})
+}
+
+func getStateFulSet(releaseName model.ReleaseName) (*appsv1.StatefulSet, error) {
+	return Clientset.AppsV1().StatefulSets(string(releaseName.Namespace())).Get(context.TODO(), releaseName.String(), v1.GetOptions{})
 }
 
 func getManifest(namespace model.Namespace) (*model.K8sResources, error) {
