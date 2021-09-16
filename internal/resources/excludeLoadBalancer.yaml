@@ -1,0 +1,2 @@
+podSpec:
+  loadbalancer: "exclude"
