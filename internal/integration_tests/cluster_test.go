@@ -151,7 +151,7 @@ func CheckLoadBalancerExclusion(t *testing.T, readReplicaName model.ReleaseName,
 	if !assert.NotNil(t, lbEndpoints) {
 		return fmt.Errorf("loadbalancer endpoints should not be empty")
 	}
-	if !assert.Len(t, lbEndpoints.Subsets, 0) {
+	if !assert.Len(t, lbEndpoints.Subsets, 1) {
 		return fmt.Errorf("subsets length should be equal to 1")
 	}
 	if !assert.Len(t, lbEndpoints.Subsets[0].Addresses, 4) {
