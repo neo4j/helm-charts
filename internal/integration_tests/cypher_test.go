@@ -182,26 +182,6 @@ func CheckNodeCount(t *testing.T, releaseName model.ReleaseName) error {
 	}
 }
 
-////UpdateReadReplicaConfig updates the read replica upstream strategy on the provided chart
-//func UpdateReadReplicaConfig(t *testing.T, releaseName model.ReleaseName, extraArgs ...string) error {
-//	chart := model.ClusterReadReplicaHelmChart
-//	diskName := releaseName.DiskName()
-//	err := run(
-//		t, "helm", model.BaseHelmCommand("upgrade", releaseName, chart, model.Neo4jEdition, &diskName,
-//			append(extraArgs, "--wait", "--timeout", "300s")...,
-//		)...,
-//	)
-//	if !assert.NoError(t, err) {
-//		return err
-//	}
-//
-//	err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()), "rollout", "status", "--watch", "--timeout=120s", "statefulset/"+releaseName.String())
-//	if !assert.NoError(t, err) {
-//		return err
-//	}
-//	return nil
-//}
-
 //UpdateReadReplicaConfig updates the read replica upstream strategy on the provided chart
 func UpdateReadReplicaConfig(t *testing.T, releaseName model.ReleaseName, extraArgs ...string) error {
 

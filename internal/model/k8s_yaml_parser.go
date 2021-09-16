@@ -158,9 +158,7 @@ func (k *K8sResources) AddPods(pods []v1.Pod) {
 	for i := 1; i < N; i++ {
 		obj[i-1] = &pods[i]
 	}
-	//if len(obj) == 1 {
-	//	k.Add(&pods[0], obj...)
-	//}
+
 	k.Add(&pods[0], obj...)
 }
 
@@ -181,9 +179,7 @@ func (k *K8sResources) AddServices(services []v1.Service) {
 	for i := 1; i < N; i++ {
 		obj[i-1] = &services[i]
 	}
-	//if len(obj) == 1 {
-	//	k.Add(&services[0], obj...)
-	//}
+
 	k.Add(&services[0], obj...)
 }
 
@@ -204,9 +200,7 @@ func (k *K8sResources) AddEndpoints(items []v1.Endpoints) {
 	for i := 1; i < N; i++ {
 		obj[i-1] = &items[i]
 	}
-	//if len(obj) == 1 {
-	//	k.Add(&items[0], obj...)
-	//}
+
 	k.Add(&items[0], obj...)
 }
 

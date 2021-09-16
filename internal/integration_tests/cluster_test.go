@@ -145,6 +145,8 @@ func CheckLoadBalancerExclusion(t *testing.T, readReplicaName model.ReleaseName,
 	readReplicaPod := manifest.OfTypeWithName(&v1.Pod{}, readReplicaName.PodName()).(*v1.Pod)
 	lbEndpoints := manifest.OfTypeWithName(&v1.Endpoints{}, lbService.Name).(*v1.Endpoints)
 
+	assert.NotNil(t, readReplicaPod, fmt.Sprintf("readReplicaPod with name %s should exist", readReplicaName.PodName()))
+	assert.NotNil(t, lbEndpoints, "loadbalancer endpoints should not be empty")
 	assert.Len(t, lbEndpoints.Subsets, 1)
 	assert.Len(t, lbEndpoints.Subsets[0].Addresses, 4)
 	assert.NotContains(t, lbEndpoints.Subsets[0].Addresses, readReplicaPod.Status.PodIP)
