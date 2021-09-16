@@ -126,7 +126,7 @@ func CheckLoadBalancerExclusion(t *testing.T, readReplicaName model.ReleaseName,
 	}
 
 	manifest, err := getManifest(loadBalancerName.Namespace())
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return err
 	}
 
@@ -145,11 +145,21 @@ func CheckLoadBalancerExclusion(t *testing.T, readReplicaName model.ReleaseName,
 	readReplicaPod := manifest.OfTypeWithName(&v1.Pod{}, readReplicaName.PodName()).(*v1.Pod)
 	lbEndpoints := manifest.OfTypeWithName(&v1.Endpoints{}, lbService.Name).(*v1.Endpoints)
 
-	assert.NotNil(t, readReplicaPod, fmt.Sprintf("readReplicaPod with name %s should exist", readReplicaName.PodName()))
-	assert.NotNil(t, lbEndpoints, "loadbalancer endpoints should not be empty")
-	assert.Len(t, lbEndpoints.Subsets, 1)
-	assert.Len(t, lbEndpoints.Subsets[0].Addresses, 4)
-	assert.NotContains(t, lbEndpoints.Subsets[0].Addresses, readReplicaPod.Status.PodIP)
+	if !assert.NotNil(t, readReplicaPod) {
+		return fmt.Errorf("readReplicaPod with name %s should exist", readReplicaName.PodName())
+	}
+	if !assert.NotNil(t, lbEndpoints) {
+		return fmt.Errorf("loadbalancer endpoints should not be empty")
+	}
+	if !assert.Len(t, lbEndpoints.Subsets, 0) {
+		return fmt.Errorf("subsets length should be equal to 1")
+	}
+	if !assert.Len(t, lbEndpoints.Subsets[0].Addresses, 4) {
+		return fmt.Errorf("number of endpoints should be 4")
+	}
+	if !assert.NotContains(t, lbEndpoints.Subsets[0].Addresses, readReplicaPod.Status.PodIP) {
+		return fmt.Errorf("loadbalancer endpoints should not contains the readreplica podIP")
+	}
 
 	return nil
 }
@@ -187,8 +197,12 @@ func CheckLoadBalancerService(t *testing.T, name model.ReleaseName, expectedEndP
 	}
 
 	lbEndpoints := manifest.OfTypeWithName(&v1.Endpoints{}, lbService.Name).(*v1.Endpoints)
-	assert.Len(t, lbEndpoints.Subsets, 1)
-	assert.Len(t, lbEndpoints.Subsets[0].Addresses, expectedEndPoints)
+	if !assert.Len(t, lbEndpoints.Subsets, 1) {
+		return fmt.Errorf("lbendpoints subsets length should be equal to 1")
+	}
+	if !assert.Len(t, lbEndpoints.Subsets[0].Addresses, expectedEndPoints) {
+		return fmt.Errorf("loadbalancer endpoints count should be %d", expectedEndPoints)
+	}
 	return nil
 }
 
@@ -200,14 +214,18 @@ func CheckPods(t *testing.T, name model.ReleaseName) error {
 	}
 
 	//5 = 3 cores + 2 read replica
-	assert.Len(t, pods.Items, 5)
+	if !assert.Len(t, pods.Items, 5) {
+		return fmt.Errorf("number of pods should be 5")
+	}
 	for _, pod := range pods.Items {
 		if assert.Contains(t, pod.Labels, "app") {
-			assert.Equal(t, "neo4j-cluster", pod.Labels["app"])
+			if !assert.Equal(t, "neo4j-cluster", pod.Labels["app"]) {
+				return fmt.Errorf("pod should have label app=neo4jcluster , found app=%s", pod.Labels["app"])
+			}
 		}
 	}
 
-	return err
+	return nil
 }
 
 func addExpectedClusterConfiguration(configuration *model.Neo4jConfiguration) *model.Neo4jConfiguration {
