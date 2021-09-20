@@ -162,6 +162,7 @@ func getAllPods(namespace model.Namespace) (*coreV1.PodList, error) {
 	return Clientset.CoreV1().Pods(string(namespace)).List(context.TODO(), v1.ListOptions{})
 }
 
+
 func getManifest(namespace model.Namespace) (*model.K8sResources, error) {
 
 	pods, err := getAllPods(namespace)

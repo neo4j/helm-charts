@@ -69,6 +69,11 @@ func NewLoadBalancerReleaseName(clusterName ReleaseName) ReleaseName {
 	return &r
 }
 
+func NewHeadlessServiceReleaseName(clusterName ReleaseName) ReleaseName {
+	r := clusterMemberReleaseName{clusterName, releaseName(fmt.Sprintf("%s-headless", clusterName))}
+	return &r
+}
+
 type clusterMemberReleaseName struct {
 	clusterName ReleaseName
 	memberName  releaseName

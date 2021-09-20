@@ -249,6 +249,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 
 	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
 	loadBalancer := clusterLoadBalancer{model.NewLoadBalancerReleaseName(clusterReleaseName)}
+	headlessService := clusterLoadBalancer{model.NewHeadlessServiceReleaseName(clusterReleaseName)}
 	readReplica1 := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName, 1)}
 	readReplica2 := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName, 2)}
 	core1 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 1)}
@@ -282,9 +283,10 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	componentsToParallelInstall := []helmComponent{
 		core2,
 		core3,
-		loadBalancer,
 		readReplica1,
 		readReplica2,
+		loadBalancer,
+		headlessService,
 	}
 	results := make(chan parallelResult)
 	for _, component := range componentsToParallelInstall {
