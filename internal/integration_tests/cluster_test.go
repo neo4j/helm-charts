@@ -95,45 +95,45 @@ func clusterTests(loadBalancerName model.ReleaseName, readReplica1Name model.Rel
 	expectedConfiguration = addExpectedClusterConfiguration(expectedConfiguration)
 
 	return []SubTest{
-		//{name: "Check K8s", test: func(t *testing.T) {
-		//	assert.NoError(t, CheckK8s(t, loadBalancerName), "Neo4j Config check should succeed")
-		//}},
-		//{name: "Check Neo4j Configuration", test: func(t *testing.T) {
-		//	assert.NoError(t, CheckNeo4jConfiguration(t, loadBalancerName, expectedConfiguration), "Neo4j Config check should succeed")
-		//}},
-		//{name: "Create Node", test: func(t *testing.T) {
-		//	assert.NoError(t, CreateNode(t, loadBalancerName), "Create Node should succeed")
-		//}},
-		//{name: "Count Nodes", test: func(t *testing.T) {
-		//	assert.NoError(t, CheckNodeCount(t, loadBalancerName), "Count Nodes should succeed")
-		//}},
-		//{name: "Check Read Replica Configuration", test: func(t *testing.T) {
-		//	assert.NoError(t, CheckReadReplicaConfiguration(t, readReplica1Name), "Checks Read Replica Configuration")
-		//}},
-		//{name: "Check Read Replica Server Groups", test: func(t *testing.T) {
-		//	assert.NoError(t, CheckReadReplicaServerGroupsConfiguration(t, readReplica1Name), "Checks Read Replica Server Groups config contains read-replicas or not")
-		//}},
-		//{name: "Update Read Replica With Upstream Strategy on Read Replica 2", test: func(t *testing.T) {
-		//	assert.NoError(t, UpdateReadReplicaConfig(t, readReplica2Name, resources.ReadReplicaUpstreamStrategy.HelmArgs()...), "Adds upstream strategy on read replica")
-		//}},
-		//{name: "Create Node on Read Replica 1", test: func(t *testing.T) {
-		//	assert.NoError(t, CreateNodeOnReadReplica(t, readReplica1Name), "Create Node on read replica should be redirected to the cluster code")
-		//}},
-		//{name: "Count Nodes on Read Replica 1", test: func(t *testing.T) {
-		//	assert.NoError(t, CheckNodeCountOnReadReplica(t, readReplica1Name, 2), "Count Nodes on read replica should succeed")
-		//}},
-		//{name: "Count Nodes on Read Replica 2 Via Upstream Strategy", test: func(t *testing.T) {
-		//	assert.NoError(t, CheckNodeCountOnReadReplica(t, readReplica2Name, 2), "Count Nodes on read replica2 should succeed by fetching it from read replica 1")
-		//}},
-		//{name: "Update Read Replica 2 to exclude from load balancer", test: func(t *testing.T) {
-		//	assert.NoError(t, UpdateReadReplicaConfig(t, readReplica2Name, resources.ExcludeLoadBalancer.HelmArgs()...), "Performs helm upgrade on read replica 2 to exclude it from loadbalancer")
-		//}},
-		//{name: "Check Load Balancer Exclusion Property", test: func(t *testing.T) {
-		//	assert.NoError(t, CheckLoadBalancerExclusion(t, readReplica2Name, loadBalancerName), "LoadBalancer Exclusion Test should succeed")
-		//}},
-		//{name: "Check Headless Service Configuration", test: func(t *testing.T) {
-		//	assert.NoError(t, CheckHeadlessServiceConfiguration(t, headlessService), "Checks Headless Service configuration")
-		//}},
+		{name: "Check K8s", test: func(t *testing.T) {
+			assert.NoError(t, CheckK8s(t, loadBalancerName), "Neo4j Config check should succeed")
+		}},
+		{name: "Check Neo4j Configuration", test: func(t *testing.T) {
+			assert.NoError(t, CheckNeo4jConfiguration(t, loadBalancerName, expectedConfiguration), "Neo4j Config check should succeed")
+		}},
+		{name: "Create Node", test: func(t *testing.T) {
+			assert.NoError(t, CreateNode(t, loadBalancerName), "Create Node should succeed")
+		}},
+		{name: "Count Nodes", test: func(t *testing.T) {
+			assert.NoError(t, CheckNodeCount(t, loadBalancerName), "Count Nodes should succeed")
+		}},
+		{name: "Check Read Replica Configuration", test: func(t *testing.T) {
+			assert.NoError(t, CheckReadReplicaConfiguration(t, readReplica1Name), "Checks Read Replica Configuration")
+		}},
+		{name: "Check Read Replica Server Groups", test: func(t *testing.T) {
+			assert.NoError(t, CheckReadReplicaServerGroupsConfiguration(t, readReplica1Name), "Checks Read Replica Server Groups config contains read-replicas or not")
+		}},
+		{name: "Update Read Replica With Upstream Strategy on Read Replica 2", test: func(t *testing.T) {
+			assert.NoError(t, UpdateReadReplicaConfig(t, readReplica2Name, resources.ReadReplicaUpstreamStrategy.HelmArgs()...), "Adds upstream strategy on read replica")
+		}},
+		{name: "Create Node on Read Replica 1", test: func(t *testing.T) {
+			assert.NoError(t, CreateNodeOnReadReplica(t, readReplica1Name), "Create Node on read replica should be redirected to the cluster code")
+		}},
+		{name: "Count Nodes on Read Replica 1", test: func(t *testing.T) {
+			assert.NoError(t, CheckNodeCountOnReadReplica(t, readReplica1Name, 2), "Count Nodes on read replica should succeed")
+		}},
+		{name: "Count Nodes on Read Replica 2 Via Upstream Strategy", test: func(t *testing.T) {
+			assert.NoError(t, CheckNodeCountOnReadReplica(t, readReplica2Name, 2), "Count Nodes on read replica2 should succeed by fetching it from read replica 1")
+		}},
+		{name: "Update Read Replica 2 to exclude from load balancer", test: func(t *testing.T) {
+			assert.NoError(t, UpdateReadReplicaConfig(t, readReplica2Name, resources.ExcludeLoadBalancer.HelmArgs()...), "Performs helm upgrade on read replica 2 to exclude it from loadbalancer")
+		}},
+		{name: "Check Load Balancer Exclusion Property", test: func(t *testing.T) {
+			assert.NoError(t, CheckLoadBalancerExclusion(t, readReplica2Name, loadBalancerName), "LoadBalancer Exclusion Test should succeed")
+		}},
+		{name: "Check Headless Service Configuration", test: func(t *testing.T) {
+			assert.NoError(t, CheckHeadlessServiceConfiguration(t, headlessService), "Checks Headless Service configuration")
+		}},
 		{name: "Check Headless Service Endpoints", test: func(t *testing.T) {
 			assert.NoError(t, CheckHeadlessServiceEndpoints(t, headlessService), "headless service endpoints should be equal to the cluster core created")
 		}},
