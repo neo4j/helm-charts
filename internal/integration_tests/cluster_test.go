@@ -11,7 +11,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"strings"
 	"testing"
 )
 
@@ -145,9 +144,15 @@ func clusterTests(loadBalancerName model.ReleaseName, readReplica1Name model.Rel
 contain the given read replica pod ip*/
 func CheckLoadBalancerExclusion(t *testing.T, readReplicaName model.ReleaseName, loadBalancerName model.ReleaseName) error {
 
-	////updating the read replica to exclude itself from loadbalancer
+	//updating the read replica to exclude itself from loadbalancer
 	if !assert.NoError(t, UpdateReadReplicaConfig(t, readReplicaName, resources.ExcludeLoadBalancer.HelmArgs()...)) {
 		return fmt.Errorf("error seen while updating read replica config")
+	}
+
+	serviceName := fmt.Sprintf("%s-neo4j", loadBalancerName.String())
+	lbService, err := Clientset.CoreV1().Services(string(loadBalancerName.Namespace())).Get(context.TODO(), serviceName, metav1.GetOptions{})
+	if !assert.NoError(t, err) {
+		return fmt.Errorf("loadbalancer service %s not found , Error seen := %v", loadBalancerName.String(), err)
 	}
 
 	manifest, err := getManifest(loadBalancerName.Namespace())
@@ -155,18 +160,10 @@ func CheckLoadBalancerExclusion(t *testing.T, readReplicaName model.ReleaseName,
 		return err
 	}
 
-	services := manifest.OfType(&v1.Service{})
-	var lbService *v1.Service
-	for _, service := range services {
-		if strings.HasSuffix(service.(*v1.Service).Name, "-neo4j") {
-			lbService = service.(*v1.Service)
-			break
-		}
-	}
-
 	if !assert.NotNil(t, lbService) {
 		return fmt.Errorf("loadbalancer service not found")
 	}
+
 	readReplicaPod := manifest.OfTypeWithName(&v1.Pod{}, readReplicaName.PodName()).(*v1.Pod)
 	lbEndpoints := manifest.OfTypeWithName(&v1.Endpoints{}, lbService.Name).(*v1.Endpoints)
 
@@ -204,24 +201,17 @@ func CheckK8s(t *testing.T, name model.ReleaseName) error {
 //CheckLoadBalancerService checks whether the loadbalancer exists or not
 //It also checks that the number of endpoints should match with the given number of expected endpoints
 func CheckLoadBalancerService(t *testing.T, name model.ReleaseName, expectedEndPoints int) error {
-	manifest, err := getManifest(name.Namespace())
+
+	serviceName := fmt.Sprintf("%s-neo4j", name.String())
+	lbService, err := Clientset.CoreV1().Services(string(name.Namespace())).Get(context.TODO(), serviceName, metav1.GetOptions{})
 	if !assert.NoError(t, err) {
-		return err
+		return fmt.Errorf("loadbalancer service %s not found , Error seen := %v", name.String(), err)
 	}
 
-	services := manifest.OfType(&v1.Service{})
-	var lbService *v1.Service
-	for _, service := range services {
-		if strings.HasSuffix(service.(*v1.Service).Name, "-neo4j") {
-			if !assert.Nil(t, lbService, "There should only be one -neo4j service in this namespace") {
-				return fmt.Errorf("There should only be one -neo4j service in this namespace")
-			}
-			lbService = service.(*v1.Service)
-			break
-		}
+	lbEndpoints, err := Clientset.CoreV1().Endpoints(string(name.Namespace())).Get(context.TODO(), lbService.Name, metav1.GetOptions{})
+	if !assert.NoError(t, err) {
+		return fmt.Errorf("failed to get loadbalancer service endpoints %v", err)
 	}
-
-	lbEndpoints := manifest.OfTypeWithName(&v1.Endpoints{}, lbService.Name).(*v1.Endpoints)
 	if !assert.Len(t, lbEndpoints.Subsets, 1) {
 		return fmt.Errorf("lbendpoints subsets length should be equal to 1")
 	}
