@@ -1,6 +1,7 @@
 package integration_tests
 
 import (
+	"context"
 	"fmt"
 	. "github.com/neo-technology/neo4j-helm-charts/internal/helpers"
 	"github.com/neo-technology/neo4j-helm-charts/internal/integration_tests/gcloud"
@@ -8,6 +9,8 @@ import (
 	"github.com/neo-technology/neo4j-helm-charts/internal/resources"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"strings"
 	"testing"
 )
@@ -68,7 +71,23 @@ func (c clusterLoadBalancer) Install(t *testing.T) parallelResult {
 	return parallelResult{cleanup, err}
 }
 
-func clusterTests(loadBalancerName model.ReleaseName, readReplica1Name model.ReleaseName, readReplica2Name model.ReleaseName) ([]SubTest, error) {
+type clusterHeadLessService struct {
+	name model.ReleaseName
+}
+
+func (c clusterHeadLessService) Name() model.ReleaseName {
+	return c.name
+}
+
+func (c clusterHeadLessService) Install(t *testing.T) parallelResult {
+	var err error
+	var cleanup Closeable
+	cleanup = func() error { return run(t, "helm", model.HeadlessServiceHelmCommand("uninstall", c.name)...) }
+	err = run(t, "helm", model.HeadlessServiceHelmCommand("install", c.name)...)
+	return parallelResult{cleanup, err}
+}
+
+func clusterTests(loadBalancerName model.ReleaseName, readReplica1Name model.ReleaseName, readReplica2Name model.ReleaseName, headlessService model.ReleaseName) ([]SubTest, error) {
 	expectedConfiguration, err := (&model.Neo4jConfiguration{}).PopulateFromFile(Neo4jConfFile)
 	if err != nil {
 		return nil, err
@@ -76,41 +95,47 @@ func clusterTests(loadBalancerName model.ReleaseName, readReplica1Name model.Rel
 	expectedConfiguration = addExpectedClusterConfiguration(expectedConfiguration)
 
 	return []SubTest{
-		{name: "Check K8s", test: func(t *testing.T) {
-			assert.NoError(t, CheckK8s(t, loadBalancerName), "Neo4j Config check should succeed")
-		}},
-		{name: "Check Neo4j Configuration", test: func(t *testing.T) {
-			assert.NoError(t, CheckNeo4jConfiguration(t, loadBalancerName, expectedConfiguration), "Neo4j Config check should succeed")
-		}},
-		{name: "Create Node", test: func(t *testing.T) {
-			assert.NoError(t, CreateNode(t, loadBalancerName), "Create Node should succeed")
-		}},
-		{name: "Count Nodes", test: func(t *testing.T) {
-			assert.NoError(t, CheckNodeCount(t, loadBalancerName), "Count Nodes should succeed")
-		}},
-		{name: "Check Read Replica Configuration", test: func(t *testing.T) {
-			assert.NoError(t, CheckReadReplicaConfiguration(t, readReplica1Name), "Checks Read Replica Configuration")
-		}},
-		{name: "Check Read Replica Server Groups", test: func(t *testing.T) {
-			assert.NoError(t, CheckReadReplicaServerGroupsConfiguration(t, readReplica1Name), "Checks Read Replica Server Groups config contains read-replicas or not")
-		}},
-		{name: "Update Read Replica With Upstream Strategy on Read Replica 2", test: func(t *testing.T) {
-			assert.NoError(t, UpdateReadReplicaConfig(t, readReplica2Name, resources.ReadReplicaUpstreamStrategy.HelmArgs()...), "Adds upstream strategy on read replica")
-		}},
-		{name: "Create Node on Read Replica 1", test: func(t *testing.T) {
-			assert.NoError(t, CreateNodeOnReadReplica(t, readReplica1Name), "Create Node on read replica should be redirected to the cluster code")
-		}},
-		{name: "Count Nodes on Read Replica 1", test: func(t *testing.T) {
-			assert.NoError(t, CheckNodeCountOnReadReplica(t, readReplica1Name, 2), "Count Nodes on read replica should succeed")
-		}},
-		{name: "Count Nodes on Read Replica 2 Via Upstream Strategy", test: func(t *testing.T) {
-			assert.NoError(t, CheckNodeCountOnReadReplica(t, readReplica2Name, 2), "Count Nodes on read replica2 should succeed by fetching it from read replica 1")
-		}},
-		{name: "Update Read Replica 2 to exclude from load balancer", test: func(t *testing.T) {
-			assert.NoError(t, UpdateReadReplicaConfig(t, readReplica2Name, resources.ExcludeLoadBalancer.HelmArgs()...), "Performs helm upgrade on read replica 2 to exclude it from loadbalancer")
-		}},
-		{name: "Check Load Balancer Exclusion Property", test: func(t *testing.T) {
-			assert.NoError(t, CheckLoadBalancerExclusion(t, readReplica2Name, loadBalancerName), "LoadBalancer Exclusion Test should succeed")
+		//{name: "Check K8s", test: func(t *testing.T) {
+		//	assert.NoError(t, CheckK8s(t, loadBalancerName), "Neo4j Config check should succeed")
+		//}},
+		//{name: "Check Neo4j Configuration", test: func(t *testing.T) {
+		//	assert.NoError(t, CheckNeo4jConfiguration(t, loadBalancerName, expectedConfiguration), "Neo4j Config check should succeed")
+		//}},
+		//{name: "Create Node", test: func(t *testing.T) {
+		//	assert.NoError(t, CreateNode(t, loadBalancerName), "Create Node should succeed")
+		//}},
+		//{name: "Count Nodes", test: func(t *testing.T) {
+		//	assert.NoError(t, CheckNodeCount(t, loadBalancerName), "Count Nodes should succeed")
+		//}},
+		//{name: "Check Read Replica Configuration", test: func(t *testing.T) {
+		//	assert.NoError(t, CheckReadReplicaConfiguration(t, readReplica1Name), "Checks Read Replica Configuration")
+		//}},
+		//{name: "Check Read Replica Server Groups", test: func(t *testing.T) {
+		//	assert.NoError(t, CheckReadReplicaServerGroupsConfiguration(t, readReplica1Name), "Checks Read Replica Server Groups config contains read-replicas or not")
+		//}},
+		//{name: "Update Read Replica With Upstream Strategy on Read Replica 2", test: func(t *testing.T) {
+		//	assert.NoError(t, UpdateReadReplicaConfig(t, readReplica2Name, resources.ReadReplicaUpstreamStrategy.HelmArgs()...), "Adds upstream strategy on read replica")
+		//}},
+		//{name: "Create Node on Read Replica 1", test: func(t *testing.T) {
+		//	assert.NoError(t, CreateNodeOnReadReplica(t, readReplica1Name), "Create Node on read replica should be redirected to the cluster code")
+		//}},
+		//{name: "Count Nodes on Read Replica 1", test: func(t *testing.T) {
+		//	assert.NoError(t, CheckNodeCountOnReadReplica(t, readReplica1Name, 2), "Count Nodes on read replica should succeed")
+		//}},
+		//{name: "Count Nodes on Read Replica 2 Via Upstream Strategy", test: func(t *testing.T) {
+		//	assert.NoError(t, CheckNodeCountOnReadReplica(t, readReplica2Name, 2), "Count Nodes on read replica2 should succeed by fetching it from read replica 1")
+		//}},
+		//{name: "Update Read Replica 2 to exclude from load balancer", test: func(t *testing.T) {
+		//	assert.NoError(t, UpdateReadReplicaConfig(t, readReplica2Name, resources.ExcludeLoadBalancer.HelmArgs()...), "Performs helm upgrade on read replica 2 to exclude it from loadbalancer")
+		//}},
+		//{name: "Check Load Balancer Exclusion Property", test: func(t *testing.T) {
+		//	assert.NoError(t, CheckLoadBalancerExclusion(t, readReplica2Name, loadBalancerName), "LoadBalancer Exclusion Test should succeed")
+		//}},
+		//{name: "Check Headless Service Configuration", test: func(t *testing.T) {
+		//	assert.NoError(t, CheckHeadlessServiceConfiguration(t, headlessService), "Checks Headless Service configuration")
+		//}},
+		{name: "Check Headless Service Endpoints", test: func(t *testing.T) {
+			assert.NoError(t, CheckHeadlessServiceEndpoints(t, headlessService), "headless service endpoints should be equal to the cluster core created")
 		}},
 	}, err
 }
@@ -228,6 +253,86 @@ func CheckPods(t *testing.T, name model.ReleaseName) error {
 	return nil
 }
 
+//CheckHeadlessServiceConfiguration checks whether the provided service is headless service or not
+func CheckHeadlessServiceConfiguration(t *testing.T, service model.ReleaseName) error {
+
+	serviceName := fmt.Sprintf("%s-neo4j", service.String())
+	headlessService, err := Clientset.CoreV1().Services(string(service.Namespace())).Get(context.TODO(), serviceName, metav1.GetOptions{})
+	if !assert.NoError(t, err) {
+		return fmt.Errorf("headless service %s not found , Error seen := %v", service.String(), err)
+	}
+	//throw error if headless service is nil which means no headless service object is released
+	if !assert.NotNil(t, headlessService) {
+		return fmt.Errorf("headless service is nil")
+	}
+	if !assert.Equal(t, headlessService.Spec.ClusterIP, "None") {
+		return fmt.Errorf("provided clusterIP is not 'None'...it is %s", headlessService.Spec.ClusterIP)
+	}
+
+	return nil
+}
+
+//CheckHeadlessServiceEndpoints checks whether the headless endpoints have the cluster cores or not
+// By default , headless service includes cluster core only and no read replicas
+func CheckHeadlessServiceEndpoints(t *testing.T, service model.ReleaseName) error {
+
+	serviceName := fmt.Sprintf("%s-neo4j", service.String())
+
+	//get the endpoints associated with the headless service
+	endpoints, err := Clientset.CoreV1().Endpoints(string(service.Namespace())).Get(context.TODO(), serviceName, metav1.GetOptions{})
+	if !assert.NoError(t, err) {
+		return fmt.Errorf("failed to get headless service endpoints %v", err)
+	}
+
+	if !assert.NotEmpty(t, endpoints.Subsets) {
+		return fmt.Errorf("headlessService endpoints subset cannot be empty")
+	}
+
+	if !assert.Len(t, endpoints.Subsets, 1) {
+		return fmt.Errorf("headlessService endpoints subset length should be 1 whereas it is %d", len(endpoints.Subsets))
+	}
+
+	if !assert.NotEmpty(t, endpoints.Subsets[0].Addresses) {
+		return fmt.Errorf("headlessService endpoints addresses list cannot be empty")
+	}
+
+	//get the list of endpoint ip's
+	var endPointIPs []string
+	for _, endpointAddress := range endpoints.Subsets[0].Addresses {
+		endPointIPs = append(endPointIPs, endpointAddress.IP)
+	}
+
+	headlessService, err := Clientset.CoreV1().Services(string(service.Namespace())).Get(context.TODO(), serviceName, metav1.GetOptions{})
+	if !assert.NoError(t, err) {
+		return fmt.Errorf("headless service %s not found , Error seen := %v", service.String(), err)
+	}
+
+	//get the list of pods which match the headless service selectors
+	headlessServiceSelectors := labels.Set(headlessService.Spec.Selector)
+	listOptions := metav1.ListOptions{LabelSelector: headlessServiceSelectors.AsSelector().String()}
+	pods, err := Clientset.CoreV1().Pods(string(service.Namespace())).List(context.TODO(), listOptions)
+	if !assert.NoError(t, err) {
+		return fmt.Errorf("cannot get pods matching with headless service selector")
+	}
+
+	if !assert.NotEmpty(t, pods) {
+		return fmt.Errorf("pods list matching headless service selector cannot be empty")
+	}
+
+	//get the list of podIPs matching the headless service selector
+	var podIPs []string
+	for _, pod := range pods.Items {
+		podIPs = append(podIPs, pod.Status.PodIP)
+	}
+
+	//compare podIps and headlessService endPoint IPs ...both should match
+	if !assert.ElementsMatch(t, podIPs, endPointIPs) {
+		return fmt.Errorf("podIPs %v and endPointIps %v do not match", podIPs, endPointIPs)
+	}
+
+	return nil
+}
+
 func addExpectedClusterConfiguration(configuration *model.Neo4jConfiguration) *model.Neo4jConfiguration {
 	updatedConfig := configuration.UpdateFromMap(map[string]string{
 		"dbms.mode":                                      "CORE",
@@ -249,7 +354,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 
 	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
 	loadBalancer := clusterLoadBalancer{model.NewLoadBalancerReleaseName(clusterReleaseName)}
-	headlessService := clusterLoadBalancer{model.NewHeadlessServiceReleaseName(clusterReleaseName)}
+	headlessService := clusterHeadLessService{model.NewHeadlessServiceReleaseName(clusterReleaseName)}
 	readReplica1 := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName, 1)}
 	readReplica2 := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName, 2)}
 	core1 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 1)}
@@ -314,7 +419,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 
 	t.Logf("Succeeded with setup of '%s'", t.Name())
 
-	subTests, err := clusterTests(loadBalancer.Name(), readReplica1.Name(), readReplica2.Name())
+	subTests, err := clusterTests(loadBalancer.Name(), readReplica1.Name(), readReplica2.Name(), headlessService.Name())
 	if !assert.NoError(t, err) {
 		return
 	}
