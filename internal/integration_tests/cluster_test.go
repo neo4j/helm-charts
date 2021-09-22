@@ -195,6 +195,7 @@ func CheckK8s(t *testing.T, name model.ReleaseName) error {
 		t.Parallel()
 		assert.NoError(t, CheckLoadBalancerService(t, name, 5))
 	})
+
 	return nil
 }
 
@@ -351,6 +352,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	core2 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 2)}
 	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3)}
 	cores := []clusterCore{core1, core2, core3}
+	readReplicas := []clusterReadReplica{readReplica1, readReplica2}
 
 	var closeables []Closeable
 	addCloseable := func(closeable Closeable) {
@@ -402,6 +404,13 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 
 	for _, core := range cores {
 		err = run(t, "kubectl", "--namespace", string(core.Name().Namespace()), "rollout", "status", "--watch", "--timeout=180s", "statefulset/"+core.Name().String())
+		if !assert.NoError(t, err) {
+			return
+		}
+	}
+
+	for _, readReplica := range readReplicas {
+		err = run(t, "kubectl", "--namespace", string(readReplica.Name().Namespace()), "rollout", "status", "--watch", "--timeout=180s", "statefulset/"+readReplica.Name().String())
 		if !assert.NoError(t, err) {
 			return
 		}
