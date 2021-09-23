@@ -87,6 +87,7 @@ func (c clusterHeadLessService) Install(t *testing.T) parallelResult {
 	return parallelResult{cleanup, err}
 }
 
+//clusterTests contains all the tests related to cluster
 func clusterTests(loadBalancerName model.ReleaseName) ([]SubTest, error) {
 	expectedConfiguration, err := (&model.Neo4jConfiguration{}).PopulateFromFile(Neo4jConfFile)
 	if err != nil {
@@ -115,6 +116,7 @@ func clusterTests(loadBalancerName model.ReleaseName) ([]SubTest, error) {
 	return subTests, nil
 }
 
+//headLessServiceTests contains all the tests related to headless service
 func headLessServiceTests(headlessService model.ReleaseName) []SubTest {
 	return []SubTest{
 		{name: "Check Headless Service Configuration", test: func(t *testing.T) {
@@ -128,6 +130,7 @@ func headLessServiceTests(headlessService model.ReleaseName) []SubTest {
 	}
 }
 
+//readReplicaTests contains all the tests related to read replicas
 func readReplicaTests(readReplica1Name model.ReleaseName, readReplica2Name model.ReleaseName, loadBalancerName model.ReleaseName) []SubTest {
 	return []SubTest{
 		{name: "Check Read Replica Configuration", test: func(t *testing.T) {
