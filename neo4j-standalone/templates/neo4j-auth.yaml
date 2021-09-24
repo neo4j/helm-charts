@@ -14,15 +14,23 @@
   {{- $secretBelongsToSomeoneElse = index $secret.metadata.annotations "meta.helm.sh/release-name" | eq .Release.Name | not }}
 {{- end }}
 
-{{- if $secretBelongsToSomeoneElse | and .Values.neo4j.password }}
+{{- if $secretBelongsToSomeoneElse -}}
 
-  {{- $expectedPassword := .Values.neo4j.password | printf "neo4j/%v" | b64enc }}
-  {{- $existingPassword := index $secret.data "NEO4J_AUTH" -}}
+  {{- if eq (len .Values.neo4j.password) 0 -}}
 
-  {{- if not ( eq $existingPassword $expectedPassword ) -}}
-    {{ fail "The desired password does not match the password stored in the Kubernetes Secret " $secretName " For details on how to change the neo4j password via helm check the Neo4j Operations Manual." }}
+    {{- $password := index $secret.data "NEO4J_AUTH" | b64dec | trimPrefix "neo4j/" -}}
+    {{- $ignored := set .Values.neo4j "password" $password -}}
+
   {{- else -}}
-    # Using the existing Kubernetes Secret {{ $secretName }} for the neo4j password.
+
+    {{- $expectedPassword := .Values.neo4j.password | printf "neo4j/%v" | b64enc -}}
+    {{- $existingPassword := index $secret.data "NEO4J_AUTH" -}}
+
+    {{- if ne $existingPassword $expectedPassword -}}
+      {{ fail "The desired password does not match the password stored in the Kubernetes Secret. For details on how to change the neo4j password via helm check the Neo4j Operations Manual." }}
+    {{- else -}}
+      # Using the existing Kubernetes Secret {{ $secretName }} for the neo4j password.
+    {{- end -}}
   {{- end -}}
 
 {{- else -}}

@@ -11,6 +11,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"os/exec"
 	"testing"
 )
 
@@ -86,14 +87,15 @@ func (c clusterHeadLessService) Install(t *testing.T) parallelResult {
 	return parallelResult{cleanup, err}
 }
 
-func clusterTests(loadBalancerName model.ReleaseName, readReplica1Name model.ReleaseName, readReplica2Name model.ReleaseName, headlessService model.ReleaseName) ([]SubTest, error) {
+//clusterTests contains all the tests related to cluster
+func clusterTests(loadBalancerName model.ReleaseName) ([]SubTest, error) {
 	expectedConfiguration, err := (&model.Neo4jConfiguration{}).PopulateFromFile(Neo4jConfFile)
 	if err != nil {
 		return nil, err
 	}
 	expectedConfiguration = addExpectedClusterConfiguration(expectedConfiguration)
 
-	return []SubTest{
+	subTests := []SubTest{
 		{name: "Check K8s", test: func(t *testing.T) {
 			assert.NoError(t, CheckK8s(t, loadBalancerName), "Neo4j Config check should succeed")
 		}},
@@ -106,6 +108,31 @@ func clusterTests(loadBalancerName model.ReleaseName, readReplica1Name model.Rel
 		{name: "Count Nodes", test: func(t *testing.T) {
 			assert.NoError(t, CheckNodeCount(t, loadBalancerName), "Count Nodes should succeed")
 		}},
+		{name: "Check Cluster Password failure", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, CheckClusterCorePasswordFailure(t), "Cluster core installation should not succeed with incorrect password")
+		}},
+	}
+	return subTests, nil
+}
+
+//headLessServiceTests contains all the tests related to headless service
+func headLessServiceTests(headlessService model.ReleaseName) []SubTest {
+	return []SubTest{
+		{name: "Check Headless Service Configuration", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, CheckHeadlessServiceConfiguration(t, headlessService), "Checks Headless Service configuration")
+		}},
+		{name: "Check Headless Service Endpoints", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, CheckHeadlessServiceEndpoints(t, headlessService), "headless service endpoints should be equal to the cluster core created")
+		}},
+	}
+}
+
+//readReplicaTests contains all the tests related to read replicas
+func readReplicaTests(readReplica1Name model.ReleaseName, readReplica2Name model.ReleaseName, loadBalancerName model.ReleaseName) []SubTest {
+	return []SubTest{
 		{name: "Check Read Replica Configuration", test: func(t *testing.T) {
 			assert.NoError(t, CheckReadReplicaConfiguration(t, readReplica1Name), "Checks Read Replica Configuration")
 		}},
@@ -130,13 +157,34 @@ func clusterTests(loadBalancerName model.ReleaseName, readReplica1Name model.Rel
 		{name: "Check Load Balancer Exclusion Property", test: func(t *testing.T) {
 			assert.NoError(t, CheckLoadBalancerExclusion(t, readReplica2Name, loadBalancerName), "LoadBalancer Exclusion Test should succeed")
 		}},
-		{name: "Check Headless Service Configuration", test: func(t *testing.T) {
-			assert.NoError(t, CheckHeadlessServiceConfiguration(t, headlessService), "Checks Headless Service configuration")
-		}},
-		{name: "Check Headless Service Endpoints", test: func(t *testing.T) {
-			assert.NoError(t, CheckHeadlessServiceEndpoints(t, headlessService), "headless service endpoints should be equal to the cluster core created")
-		}},
-	}, err
+	}
+}
+
+//CheckClusterCorePasswordFailure checks if a cluster core is failing on installation or not with an incorrect password
+func CheckClusterCorePasswordFailure(t *testing.T) error {
+	//creating a sample cluster core definition (which is not supposed to get installed)
+	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
+	core := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 4)}
+	releaseName := core.Name()
+	diskName := releaseName.DiskName()
+	// we are not using the customized run() func here since we need to assert the error received on stdout
+	//(present in out variable and not in err)
+	out, err := exec.Command(
+		"helm",
+		model.BaseHelmCommand(
+			"install",
+			releaseName,
+			model.ClusterCoreHelmChart,
+			model.Neo4jEdition,
+			&diskName,
+			"--set", "neo4j.password=my-password")...).CombinedOutput()
+	if !assert.Error(t, err) {
+		return fmt.Errorf("helm install should fail without the default password")
+	}
+	if !assert.Contains(t, string(out), "The desired password does not match the password stored in the Kubernetes Secret") {
+		return fmt.Errorf("error thrown on password failure is different , err := %s", string(out))
+	}
+	return nil
 }
 
 //CheckLoadBalancerExclusion updates the label on the provided read replica to excluded it from loadbalancer
@@ -418,10 +466,12 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 
 	t.Logf("Succeeded with setup of '%s'", t.Name())
 
-	subTests, err := clusterTests(loadBalancer.Name(), readReplica1.Name(), readReplica2.Name(), headlessService.Name())
+	subTests, err := clusterTests(loadBalancer.Name())
 	if !assert.NoError(t, err) {
 		return
 	}
+	subTests = append(subTests, headLessServiceTests(headlessService.Name())...)
+	subTests = append(subTests, readReplicaTests(readReplica1.Name(), readReplica2.Name(), loadBalancer.Name())...)
 	runSubTests(t, subTests)
 
 	t.Logf("Succeeded running all tests in '%s'", t.Name())
