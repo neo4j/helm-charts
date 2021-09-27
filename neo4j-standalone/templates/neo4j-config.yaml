@@ -3,6 +3,7 @@
 {{- $backupEnabled := index .Values.config "dbms.backup.enabled" | default "" | regexMatch "(?i)yes|true" }}
 {{- template "neo4j.checkLicenseAgreement" . -}}
 
+
 # Neo4j config values that are required for neo4j to work correctly in Kubernetes, these are not overridden by user-provided values
 apiVersion: v1
 kind: ConfigMap
@@ -20,7 +21,7 @@ data:
   {{- $confFileName = "neo4j-enterprise.conf" -}}
 {{- end }}
 {{- $confFile := .Files.Get $confFileName -}}
-{{- $configImport := .Values.configImport -}}
+  {{- $configImport := .Values.configImport -}}
 # User-provided Neo4j config values
 apiVersion: v1
 kind: ConfigMap
@@ -76,6 +77,7 @@ data:
   # Neo4j defaults
   {{- /* TODO: figure out how to use lookup to detect if there is an existing default configMap and require user to explicitly force overwrite */}}
   {{- include "neo4j.configYaml" $confFile | nindent 2 }}
+
 
   # Helm defaults
   dbms.mode: "{{ index .Values.config "dbms.mode" | default "SINGLE" | upper }}"

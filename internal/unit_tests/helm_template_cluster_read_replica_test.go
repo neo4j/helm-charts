@@ -103,3 +103,19 @@ func TestReadReplicaAntiAffinityRuleDoesNotExists(t *testing.T) {
 	statefulSet := readReplicaManifest.Only(t, &appsv1.StatefulSet{}).(*appsv1.StatefulSet)
 	assert.Empty(t, statefulSet.Spec.Template.Spec.Affinity)
 }
+
+//TestReadReplicaPanicOnShutDownConfig checks whether the dbms.panic.shutdown_on_panic attribute is set to the default value true or not
+func TestReadReplicaPanicOnShutDownConfig(t *testing.T) {
+	t.Parallel()
+
+	readReplica := model.NewReleaseName("foo")
+
+	readReplicaManifest, err := model.HelmTemplateForRelease(t, readReplica, model.ClusterReadReplicaHelmChart, useDataModeAndAcceptLicense)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	defaultConfigMap := readReplicaManifest.OfTypeWithName(&v1.ConfigMap{}, readReplica.DefaultConfigMapName()).(*v1.ConfigMap)
+	assert.Contains(t, defaultConfigMap.Data, "dbms.panic.shutdown_on_panic")
+	assert.Contains(t, defaultConfigMap.Data["dbms.panic.shutdown_on_panic"], "true")
+}
