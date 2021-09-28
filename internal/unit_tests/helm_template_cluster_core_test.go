@@ -108,3 +108,19 @@ func TestClusterCorePanicOnShutDownConfig(t *testing.T) {
 	assert.Contains(t, defaultConfigMap.Data, "dbms.panic.shutdown_on_panic")
 	assert.Contains(t, defaultConfigMap.Data["dbms.panic.shutdown_on_panic"], "true")
 }
+
+//TestClusterCoreDefaultLogFormat checks whether the dbms.logs.default_format value is set to JSON or not
+func TestClusterCoreDefaultLogFormat(t *testing.T) {
+	t.Parallel()
+
+	clusterCore := model.NewReleaseName("foo")
+
+	clusterCoreManifest, err := model.HelmTemplateForRelease(t, clusterCore, model.ClusterCoreHelmChart, useDataModeAndAcceptLicense)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	defaultConfigMap := clusterCoreManifest.OfTypeWithName(&v1.ConfigMap{}, clusterCore.DefaultConfigMapName()).(*v1.ConfigMap)
+	assert.Contains(t, defaultConfigMap.Data, "dbms.logs.default_format")
+	assert.Contains(t, defaultConfigMap.Data["dbms.logs.default_format"], "JSON")
+}
