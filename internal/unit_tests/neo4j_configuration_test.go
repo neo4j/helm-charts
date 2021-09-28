@@ -43,10 +43,6 @@ func TestPopulateFromFile(t *testing.T) {
 		assert.True(t, found)
 		assert.Equal(t, "neo4j", value)
 
-		value, found = conf.Conf()["dbms.panic.shutdown_on_panic"]
-		assert.True(t, found)
-		assert.Equal(t, "true", value)
-
 		_, jvmKeyFound := conf.Conf()["dbms.jvm.additional"]
 		assert.False(t, jvmKeyFound)
 
