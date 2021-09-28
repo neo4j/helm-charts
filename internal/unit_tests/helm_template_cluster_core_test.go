@@ -80,15 +80,31 @@ func TestClusterCoreInternalPorts(t *testing.T) {
 func TestClusterCoreServerGroups(t *testing.T) {
 	t.Parallel()
 
-	readReplica := model.NewReleaseName("foo")
+	clusterCore := model.NewReleaseName("foo")
 
-	readReplicaManifest, err := model.HelmTemplateForRelease(t, readReplica, model.ClusterCoreHelmChart, useDataModeAndAcceptLicense)
+	clusterCoreManifest, err := model.HelmTemplateForRelease(t, clusterCore, model.ClusterCoreHelmChart, useDataModeAndAcceptLicense)
 	if !assert.NoError(t, err) {
 		return
 	}
 
-	defaultConfigMap := readReplicaManifest.OfTypeWithName(&v1.ConfigMap{}, readReplica.DefaultConfigMapName()).(*v1.ConfigMap)
+	defaultConfigMap := clusterCoreManifest.OfTypeWithName(&v1.ConfigMap{}, clusterCore.DefaultConfigMapName()).(*v1.ConfigMap)
 	assert.Contains(t, defaultConfigMap.Data, "causal_clustering.server_groups")
 	assert.Contains(t, defaultConfigMap.Data["causal_clustering.server_groups"], "cores")
 	assert.NotContains(t, defaultConfigMap.Data["causal_clustering.server_groups"], "read-replicas")
+}
+
+//TestClusterCorePanicOnShutDownConfig checks whether the dbms.panic.shutdown_on_panic attribut is set to the default value true or not
+func TestClusterCorePanicOnShutDownConfig(t *testing.T) {
+	t.Parallel()
+
+	clusterCore := model.NewReleaseName("foo")
+
+	clusterCoreManifest, err := model.HelmTemplateForRelease(t, clusterCore, model.ClusterCoreHelmChart, useDataModeAndAcceptLicense)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	defaultConfigMap := clusterCoreManifest.OfTypeWithName(&v1.ConfigMap{}, clusterCore.DefaultConfigMapName()).(*v1.ConfigMap)
+	assert.Contains(t, defaultConfigMap.Data, "dbms.panic.shutdown_on_panic")
+	assert.Contains(t, defaultConfigMap.Data["dbms.panic.shutdown_on_panic"], "true")
 }
