@@ -99,7 +99,7 @@ func CreateNode(t *testing.T, releaseName model.ReleaseName) error {
 //CreateDatabase runs a cypher query to create a database with the given name
 func CreateDatabase(t *testing.T, releaseName model.ReleaseName, databaseName string) error {
 	cypherQuery := fmt.Sprintf("CREATE DATABASE %s", databaseName)
-	_, err := runQuery(t, releaseName, cypherQuery, nil, true)
+	_, err := runQuery(t, releaseName, cypherQuery, nil, false)
 	if !assert.NoError(t, err) {
 		return fmt.Errorf("error seen while creating database %s , err := %v", databaseName, err)
 	}
@@ -113,7 +113,7 @@ func CreateDatabase(t *testing.T, releaseName model.ReleaseName, databaseName st
 //CheckDataBaseExists runs a cypher query to check if the given database name exists or not
 func CheckDataBaseExists(t *testing.T, releaseName model.ReleaseName, databaseName string) error {
 	cypherQuery := fmt.Sprintf("SHOW DATABASE %s YIELD name", databaseName)
-	results, err := runQuery(t, releaseName, cypherQuery, nil, true)
+	results, err := runQuery(t, releaseName, cypherQuery, nil, false)
 	if !assert.NoError(t, err) {
 		return fmt.Errorf("error seen while creating database %s , err := %v", databaseName, err)
 	}

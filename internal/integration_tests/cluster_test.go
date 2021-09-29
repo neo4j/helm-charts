@@ -117,10 +117,10 @@ func clusterTests(loadBalancerName model.ReleaseName, core model.ReleaseName) ([
 			assert.NoError(t, CheckClusterCorePasswordFailure(t), "Cluster core installation should not succeed with incorrect password")
 		}},
 		{name: "Create Database customers", test: func(t *testing.T) {
-			assert.NoError(t, CreateDatabase(t, core, "customers"), "Creates customer database")
+			assert.NoError(t, CreateDatabase(t, loadBalancerName, "customers"), "Creates customer database")
 		}},
 		{name: "Check Database customers exists", test: func(t *testing.T) {
-			assert.NoError(t, CheckDataBaseExists(t, core, "customers"), "Checks if customer database exists or not")
+			assert.NoError(t, CheckDataBaseExists(t, loadBalancerName, "customers"), "Checks if customer database exists or not")
 		}},
 	}
 	return subTests, nil
