@@ -50,7 +50,6 @@ func TestPopulateFromFile(t *testing.T) {
 		assert.True(t, found)
 		assert.Equal(t, "JSON", value)
 
-
 		assert.Contains(t, conf.JvmArgs(), "-XX:+UnlockDiagnosticVMOptions")
 		assert.Contains(t, conf.JvmArgs(), "-XX:+DebugNonSafepoints")
 		assert.Greater(t, len(conf.JvmArgs()), 1)

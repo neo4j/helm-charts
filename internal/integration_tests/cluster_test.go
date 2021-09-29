@@ -88,7 +88,7 @@ func (c clusterHeadLessService) Install(t *testing.T) parallelResult {
 }
 
 //clusterTests contains all the tests related to cluster
-func clusterTests(loadBalancerName model.ReleaseName,core model.ReleaseName) ([]SubTest, error) {
+func clusterTests(loadBalancerName model.ReleaseName, core model.ReleaseName) ([]SubTest, error) {
 	expectedConfiguration, err := (&model.Neo4jConfiguration{}).PopulateFromFile(Neo4jConfFile)
 	if err != nil {
 		return nil, err
@@ -98,7 +98,7 @@ func clusterTests(loadBalancerName model.ReleaseName,core model.ReleaseName) ([]
 	subTests := []SubTest{
 		{name: "Check Cluster Core Logs Format", test: func(t *testing.T) {
 			t.Parallel()
-			assert.NoError(t, CheckLogsFormat(t,core), "Cluster core logs format should be in JSON")
+			assert.NoError(t, CheckLogsFormat(t, core), "Cluster core logs format should be in JSON")
 		}},
 		{name: "Check K8s", test: func(t *testing.T) {
 			assert.NoError(t, CheckK8s(t, loadBalancerName), "Neo4j Config check should succeed")
@@ -122,17 +122,17 @@ func clusterTests(loadBalancerName model.ReleaseName,core model.ReleaseName) ([]
 
 //CheckLogsFormat checks whether the neo4j logs are in json format or not
 // we check for the json "level":"INFO","message":"Started."} in /logs/neo4j.log
-func CheckLogsFormat(t *testing.T,releaseName model.ReleaseName) error {
+func CheckLogsFormat(t *testing.T, releaseName model.ReleaseName) error {
 
-	stdout , stderr , err := ExecInPod(releaseName,[]string{"cat","/logs/neo4j.log"})
-	if !assert.NoError(t,err) {
-		return fmt.Errorf("error seen while executing command `cat /logs/neo4j.log' ,\n err :- %v",err)
+	stdout, stderr, err := ExecInPod(releaseName, []string{"cat", "/logs/neo4j.log"})
+	if !assert.NoError(t, err) {
+		return fmt.Errorf("error seen while executing command `cat /logs/neo4j.log' ,\n err :- %v", err)
 	}
-	if !assert.Contains(t,stdout,",\"level\":\"INFO\",\"message\":\"Started.\"}") {
-		return fmt.Errorf("foes not contain the required json format\n stdout := %s",stdout)
+	if !assert.Contains(t, stdout, ",\"level\":\"INFO\",\"message\":\"Started.\"}") {
+		return fmt.Errorf("foes not contain the required json format\n stdout := %s", stdout)
 	}
-	if !assert.Len(t, stderr,0) {
-		return fmt.Errorf("stderr found while checking logs \n stderr := %s",stderr)
+	if !assert.Len(t, stderr, 0) {
+		return fmt.Errorf("stderr found while checking logs \n stderr := %s", stderr)
 	}
 	return nil
 }
@@ -156,7 +156,7 @@ func readReplicaTests(readReplica1Name model.ReleaseName, readReplica2Name model
 	return []SubTest{
 		{name: "Check ReadReplica Logs Format", test: func(t *testing.T) {
 			t.Parallel()
-			assert.NoError(t, CheckLogsFormat(t,readReplica1Name), "Read Replica logs format should be in JSON")
+			assert.NoError(t, CheckLogsFormat(t, readReplica1Name), "Read Replica logs format should be in JSON")
 		}},
 		{name: "Check Read Replica Logs Format", test: func(t *testing.T) {
 			t.Parallel()
@@ -495,7 +495,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 
 	t.Logf("Succeeded with setup of '%s'", t.Name())
 
-	subTests, err := clusterTests(loadBalancer.Name(),core1.Name())
+	subTests, err := clusterTests(loadBalancer.Name(), core1.Name())
 	if !assert.NoError(t, err) {
 		return
 	}
