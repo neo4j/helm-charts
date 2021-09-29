@@ -96,6 +96,41 @@ func CreateNode(t *testing.T, releaseName model.ReleaseName) error {
 	return err
 }
 
+//CreateDatabase runs a cypher query to create a database with the given name
+func CreateDatabase(t *testing.T, releaseName model.ReleaseName, databaseName string) error {
+	cypherQuery := fmt.Sprintf("CREATE DATABASE %s", databaseName)
+	_, err := runQuery(t, releaseName, cypherQuery, nil, true)
+	if !assert.NoError(t, err) {
+		return fmt.Errorf("error seen while creating database %s , err := %v", databaseName, err)
+	}
+	//sleep is required so that CheckDataBase is able to fetch the above created database
+	//It takes few seconds for the new database to be updated.
+	// Do not reduce the time to anything less than 3 , tests would fail
+	time.Sleep(3 * time.Second)
+	return nil
+}
+
+//CheckDataBaseExists runs a cypher query to check if the given database name exists or not
+func CheckDataBaseExists(t *testing.T, releaseName model.ReleaseName, databaseName string) error {
+	cypherQuery := fmt.Sprintf("SHOW DATABASE %s YIELD name", databaseName)
+	results, err := runQuery(t, releaseName, cypherQuery, nil, true)
+	if !assert.NoError(t, err) {
+		return fmt.Errorf("error seen while creating database %s , err := %v", databaseName, err)
+	}
+	if !assert.NotEqual(t, len(results), 0) {
+		return fmt.Errorf("no results received from cypher query")
+	}
+
+	for _, result := range results {
+		if value, found := result.Get("name"); found {
+			if assert.Equal(t, value, databaseName) {
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("no record yielded for cypher query %s", cypherQuery)
+}
+
 //CreateNodeOnReadReplica fires a cypher query to create a node
 //It's a way to check write requests to read replica are routed to the cluster core since read replica DOES NOT perform writes
 func CreateNodeOnReadReplica(t *testing.T, releaseName model.ReleaseName) error {
