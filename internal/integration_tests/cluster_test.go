@@ -438,8 +438,10 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	readReplicas := []clusterReadReplica{readReplica1, readReplica2}
 
 	var closeables []Closeable
-	addCloseable := func(closeable Closeable) {
-		closeables = append([]Closeable{closeable}, closeables...)
+	addCloseable := func(closeableList ...Closeable) {
+		for _, closeable := range closeableList {
+			closeables = append([]Closeable{closeable}, closeables...)
+		}
 	}
 
 	t.Cleanup(func() { cleanupTest(t, AsCloseable(closeables)) })
@@ -459,31 +461,12 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 		return
 	}
 
-	// parallel for loop using goroutines
-	componentsToParallelInstall := []helmComponent{
-		core2,
-		core3,
-		readReplica1,
-		readReplica2,
-		loadBalancer,
-		headlessService,
-	}
-	results := make(chan parallelResult)
-	for _, component := range componentsToParallelInstall {
-		backgroundInstall(t, results, component, clusterReleaseName)
-	}
-
-	var combinedError error
-	for i := 0; i < len(componentsToParallelInstall); i++ {
-		result := <-results
-		addCloseable(result.Closeable)
-		if result.error != nil {
-			combinedError = CombineErrors(combinedError, result.error)
-		}
-	}
-	if !assert.NoError(t, combinedError) {
+	componentsToParallelInstall := []helmComponent{core2, core3, loadBalancer, headlessService}
+	closeablesNew, err := performBackgroundInstall(t, componentsToParallelInstall, clusterReleaseName)
+	if !assert.NoError(t, err) {
 		return
 	}
+	addCloseable(closeablesNew...)
 
 	for _, core := range cores {
 		err = run(t, "kubectl", "--namespace", string(core.Name().Namespace()), "rollout", "status", "--watch", "--timeout=180s", "statefulset/"+core.Name().String())
@@ -491,6 +474,13 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 			return
 		}
 	}
+	//install read replicas after cores are completed and cluster is formed or else the read replica installation will fail
+	componentsToParallelInstall = []helmComponent{readReplica1, readReplica2}
+	closeablesNew, err = performBackgroundInstall(t, componentsToParallelInstall, clusterReleaseName)
+	if !assert.NoError(t, err) {
+		return
+	}
+	addCloseable(closeablesNew...)
 
 	for _, readReplica := range readReplicas {
 		err = run(t, "kubectl", "--namespace", string(readReplica.Name().Namespace()), "rollout", "status", "--watch", "--timeout=180s", "statefulset/"+readReplica.Name().String())
@@ -512,13 +502,31 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	t.Logf("Succeeded running all tests in '%s'", t.Name())
 }
 
-func backgroundInstall(t *testing.T, results chan parallelResult, component helmComponent, clusterName model.ReleaseName) {
-	go func() {
-		var parallelResult = parallelResult{
-			Closeable: nil,
-			error:     fmt.Errorf("illegal state: background install did not take place for %s in %s", component.Name(), clusterName),
+func performBackgroundInstall(t *testing.T, componentsToParallelInstall []helmComponent, clusterReleaseName model.ReleaseName) ([]Closeable, error) {
+
+	results := make(chan parallelResult)
+	for _, component := range componentsToParallelInstall {
+		go func(comp helmComponent) {
+			var parallelResult = parallelResult{
+				Closeable: nil,
+				error:     fmt.Errorf("illegal state: background install did not take place for %s in %s", comp.Name(), clusterReleaseName),
+			}
+			defer func() { results <- parallelResult }()
+			parallelResult = comp.Install(t)
+		}(component)
+	}
+
+	var closeables []Closeable
+	var combinedError error
+	for i := 0; i < len(componentsToParallelInstall); i++ {
+		result := <-results
+		closeables = append(closeables, result.Closeable)
+		if result.error != nil {
+			combinedError = CombineErrors(combinedError, result.error)
 		}
-		defer func() { results <- parallelResult }()
-		parallelResult = component.Install(t)
-	}()
+	}
+	if !assert.NoError(t, combinedError) {
+		return closeables, combinedError
+	}
+	return closeables, nil
 }

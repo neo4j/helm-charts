@@ -53,6 +53,39 @@ If no password is set in `Values.neo4j.password` generates a new random password
   {{- .Values.neo4j.password }}
 {{- end -}}
 
+{{- define "neo4j.checkIfClusterIsPresent" -}}
+
+    {{- $name := .Values.neo4j.name -}}
+    {{- $clusterList := list -}}
+    {{- range $index,$pod := (lookup "v1" "Pod" .Release.Namespace "").items -}}
+        {{- if eq $name (index $pod.metadata.labels "helm.neo4j.com/neo4j.name") -}}
+            {{- if eq (index $pod.metadata.labels "helm.neo4j.com/dbms.mode") "CORE" -}}
+
+                {{- $noOfContainers := len (index $pod.status.containerStatuses) -}}
+                {{- $noOfReadyContainers := 0 -}}
+
+                {{- range $index,$value := index $pod.status.containerStatuses -}}
+                    {{- if $value.ready }}
+                        {{- $noOfReadyContainers = add1 $noOfReadyContainers -}}
+                    {{- end -}}
+                {{- end -}}
+
+                {{/* Number of Ready Containers should be equal to the number of containers in the pod */}}
+                {{/* Pod should be in running state */}}
+                {{- if and (eq $noOfReadyContainers $noOfContainers) (eq (index $pod.status.phase) "Running") -}}
+                    {{- $clusterList = append $clusterList (index $pod.metadata.name) -}}
+                {{- end -}}
+
+            {{- end -}}
+        {{- end -}}
+    {{- end -}}
+
+    {{- if lt (len $clusterList) 3 -}}
+        {{ fail "Cannot install Read Replica until a cluster of 3 or more cores is formed" }}
+    {{- end -}}
+
+{{- end -}}
+
 {{- define "podSpec.checkLoadBalancerParam" }}
 {{- $isLoadBalancerValuePresent := required (include "podSpec.loadBalancer.mustBeSetMessage" .) .Values.podSpec.loadbalancer | regexMatch "(?i)include$|(?i)exclude$" -}}
 {{- if not $isLoadBalancerValuePresent }}
