@@ -13,7 +13,7 @@ func TestDefaultNeo4jNameClusterReadReplica(t *testing.T) {
 
 	readReplica := model.NewReleaseName("foo")
 
-	readReplicaManifest, err := model.HelmTemplateForRelease(t, readReplica, model.ClusterReadReplicaHelmChart, useDataModeAndAcceptLicense)
+	readReplicaManifest, err := model.HelmTemplateForRelease(t, readReplica, model.ClusterReadReplicaHelmChart, useDataModeAndAcceptLicense, readReplicaTesting...)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -23,6 +23,22 @@ func TestDefaultNeo4jNameClusterReadReplica(t *testing.T) {
 
 	assert.Contains(t, selector, "app")
 	assert.Equal(t, selector["app"], "neo4j-cluster")
+}
+
+//TestReadReplicaInstallationFailure checks whether read replica installation is failing or not when clusters are not setup
+// Since it's a unit test case failure will occur as cluster is not in place
+func TestReadReplicaInstallationFailure(t *testing.T) {
+	t.Parallel()
+
+	readReplica := model.NewReleaseName("foo")
+
+	_, err := model.HelmTemplateForRelease(t, readReplica, model.ClusterReadReplicaHelmChart, useDataModeAndAcceptLicense)
+	if !assert.Error(t, err) {
+		return
+	}
+	if !assert.Contains(t, err.Error(), "Cannot install Read Replica until a cluster of 3 or more cores is formed") {
+		return
+	}
 }
 
 //TODO : assert dbms mode to be READ_REPLICA
@@ -41,7 +57,7 @@ func TestReadReplicaInternalPorts(t *testing.T) {
 
 	readReplica := model.NewReleaseName("foo")
 
-	readReplicaManifest, err := model.HelmTemplateForRelease(t, readReplica, model.ClusterReadReplicaHelmChart, useDataModeAndAcceptLicense)
+	readReplicaManifest, err := model.HelmTemplateForRelease(t, readReplica, model.ClusterReadReplicaHelmChart, useDataModeAndAcceptLicense, readReplicaTesting...)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -58,7 +74,7 @@ func TestReadReplicaServerGroups(t *testing.T) {
 
 	readReplica := model.NewReleaseName("foo")
 
-	readReplicaManifest, err := model.HelmTemplateForRelease(t, readReplica, model.ClusterReadReplicaHelmChart, useDataModeAndAcceptLicense)
+	readReplicaManifest, err := model.HelmTemplateForRelease(t, readReplica, model.ClusterReadReplicaHelmChart, useDataModeAndAcceptLicense, readReplicaTesting...)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -74,7 +90,7 @@ func TestReadReplicaAntiAffinityRuleExists(t *testing.T) {
 
 	readReplica := model.NewReleaseName("foo")
 
-	readReplicaManifest, err := model.HelmTemplateForRelease(t, readReplica, model.ClusterReadReplicaHelmChart, useDataModeAndAcceptLicense)
+	readReplicaManifest, err := model.HelmTemplateForRelease(t, readReplica, model.ClusterReadReplicaHelmChart, useDataModeAndAcceptLicense, readReplicaTesting...)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -94,7 +110,7 @@ func TestReadReplicaAntiAffinityRuleDoesNotExists(t *testing.T) {
 		readReplica,
 		model.ClusterReadReplicaHelmChart,
 		useDataModeAndAcceptLicense,
-		"--set", "podSpec.podAntiAffinity=false",
+		append(readReplicaTesting, "--set", "podSpec.podAntiAffinity=false")...,
 	)
 	if !assert.NoError(t, err) {
 		return
@@ -110,7 +126,7 @@ func TestReadReplicaPanicOnShutDownConfig(t *testing.T) {
 
 	readReplica := model.NewReleaseName("foo")
 
-	readReplicaManifest, err := model.HelmTemplateForRelease(t, readReplica, model.ClusterReadReplicaHelmChart, useDataModeAndAcceptLicense)
+	readReplicaManifest, err := model.HelmTemplateForRelease(t, readReplica, model.ClusterReadReplicaHelmChart, useDataModeAndAcceptLicense, readReplicaTesting...)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -126,7 +142,7 @@ func TestReadReplicaDefaultLogFormat(t *testing.T) {
 
 	readReplica := model.NewReleaseName("foo")
 
-	readReplicaManifest, err := model.HelmTemplateForRelease(t, readReplica, model.ClusterReadReplicaHelmChart, useDataModeAndAcceptLicense)
+	readReplicaManifest, err := model.HelmTemplateForRelease(t, readReplica, model.ClusterReadReplicaHelmChart, useDataModeAndAcceptLicense, readReplicaTesting...)
 	if !assert.NoError(t, err) {
 		return
 	}

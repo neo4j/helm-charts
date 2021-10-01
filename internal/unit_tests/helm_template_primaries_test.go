@@ -18,6 +18,7 @@ import (
 var acceptLicenseAgreement = []string{"--set", "neo4j.acceptLicenseAgreement=yes"}
 var requiredDataMode = []string{"--set", "volumes.data.mode=selector"}
 var useDataModeAndAcceptLicense = append(requiredDataMode, acceptLicenseAgreement...)
+var readReplicaTesting = []string{"--set", "testing=true"}
 var useEnterprise = []string{"--set", "neo4j.edition=enterprise"}
 var useCommunity = []string{"--set", "neo4j.edition=community"}
 var useEnterpriseAndAcceptLicense = append(useEnterprise, acceptLicenseAgreement...)
