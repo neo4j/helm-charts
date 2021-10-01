@@ -1,3 +1,4 @@
+{{/*{{- $clusterFormation := include "neo4j.checkIfClusterIsPresent" . -}}*/}}
 {{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
 {{- $clusterEnabled := or ( index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" ) ( index .Values.config "dbms.clustering.enable" | default "" | regexMatch "(?i)true|yes" ) }}
 {{- $backupEnabled := index .Values.config "dbms.backup.enabled" | default "" | regexMatch "(?i)yes|true" }}
