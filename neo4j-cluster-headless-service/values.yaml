@@ -13,7 +13,7 @@ loadBalancerIP: NULL
 # Neo4j ports to include in external service
 ports:
   http:
-    enabled: true #Set this to false to remove HTTP from this service (this does not affect whether http is enabled for the neo4j process)
+    enabled: false #Set this to false to remove HTTP from this service (this does not affect whether http is enabled for the neo4j process)
     # uncomment to publish http on port 80 (neo4j default is 7474)
     # port: 80
   https:
