@@ -1,4 +1,5 @@
 {{- /* In almost all cases the selector should be unspecified and the default selector should be used. */ -}}
+{{- template "neo4j.checkPortMapping" . -}}
 {{- $alwaysEnabled := set .Values "enabled" true }}
 {{- if not .Values.selectorOverride }}
 {{- /* Default selector. TODO move this to a shared template */ -}}
