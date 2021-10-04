@@ -10,7 +10,7 @@
     {{- $httpPort := .Values.ports.http.port | int | default 7474 -}}
     {{- $httpsPort := .Values.ports.https.port | int | default 7473 -}}
     {{- $boltPort := .Values.ports.bolt.port | int | default 7687 -}}
-    {{- $backupPort := .Values.ports.backup.port | default 6362 -}}
+    {{- $backupPort := .Values.ports.backup.port | int | default 6362 -}}
 
     {{- if and (eq .Values.ports.http.enabled true) (ne $httpPort 7474) -}}
         {{- include "neo4j.portRemappingFailureMessage" $httpPort -}}
