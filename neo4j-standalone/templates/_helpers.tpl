@@ -58,8 +58,8 @@ If no password is set in `Values.neo4j.password` generates a new random password
     {{- $name := .Values.neo4j.name -}}
     {{- $clusterList := list -}}
     {{- range $index,$pod := (lookup "v1" "Pod" .Release.Namespace "").items -}}
-        {{- if eq $name (index $pod.metadata.labels "helm.neo4j.com/neo4j.name") -}}
-            {{- if eq (index $pod.metadata.labels "helm.neo4j.com/dbms.mode") "CORE" -}}
+        {{- if eq $name (index $pod.metadata.labels "helm.neo4j.com/neo4j.name" | toString) -}}
+            {{- if eq (index $pod.metadata.labels "helm.neo4j.com/dbms.mode" | toString) "CORE" -}}
 
                 {{- $noOfContainers := len (index $pod.status.containerStatuses) -}}
                 {{- $noOfReadyContainers := 0 -}}
@@ -72,7 +72,7 @@ If no password is set in `Values.neo4j.password` generates a new random password
 
                 {{/* Number of Ready Containers should be equal to the number of containers in the pod */}}
                 {{/* Pod should be in running state */}}
-                {{- if and (eq $noOfReadyContainers $noOfContainers) (eq (index $pod.status.phase) "Running") -}}
+                {{- if and (eq $noOfReadyContainers $noOfContainers) (eq (index $pod.status.phase | toString) "Running") -}}
                     {{- $clusterList = append $clusterList (index $pod.metadata.name) -}}
                 {{- end -}}
 
