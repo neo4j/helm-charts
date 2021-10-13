@@ -96,10 +96,11 @@ func clusterTests(loadBalancerName model.ReleaseName, core model.ReleaseName) ([
 	expectedConfiguration = addExpectedClusterConfiguration(expectedConfiguration)
 
 	subTests := []SubTest{
-		{name: "Check Cluster Core Logs Format", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, CheckLogsFormat(t, core), "Cluster core logs format should be in JSON")
-		}},
+		//TODO: This is to be enabled in 5.0
+		//{name: "Check Cluster Core Logs Format", test: func(t *testing.T) {
+		//	t.Parallel()
+		//	assert.NoError(t, CheckLogsFormat(t, core), "Cluster core logs format should be in JSON")
+		//}},
 		{name: "Check K8s", test: func(t *testing.T) {
 			assert.NoError(t, CheckK8s(t, loadBalancerName), "Neo4j Config check should succeed")
 		}},
@@ -126,22 +127,23 @@ func clusterTests(loadBalancerName model.ReleaseName, core model.ReleaseName) ([
 	return subTests, nil
 }
 
+//TODO: This is to be enabled in 5.0
 //CheckLogsFormat checks whether the neo4j logs are in json format or not
 // we check for the json "level":"INFO","message":"Started."} in /logs/neo4j.log
-func CheckLogsFormat(t *testing.T, releaseName model.ReleaseName) error {
-
-	stdout, stderr, err := ExecInPod(releaseName, []string{"cat", "/logs/neo4j.log"})
-	if !assert.NoError(t, err) {
-		return fmt.Errorf("error seen while executing command `cat /logs/neo4j.log' ,\n err :- %v", err)
-	}
-	if !assert.Contains(t, stdout, ",\"level\":\"INFO\",\"message\":\"Started.\"}") {
-		return fmt.Errorf("foes not contain the required json format\n stdout := %s", stdout)
-	}
-	if !assert.Len(t, stderr, 0) {
-		return fmt.Errorf("stderr found while checking logs \n stderr := %s", stderr)
-	}
-	return nil
-}
+//func CheckLogsFormat(t *testing.T, releaseName model.ReleaseName) error {
+//
+//	stdout, stderr, err := ExecInPod(releaseName, []string{"cat", "/logs/neo4j.log"})
+//	if !assert.NoError(t, err) {
+//		return fmt.Errorf("error seen while executing command `cat /logs/neo4j.log' ,\n err :- %v", err)
+//	}
+//	if !assert.Contains(t, stdout, ",\"level\":\"INFO\",\"message\":\"Started.\"}") {
+//		return fmt.Errorf("foes not contain the required json format\n stdout := %s", stdout)
+//	}
+//	if !assert.Len(t, stderr, 0) {
+//		return fmt.Errorf("stderr found while checking logs \n stderr := %s", stderr)
+//	}
+//	return nil
+//}
 
 //headLessServiceTests contains all the tests related to headless service
 func headLessServiceTests(headlessService model.ReleaseName) []SubTest {
@@ -160,14 +162,15 @@ func headLessServiceTests(headlessService model.ReleaseName) []SubTest {
 //readReplicaTests contains all the tests related to read replicas
 func readReplicaTests(readReplica1Name model.ReleaseName, readReplica2Name model.ReleaseName, loadBalancerName model.ReleaseName) []SubTest {
 	return []SubTest{
-		{name: "Check ReadReplica Logs Format", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, CheckLogsFormat(t, readReplica1Name), "Read Replica logs format should be in JSON")
-		}},
-		{name: "Check Read Replica Logs Format", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, CheckLogsFormat(t, readReplica1Name), "Checks Read Replica Logs Format")
-		}},
+		//TODO: This is to be enabled in 5.0
+		//{name: "Check ReadReplica Logs Format", test: func(t *testing.T) {
+		//	t.Parallel()
+		//	assert.NoError(t, CheckLogsFormat(t, readReplica1Name), "Read Replica logs format should be in JSON")
+		//}},
+		//{name: "Check Read Replica Logs Format", test: func(t *testing.T) {
+		//	t.Parallel()
+		//	assert.NoError(t, CheckLogsFormat(t, readReplica1Name), "Checks Read Replica Logs Format")
+		//}},
 		{name: "Check Read Replica Configuration", test: func(t *testing.T) {
 			assert.NoError(t, CheckReadReplicaConfiguration(t, readReplica1Name), "Checks Read Replica Configuration")
 		}},

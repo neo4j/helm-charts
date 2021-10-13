@@ -46,9 +46,10 @@ func TestPopulateFromFile(t *testing.T) {
 		_, jvmKeyFound := conf.Conf()["dbms.jvm.additional"]
 		assert.False(t, jvmKeyFound)
 
-		value, found = conf.Conf()["dbms.logs.default_format"]
-		assert.True(t, found)
-		assert.Equal(t, "JSON", value)
+		//TODO: This is to be enabled in 5.0
+		//value, found = conf.Conf()["dbms.logs.default_format"]
+		//assert.True(t, found)
+		//assert.Equal(t, "JSON", value)
 
 		assert.Contains(t, conf.JvmArgs(), "-XX:+UnlockDiagnosticVMOptions")
 		assert.Contains(t, conf.JvmArgs(), "-XX:+DebugNonSafepoints")
