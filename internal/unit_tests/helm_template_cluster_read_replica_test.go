@@ -136,18 +136,19 @@ func TestReadReplicaPanicOnShutDownConfig(t *testing.T) {
 	assert.Contains(t, defaultConfigMap.Data["dbms.panic.shutdown_on_panic"], "true")
 }
 
+//TODO : This is to be enabled in 5.0
 //TestReadReplicaDefaultLogFormat checks whether the dbms.logs.default_format value is set to JSON or not
-func TestReadReplicaDefaultLogFormat(t *testing.T) {
-	t.Parallel()
-
-	readReplica := model.NewReleaseName("foo")
-
-	readReplicaManifest, err := model.HelmTemplateForRelease(t, readReplica, model.ClusterReadReplicaHelmChart, useDataModeAndAcceptLicense, readReplicaTesting...)
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	defaultConfigMap := readReplicaManifest.OfTypeWithName(&v1.ConfigMap{}, readReplica.DefaultConfigMapName()).(*v1.ConfigMap)
-	assert.Contains(t, defaultConfigMap.Data, "dbms.logs.default_format")
-	assert.Contains(t, defaultConfigMap.Data["dbms.logs.default_format"], "JSON")
-}
+//func TestReadReplicaDefaultLogFormat(t *testing.T) {
+//	t.Parallel()
+//
+//	readReplica := model.NewReleaseName("foo")
+//
+//	readReplicaManifest, err := model.HelmTemplateForRelease(t, readReplica, model.ClusterReadReplicaHelmChart, useDataModeAndAcceptLicense, readReplicaTesting...)
+//	if !assert.NoError(t, err) {
+//		return
+//	}
+//
+//	defaultConfigMap := readReplicaManifest.OfTypeWithName(&v1.ConfigMap{}, readReplica.DefaultConfigMapName()).(*v1.ConfigMap)
+//	assert.Contains(t, defaultConfigMap.Data, "dbms.logs.default_format")
+//	assert.Contains(t, defaultConfigMap.Data["dbms.logs.default_format"], "JSON")
+//}
