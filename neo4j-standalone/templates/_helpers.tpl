@@ -154,7 +154,7 @@ E.g. by adding `--set podSpec.loadbalancer=include`
     {{- end -}}
 
     {{- if lt $cpuFloat 0.5 }}
-        {{ fail (printf "Provided cpu value %s is less than minimum. \n %s" $cpu (include "neo4j.resources.invalidCPUMessage" .) ) }}
+        {{ fail (printf "Provided cpu value %s is less than minimum. \n %s" (.Values.neo4j.resources.cpu) (include "neo4j.resources.invalidCPUMessage" .) ) }}
     {{- end -}}
 {{- end -}}
 
