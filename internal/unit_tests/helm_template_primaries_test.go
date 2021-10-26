@@ -528,6 +528,127 @@ func TestExtraLabels(t *testing.T) {
 	}))
 }
 
+func TestErrorIsThrownForInvalidMemoryResources(t *testing.T) {
+
+	t.Parallel()
+	doTestCase := func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+		//valid syntax but less than the minimum 2G or 2Gi
+		invalidMemory := []string{
+			"2M",
+			"1000K",
+			"12345.67",
+			"0.1234",
+			"123e+5",
+			"0.0003T",
+		}
+		checkMemoryResources(t, chart, edition, invalidMemory, "less than minimum")
+	}
+	forEachPrimaryChart(t, andEachSupportedEdition(doTestCase))
+}
+
+func TestErrorIsThrownForInvalidMemoryResourcesRegex(t *testing.T) {
+
+	t.Parallel()
+	doTestCase := func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+		invalidMemoryRegexs := []string{
+			"P1233",
+			"2.G",
+			"1.e",
+			"1.23ei",
+			"2.5GG",
+			"2.3i",
+			"1.eeee",
+			"1.2.3.3.4",
+			"1. ",
+			"1.34ki",
+			"1.i.1.2",
+			"1.iK",
+			"1.3456I",
+			"2.5 K ",
+			"123.B",
+		}
+		checkMemoryResources(t, chart, edition, invalidMemoryRegexs, "Invalid memory value")
+	}
+	forEachPrimaryChart(t, andEachSupportedEdition(doTestCase))
+}
+
+func TestErrorIsThrownForInvalidCPUResourcesRegex(t *testing.T) {
+
+	t.Parallel()
+	doTestCase := func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+		invalidCPURegexs := []string{
+			"123m123m123",
+			"123m3222",
+			"0.12343",
+			"1.2.3.4.4.",
+			"m12334",
+			"1.2.3.4",
+			"m",
+			"1.m",
+			"1.A",
+			"1.2.3.m.4.4.",
+			"1.m.3.4.m",
+			"1m2m3m3m",
+			"m1233",
+			"1..23442",
+			"0.5",
+			"0.5m",
+		}
+		checkCPUResources(t, chart, edition, invalidCPURegexs, "Invalid cpu value")
+	}
+	forEachPrimaryChart(t, andEachSupportedEdition(doTestCase))
+}
+
+func TestErrorIsThrownForInvalidCPUResources(t *testing.T) {
+
+	t.Parallel()
+	doTestCase := func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+		//valid syntax but less than the minimum 2G or 2Gi
+		invalidCPU := []string{
+			"1.5m",
+			"123.45m",
+		}
+		checkCPUResources(t, chart, edition, invalidCPU, "less than minimum")
+	}
+	forEachPrimaryChart(t, andEachSupportedEdition(doTestCase))
+}
+
+func checkMemoryResources(t *testing.T, chart model.Neo4jHelmChart, edition string, memorySlice []string, containsMsg string) {
+	for _, memory := range memorySlice {
+		setMemoryResource := []string{"--set", fmt.Sprintf("neo4j.resources.memory=%s", memory)}
+		setEdition := []string{"--set", fmt.Sprintf("neo4j.edition=%s", edition)}
+		var args []string
+		args = append(args, setMemoryResource...)
+		args = append(args, setEdition...)
+		args = append(args, useDataModeAndAcceptLicense...)
+		_, err := model.HelmTemplate(t, chart, args)
+		if !assert.Error(t, err) {
+			return
+		}
+		if !assert.Contains(t, err.Error(), containsMsg) {
+			return
+		}
+	}
+}
+
+func checkCPUResources(t *testing.T, chart model.Neo4jHelmChart, edition string, cpuSlice []string, containsMsg string) {
+	for _, cpu := range cpuSlice {
+		setCPUResource := []string{"--set", fmt.Sprintf("neo4j.resources.cpu=%s", cpu)}
+		setEdition := []string{"--set", fmt.Sprintf("neo4j.edition=%s", edition)}
+		var args []string
+		args = append(args, setCPUResource...)
+		args = append(args, setEdition...)
+		args = append(args, useDataModeAndAcceptLicense...)
+		_, err := model.HelmTemplate(t, chart, args)
+		if !assert.Error(t, err) {
+			return
+		}
+		if !assert.Contains(t, err.Error(), containsMsg) {
+			return
+		}
+	}
+}
+
 func checkNeo4jManifest(t *testing.T, manifest *model.K8sResources) {
 	// should contain exactly one StatefulSet
 	assert.Len(t, manifest.OfType(&appsv1.StatefulSet{}), 1)
