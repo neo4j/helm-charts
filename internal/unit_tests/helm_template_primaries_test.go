@@ -579,7 +579,6 @@ func TestErrorIsThrownForInvalidCPUResourcesRegex(t *testing.T) {
 		invalidCPURegexs := []string{
 			"123m123m123",
 			"123m3222",
-			"0.12343",
 			"1.2.3.4.4.",
 			"m12334",
 			"1.2.3.4",
@@ -591,8 +590,6 @@ func TestErrorIsThrownForInvalidCPUResourcesRegex(t *testing.T) {
 			"1m2m3m3m",
 			"m1233",
 			"1..23442",
-			"0.5",
-			"0.5m",
 		}
 		checkCPUResources(t, chart, edition, invalidCPURegexs, "Invalid cpu value")
 	}
@@ -607,43 +604,47 @@ func TestErrorIsThrownForInvalidCPUResources(t *testing.T) {
 		invalidCPU := []string{
 			"1.5m",
 			"123.45m",
+			"0.5m",
+			"0.12343",
 		}
 		checkCPUResources(t, chart, edition, invalidCPU, "less than minimum")
 	}
 	forEachPrimaryChart(t, andEachSupportedEdition(doTestCase))
 }
 
-func checkMemoryResources(t *testing.T, chart model.Neo4jHelmChart, edition string, memorySlice []string, containsMsg string) {
+//checkMemoryResources runs helm template on all charts of all editions with invalid memory values
+func checkMemoryResources(t *testing.T, chart model.Neo4jHelmChart, edition string, memorySlice []string, containsErrMsg string) {
+
+	var args []string
+	setEdition := []string{"--set", fmt.Sprintf("neo4j.edition=%s", edition)}
+	args = append(args, setEdition...)
+	args = append(args, useDataModeAndAcceptLicense...)
 	for _, memory := range memorySlice {
 		setMemoryResource := []string{"--set", fmt.Sprintf("neo4j.resources.memory=%s", memory)}
-		setEdition := []string{"--set", fmt.Sprintf("neo4j.edition=%s", edition)}
-		var args []string
-		args = append(args, setMemoryResource...)
-		args = append(args, setEdition...)
-		args = append(args, useDataModeAndAcceptLicense...)
-		_, err := model.HelmTemplate(t, chart, args)
+		_, err := model.HelmTemplate(t, chart, args, setMemoryResource...)
 		if !assert.Error(t, err) {
 			return
 		}
-		if !assert.Contains(t, err.Error(), containsMsg) {
+		if !assert.Contains(t, err.Error(), containsErrMsg) {
 			return
 		}
 	}
 }
 
-func checkCPUResources(t *testing.T, chart model.Neo4jHelmChart, edition string, cpuSlice []string, containsMsg string) {
+//checkCPUResources runs helm template on all charts of all editions with invalid cpu values
+func checkCPUResources(t *testing.T, chart model.Neo4jHelmChart, edition string, cpuSlice []string, containsErrMsg string) {
+
+	var args []string
+	setEdition := []string{"--set", fmt.Sprintf("neo4j.edition=%s", edition)}
+	args = append(args, setEdition...)
+	args = append(args, useDataModeAndAcceptLicense...)
 	for _, cpu := range cpuSlice {
 		setCPUResource := []string{"--set", fmt.Sprintf("neo4j.resources.cpu=%s", cpu)}
-		setEdition := []string{"--set", fmt.Sprintf("neo4j.edition=%s", edition)}
-		var args []string
-		args = append(args, setCPUResource...)
-		args = append(args, setEdition...)
-		args = append(args, useDataModeAndAcceptLicense...)
-		_, err := model.HelmTemplate(t, chart, args)
+		_, err := model.HelmTemplate(t, chart, args, setCPUResource...)
 		if !assert.Error(t, err) {
 			return
 		}
-		if !assert.Contains(t, err.Error(), containsMsg) {
+		if !assert.Contains(t, err.Error(), containsErrMsg) {
 			return
 		}
 	}
