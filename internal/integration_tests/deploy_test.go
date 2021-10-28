@@ -21,6 +21,10 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChart) ([]SubTest, er
 	}
 
 	return []SubTest{
+		{name: "Check Neo4j Logs For Any Errors", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, CheckNeo4jLogsForAnyErrors(t, name), "Neo4j Logs check should succeed")
+		}},
 		{name: "Check Neo4j Configuration", test: func(t *testing.T) {
 			assert.NoError(t, CheckNeo4jConfiguration(t, name, expectedConfiguration), "Neo4j Config check should succeed")
 		}},

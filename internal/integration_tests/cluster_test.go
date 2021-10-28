@@ -104,9 +104,6 @@ func clusterTests(loadBalancerName model.ReleaseName, core model.ReleaseName) ([
 		{name: "Check K8s", test: func(t *testing.T) {
 			assert.NoError(t, CheckK8s(t, loadBalancerName), "Neo4j Config check should succeed")
 		}},
-		{name: "Check Neo4j Configuration", test: func(t *testing.T) {
-			assert.NoError(t, CheckNeo4jConfiguration(t, loadBalancerName, expectedConfiguration), "Neo4j Config check should succeed")
-		}},
 		{name: "Create Node", test: func(t *testing.T) {
 			assert.NoError(t, CreateNode(t, loadBalancerName), "Create Node should succeed")
 		}},
@@ -172,9 +169,15 @@ func readReplicaTests(readReplica1Name model.ReleaseName, readReplica2Name model
 		//	assert.NoError(t, CheckLogsFormat(t, readReplica1Name), "Checks Read Replica Logs Format")
 		//}},
 		{name: "Check Read Replica Configuration", test: func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, CheckReadReplicaConfiguration(t, readReplica1Name), "Checks Read Replica Configuration")
 		}},
+		{name: "Check ReadReplica2 Neo4j Logs For Any Errors", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, CheckNeo4jLogsForAnyErrors(t, readReplica2Name), "Neo4j Logs check should succeed")
+		}},
 		{name: "Check Read Replica Server Groups", test: func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, CheckReadReplicaServerGroupsConfiguration(t, readReplica1Name), "Checks Read Replica Server Groups config contains read-replicas or not")
 		}},
 		{name: "Update Read Replica With Upstream Strategy on Read Replica 2", test: func(t *testing.T) {
@@ -327,6 +330,27 @@ func CheckPods(t *testing.T, name model.ReleaseName) error {
 		}
 	}
 
+	return nil
+}
+
+//CheckLogsForAnyErrors checks whether neo4j.log and debug.log contain any errors or not
+func CheckNeo4jLogsForAnyErrors(t *testing.T, name model.ReleaseName) error {
+	cmd := []string{
+		"bash",
+		"-c",
+		"cat /logs/neo4j.log /logs/debug.log",
+	}
+
+	stdout, stderr, err := ExecInPod(name, cmd)
+	if !assert.NoError(t, err) {
+		return err
+	}
+	if !assert.Len(t, stderr, 0) {
+		return fmt.Errorf("stderr found \n %s", stderr)
+	}
+	if !assert.NotContains(t, stdout, "ERROR") {
+		return fmt.Errorf("Contains error logs \n%s", stdout)
+	}
 	return nil
 }
 
