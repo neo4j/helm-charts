@@ -184,6 +184,19 @@ services:
 config:
   dbms.mode: "READ_REPLICA"
   dbms.config.strict_validation: "true"
+  # The amount of memory to use for mapping the store files.
+  # The default page cache memory assumes the machine is dedicated to running
+  # Neo4j, and is heuristically set to 50% of RAM minus the Java heap size.
+  #dbms.memory.pagecache.size: "74m"
+
+  #The number of Cypher query execution plans that are cached.
+  #dbms.query_cache_size: "10"
+
+  # Java Heap Size: by default the Java heap size is dynamically calculated based
+  # on available system resources. Uncomment these lines to set specific initial
+  # and maximum heap size.
+  #dbms.memory.heap.initial_size: "317m"
+  #dbms.memory.heap.max_size: "317m"
 
 # securityContext defines privilege and access control settings for a Pod or Container. Making sure that we dont run Neo4j as root user.
 securityContext:
@@ -292,3 +305,5 @@ jvm:
   additionalJvmArguments: []
   # - "-XX:+HeapDumpOnOutOfMemoryError"
   # - "-XX:HeapDumpPath=/logs/neo4j.hprof"
+  # - "-XX:MaxMetaspaceSize=180m"
+  # - "-XX:ReservedCodeCacheSize=40m"
