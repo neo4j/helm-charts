@@ -1,0 +1,5 @@
+config:
+  dbms.memory.pagecache.size: "74m"
+  dbms.query_cache_size: "10"
+  dbms.memory.heap.initial_size: "317m"
+  dbms.memory.heap.max_size: "317m"

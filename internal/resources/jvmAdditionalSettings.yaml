@@ -4,3 +4,5 @@ jvm:
     - "-XX:+HeapDumpOnOutOfMemoryError"
     - "-XX:HeapDumpPath=./java_pid<pid>.hprof"
     - "-XX:+UseGCOverheadLimit"
+    - "-XX:MaxMetaspaceSize=180m"
+    - "-XX:ReservedCodeCacheSize=40m"
