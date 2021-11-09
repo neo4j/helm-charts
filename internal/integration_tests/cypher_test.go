@@ -105,8 +105,8 @@ func CreateDatabase(t *testing.T, releaseName model.ReleaseName, databaseName st
 	}
 	//sleep is required so that CheckDataBase is able to fetch the above created database
 	//It takes few seconds for the new database to be updated.
-	// Do not reduce the time to anything less than 3 , tests would fail
-	time.Sleep(3 * time.Second)
+	// Do not reduce the time to anything less than 10 , tests would fail
+	time.Sleep(10 * time.Second)
 	return nil
 }
 
