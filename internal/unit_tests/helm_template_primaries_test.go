@@ -173,15 +173,25 @@ func TestEnterpriseDoesNotThrowErrorIfLicenseAgreementAccepted(t *testing.T) {
 func TestEnterpriseDoesNotThrowIfSet(t *testing.T) {
 	t.Parallel()
 
-	baseSettings := append(useEnterprise, acceptLicenseAgreement...)
 	testCases := [][]string{
-		baseSettings,
-		append(baseSettings, "--set", "neo4j.resources.requests.cpu=100m"),
-		append(baseSettings, resources.ApocCorePlugin.HelmArgs()...),
-		append(baseSettings, resources.CsvMetrics.HelmArgs()...),
-		append(baseSettings, resources.DefaultStorageClass.HelmArgs()...),
-		append(baseSettings, resources.JvmAdditionalSettings.HelmArgs()...),
-		append(baseSettings, resources.PluginsInitContainer.HelmArgs()...),
+		useEnterpriseAndAcceptLicense,
+		//memory is not set here hence it will pick the default value from values.yaml
+		append(useEnterpriseAndAcceptLicense, "--set", "neo4j.resources.requests.cpu=500m"),
+		//cpu is not set here hence it will pick the default value from values.yaml
+		append(useEnterpriseAndAcceptLicense, "--set", "neo4j.resources.requests.memory=2Gi"),
+		//cpu is not set here hence it will pick the default value from values.yaml
+		append(useEnterpriseAndAcceptLicense, "--set", "neo4j.resources.memory=2Gi"),
+		//memory is not set here hence it will pick the default value from values.yaml
+		append(useEnterpriseAndAcceptLicense, "--set", "neo4j.resources.cpu=500m"),
+		append(useEnterpriseAndAcceptLicense, "--set", "neo4j.resources.cpu=500m", "--set", "neo4j.resources.requests.memory=2Gi"),
+		append(useEnterpriseAndAcceptLicense, "--set", "neo4j.resources.requests.cpu=500m", "--set", "neo4j.resources.memory=2Gi"),
+		append(useEnterpriseAndAcceptLicense, "--set", "neo4j.resources.requests.cpu=500m", "--set", "neo4j.resources.requests.memory=2Gi"),
+		append(useEnterpriseAndAcceptLicense, "--set", "neo4j.resources.cpu=500m", "--set", "neo4j.resources.memory=2Gi"),
+		append(useEnterpriseAndAcceptLicense, resources.ApocCorePlugin.HelmArgs()...),
+		append(useEnterpriseAndAcceptLicense, resources.CsvMetrics.HelmArgs()...),
+		append(useEnterpriseAndAcceptLicense, resources.DefaultStorageClass.HelmArgs()...),
+		append(useEnterpriseAndAcceptLicense, resources.JvmAdditionalSettings.HelmArgs()...),
+		append(useEnterpriseAndAcceptLicense, resources.PluginsInitContainer.HelmArgs()...),
 	}
 
 	doTestCase := func(t *testing.T, chart model.Neo4jHelmChart, testCase []string) {
@@ -572,6 +582,30 @@ func TestErrorIsThrownForInvalidMemoryResourcesRegex(t *testing.T) {
 	forEachPrimaryChart(t, andEachSupportedEdition(doTestCase))
 }
 
+func TestErrorIsThrownForEmptyMemoryResources(t *testing.T) {
+
+	t.Parallel()
+	doTestCase := func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+		invalidMemory := []string{
+			"",
+		}
+		checkMemoryResources(t, chart, edition, invalidMemory, "neo4j.resources.memory cannot be set to \"\"")
+	}
+	forEachPrimaryChart(t, andEachSupportedEdition(doTestCase))
+}
+
+func TestErrorIsThrownForEmptyCPUResources(t *testing.T) {
+
+	t.Parallel()
+	doTestCase := func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+		invalidCPU := []string{
+			"",
+		}
+		checkCPUResources(t, chart, edition, invalidCPU, "neo4j.resources.cpu cannot be set to \"\"")
+	}
+	forEachPrimaryChart(t, andEachSupportedEdition(doTestCase))
+}
+
 func TestErrorIsThrownForInvalidCPUResourcesRegex(t *testing.T) {
 
 	t.Parallel()
@@ -612,6 +646,30 @@ func TestErrorIsThrownForInvalidCPUResources(t *testing.T) {
 	forEachPrimaryChart(t, andEachSupportedEdition(doTestCase))
 }
 
+func TestNeo4jResourcesAndLimits(t *testing.T) {
+
+	t.Parallel()
+
+	var testCases = []Neo4jResourceTestCase{
+		GenerateNeo4jResourcesTestCase([]string{"cpuResources"}, "500m", ""),
+		GenerateNeo4jResourcesTestCase([]string{"cpuRequests"}, "1", ""),
+		GenerateNeo4jResourcesTestCase([]string{"memoryResources"}, "", "3Gi"),
+		GenerateNeo4jResourcesTestCase([]string{"memoryRequests"}, "", "3Gi"),
+		GenerateNeo4jResourcesTestCase([]string{"cpuRequests", "memoryResources"}, "1", "3Gi"),
+		GenerateNeo4jResourcesTestCase([]string{"cpuResources", "memoryResources"}, "0.5", "3Gi"),
+		GenerateNeo4jResourcesTestCase([]string{"cpuRequests", "memoryRequests"}, "0.5", "3Gi"),
+		GenerateNeo4jResourcesTestCase([]string{"cpuResources", "memoryRequests"}, "0.5", "3Gi"),
+	}
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+		for i, testCase := range testCases {
+			t.Run(fmt.Sprintf("%d %s", i, testCase), func(t *testing.T) {
+				checkResourcesAndLimits(t, chart, edition, testCase)
+			})
+		}
+	}))
+}
+
 //checkMemoryResources runs helm template on all charts of all editions with invalid memory values
 func checkMemoryResources(t *testing.T, chart model.Neo4jHelmChart, edition string, memorySlice []string, containsErrMsg string) {
 
@@ -648,6 +706,58 @@ func checkCPUResources(t *testing.T, chart model.Neo4jHelmChart, edition string,
 			return
 		}
 	}
+}
+
+//checkCPUResources runs helm template on all charts of all editions with invalid cpu values
+func checkResourcesAndLimits(t *testing.T, chart model.Neo4jHelmChart, edition string, testCase Neo4jResourceTestCase) {
+
+	var args []string
+	setEdition := []string{"--set", fmt.Sprintf("neo4j.edition=%s", edition)}
+	args = append(args, setEdition...)
+	args = append(args, useDataModeAndAcceptLicense...)
+
+	manifest, err := model.HelmTemplate(t, chart, args, testCase.arguments...)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	statefulSets := manifest.OfType(&appsv1.StatefulSet{})
+
+	// should contain exactly one StatefulSet
+	assert.Len(t, statefulSets, 1)
+
+	statefulSet := statefulSets[0].(*appsv1.StatefulSet)
+	// should contain exactly one Container
+	assert.Len(t, statefulSet.Spec.Template.Spec.Containers, 1)
+	container := statefulSet.Spec.Template.Spec.Containers[0]
+
+	assert.Equal(t, container.Resources.Requests.Memory().String(), testCase.memory)
+	assert.Equal(t, container.Resources.Limits.Memory().String(), testCase.memory)
+
+	var cpuValue float64
+	if strings.Contains(testCase.cpu, "m") {
+		cpu := strings.Replace(testCase.cpu, "m", "", 1)
+		cpuValue, err = strconv.ParseFloat(cpu, 64)
+		if !assert.NoError(t, err) {
+			return
+		}
+		cpuValue = cpuValue / 1000
+	} else {
+		cpuValue, err = strconv.ParseFloat(testCase.cpu, 64)
+		if !assert.NoError(t, err) {
+			return
+		}
+	}
+	//if the test case cpu is a decimal value use AsDec()
+	if strings.Contains(testCase.cpu, ".") {
+		assert.Equal(t, container.Resources.Requests.Cpu().AsDec().String(), fmt.Sprintf("%g", cpuValue))
+		assert.Equal(t, container.Resources.Limits.Cpu().AsDec().String(), fmt.Sprintf("%g", cpuValue))
+	} else {
+		t.Logf("checking %s == %s", container.Resources.Requests.Cpu().String(), fmt.Sprintf("%g", cpuValue))
+		assert.Equal(t, container.Resources.Requests.Cpu().String(), testCase.cpu)
+		assert.Equal(t, container.Resources.Limits.Cpu().String(), testCase.cpu)
+	}
+
 }
 
 func checkNeo4jManifest(t *testing.T, manifest *model.K8sResources) {

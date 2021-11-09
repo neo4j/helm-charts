@@ -115,21 +115,55 @@ E.g. by adding `--set podSpec.loadbalancer=include`
 {{- define "neo4j.resources.checkForEmptyResources" -}}
 
     {{/* check for missing cpu and memory values */}}
-    {{- if empty .Values.neo4j.resources -}}
-        {{ $message := printf "Missing neo4j.resources.cpu and neo4j.resources.memory values ! \n %s \n %s" (include "neo4j.resources.minCPUMessage" .) (include "neo4j.resources.minMemoryMessage" .) }}
+    {{- if and (kindIs "invalid" .Values.neo4j.resources) (kindIs "invalid" .Values.neo4j.resources.requests) -}}
+        {{ $message := printf "Missing neo4j.resources.requests.cpu and neo4j.resources.requests.memory values ! \n %s \n %s" (include "neo4j.resources.minCPUMessage" .) (include "neo4j.resources.minMemoryMessage" .) }}
         {{ fail $message }}
     {{- end -}}
 
-    {{/* check for empty cpu value cpu:"" */}}
-    {{- if empty (index .Values.neo4j.resources "cpu") -}}
-        {{ $message := include "neo4j.resources.minCPUMessage" . | printf "Empty or Missing neo4j.resources.cpu value \n %s" }}
-        {{ fail $message }}
+    {{- $cpu := "" }}
+    {{- $memory := "" }}
+    {{- $isMemorySet := false }}
+    {{- $isCPUSet := false }}
+
+    {{- if not (kindIs "invalid" .Values.neo4j.resources.requests) }}
+
+        {{- if not (kindIs "invalid" .Values.neo4j.resources.requests.cpu) }}
+            {{- dict "val" .Values.neo4j.resources.requests.cpu "errMsg" "neo4j.resources.requests.cpu cannot be set to \"\"" | include "neo4j.resources.checkForEmptyString" -}}
+            {{- $cpu =  .Values.neo4j.resources.requests.cpu | toString }}
+            {{- $isCPUSet = true }}
+        {{- end -}}
+
+        {{- if not (kindIs "invalid" .Values.neo4j.resources.requests.memory) }}
+            {{- dict "val" .Values.neo4j.resources.requests.memory "errMsg" "neo4j.resources.requests.memory cannot be set to \"\"" | include "neo4j.resources.checkForEmptyString" -}}
+            {{- $memory =  .Values.neo4j.resources.requests.memory | toString }}
+            {{- $isMemorySet = true }}
+        {{- end -}}
+
     {{- end -}}
 
-    {{/* check for empty memory value memory:"" */}}
-    {{- if empty (index .Values.neo4j.resources "memory") -}}
-        {{ $message := include "neo4j.resources.minMemoryMessage" . | printf "Empty or Missing neo4j.resources.memory value \n %s" }}
-        {{ fail $message }}
+
+    {{- if not $isCPUSet }}
+        {{- if kindIs "invalid" .Values.neo4j.resources.cpu -}}
+            {{- fail (printf "Empty or Missing neo4j.resources.cpu value \n %s" (include "neo4j.resources.minCPUMessage" .)) -}}
+        {{- end -}}
+        {{- dict "val" .Values.neo4j.resources.cpu "errMsg" "neo4j.resources.cpu cannot be set to \"\"" | include "neo4j.resources.checkForEmptyString" -}}
+        {{- $cpu = .Values.neo4j.resources.cpu | toString }}
+    {{- end -}}
+
+    {{- if not $isMemorySet }}
+         {{- if kindIs "invalid" .Values.neo4j.resources.memory -}}
+            {{- fail (printf "Empty or Missing neo4j.resources.memory value \n %s" (include "neo4j.resources.minMemoryMessage" .)) -}}
+        {{- end -}}
+        {{- dict "val" .Values.neo4j.resources.memory "errMsg" "neo4j.resources.memory cannot be set to \"\"" | include "neo4j.resources.checkForEmptyString" -}}
+        {{- $memory = .Values.neo4j.resources.memory | toString }}
+    {{- end -}}
+
+    {{- $requests := dict "cpu" $cpu "memory" $memory -}}
+    {{- $ignored := set .Values.neo4j.resources "requests" $requests -}}
+
+    {{/* set limits as same as cpu and memory if not provided by the user */}}
+    {{- if kindIs "invalid" .Values.neo4j.resources.limits -}}
+       {{- $ignored := set .Values.neo4j.resources "limits" $requests -}}
     {{- end -}}
 
 {{- end -}}
@@ -139,37 +173,42 @@ E.g. by adding `--set podSpec.loadbalancer=include`
     {{/* check regex here :- https://regex101.com/r/wJsFcO/1 */}}
     {{ $cpuRegex := "(^\\d+)((\\.?[^\\.a-zA-Z])?)([0-9]*m?$)" }}
 
-    {{- if not (regexMatch $cpuRegex (.Values.neo4j.resources.cpu | toString)) -}}
-        {{ fail (printf "Invalid cpu value %s\n%s" (.Values.neo4j.resources.cpu) (include "neo4j.resources.minCPUMessage" .)) }}
+    {{- $cpu := .Values.neo4j.resources.requests.cpu | toString }}
+
+    {{- if not (regexMatch $cpuRegex $cpu) -}}
+        {{ fail (printf "Invalid cpu value %s\n%s" $cpu (include "neo4j.resources.minCPUMessage" .)) }}
     {{- end -}}
 
-    {{- $cpu := regexFind $cpuRegex (.Values.neo4j.resources.cpu | toString) -}}
+    {{- $cpuRegexValue := regexFind $cpuRegex $cpu -}}
     {{- $cpuFloat := 0.0 -}}
     {{/* cpu="123m" , convert millicore cpu to cpu */}}
-    {{- if contains "m" $cpu -}}
-        {{ $cpuFloat = $cpu | replace "m" "" | float64 -}}
+    {{- if contains "m" $cpuRegexValue -}}
+        {{ $cpuFloat = $cpuRegexValue | replace "m" "" | float64 -}}
         {{ $cpuFloat = divf $cpuFloat 1000 -}}
     {{- else -}}
-        {{ $cpuFloat = $cpu | float64 }}
+        {{ $cpuFloat = $cpuRegexValue | float64 }}
     {{- end -}}
 
     {{- if lt $cpuFloat 0.5 }}
-        {{ fail (printf "Provided cpu value %s is less than minimum. \n %s" (.Values.neo4j.resources.cpu) (include "neo4j.resources.invalidCPUMessage" .) ) }}
+        {{ fail (printf "Provided cpu value %s is less than minimum. \n %s" $cpu (include "neo4j.resources.invalidCPUMessage" .) ) }}
     {{- end -}}
 {{- end -}}
 
 
 {{- define "neo4j.resources.evaluateMemory" -}}
 
+
     {{/* check regex here :- https://regex101.com/r/68NEQV/1 */}}
     {{ $memoryRegex := "(^\\d+)((\\.?[^\\.a-zA-Z\\s])?)(\\d*)(([EkMGTP]?|[EKMGTP]i?|e[+-]?\\d*[EKMGTP]?)$)" -}}
 
-    {{- if not (regexMatch $memoryRegex (.Values.neo4j.resources.memory | toString)) -}}
-        {{ fail (printf "Invalid memory value %s\n%s" (.Values.neo4j.resources.memory) (include "neo4j.resources.minMemoryMessage" .)) }}
+    {{- $memory := .Values.neo4j.resources.requests.memory | toString }}
+
+    {{- if not (regexMatch $memoryRegex $memory) -}}
+        {{ fail (printf "Invalid memory value %s\n%s" $memory (include "neo4j.resources.minMemoryMessage" .)) }}
     {{- end -}}
 
-    {{- $memoryOrig := regexFind $memoryRegex (.Values.neo4j.resources.memory | toString) -}}
-    {{- $memory := $memoryOrig -}}
+    {{- $memoryOrig := regexFind $memoryRegex $memory -}}
+    {{- $memory = $memoryOrig -}}
     {{- $memoryFloat := 0.0 -}}
 
     {{- if contains "i" $memory -}}
@@ -229,4 +268,11 @@ cpu value cannot be less than 0.5 or 500m
 
 {{- define "neo4j.resources.invalidMemoryMessage" -}}
 memory value cannot be less than 2Gb or 2Gi
+{{- end -}}
+
+{{/* Takes a dict with "val" and "message" as input*/}}
+{{- define "neo4j.resources.checkForEmptyString" -}}
+    {{- if eq (len (trim (.val | toString))) 0 }}
+        {{ fail (printf .errMsg) }}
+    {{- end -}}
 {{- end -}}
