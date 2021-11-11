@@ -227,10 +227,15 @@ func TestDefaultEnterpriseHelmTemplate(t *testing.T) {
 
 		neo4jStatefulSet := manifest.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
 		for _, container := range neo4jStatefulSet.Spec.Template.Spec.Containers {
-			assert.Contains(t, container.Image, "enterprise")
+			if !strings.Contains(container.Image, "neo4j-experimental") {
+				assert.Contains(t, container.Image, "enterprise")
+			}
+
 		}
 		for _, container := range neo4jStatefulSet.Spec.Template.Spec.InitContainers {
-			assert.Contains(t, container.Image, "enterprise")
+			if !strings.Contains(container.Image, "neo4j-experimental") {
+				assert.Contains(t, container.Image, "enterprise")
+			}
 		}
 	})
 }
@@ -790,10 +795,14 @@ func assertOnlyNeo4jImagesUsed(t *testing.T, manifest *model.K8sResources) {
 
 func assertOnlyNeo4jImagesUsedInStatefulSet(t *testing.T, neo4jStatefulSet *appsv1.StatefulSet) {
 	for _, container := range neo4jStatefulSet.Spec.Template.Spec.Containers {
-		assert.Contains(t, container.Image, "neo4j:")
+		if !strings.Contains(container.Image, "neo4j-experimental") {
+			assert.Contains(t, container.Image, "neo4j:")
+		}
 	}
 
 	for _, container := range neo4jStatefulSet.Spec.Template.Spec.InitContainers {
-		assert.Contains(t, container.Image, "neo4j:")
+		if !strings.Contains(container.Image, "neo4j-experimental") {
+			assert.Contains(t, container.Image, "neo4j:")
+		}
 	}
 }
