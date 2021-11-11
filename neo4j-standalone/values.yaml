@@ -266,7 +266,7 @@ clusterDomain: "cluster.local"
 image:
   imagePullPolicy: IfNotPresent
   # set a customImage if you want to use your own docker image
-  customImage: neo4j/neo4j-experimental:4.4.0-alpha01
+  # customImage: my-image:my-tag
 
 # additional environment variables for the Neo4j Container
 env: {}
