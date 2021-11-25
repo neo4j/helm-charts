@@ -19,3 +19,7 @@ maintainers:
     email: bledi.feshti@neotechnology.com
   - name: jennyowen
     email: jenny.owen@neotechnology.com
+dependencies:
+  - name: neo4j-shared-templates
+    version: "4.4.0"
+    repository: "file://../neo4j-shared-templates"
