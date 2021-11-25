@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y \
   && ./tmp/go_linux_installer -v -version "${GO_VERSION}" \
   && apt-get -y --purge remove curl \
   && rm -rf /var/lib/apt/lists/* \
-  && rm -rf /tmp/*
+  && rm -rf /tmp/* \
 
 # Configure Go
 ENV GOPATH /root/go
