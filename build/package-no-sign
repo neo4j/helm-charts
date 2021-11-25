@@ -13,24 +13,22 @@ shopt -s inherit_errexit
 S3_UPLOAD_TO_SUB_FOLDER="${S3_SUB_FOLDER:-neo4j}"
 
 NEO4J_VERSION_TC="${NEO4J_VERSION:?NEO4J_VERSION is required}"
-
 NEO4J_VERSION_BUILD=$(echo "${NEO4J_VERSION_TC}" | awk -F "-" '{print $1}')
-
 echo "NEO4J VERSION := ${NEO4J_VERSION_BUILD}"
 
 # Create packages!
 mkdir -p ./packages
 
 # create neo4j-shared-templates with updated app-version and replace the older neo4j-shared-templates with the new one
-helm package ./neo4j-shared-templates --app-version=${NEO4J_VERSION_BUILD} --destination ./packages
+helm package ./neo4j-shared-templates --app-version="${NEO4J_VERSION_BUILD}" --destination ./packages
 rm -rf ./neo4j-shared-templates
 tar -xvf ./packages/neo4j-shared-templates*.tgz -C ./
 
-helm package ./neo4j-standalone --app-version=${NEO4J_VERSION_BUILD} --dependency-update ./neo4j-shared-templates --destination ./packages
-helm package ./neo4j-cluster-core --app-version=${NEO4J_VERSION_BUILD} --dependency-update ./neo4j-shared-templates --destination ./packages
-helm package ./neo4j-cluster-loadbalancer --app-version=${NEO4J_VERSION_BUILD} --dependency-update ./neo4j-shared-templates --destination ./packages
-helm package ./neo4j-cluster-read-replica --app-version=${NEO4J_VERSION_BUILD} --dependency-update ./neo4j-shared-templates --destination ./packages
-helm package ./neo4j-cluster-headless-service --app-version=${NEO4J_VERSION_BUILD} --dependency-update ./neo4j-shared-templates --destination ./packages
+helm package ./neo4j-standalone --app-version="${NEO4J_VERSION_BUILD}" --dependency-update ./neo4j-shared-templates --destination ./packages
+helm package ./neo4j-cluster-core --app-version="${NEO4J_VERSION_BUILD}" --dependency-update ./neo4j-shared-templates --destination ./packages
+helm package ./neo4j-cluster-loadbalancer --app-version="${NEO4J_VERSION_BUILD}" --dependency-update ./neo4j-shared-templates --destination ./packages
+helm package ./neo4j-cluster-read-replica --app-version="${NEO4J_VERSION_BUILD}" --dependency-update ./neo4j-shared-templates --destination ./packages
+helm package ./neo4j-cluster-headless-service --app-version="${NEO4J_VERSION_BUILD}" --dependency-update ./neo4j-shared-templates --destination ./packages
 # helm package ./neo4j-docker-desktop-pv
 # helm package ./neo4j-gcloud-pv
 

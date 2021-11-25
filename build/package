@@ -14,6 +14,9 @@ BUILD_OUT_DIR="tmp/new-packages/"
 S3_LOCAL_SYNC_DIR="tmp/release-packages"
 S3_UPLOAD_TO_SUB_FOLDER="${S3_SUB_FOLDER:-neo4j}"
 S3_CACHE_CONTROL_MAX_AGE_SECONDS="${S3_CACHE_CONTROL_MAX_AGE_SECONDS:-300}"
+NEO4J_VERSION_TC="${NEO4J_VERSION:?NEO4J_VERSION is required}"
+NEO4J_VERSION_BUILD=$(echo "${NEO4J_VERSION_TC}" | awk -F "-" '{print $1}')
+echo "NEO4J VERSION := ${NEO4J_VERSION_BUILD}"
 
 # Required env vars
 #
@@ -22,19 +25,27 @@ PACKAGE_SIGNING_KEY="${PACKAGE_SIGNING_KEY:?PACKAGE_SIGNING_KEY is required}"
 PACKAGE_SIGNING_KEYRING="${PACKAGE_SIGNING_KEYRING:?PACKAGE_SIGNING_KEYRING is required}"
 PACKAGE_SIGNING_PASSPHRASE="${PACKAGE_SIGNING_PASSPHRASE:?PACKAGE_SIGNING_PASSPHRASE is required}"
 
+
+mkdir -p ${BUILD_OUT_DIR}
+
+# create neo4j-shared-templates with updated app-version and replace the older neo4j-shared-templates with the new one
+helm package ./neo4j-shared-templates --app-version="${NEO4J_VERSION_BUILD}" --destination "${BUILD_OUT_DIR}"
+rm -rf ./neo4j-shared-templates
+tar -xvf "${BUILD_OUT_DIR}"neo4j-shared-templates*.tgz -C ./
+
 # create the package!
-echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-standalone --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
-echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-cluster-core --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
-echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-cluster-loadbalancer --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
-echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-cluster-read-replica --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
-echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-cluster-headless-service --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
+echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-standalone --app-version="${NEO4J_VERSION_BUILD}" --destination "${BUILD_OUT_DIR}" --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
+echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-cluster-core --app-version="${NEO4J_VERSION_BUILD}" --destination "${BUILD_OUT_DIR}" --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
+echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-cluster-loadbalancer --app-version="${NEO4J_VERSION_BUILD}" --destination "${BUILD_OUT_DIR}" --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
+echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-cluster-read-replica --app-version="${NEO4J_VERSION_BUILD}" --destination "${BUILD_OUT_DIR}" --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
+echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-cluster-headless-service --app-version="${NEO4J_VERSION_BUILD}" --destination "${BUILD_OUT_DIR}" --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
 # echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-docker-desktop-pv --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
 # echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-gcloud-pv --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
 
-echo "Copying packaged files to ${BUILD_OUT_DIR}"
-mkdir -p ${BUILD_OUT_DIR}
-mv *.tgz ${BUILD_OUT_DIR}
-mv *.tgz.prov ${BUILD_OUT_DIR}
+#echo "Copying packaged files to ${BUILD_OUT_DIR}"
+#mkdir -p ${BUILD_OUT_DIR}
+#mv *.tgz ${BUILD_OUT_DIR}
+#mv *.tgz.prov ${BUILD_OUT_DIR}
 
 # Upload packages
 
