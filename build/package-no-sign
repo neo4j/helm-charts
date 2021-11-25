@@ -22,7 +22,7 @@ mkdir -p ./packages
 # create neo4j-shared-templates with updated app-version and replace the older neo4j-shared-templates with the new one
 helm package ./neo4j-shared-templates --app-version="${NEO4J_VERSION}" --destination ./packages
 rm -rf ./neo4j-shared-templates
-tar -xvf ./packages/neo4j-shared-templates*.tgz -C ./neo4j-shared-templates
+tar -xvf ./packages/neo4j-shared-templates*.tgz -C ./
 
 helm package ./neo4j-standalone --app-version="${NEO4J_VERSION}" --dependency-update ./neo4j-shared-templates --destination ./packages
 helm package ./neo4j-cluster-core --app-version="${NEO4J_VERSION}" --dependency-update ./neo4j-shared-templates --destination ./packages

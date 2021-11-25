@@ -33,7 +33,7 @@ helm package ./neo4j-shared-templates --app-version="${NEO4J_VERSION}" --destina
 echo "neo4j-shared-templates tar created"
 rm -rf ./neo4j-shared-templates
 echo "old neo4j-shared-templates deleted"
-tar -xvf "${BUILD_OUT_DIR}"neo4j-shared-templates*.tgz -C ./neo4j-shared-templates
+tar -xvf "${BUILD_OUT_DIR}"neo4j-shared-templates*.tgz -C ./
 echo "neo4j-shared-templates tar extracted"
 
 # create the package!
