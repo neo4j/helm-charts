@@ -37,20 +37,16 @@ tar -xvf "${BUILD_OUT_DIR}"neo4j-shared-templates*.tgz -C ./
 echo "neo4j-shared-templates tar extracted"
 
 # create the package!
-echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-standalone --dependency-update ./neo4j-shared-templates --app-version="${NEO4J_VERSION}" --destination "${BUILD_OUT_DIR}" --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
-echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-cluster-core --dependency-update ./neo4j-shared-templates --app-version="${NEO4J_VERSION}" --destination "${BUILD_OUT_DIR}" --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
-echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-cluster-loadbalancer --dependency-update ./neo4j-shared-templates --app-version="${NEO4J_VERSION}" --destination "${BUILD_OUT_DIR}" --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
-echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-cluster-read-replica --dependency-update ./neo4j-shared-templates --app-version="${NEO4J_VERSION}" --destination "${BUILD_OUT_DIR}" --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
-echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-cluster-headless-service --dependency-update ./neo4j-shared-templates --app-version="${NEO4J_VERSION}" --destination "${BUILD_OUT_DIR}" --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
+echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-standalone --dependency-update "./neo4j-shared-templates" --app-version="${NEO4J_VERSION}" --destination "${BUILD_OUT_DIR}" --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
+echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-cluster-core --dependency-update "./neo4j-shared-templates" --app-version="${NEO4J_VERSION}" --destination "${BUILD_OUT_DIR}" --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
+echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-cluster-loadbalancer --dependency-update "./neo4j-shared-templates" --app-version="${NEO4J_VERSION}" --destination "${BUILD_OUT_DIR}" --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
+echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-cluster-read-replica --dependency-update "./neo4j-shared-templates" --app-version="${NEO4J_VERSION}" --destination "${BUILD_OUT_DIR}" --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
+echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-cluster-headless-service --dependency-update "./neo4j-shared-templates" --app-version="${NEO4J_VERSION}" --destination "${BUILD_OUT_DIR}" --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
 # echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-docker-desktop-pv --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
 # echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-gcloud-pv --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
 
 #remove neo4j shared templates tar as we dont want to upload it to helm repo
 rm -f "${BUILD_OUT_DIR}"neo4j-shared-templates*.tgz
-#echo "Copying packaged files to ${BUILD_OUT_DIR}"
-#mkdir -p ${BUILD_OUT_DIR}
-#mv *.tgz ${BUILD_OUT_DIR}
-#mv *.tgz.prov ${BUILD_OUT_DIR}
 
 # Upload packages
 
