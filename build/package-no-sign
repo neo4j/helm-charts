@@ -24,11 +24,11 @@ helm package ./neo4j-shared-templates --app-version="${NEO4J_VERSION}" --destina
 rm -rf ./neo4j-shared-templates
 tar -xvf ./packages/neo4j-shared-templates*.tgz -C ./
 
-helm package ./neo4j-standalone --app-version="${NEO4J_VERSION}" --dependency-update ./neo4j-shared-templates --destination ./packages
-helm package ./neo4j-cluster-core --app-version="${NEO4J_VERSION}" --dependency-update ./neo4j-shared-templates --destination ./packages
-helm package ./neo4j-cluster-loadbalancer --app-version="${NEO4J_VERSION}" --dependency-update ./neo4j-shared-templates --destination ./packages
-helm package ./neo4j-cluster-read-replica --app-version="${NEO4J_VERSION}" --dependency-update ./neo4j-shared-templates --destination ./packages
-helm package ./neo4j-cluster-headless-service --app-version="${NEO4J_VERSION}" --dependency-update ./neo4j-shared-templates --destination ./packages
+helm package ./neo4j-standalone --app-version="${NEO4J_VERSION}" --dependency-update --destination ./packages
+helm package ./neo4j-cluster-core --app-version="${NEO4J_VERSION}" --dependency-update --destination ./packages
+helm package ./neo4j-cluster-loadbalancer --app-version="${NEO4J_VERSION}" --dependency-update --destination ./packages
+helm package ./neo4j-cluster-read-replica --app-version="${NEO4J_VERSION}" --dependency-update --destination ./packages
+helm package ./neo4j-cluster-headless-service --app-version="${NEO4J_VERSION}" --dependency-update --destination ./packages
 
 #remove neo4j shared templates tar as we dont want to upload it to helm repo
 rm -f "./packages/neo4j-shared-templates*.tgz"
