@@ -30,8 +30,11 @@ mkdir -p ${BUILD_OUT_DIR}
 
 # create neo4j-shared-templates with updated app-version and replace the older neo4j-shared-templates with the new one
 helm package ./neo4j-shared-templates --app-version="${NEO4J_VERSION}" --destination "${BUILD_OUT_DIR}"
+echo "neo4j-shared-templates tar created"
 rm -rf ./neo4j-shared-templates
-tar -xvf "${BUILD_OUT_DIR}"neo4j-shared-templates*.tgz -C ./
+echo "old neo4j-shared-templates deleted"
+tar -xvf "${BUILD_OUT_DIR}"neo4j-shared-templates*.tgz -C ./neo4j-shared-templates
+echo "neo4j-shared-templates tar extracted"
 
 # create the package!
 echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-standalone --dependency-update ./neo4j-shared-templates --app-version="${NEO4J_VERSION}" --destination "${BUILD_OUT_DIR}" --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
