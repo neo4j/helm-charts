@@ -12,7 +12,7 @@ shopt -s inherit_errexit
 #
 S3_UPLOAD_TO_SUB_FOLDER="${S3_SUB_FOLDER:-neo4j}"
 
-NEO4J_VERSION_TC="${NEO4JVERSION1}"
+NEO4J_VERSION_TC="${NEO4JVERSION}"
 
 [ -z "$NEO4J_VERSION_TC" ] && echo "env.NEO4JVERSION cannot be empty" && exit 1
 
