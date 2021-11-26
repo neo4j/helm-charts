@@ -1,5 +1,4 @@
 apiVersion: v1
-appVersion: 5.0.0
 description: Neo4j is the world's leading graph database
 home: https://www.neo4j.com
 icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
@@ -8,12 +7,10 @@ keywords:
 - database
 - cypher
 maintainers:
-- email: andrew.jefferson@neotechnology.com
-  name: eastlondoner
-- email: bledi.feshti@neotechnology.com
-  name: bfeshti
-- email: jenny.owen@neotechnology.com
-  name: jennyowen
+  - name: bfeshti
+    email: bledi.feshti@neotechnology.com
+  - name: harshitsinghvi22
+    email: harshit.singhvi@neotechnology.com
 name: neo4j-shared-templates
 sources:
 - https://github.com/neo4j/neo4j
