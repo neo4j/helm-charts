@@ -348,7 +348,7 @@ func CheckNeo4jLogsForAnyErrors(t *testing.T, name model.ReleaseName) error {
 	if !assert.Len(t, stderr, 0) {
 		return fmt.Errorf("stderr found \n %s", stderr)
 	}
-	if !assert.NotContains(t, stdout, "ERROR") {
+	if !assert.NotContains(t, stdout, " ERROR [") {
 		return fmt.Errorf("Contains error logs \n%s", stdout)
 	}
 	return nil
