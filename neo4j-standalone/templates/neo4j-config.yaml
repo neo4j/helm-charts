@@ -1,6 +1,5 @@
 {{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
 {{- $clusterEnabled := or ( index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" ) ( index .Values.config "dbms.clustering.enable" | default "" | regexMatch "(?i)true|yes" ) }}
-{{- $backupEnabled := index .Values.config "dbms.backup.enabled" | default "" | regexMatch "(?i)yes|true" }}
 {{- template "neo4j.checkLicenseAgreement" . -}}
 # Neo4j config values that are required for neo4j to work correctly in Kubernetes, these are not overridden by user-provided values
 apiVersion: v1
@@ -92,10 +91,6 @@ data:
   dbms.config.strict_validation: "true"
   dbms.logs.user.stdout_enabled: "false"
   unsupported.dbms.ssl.system.ignore_dot_files: "true"
-
-  {{- if $backupEnabled }}
-  dbms.backup.listen_address: "0.0.0.0"
-  {{- end }}
 
   {{- if $clusterEnabled }}
   # Clustering

@@ -13,9 +13,7 @@ sources:
   - https://github.com/neo4j/neo4j
   - https://github.com/neo4j/docker-neo4j
 maintainers:
-  - name: eastlondoner
-    email: andrew.jefferson@neotechnology.com
   - name: bfeshti
     email: bledi.feshti@neotechnology.com
-  - name: jennyowen
-    email: jenny.owen@neotechnology.com
+  - name: harshitsinghvi22
+    email: harshit.singhvi@neotechnology.com
