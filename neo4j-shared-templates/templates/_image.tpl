@@ -1,6 +1,6 @@
 {{- define "neo4j.defaultChartImage" -}}
 {{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
-neo4j:{{ .Chart.AppVersion }}{{ if $isEnterprise }}-enterprise{{ end }}
+neo4j:{{ .Values.neo4j.version | default .Chart.AppVersion }}{{ if $isEnterprise }}-enterprise{{ end }}
 {{- end -}}
 
 
