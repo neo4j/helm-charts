@@ -213,6 +213,28 @@ func TestEnterpriseDoesNotThrowIfSet(t *testing.T) {
 	})
 }
 
+// TestEnterpriseContainsDefaultBackupAddress checks if the default backup address is set to 0.0.0.0:6362 or not in enterprise standalone
+// and cluster-core charts
+func TestEnterpriseContainsDefaultBackupAddress(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, func(t *testing.T, chart model.Neo4jHelmChart) {
+		manifest, err := model.HelmTemplate(t, chart, requiredDataMode, useEnterpriseAndAcceptLicense...)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		configMaps := manifest.OfType(&v1.ConfigMap{})
+		for _, configMap := range configMaps {
+			cm := configMap.(*v1.ConfigMap)
+			if strings.Contains(cm.Name, "default-config") {
+				assert.Contains(t, cm.Data["dbms.backup.listen_address"], "0.0.0.0:6362")
+			}
+		}
+
+	})
+}
+
 // Tests the "default" behaviour that you get if you don't pass in *any* other values and the helm chart defaults are used
 func TestDefaultEnterpriseHelmTemplate(t *testing.T) {
 	t.Parallel()

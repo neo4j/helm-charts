@@ -87,6 +87,11 @@ data:
   # If we set default advertised address it over-rides the bolt address used to populate the browser in a really annoying way
   # dbms.default_advertised_address: "$(bash -c 'echo ${SERVICE_DOMAIN}')"
 
+  {{- if $isEnterprise }}
+  dbms.backup.listen_address: "0.0.0.0:6362"
+  {{- end }}
+
+
   # Other
   dbms.config.strict_validation: "true"
   dbms.logs.user.stdout_enabled: "false"
