@@ -3,8 +3,8 @@ package integration_tests
 import (
 	"fmt"
 	"github.com/hashicorp/go-multierror"
-	"github.com/stretchr/testify/assert"
 	"github.com/neo-technology/neo4j-helm-charts/internal/model"
+	"github.com/stretchr/testify/assert"
 	"strings"
 )
 import "testing"
@@ -19,7 +19,9 @@ func volumesTests(name *model.ReleaseName) []SubTest {
 		{name: "Check Volumes", test: func(t *testing.T) { assert.NoError(t, CheckVolumes(t, name), "Check volumes") }},
 		{name: "Enter maintenance mode", test: func(t *testing.T) { assert.NoError(t, EnterMaintenanceMode(t, name), "Enter maintenance mode") }},
 		{name: "Check Volumes", test: func(t *testing.T) { assert.NoError(t, CheckVolumes(t, name), "Check volumes") }},
-		{name: "Exit maintenance mode and install plugins", test: func(t *testing.T) { assert.NoError(t, ExitMaintenanceMode(t, name, pluginArgs...), "Exit maintenance mode and install plugins") }},
+		{name: "Exit maintenance mode and install plugins", test: func(t *testing.T) {
+			assert.NoError(t, ExitMaintenanceMode(t, name, pluginArgs...), "Exit maintenance mode and install plugins")
+		}},
 		{name: "Check Apoc", test: func(t *testing.T) { assert.NoError(t, CheckApoc(t, name), "Check APOC") }},
 	}
 }

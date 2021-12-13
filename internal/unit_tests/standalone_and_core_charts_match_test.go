@@ -1,4 +1,4 @@
-package unit_tests_test
+package unit_tests
 
 import (
 	"github.com/sergi/go-diff/diffmatchpatch"
