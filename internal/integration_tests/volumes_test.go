@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/go-multierror"
 	"github.com/stretchr/testify/assert"
-	"neo4j.com/helm-charts-tests/internal/model"
+	"github.com/neo-technology/neo4j-helm-charts/internal/model"
 	"strings"
 )
 import "testing"

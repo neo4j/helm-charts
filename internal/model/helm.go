@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hashicorp/go-multierror"
-	. "neo4j.com/helm-charts-tests/internal/helpers"
+	. "github.com/neo-technology/neo4j-helm-charts/internal/helpers"
 	"os"
 	"os/exec"
 	"strings"

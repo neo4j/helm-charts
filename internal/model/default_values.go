@@ -2,7 +2,7 @@ package model
 
 import (
 	"fmt"
-	. "neo4j.com/helm-charts-tests/internal/helpers"
+	. "github.com/neo-technology/neo4j-helm-charts/internal/helpers"
 )
 
 var DefaultPassword = fmt.Sprintf("a%da", RandomIntBetween(100000, 999999999))
