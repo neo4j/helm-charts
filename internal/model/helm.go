@@ -5,11 +5,61 @@ import (
 	"fmt"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/neo-technology/neo4j-helm-charts/internal/helpers"
+	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
+	"path"
+	"runtime"
 	"strings"
 	"testing"
 )
+
+func CheckError(err error) {
+	if err != nil {
+		log.Panic(err)
+	}
+}
+
+// This changes the working directory to the parent directory if the current working directory doesn't contain a directory called "internal"
+func setWorkingDir() {
+
+	var _, thisFile, _, _ = runtime.Caller(0)
+	var thisDir = path.Dir(thisFile)
+
+	files, err := ioutil.ReadDir(".")
+	CheckError(err)
+	for _, file := range files {
+		if file.Name() == "internal" {
+			return
+		}
+	}
+
+	files, err = ioutil.ReadDir(thisDir)
+	CheckError(err)
+	for _, file := range files {
+		if file.Name() == "internal" {
+			return
+		}
+	}
+	dir := path.Join(thisDir, "../..")
+	err = os.Chdir(dir)
+	CheckError(err)
+	files, err = ioutil.ReadDir(".")
+	CheckError(err)
+	for _, file := range files {
+		if file.Name() == "internal" {
+			return
+		}
+	}
+	panic("unable to set current dir correctly")
+}
+
+func init() {
+	setWorkingDir()
+
+	os.Setenv("KUBECONFIG", ".kube/config")
+}
 
 var DefaultHelmTemplateReleaseName = ReleaseName("my-release")
 
