@@ -8,7 +8,7 @@ import (
 var DefaultPassword = fmt.Sprintf("defaulthelmpassword%da", RandomIntBetween(100000, 999999999))
 
 const StorageSize = "10Gi"
-const cpuRequests = "50m"
-const memoryRequests = "500Mi"
+const cpuRequests = "500m"
+const memoryRequests = "2Gi"
 const cpuLimits = "1500m"
-const memoryLimits = "900Mi"
+const memoryLimits = "2Gi"

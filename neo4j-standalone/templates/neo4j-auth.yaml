@@ -1,15 +1,18 @@
-{{- template "neo4j.checkResources" . -}}
 {{- $isReadReplica := index .Values.config "dbms.mode" | default "" | regexMatch "(?i)READ_REPLICA$" }}
-  {{/* .Values.testing is being set to true in unit test cases for read replica*/}}
-  {{- if and $isReadReplica (not .Values.testing | default false ) -}}
+
+{{/* .Values.testing is being set to true in unit test cases for read replica*/}}
+{{- if and $isReadReplica (not .Values.testing | default false ) -}}
     {{- include "neo4j.checkIfClusterIsPresent" . -}}
-  {{- end -}}
+{{- end -}}
+
 {{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "true" | regexMatch "(?i)no|false" -}}
-{{- if $authDisabled -}}
-  {{- if .Values.neo4j.password -}}
-    {{ fail "unsupported State: Cannot set neo4j.password when Neo4j authis disabled (dbms.security.auth_enabled=false). Either remove neo4j.password setting or enable Neo4j auth" }}
-  {{- end -}}
-{{- else -}}
+
+  {{- if $authDisabled -}}
+    {{- if .Values.neo4j.password -}}
+      {{ fail "unsupported State: Cannot set neo4j.password when Neo4j authis disabled (dbms.security.auth_enabled=false). Either remove neo4j.password setting or enable Neo4j auth" }}
+    {{- end -}}
+
+  {{- else -}}
 
 {{- $secretName := include "neo4j.appName" . | printf "%s-auth" }}
 {{- $secret := (lookup "v1" "Secret" .Release.Namespace $secretName) }}

@@ -7,7 +7,7 @@
 {{- template "podSpec.checkLoadBalancerParam" . -}}
 {{- template "neo4j.checkLicenseAgreement" . -}}
 {{- template "neo4j.volumes.validation" . -}}
-
+{{- template "neo4j.checkResources" . -}}
 
 apiVersion: apps/v1
 kind: StatefulSet
