@@ -1,0 +1,50 @@
+{{- with .Values.ops }}
+{{- if or .efsId .efsApID | or .capacity.storage | or .storageClassName -}}
+apiVersion: v1
+kind: CSIDriver
+metadata:
+  name: efs.csi.aws.com
+spec:
+  attachRequired: false
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: "{{ .storageClassName }}"
+provisioner: efs.csi.aws.com
+---
+apiVersion: v1
+kind: "PersistentVolume"
+metadata:
+  name: "{{ $.Release.Name }}-ops"
+  labels:
+    helm.neo4j.com/volume-role: "ops"
+    app: "{{ template "neo4j.appName" $ }}"
+spec:
+  capacity:
+    storage:  "{{ required "ops.capacity.storage is required (e.g. 1Ti)" .capacity.storage }}"
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: "{{ .storageClassName }}"
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: "{{ required "ops.efsID is required" .efsId }}::{{required "ops.efsApID is required" .efsApID }}"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: "{{ $.Release.Name }}-ops"
+  labels:
+    helm.neo4j.com/volume-role: "ops"
+    app: "{{ template "neo4j.appName" $ }}"
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: "{{ .storageClassName }}"
+  resources:
+    requests:
+      storage: "{{ required "ops.capacity.storage is required (e.g. 1Ti)" .capacity.storage }}"
+{{- end }}
+{{- end }}
