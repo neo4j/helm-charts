@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+# This creates a new Kubernetes cluster on AWS
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+# Required env vars
+AWS_CLUSTER_NAME="${AWS_CLUSTER_NAME:?AWS_CLUSTER_NAME}"
+AWS_NODE_GROUP_NAME="${AWS_NODE_GROUP_NAME:?AWS_NODE_GROUP_NAME}"
+AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:?AWS_DEFAULT_REGION is required}"
+AWS_AZ="${AWS_AZ:?AWS_AZ is required}"
+AWS_KEY_ID="${AWS_KEY_ID:?AWS_KEY_ID is required}"
+AWS_ACCESS_KEY="${AWS_ACCESS_KEY:?AWS_ACCESS_KEY is required}"
+PUBLIC_KEY_PATH="${PUBLIC_KEY_PATH:?PUBLIC_KEY_PATH}"
+
+# Local vars
+AWS_INSTANCE_TYPE=m5.large
+AWS_CLUSTER_NODES=1
+
+eksctl create cluster --name ${AWS_CLUSTER_NAME} --region "${AWS_DEFAULT_REGION}" --nodegroup-name ${AWS_NODE_GROUP_NAME} --node-zones "${AWS_AZ}" --nodes-min 1 --nodes-max 2 --node-type c4.xlarge --nodes 1 --node-volume-size 10 --ssh-access --with-oidc

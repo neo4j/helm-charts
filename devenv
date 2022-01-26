@@ -7,7 +7,13 @@ if [ -f ./devenv.local ]; then
     export CLOUDSDK_COMPUTE_REGION
     export CLOUDSDK_CONTAINER_CLUSTER
     export PACKAGE_SIGNING_KEY
-    export PACKAGE_SIGNING_KEYRING
+    export AWS_CLUSTER_NAME
+    export AWS_NODE_GROUP_NAME
+    export AWS_DEFAULT_REGION
+    export AWS_AZ
+    export PUBLIC_KEY_PATH
+    export AWS_KEY_ID
+    export AWS_ACCESS_KEY
 else
     echo "Couldn't find ./devenv.local."
 fi

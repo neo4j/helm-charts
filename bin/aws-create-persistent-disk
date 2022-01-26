@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+# This creates the expected persistent disk
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+
+# Required env vars
+AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:?AWS_DEFAULT_REGION is required}"
+AWS_AZ="${AWS_AZ:?AWS_AZ is required}"
+
+
+# Local vars
+AWS_DISK_SIZE="${DISK_SIZE:-10}"
+TIMESTAMP=`date +%Y-%m-%d_%H-%M-%S`
+
+# Check if there are leftover disks and clean them up
+for volume in `aws ec2 describe-volumes --filters Name=tag:volume,Values=neo4j-k8s  --query "Volumes[*].{ID:VolumeId}" --output text`
+do
+  echo "deleting leftover disks"
+  aws ec2 delete-volume --volume-id $volume
+done
+
+# Create disk
+aws ec2 create-volume --availability-zone=$AWS_AZ --size=$AWS_DISK_SIZE --volume-type=gp2 --tag-specifications "ResourceType=volume,Tags=[{Key=volume,Value=neo4j-k8s,$TIMESTAMP}]"
+
+# Get Volume id
+VOLUME_ID=$(aws ec2 describe-volumes --filters Name=tag:volume,Values=neo4j-k8s,$TIMESTAMP --region us-west-2 --query "Volumes[*].{ID:VolumeId}" --output text)
+
+# Print the necessary yaml for use with our pv helm charts
+cat << EOF
+data:
+  capacity:
+    storage: "${AWS_DISK_SIZE}"
+  awsVolumeID: "${VOLUME_ID}"
+EOF
