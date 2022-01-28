@@ -15,7 +15,7 @@ fi
 git clone --bare --branch="${PUBLISH_BRANCHES}" --single-branch git@github.com:neo-technology/neo4j-helm-charts.git "${TEMP_REPO_DIR}"
 cd "${TEMP_REPO_DIR}"
 
-git filter-repo --path-regex "^neo4j-*/*" --path index_public.yml --path-rename index_public.yml:index.yml --path README_public.md --path-rename README_public.md:README.md
+git filter-repo --path-regex "^neo4j-*/*" --path index_public.yaml --path-rename index_public.yaml:index.yaml --path README_public.md --path-rename README_public.md:README.md
 
 # Setup public repo remote
 git remote add pub git@github.com:neo4j/helm-charts.git
