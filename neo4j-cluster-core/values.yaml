@@ -276,6 +276,10 @@ podSpec:
   # If set to false then no anti-affinity rules are applied
   # If set to an object then that object is used for the Neo4j podAntiAffinity
   podAntiAffinity: true
+  
+  ## Priority for pod scheduling
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/
+  priorityClassName: ""
 
   #This indicates that the neo4j instance be included to the loadbalancer. Can be set to exclude to not add the stateful set to loadbalancer
   loadbalancer: "include"
