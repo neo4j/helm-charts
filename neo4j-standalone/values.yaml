@@ -255,6 +255,10 @@ podSpec:
   # If set to an object then that object is used for the Neo4j podAntiAffinity
   podAntiAffinity: true
 
+  ## Priority for pod scheduling
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/
+  priorityClassName: ""
+
   # Name of service account to use for the Neo4j Pod (optional)
   # this is useful if you want to use Workload Identity to grant permissions to access cloud resources e.g. cloud object storage (AWS S3 etc.)
   serviceAccountName: ""
