@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+# This sets up the kubectl configuration to point at the current cluster
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+# Required env vars
+AWS_CLUSTER_NAME="${AWS_CLUSTER_NAME:?AWS_CLUSTER_NAME}"
+AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:?AWS_DEFAULT_REGION is required}"
+KUBECONFIG="${KUBECONFIG:?KUBECONFIG is required}"
+
+# Configure kubectl
+aws eks update-kubeconfig --name "${AWS_CLUSTER_NAME}"
+
+echo "kubectl configured for $(kubectl config current-context)"
