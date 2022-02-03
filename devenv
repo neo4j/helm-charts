@@ -9,6 +9,7 @@ if [ -f ./devenv.local ]; then
     export PACKAGE_SIGNING_KEY
     export AWS_CLUSTER_NAME
     export AWS_NODE_GROUP_NAME
+    export AWS_CLUSTER_NODES
     export AWS_DEFAULT_REGION
     export AWS_AZ
     export PUBLIC_KEY_PATH
