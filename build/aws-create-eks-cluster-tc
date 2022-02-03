@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+# This creates a new Kubernetes cluster on AWS
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+# Local vars
+export AWS_CLUSTER_NODES=6
+cluster_name_prefix="tc-${TEAMCITY_PROJECT_NAME}"
+
+AWS_CLUSTER_NAME="${cluster_name_prefix}-$(date +%s)-helm"
+export AWS_CLUSTER_NAME="$(echo "${AWS_CLUSTER_NAME}" | sed 's/\./-/g' )"
+echo "##teamcity[setParameter name='env.AWS_CLUSTER_NAME' value='$AWS_CLUSTER_NAME']"
+
+aws-create-eks-cluster
