@@ -18,7 +18,11 @@ AWS_ACCESS_KEY="${AWS_ACCESS_KEY:?AWS_ACCESS_KEY is required}"
 PUBLIC_KEY_PATH="${PUBLIC_KEY_PATH:?PUBLIC_KEY_PATH}"
 
 # Local vars
-AWS_INSTANCE_TYPE=m5.large
-AWS_CLUSTER_NODES=1
+AWS_INSTANCE_TYPE=t4g.medium
+AWS_CLUSTER_NODES="${AWS_CLUSTER_NODES:-6}"
 
+# Create a new Kubernetes cluster
+#
 eksctl create cluster --name ${AWS_CLUSTER_NAME} --region "${AWS_DEFAULT_REGION}" --nodegroup-name ${AWS_NODE_GROUP_NAME} --node-zones "${AWS_AZ}" --nodes-min 1 --nodes-max 2 --node-type c4.xlarge --nodes 1 --node-volume-size 10 --ssh-access --with-oidc
+
+aws-configure-kubectl
