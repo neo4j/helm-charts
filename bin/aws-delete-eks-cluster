@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# This script creates a new Kubernetes cluster on AWS
+# This script deletes the Kubernetes cluster on AWS
 
 # make bash play nicely
 #
