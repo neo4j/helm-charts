@@ -200,6 +200,14 @@ func getAllServices(namespace model.Namespace) (*coreV1.ServiceList, error) {
 	return Clientset.CoreV1().Services(string(namespace)).List(context.TODO(), v1.ListOptions{})
 }
 
+func getAllSecrets(namespace model.Namespace) (*coreV1.SecretList, error) {
+	return Clientset.CoreV1().Secrets(string(namespace)).List(context.TODO(), v1.ListOptions{})
+}
+
+func getSpecificSecret(namespace model.Namespace, secretName string) (*coreV1.Secret, error) {
+	return Clientset.CoreV1().Secrets(string(namespace)).Get(context.TODO(), secretName, v1.GetOptions{})
+}
+
 func RunAsNonRoot(t *testing.T, releaseName model.ReleaseName) error {
 	pods, err := Clientset.CoreV1().Pods(string(releaseName.Namespace())).List(context.TODO(), v1.ListOptions{})
 	if err != nil {

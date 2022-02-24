@@ -57,12 +57,6 @@ func setWorkingDir() {
 	panic("unable to set current dir correctly")
 }
 
-func init() {
-	setWorkingDir()
-
-	os.Setenv("KUBECONFIG", ".kube/config")
-}
-
 var DefaultHelmTemplateReleaseName = releaseName("my-release")
 var Neo4jEdition = strings.ToLower(env.GetString("NEO4J_EDITION", "enterprise"))
 

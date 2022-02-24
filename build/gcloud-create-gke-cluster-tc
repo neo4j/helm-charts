@@ -21,4 +21,7 @@ CLOUDSDK_CONTAINER_CLUSTER="${cluster_name_prefix}-$(date +%s)-helm"
 export CLOUDSDK_CONTAINER_CLUSTER="$(echo "${CLOUDSDK_CONTAINER_CLUSTER}" | sed 's/\./-/g' )"
 echo "##teamcity[setParameter name='env.CLOUDSDK_CONTAINER_CLUSTER' value='$CLOUDSDK_CONTAINER_CLUSTER']"
 
+#token to be used in imagePullSecret
+GCR_ACCESS_TOKEN="$(gcloud auth print-access-token)"
+echo "##teamcity[setParameter name='env.IPS_PASS' value='${GCR_ACCESS_TOKEN}']"
 gcloud-create-gke-cluster

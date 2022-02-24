@@ -8,6 +8,11 @@ if [ -f ./devenv.local ]; then
     export CLOUDSDK_CONTAINER_CLUSTER
     export PACKAGE_SIGNING_KEY
     export PACKAGE_SIGNING_KEYRING
+    export IPS_USERNAME
+    export IPS_PASS
+    export IPS_EMAIL
+    export NEO4J_DOCKER_IMG
+
 else
     echo "Couldn't find ./devenv.local."
 fi
