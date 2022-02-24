@@ -1,0 +1,12 @@
+image:
+  imageCredentials:
+    - registry: "https://index.docker.io/v1/"
+      username: "sample1"
+      password: "samplepass"
+      email: "sample1@gmail.com"
+      name: "sample1"
+    - registry: "https://index.docker.io/v1/"
+      username: "sample2"
+      password: "samplepass"
+      email: "sample2@gmail.com"
+      name: "sample1"

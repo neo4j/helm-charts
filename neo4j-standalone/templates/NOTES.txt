@@ -1,3 +1,4 @@
+
 {{- define "neo4j.namespaceParameter" -}}
 {{ if ne "default" .Release.Namespace }} --namespace "{{.Release.Namespace}}"{{ end }}
 {{- end -}}

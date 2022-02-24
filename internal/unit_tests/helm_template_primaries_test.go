@@ -560,6 +560,101 @@ func TestExtraLabels(t *testing.T) {
 	}))
 }
 
+func TestEmptyImageCredentials(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+		_, err := model.HelmTemplate(t, chart, useDataModeAndAcceptLicense, resources.EmptyImageCredentials.HelmArgs()...)
+		if !assert.Error(t, err) {
+			return
+		}
+		if !assert.Contains(t, err.Error(), "Username field cannot be empty") {
+			return
+		}
+		if !assert.Contains(t, err.Error(), "Password field cannot be empty") {
+			return
+		}
+		if !assert.Contains(t, err.Error(), "Email field cannot be empty") {
+			return
+		}
+		if !assert.Contains(t, err.Error(), "name field cannot be empty") {
+			return
+		}
+	}))
+}
+
+func TestDuplicateImageCredentials(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+		_, err := model.HelmTemplate(t, chart, useDataModeAndAcceptLicense, resources.DuplicateImageCredentials.HelmArgs()...)
+		if !assert.Error(t, err) {
+			return
+		}
+		if !assert.Contains(t, err.Error(), "Duplicate \"names\" found in imageCredentials list. Please remove duplicates") {
+			return
+		}
+	}))
+}
+
+func TestMissingImageCredentials(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+		_, err := model.HelmTemplate(t, chart, useDataModeAndAcceptLicense, resources.MissingImageCredentials.HelmArgs()...)
+		if !assert.Error(t, err) {
+			return
+		}
+		if !assert.Contains(t, err.Error(), "Missing imageCredential entry") {
+			return
+		}
+	}))
+}
+
+//TestEmptyImagePullSecrets ensures empty imagePullSecret names or names with just spaces are not included in the cluster formation
+func TestEmptyImagePullSecrets(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+		manifest, err := model.HelmTemplate(t, chart, useDataModeAndAcceptLicense, resources.EmptyImagePullSecrets.HelmArgs()...)
+		if !assert.NoError(t, err) {
+			return
+		}
+		secrets := manifest.OfType(&v1.Secret{})
+		secret1 := manifest.OfTypeWithName(&v1.Secret{}, "secret1").(*v1.Secret)
+		secret2 := manifest.OfTypeWithName(&v1.Secret{}, "secret2").(*v1.Secret)
+
+		if !assert.NotEqual(t, len(secrets), 0) {
+			fmt.Errorf("No secrets found !!")
+			return
+		}
+		var secretCount int
+		for _, secret := range secrets {
+			if secret.(*v1.Secret).Type == "kubernetes.io/dockerconfigjson" {
+				secretCount++
+			}
+		}
+		if !assert.Equal(t, secretCount, 2) {
+			fmt.Errorf("%d secrets of type \"kubernetes.io/dockerconfigjson\" found instead of 2 ", secretCount)
+			return
+		}
+		if !assert.NotNil(t, secret1) {
+			return
+		}
+		if !assert.NotNil(t, secret2) {
+			return
+		}
+		if !assert.Equal(t, secret1.Name, "secret1") {
+			fmt.Errorf(" secret name %s not matching with secret1", secret1.Name)
+			return
+		}
+		if !assert.Equal(t, secret2.Name, "secret2") {
+			fmt.Errorf(" secret name %s not matching with secret2", secret2.Name)
+			return
+		}
+	}))
+}
+
 func TestErrorIsThrownForInvalidMemoryResources(t *testing.T) {
 
 	t.Parallel()

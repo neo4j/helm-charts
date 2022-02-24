@@ -32,7 +32,7 @@ metadata:
     helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" $ }}"
     app: "{{ template "neo4j.appName" . }}"
     helm.neo4j.com/service: "neo4j"
-    {{- include "neo4j.labels" .Values.neo4j | nindent 4 }}
+    {{- include "neo4j.labels" .Values.neo4j | indent 4 }}
   {{- with .Values.annotations }}
   annotations: {{ toYaml . | nindent 4 }}
   {{- end }}
