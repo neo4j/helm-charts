@@ -1,11 +1,7 @@
-# Neo4j Helm Charts
+# Helm-Charts
 
-This repository contains work on official Neo4j Helm Charts
+This repository contains Helm charts that supports both Neo4j standalone and Neo4j clusters
 
+Helm charts for Neo4j clusters are supported from version >= 4.4.0
 
-# Usage
-
-Detailed usage instructions can be found here:
-
-* [Neo4j Helm Standalone Manual](https://docs.google.com/document/d/1cpUnmYFwRmhj2MHxGvpcsooYaQ0VLp16nDA5IiMwNXo/edit#heading=h.pr9i7hz1lye2)
-* [Neo4j Helm Quickstarts](https://docs.google.com/document/d/1Cofc1djg9u1djIqMiQVigz3YJ_6WK65dQdZWRPihzy8/edit#heading=h.3j8xt8s28bvo)
+[Full Documentation can be found here](https://neo4j.com/docs/operations-manual/current/kubernetes/)
