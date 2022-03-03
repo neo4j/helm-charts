@@ -2,7 +2,7 @@ package model
 
 import (
 	"fmt"
-	. "github.com/neo-technology/neo4j-helm-charts/internal/helpers"
+	. "github.com/neo4j/helm-charts/internal/helpers"
 	"k8s.io/utils/env"
 	"log"
 	"os"

@@ -3,9 +3,9 @@ package unit_tests
 import (
 	"errors"
 	"fmt"
-	"github.com/neo-technology/neo4j-helm-charts/internal/helpers"
-	"github.com/neo-technology/neo4j-helm-charts/internal/model"
-	"github.com/neo-technology/neo4j-helm-charts/internal/resources"
+	"github.com/neo4j/helm-charts/internal/helpers"
+	"github.com/neo4j/helm-charts/internal/model"
+	"github.com/neo4j/helm-charts/internal/resources"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
