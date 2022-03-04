@@ -2,7 +2,7 @@ package unit_tests
 
 import (
 	"fmt"
-	"github.com/neo-technology/neo4j-helm-charts/internal/model"
+	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"

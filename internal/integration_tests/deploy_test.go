@@ -2,8 +2,8 @@ package integration_tests
 
 import (
 	"fmt"
-	"github.com/neo-technology/neo4j-helm-charts/internal/integration_tests/gcloud"
-	"github.com/neo-technology/neo4j-helm-charts/internal/model"
+	"github.com/neo4j/helm-charts/internal/integration_tests/gcloud"
+	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/utils/env"
 )
