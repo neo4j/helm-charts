@@ -25,6 +25,10 @@ var ChmodInitContainer = newYamlFile("chmodInitContainer.yaml")
 var ChmodInitContainerAndCustomInitContainer = newYamlFile("chmodInitContainerAndCustomInitContainer.yaml")
 var ReadReplicaUpstreamStrategy = newYamlFile("read_replica_upstream_selection_strategy.yaml")
 var ExcludeLoadBalancer = newYamlFile("excludeLoadBalancer.yaml")
+var EmptyImageCredentials = newYamlFile("imagePullSecret/emptyImageCreds.yaml")
+var DuplicateImageCredentials = newYamlFile("imagePullSecret/duplicateImageCreds.yaml")
+var MissingImageCredentials = newYamlFile("imagePullSecret/missingImageCreds.yaml")
+var EmptyImagePullSecrets = newYamlFile("imagePullSecret/emptyImagePullSecrets.yaml")
 
 type YamlFile interface {
 	Path() string

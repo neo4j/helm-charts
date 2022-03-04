@@ -1,0 +1,9 @@
+image:
+  imagePullSecrets:
+    - "secret1"
+  imageCredentials:
+    - registry: "https://index.docker.io/v1/"
+      username: "sampleuser"
+      password: "samplepass"
+      email: "sample@gmail.com"
+      name: "sample"

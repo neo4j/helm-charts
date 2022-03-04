@@ -1,7 +1,7 @@
 {{- define "neo4j.labels" -}}
-{{- with .labels }}
+{{- with .labels -}}
 {{- range $name, $value := . }}
 "{{ $name }}": "{{ $value }}"
-{{ end }}
-{{- end }}
 {{- end -}}
+{{- end -}}
+{{- end }}

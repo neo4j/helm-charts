@@ -3,4 +3,5 @@ temp/
 devenv.local
 .idea/
 .kube/
+.DS_Store
 *.test

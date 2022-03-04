@@ -29,6 +29,10 @@ neo4j:
     cpu: "1000m"
     memory: "2Gi"
 
+  #add labels if required
+  labels:
+
+
 # Volumes for Neo4j
 volumes:
   data:
@@ -267,6 +271,21 @@ image:
   imagePullPolicy: IfNotPresent
   # set a customImage if you want to use your own docker image
   # customImage: my-image:my-tag
+
+  #imagePullSecrets list
+  #  imagePullSecrets:
+  #    - "demo"
+
+  #imageCredentials list for which secret of type docker-registry will be created automatically using the details provided
+  # registry , username , password , email are compulsory field for an imageCredential , without any ,  helm chart will throw an error
+  # imageCredential name should be part of the imagePullSecrets list or else the respective imageCredential will be ignored and no secret creation will be done
+#  imageCredentials:
+#    - registry: ""
+#      username: ""
+#      password: ""
+#      email: ""
+#      name: ""
+
 
 # additional environment variables for the Neo4j Container
 env: {}

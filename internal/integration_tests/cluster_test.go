@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"os/exec"
+	"strings"
 	"testing"
 )
 
@@ -26,7 +27,8 @@ type helmComponent interface {
 }
 
 type clusterCore struct {
-	name model.ReleaseName
+	name                 model.ReleaseName
+	extraHelmInstallArgs []string
 }
 
 func (c clusterCore) Name() model.ReleaseName {
@@ -36,12 +38,13 @@ func (c clusterCore) Name() model.ReleaseName {
 func (c clusterCore) Install(t *testing.T) parallelResult {
 	var err error
 	var cleanup Closeable
-	cleanup, err = InstallNeo4jInGcloud(t, gcloud.CurrentZone(), gcloud.CurrentProject(), c.name, model.ClusterCoreHelmChart)
+	cleanup, err = InstallNeo4jInGcloud(t, gcloud.CurrentZone(), gcloud.CurrentProject(), c.name, model.ClusterCoreHelmChart, c.extraHelmInstallArgs...)
 	return parallelResult{cleanup, err}
 }
 
 type clusterReadReplica struct {
-	name model.ReleaseName
+	name                 model.ReleaseName
+	extraHelmInstallArgs []string
 }
 
 func (c clusterReadReplica) Name() model.ReleaseName {
@@ -51,12 +54,13 @@ func (c clusterReadReplica) Name() model.ReleaseName {
 func (c clusterReadReplica) Install(t *testing.T) parallelResult {
 	var err error
 	var cleanup Closeable
-	cleanup, err = InstallNeo4jInGcloud(t, gcloud.CurrentZone(), gcloud.CurrentProject(), c.name, model.ClusterReadReplicaHelmChart)
+	cleanup, err = InstallNeo4jInGcloud(t, gcloud.CurrentZone(), gcloud.CurrentProject(), c.name, model.ClusterReadReplicaHelmChart, c.extraHelmInstallArgs...)
 	return parallelResult{cleanup, err}
 }
 
 type clusterLoadBalancer struct {
-	name model.ReleaseName
+	name                 model.ReleaseName
+	extraHelmInstallArgs []string
 }
 
 func (c clusterLoadBalancer) Name() model.ReleaseName {
@@ -66,13 +70,16 @@ func (c clusterLoadBalancer) Name() model.ReleaseName {
 func (c clusterLoadBalancer) Install(t *testing.T) parallelResult {
 	var err error
 	var cleanup Closeable
-	cleanup = func() error { return run(t, "helm", model.LoadBalancerHelmCommand("uninstall", c.name)...) }
-	err = run(t, "helm", model.LoadBalancerHelmCommand("install", c.name)...)
+	cleanup = func() error {
+		return run(t, "helm", model.LoadBalancerHelmCommand("uninstall", c.name, c.extraHelmInstallArgs...)...)
+	}
+	err = run(t, "helm", model.LoadBalancerHelmCommand("install", c.name, c.extraHelmInstallArgs...)...)
 	return parallelResult{cleanup, err}
 }
 
 type clusterHeadLessService struct {
-	name model.ReleaseName
+	name                 model.ReleaseName
+	extraHelmInstallArgs []string
 }
 
 func (c clusterHeadLessService) Name() model.ReleaseName {
@@ -82,13 +89,15 @@ func (c clusterHeadLessService) Name() model.ReleaseName {
 func (c clusterHeadLessService) Install(t *testing.T) parallelResult {
 	var err error
 	var cleanup Closeable
-	cleanup = func() error { return run(t, "helm", model.HeadlessServiceHelmCommand("uninstall", c.name)...) }
-	err = run(t, "helm", model.HeadlessServiceHelmCommand("install", c.name)...)
+	cleanup = func() error {
+		return run(t, "helm", model.HeadlessServiceHelmCommand("uninstall", c.name, c.extraHelmInstallArgs...)...)
+	}
+	err = run(t, "helm", model.HeadlessServiceHelmCommand("install", c.name, c.extraHelmInstallArgs...)...)
 	return parallelResult{cleanup, err}
 }
 
 //clusterTests contains all the tests related to cluster
-func clusterTests(loadBalancerName model.ReleaseName, core model.ReleaseName) ([]SubTest, error) {
+func clusterTests(loadBalancerName model.ReleaseName) ([]SubTest, error) {
 	expectedConfiguration, err := (&model.Neo4jConfiguration{}).PopulateFromFile(Neo4jConfFile)
 	if err != nil {
 		return nil, err
@@ -96,11 +105,20 @@ func clusterTests(loadBalancerName model.ReleaseName, core model.ReleaseName) ([
 	expectedConfiguration = addExpectedClusterConfiguration(expectedConfiguration)
 
 	subTests := []SubTest{
+
 		//TODO: This is to be enabled in 5.0
 		//{name: "Check Cluster Core Logs Format", test: func(t *testing.T) {
 		//	t.Parallel()
 		//	assert.NoError(t, CheckLogsFormat(t, core), "Cluster core logs format should be in JSON")
 		//}},
+		{name: "ImagePullSecret tests", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, ImagePullSecretTests(t, loadBalancerName), "Perform ImagePullSecret Tests")
+		}},
+		{name: "Check Cluster Password failure", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, CheckClusterCorePasswordFailure(t), "Cluster core installation should not succeed with incorrect password")
+		}},
 		{name: "Check K8s", test: func(t *testing.T) {
 			assert.NoError(t, CheckK8s(t, loadBalancerName), "Neo4j Config check should succeed")
 		}},
@@ -110,15 +128,8 @@ func clusterTests(loadBalancerName model.ReleaseName, core model.ReleaseName) ([
 		{name: "Count Nodes", test: func(t *testing.T) {
 			assert.NoError(t, CheckNodeCount(t, loadBalancerName), "Count Nodes should succeed")
 		}},
-		{name: "Check Cluster Password failure", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, CheckClusterCorePasswordFailure(t), "Cluster core installation should not succeed with incorrect password")
-		}},
-		{name: "Create Database customers", test: func(t *testing.T) {
-			assert.NoError(t, CreateDatabase(t, loadBalancerName, "customers"), "Creates customer database")
-		}},
-		{name: "Check Database customers exists", test: func(t *testing.T) {
-			assert.NoError(t, CheckDataBaseExists(t, loadBalancerName, "customers"), "Checks if customer database exists or not")
+		{name: "Database Creation Tests", test: func(t *testing.T) {
+			assert.NoError(t, DatabaseCreationTests(t, loadBalancerName, "customers"), "Creates \"customer\" database and checks for its existence")
 		}},
 	}
 	return subTests, nil
@@ -141,6 +152,62 @@ func clusterTests(loadBalancerName model.ReleaseName, core model.ReleaseName) ([
 //	}
 //	return nil
 //}
+
+//ImagePullSecretTests runs tests related to imagePullSecret feature
+func ImagePullSecretTests(t *testing.T, name model.ReleaseName) error {
+	t.Run("Check cluster core has imagePullSecret image", func(t *testing.T) {
+		t.Parallel()
+		assert.NoError(t, CheckCoreImageName(t, name), "Core-1 image name should match with customImage")
+	})
+	t.Run("Check imagePullSecret \"demo\" is created", func(t *testing.T) {
+		t.Parallel()
+		assert.NoError(t, CheckImagePullSecret(t, name), "ImagePullSecret named \"demo\" should be present")
+	})
+	return nil
+}
+
+//DatabaseCreationTests creates a database against a cluster and checks if its created or not
+func DatabaseCreationTests(t *testing.T, loadBalancerName model.ReleaseName, dataBaseName string) error {
+	t.Run("Create Database customers", func(t *testing.T) {
+		assert.NoError(t, CreateDatabase(t, loadBalancerName, dataBaseName), "Creates database")
+	})
+	t.Run("Check Database customers exists", func(t *testing.T) {
+		assert.NoError(t, CheckDataBaseExists(t, loadBalancerName, dataBaseName), "Checks if database exists or not")
+	})
+	return nil
+}
+
+//CheckImagePullSecret checks whether a secret of type docker-registry is created or not
+func CheckCoreImageName(t *testing.T, releaseName model.ReleaseName) error {
+
+	pods, err := getAllPods(releaseName.Namespace())
+	if !assert.NoError(t, err) {
+		return err
+	}
+	for _, pod := range pods.Items {
+		if strings.Contains(pod.Name, "core-1") {
+			container := pod.Spec.Containers[0]
+			if !assert.Equal(t, container.Image, model.ImagePullSecretCustomImageName) {
+				return fmt.Errorf("container image %s not matching with imagePullSecet customImage %s", container.Image, model.ImagePullSecretCustomImageName)
+			}
+			break
+		}
+	}
+	return nil
+}
+
+//CheckImagePullSecret checks whether a secret of type docker-registry is created or not
+func CheckImagePullSecret(t *testing.T, releaseName model.ReleaseName) error {
+
+	secret, err := getSpecificSecret(releaseName.Namespace(), "demo")
+	if !assert.NoError(t, err) {
+		return fmt.Errorf("No secret found for the provided imagePullSecret \n %v", err)
+	}
+	if !assert.Equal(t, secret.Name, "demo") {
+		return fmt.Errorf("imagePullSecret name %s does not match with demo", secret.Name)
+	}
+	return nil
+}
 
 //headLessServiceTests contains all the tests related to headless service
 func headLessServiceTests(headlessService model.ReleaseName) []SubTest {
@@ -205,7 +272,7 @@ func readReplicaTests(readReplica1Name model.ReleaseName, readReplica2Name model
 func CheckClusterCorePasswordFailure(t *testing.T) error {
 	//creating a sample cluster core definition (which is not supposed to get installed)
 	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
-	core := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 4)}
+	core := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 4), nil}
 	releaseName := core.Name()
 	diskName := releaseName.DiskName()
 	// we are not using the customized run() func here since we need to assert the error received on stdout
@@ -284,7 +351,6 @@ func CheckK8s(t *testing.T, name model.ReleaseName) error {
 		t.Parallel()
 		assert.NoError(t, CheckLoadBalancerService(t, name, 5))
 	})
-
 	return nil
 }
 
@@ -454,13 +520,14 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	t.Parallel()
 
 	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
-	loadBalancer := clusterLoadBalancer{model.NewLoadBalancerReleaseName(clusterReleaseName)}
-	headlessService := clusterHeadLessService{model.NewHeadlessServiceReleaseName(clusterReleaseName)}
-	readReplica1 := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName, 1)}
-	readReplica2 := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName, 2)}
-	core1 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 1)}
-	core2 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 2)}
-	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3)}
+	loadBalancer := clusterLoadBalancer{model.NewLoadBalancerReleaseName(clusterReleaseName), nil}
+	headlessService := clusterHeadLessService{model.NewHeadlessServiceReleaseName(clusterReleaseName), nil}
+	readReplica1 := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName, 1), model.ImagePullSecretArgs}
+	readReplica2 := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName, 2), nil}
+
+	core1 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 1), model.ImagePullSecretArgs}
+	core2 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 2), nil}
+	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3), nil}
 	cores := []clusterCore{core1, core2, core3}
 	readReplicas := []clusterReadReplica{readReplica1, readReplica2}
 
@@ -518,7 +585,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 
 	t.Logf("Succeeded with setup of '%s'", t.Name())
 
-	subTests, err := clusterTests(loadBalancer.Name(), core1.Name())
+	subTests, err := clusterTests(loadBalancer.Name())
 	if !assert.NoError(t, err) {
 		return
 	}

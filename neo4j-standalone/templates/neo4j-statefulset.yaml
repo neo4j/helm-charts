@@ -17,7 +17,7 @@ metadata:
     helm.neo4j.com/dbms.mode: "{{ index $.Values.config "dbms.mode" | default "SINGLE" | upper }}"
     app: "{{ template "neo4j.appName" . }}"
     helm.neo4j.com/instance: "{{ .Release.Name }}"
-    {{- include "neo4j.labels" $.Values.neo4j | nindent 4 }}
+    {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
   name: "{{ .Release.Name }}"
   namespace: "{{ .Release.Namespace }}"
 spec:
@@ -37,7 +37,7 @@ spec:
         helm.neo4j.com/pod_category: "neo4j-instance" # used for anti affinity rules
         helm.neo4j.com/neo4j.loadbalancer: "{{ $.Values.podSpec.loadbalancer }}"
         helm.neo4j.com/instance: "{{ .Release.Name }}"
-        {{- include "neo4j.labels" $.Values.neo4j | nindent 8 }}
+        {{- include "neo4j.labels" $.Values.neo4j | indent 8 }}
       annotations:
         "checksum/{{ .Release.Name }}-config": {{ include (print $.Template.BasePath "/neo4j-config.yaml") . | sha256sum }}
     spec:
@@ -77,6 +77,7 @@ spec:
         {{- end }}
         {{- end }}
       {{- end }}
+      {{- include "neo4j.imagePullSecrets" .Values.image.imagePullSecrets | indent 6 }}
       containers:
         - name: "neo4j"
           image: "{{ $neo4jImage }}"

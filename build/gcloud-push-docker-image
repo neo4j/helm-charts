@@ -27,6 +27,5 @@ function push_to_gcr {
     echo "##teamcity[setParameter name='env.NEO4J_DOCKER_IMG_${EDITION}' value='${NEO4J_DOCKER_IMG}']"
     docker rmi "${NEO4J_DOCKER_IMG}" "${DOCKER_IMG}"
 }
-
 push_to_gcr "$(ls | grep "neo4j-enterprise-")" "ENTERPRISE"
 push_to_gcr "$(ls | grep "neo4j-community-")" "COMMUNITY"
