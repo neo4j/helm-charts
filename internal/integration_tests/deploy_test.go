@@ -1,10 +1,10 @@
 package integration_tests
 
 import (
-	. "github.com/neo-technology/neo4j-helm-charts/internal/helpers"
-	"github.com/neo-technology/neo4j-helm-charts/internal/integration_tests/gcloud"
-	"github.com/neo-technology/neo4j-helm-charts/internal/model"
-	"github.com/neo-technology/neo4j-helm-charts/internal/resources"
+	. "github.com/neo4j/helm-charts/internal/helpers"
+	"github.com/neo4j/helm-charts/internal/integration_tests/gcloud"
+	"github.com/neo4j/helm-charts/internal/model"
+	"github.com/neo4j/helm-charts/internal/resources"
 	"github.com/stretchr/testify/assert"
 )
 import "testing"

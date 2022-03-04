@@ -3,7 +3,7 @@ package unit_tests
 import (
 	"bufio"
 	"fmt"
-	"github.com/neo-technology/neo4j-helm-charts/internal/model"
+	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	"os"

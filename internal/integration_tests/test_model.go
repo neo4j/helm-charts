@@ -2,8 +2,8 @@ package integration_tests
 
 import (
 	"fmt"
-	. "github.com/neo-technology/neo4j-helm-charts/internal/helpers"
-	"github.com/neo-technology/neo4j-helm-charts/internal/model"
+	. "github.com/neo4j/helm-charts/internal/helpers"
+	"github.com/neo4j/helm-charts/internal/model"
 	"strings"
 	"testing"
 	"time"
