@@ -3,8 +3,8 @@ package integration_tests
 import (
 	"fmt"
 	"github.com/hashicorp/go-multierror"
-	"github.com/neo-technology/neo4j-helm-charts/internal/model"
-	"github.com/neo-technology/neo4j-helm-charts/internal/resources"
+	"github.com/neo4j/helm-charts/internal/model"
+	"github.com/neo4j/helm-charts/internal/resources"
 	"github.com/stretchr/testify/assert"
 	"strings"
 )
