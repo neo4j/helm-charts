@@ -2,7 +2,7 @@ package integration_tests
 
 import (
 	"fmt"
-	"github.com/neo-technology/neo4j-helm-charts/internal/model"
+	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 	"github.com/stretchr/testify/assert"
 	"strings"

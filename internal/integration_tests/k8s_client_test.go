@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/neo-technology/neo4j-helm-charts/internal/model"
+	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
