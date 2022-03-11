@@ -51,6 +51,8 @@ helm repo index ${S3_LOCAL_SYNC_DIR} --url https://helm.neo4j.com/${S3_UPLOAD_TO
 # Upload new packages to s3
 #
 aws s3 sync --acl bucket-owner-full-control --cache-control max-age=${S3_CACHE_CONTROL_MAX_AGE_SECONDS} ${S3_LOCAL_SYNC_DIR} s3://helm.neo4j.com/${S3_UPLOAD_TO_SUB_FOLDER}
-
+if [ ${S3_UPLOAD_TO_SUB_FOLDER} == "neo4j" ]; then
+    aws s3 sync --acl public-read --include "*.tgz" --exclude "*.yaml" --exclude "*.tgz.prov" s3://helm.neo4j.com/neo4j s3://dist.neo4j.org/helm/
+fi
 # Clean up local packages
 #rm ./packages/*
