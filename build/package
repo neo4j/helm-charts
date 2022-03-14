@@ -37,7 +37,7 @@ mkdir -p ${BUILD_OUT_DIR}
 
 if [ ${S3_UPLOAD_TO_SUB_FOLDER} == "neo4j-experimental" ]; then
     CHART_VERSION=$(helm show chart ./neo4j-standalone | grep -E "version:(.*)" | awk -F ": " '{print $2}')
-    tar -czvf "neo4j-helm-charts-${CHART_VERSION}.tgz" neo4j-standalone neo4j-cluster* neo4j-gcloud* neo4j-desktop*
+    tar -czvf "neo4j-helm-charts-${CHART_VERSION}.tgz" neo4j-standalone neo4j-cluster* neo4j-gcloud* neo4j-docker*
     aws s3 sync --acl public-read --include "*.tgz" --exclude "*.yaml" --exclude "*.tgz.prov" "neo4j-helm-charts-${CHART_VERSION}.tgz" s3://dist.neo4j.org/helm/
     rm -f "neo4j-helm-charts-${CHART_VERSION}.tgz"
 fi
