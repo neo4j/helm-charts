@@ -11,6 +11,7 @@ shopt -s inherit_errexit
 # Local env vars
 #
 BUILD_OUT_DIR="tmp/new-packages/"
+DIST_DIR="tmp/dist/"
 S3_LOCAL_SYNC_DIR="tmp/release-packages"
 S3_UPLOAD_TO_SUB_FOLDER="${S3_SUB_FOLDER:-neo4j}"
 S3_CACHE_CONTROL_MAX_AGE_SECONDS="${S3_CACHE_CONTROL_MAX_AGE_SECONDS:-300}"
@@ -32,7 +33,17 @@ echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-cluster-headless-
 # echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-gcloud-pv --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
 
 echo "Copying packaged files to ${BUILD_OUT_DIR}"
+
 mkdir -p ${BUILD_OUT_DIR}
+
+if [ ${S3_UPLOAD_TO_SUB_FOLDER} == "neo4j-experimental" ]; then
+    CHART_VERSION=$(helm show chart ./neo4j-standalone | grep -E "version:(.*)" | awk -F ": " '{print $2}')
+    mkdir -p "{DIST_DIR}"
+    tar -czvf "${DIST_DIR}/neo4j-helm-charts-${CHART_VERSION}.tgz" neo4j-standalone neo4j-cluster* neo4j-gcloud* neo4j-desktop*
+    aws s3 sync --acl public-read --include "*.tgz" --exclude "*.yaml" --exclude "*.tgz.prov" ${DIST_DIR} s3://dist.neo4j.org/helm/
+fi
+
+
 mv *.tgz ${BUILD_OUT_DIR}
 mv *.tgz.prov ${BUILD_OUT_DIR}
 
@@ -51,7 +62,7 @@ helm repo index ${S3_LOCAL_SYNC_DIR} --url https://helm.neo4j.com/${S3_UPLOAD_TO
 # Upload new packages to s3
 #
 aws s3 sync --acl bucket-owner-full-control --cache-control max-age=${S3_CACHE_CONTROL_MAX_AGE_SECONDS} ${S3_LOCAL_SYNC_DIR} s3://helm.neo4j.com/${S3_UPLOAD_TO_SUB_FOLDER}
-if [ ${S3_UPLOAD_TO_SUB_FOLDER} == "neo4j" ]; then
+if [ ${S3_UPLOAD_TO_SUB_FOLDER} == "neo4j-experimental" ]; then
     aws s3 sync --acl public-read --include "*.tgz" --exclude "*.yaml" --exclude "*.tgz.prov" s3://helm.neo4j.com/neo4j s3://dist.neo4j.org/helm/
 fi
 # Clean up local packages
