@@ -22,6 +22,14 @@ PACKAGE_SIGNING_KEY="${PACKAGE_SIGNING_KEY:?PACKAGE_SIGNING_KEY is required}"
 PACKAGE_SIGNING_KEYRING="${PACKAGE_SIGNING_KEYRING:?PACKAGE_SIGNING_KEYRING is required}"
 PACKAGE_SIGNING_PASSPHRASE="${PACKAGE_SIGNING_PASSPHRASE:?PACKAGE_SIGNING_PASSPHRASE is required}"
 
+
+if [ ${S3_UPLOAD_TO_SUB_FOLDER} == "neo4j" ]; then
+    CHART_VERSION=$(helm show chart ./neo4j-standalone | grep -E "version:(.*)" | awk -F ": " '{print $2}')
+    tar -czvf "neo4j-helm-charts-${CHART_VERSION}.tgz" neo4j-standalone neo4j-cluster* neo4j-gcloud* neo4j-docker*
+    aws s3 cp --acl public-read "neo4j-helm-charts-${CHART_VERSION}.tgz" s3://dist.neo4j.org/helm/
+    rm -f "neo4j-helm-charts-${CHART_VERSION}.tgz"
+fi
+
 # create the package!
 echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-standalone --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
 # echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-cluster-core --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
@@ -29,6 +37,7 @@ echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-standalone --key 
 # echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-gcloud-pv --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
 
 echo "Copying packaged files to ${BUILD_OUT_DIR}"
+
 mkdir -p ${BUILD_OUT_DIR}
 mv *.tgz ${BUILD_OUT_DIR}
 mv *.tgz.prov ${BUILD_OUT_DIR}
@@ -48,8 +57,5 @@ helm repo index ${S3_LOCAL_SYNC_DIR} --url https://helm.neo4j.com/${S3_UPLOAD_TO
 # Upload new packages to s3
 #
 aws s3 sync --acl bucket-owner-full-control --cache-control max-age=${S3_CACHE_CONTROL_MAX_AGE_SECONDS} ${S3_LOCAL_SYNC_DIR} s3://helm.neo4j.com/${S3_UPLOAD_TO_SUB_FOLDER}
-if [ ${S3_UPLOAD_TO_SUB_FOLDER} == "neo4j" ]; then
-    aws s3 sync --acl public-read --include "*.tgz" --exclude "*.yaml" --exclude "*.tgz.prov" s3://helm.neo4j.com/neo4j s3://dist.neo4j.org/helm/
-fi
 # Clean up local packages
 #rm ./packages/*
