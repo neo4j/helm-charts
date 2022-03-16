@@ -128,6 +128,10 @@ volumes:
     share:
       name: "data"
 
+nodeSelector:
+  disktype: ssd
+  demo123: "ssd1123"
+
 # Services for Neo4j
 services:
   # A ClusterIP service with the same name as the Helm Release name should be used for Neo4j Driver connections originating inside the

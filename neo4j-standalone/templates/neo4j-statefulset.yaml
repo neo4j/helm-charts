@@ -78,6 +78,7 @@ spec:
         {{- end }}
       {{- end }}
       {{- include "neo4j.imagePullSecrets" .Values.image.imagePullSecrets | indent 6 }}
+      {{- include "neo4j.nodeSelector" .Values.nodeSelector | indent 6 }}
       containers:
         - name: "neo4j"
           image: "{{ $neo4jImage }}"
