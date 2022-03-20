@@ -315,6 +315,12 @@ podSpec:
   # additional runtime containers for the Neo4j pod
   containers: [ ]
 
+  # Node Selector(s) for scheduling the pods on specific Nodes
+  nodeSelector: {}
+
+  # Allow pods to be scheduled on nodes containing specific taints
+  tolerations: [ ]
+
 # print the neo4j user password set during install to the `helm install` log
 logInitialPassword: true
 
