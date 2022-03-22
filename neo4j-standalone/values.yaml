@@ -38,9 +38,6 @@ neo4j:
 ## into the running container
 additionalVolumes: []
 
-## specify where the additional volumes are mounted in the core container
-additionalVolumeMounts: []
-
 # Volumes for Neo4j
 volumes:
   data:
