@@ -41,6 +41,10 @@ spec:
       annotations:
         "checksum/{{ .Release.Name }}-config": {{ include (print $.Template.BasePath "/neo4j-config.yaml") . | sha256sum }}
     spec:
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+      {{ toYaml . | indent 8 }}
+      {{- end }}
       {{- if .Values.podSpec.podAntiAffinity }}
       affinity:
         {{- if kindIs "bool" .Values.podSpec.podAntiAffinity | and .Values.podSpec.podAntiAffinity }}
@@ -173,6 +177,9 @@ spec:
         {{- end }}
         {{- end }}
       volumes:
+        {{- if .Values.additionalVolumes }}
+        {{ toYaml .Values.additionalVolumes | indent 10}}
+        {{- end }}
         {{- /* neo4j.conf settings. Using a projected volume allows keys defined later in the list of configMaps to override keys defined earlier in the list of configmaps. */}}
         - name: neo4j-conf
           projected:
