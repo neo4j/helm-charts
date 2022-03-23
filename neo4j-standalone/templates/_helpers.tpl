@@ -36,7 +36,7 @@ Convert a neo4j.conf properties text into valid yaml
             {{/* match all the nodeSelector labels with the existing node labels*/}}
             {{- range $name,$value := $.Values.nodeSelector -}}
                 {{- if hasKey $nodeLabels $name -}}
-                    {{- if eq $value (get $nodeLabels $name) -}}
+                    {{- if eq ($value | toString) (get $nodeLabels $name | toString ) -}}
                         {{- $numberOfLabelsFound = add1 $numberOfLabelsFound -}}
                     {{- end -}}
                 {{- end -}}

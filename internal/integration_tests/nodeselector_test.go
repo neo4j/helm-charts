@@ -10,17 +10,17 @@ import (
 func LabelNodes(t *testing.T) error {
 
 	var errors *multierror.Error
-	nodesList , err := getNodesList()
+	nodesList, err := getNodesList()
 	if err != nil {
 		return err
 	}
 
-	for index,node := range nodesList.Items {
-		labelName := fmt.Sprintf("testLabel=%d",index+1)
-		err = run(t, "kubectl", "label", "nodes",node.ObjectMeta.Name,labelName)
+	for index, node := range nodesList.Items {
+		labelName := fmt.Sprintf("testLabel=%d", index+1)
+		err = run(t, "kubectl", "label", "nodes", node.ObjectMeta.Name, labelName)
 		if err != nil {
 			errors = multierror.Append(errors, err)
-			t.Logf("Node Label failed for %s: %v",node.ObjectMeta.Name,err)
+			t.Logf("Node Label failed for %s: %v", node.ObjectMeta.Name, err)
 		}
 	}
 
@@ -31,16 +31,16 @@ func LabelNodes(t *testing.T) error {
 func RemoveLabelFromNodes(t *testing.T) error {
 
 	var errors *multierror.Error
-	nodesList , err := getNodesList()
+	nodesList, err := getNodesList()
 	if err != nil {
 		return err
 	}
 
-	for _,node := range nodesList.Items {
-		err = run(t, "kubectl", "label", "nodes",node.ObjectMeta.Name,"testLabel-")
+	for _, node := range nodesList.Items {
+		err = run(t, "kubectl", "label", "nodes", node.ObjectMeta.Name, "testLabel-")
 		if err != nil {
 			errors = multierror.Append(errors, err)
-			t.Logf("Node Label removal failed for %s: %v",node.ObjectMeta.Name,err)
+			t.Logf("Node Label removal failed for %s: %v", node.ObjectMeta.Name, err)
 		}
 	}
 

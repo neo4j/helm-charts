@@ -664,7 +664,7 @@ func TestInvalidNodeSelectorLabels(t *testing.T) {
 		if !assert.Error(t, err) {
 			return
 		}
-		if !assert.Contains(t, err.Error(),"No node exists in the cluster which has all the below labels") {
+		if !assert.Contains(t, err.Error(), "No node exists in the cluster which has all the below labels") {
 			t.Logf("Invalid nodeselector error message")
 			return
 		}
