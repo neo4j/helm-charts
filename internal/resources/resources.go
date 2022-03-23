@@ -29,6 +29,7 @@ var EmptyImageCredentials = newYamlFile("imagePullSecret/emptyImageCreds.yaml")
 var DuplicateImageCredentials = newYamlFile("imagePullSecret/duplicateImageCreds.yaml")
 var MissingImageCredentials = newYamlFile("imagePullSecret/missingImageCreds.yaml")
 var EmptyImagePullSecrets = newYamlFile("imagePullSecret/emptyImagePullSecrets.yaml")
+var InvalidNodeSelectorLabels = newYamlFile("nodeselector.yaml")
 
 type YamlFile interface {
 	Path() string

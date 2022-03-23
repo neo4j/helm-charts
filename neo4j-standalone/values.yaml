@@ -129,8 +129,6 @@ volumes:
       name: "data"
 
 nodeSelector:
-  disktype: ssd
-  demo123: "ssd1123"
 
 # Services for Neo4j
 services:

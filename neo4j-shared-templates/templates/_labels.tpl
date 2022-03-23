@@ -1,13 +1,13 @@
 {{- define "neo4j.labels" -}}
-{{- with .labels -}}
-{{- range $name, $value := . }}
+    {{- with .labels -}}
+        {{- range $name, $value := . }}
 "{{ $name }}": "{{ $value }}"
-{{- end -}}
-{{- end -}}
+        {{- end -}}
+    {{- end -}}
 {{- end }}
 
 {{- define "neo4j.nodeSelector" -}}
-{{- if and (not (empty .)) (ne (len ( . | join "" | trim)) 0) }}
+{{- if not (empty .) }}
 nodeSelector:
     {{- with . -}}
         {{- range $name, $value := . }}
