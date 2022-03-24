@@ -166,6 +166,16 @@ func ImagePullSecretTests(t *testing.T, name model.ReleaseName) error {
 	return nil
 }
 
+//NodeSelectorTests runs tests related to nodeSelector feature
+func NodeSelectorTests(name model.ReleaseName) []SubTest {
+	return []SubTest{
+		{name: fmt.Sprintf("Check cluster core 1 is assigned with label %s", model.NodeSelectorLabel), test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, CheckNodeSelectorLabel(t, name, model.NodeSelectorLabel), fmt.Sprintf("Core-1 Pod should be deployed on node with label %s", model.NodeSelectorLabel))
+		}},
+	}
+}
+
 //DatabaseCreationTests creates a database against a cluster and checks if its created or not
 func DatabaseCreationTests(t *testing.T, loadBalancerName model.ReleaseName, dataBaseName string) error {
 	t.Run("Create Database customers", func(t *testing.T) {
@@ -193,6 +203,24 @@ func CheckCoreImageName(t *testing.T, releaseName model.ReleaseName) error {
 			break
 		}
 	}
+	return nil
+}
+
+//CheckNodeSelectorLabel checks whether the given pod is associated with the correct node or not
+func CheckNodeSelectorLabel(t *testing.T, releaseName model.ReleaseName, labelName string) error {
+
+	nodeSelectorNode, err := getNodeWithLabel(labelName)
+	if !assert.NoError(t, err) {
+		return err
+	}
+	pod, err := getSpecificPod(releaseName.Namespace(), releaseName.PodName())
+	if !assert.NoError(t, err) {
+		return fmt.Errorf("error while fetching pod list \n %v", err)
+	}
+	if !assert.Equal(t, nodeSelectorNode.Name, pod.Spec.NodeName) {
+		return fmt.Errorf("pod %s is not scheduled on the correct node %s", pod.Spec.NodeName, nodeSelectorNode.Name)
+	}
+
 	return nil
 }
 
@@ -519,24 +547,32 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	}
 	t.Parallel()
 
-	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
-	loadBalancer := clusterLoadBalancer{model.NewLoadBalancerReleaseName(clusterReleaseName), nil}
-	headlessService := clusterHeadLessService{model.NewHeadlessServiceReleaseName(clusterReleaseName), nil}
-	readReplica1 := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName, 1), model.ImagePullSecretArgs}
-	readReplica2 := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName, 2), nil}
-
-	core1 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 1), model.ImagePullSecretArgs}
-	core2 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 2), nil}
-	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3), nil}
-	cores := []clusterCore{core1, core2, core3}
-	readReplicas := []clusterReadReplica{readReplica1, readReplica2}
-
 	var closeables []Closeable
 	addCloseable := func(closeableList ...Closeable) {
 		for _, closeable := range closeableList {
 			closeables = append([]Closeable{closeable}, closeables...)
 		}
 	}
+
+	err := LabelNodes(t)
+	addCloseable(func() error {
+		return RemoveLabelFromNodes(t)
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
+	loadBalancer := clusterLoadBalancer{model.NewLoadBalancerReleaseName(clusterReleaseName), nil}
+	headlessService := clusterHeadLessService{model.NewHeadlessServiceReleaseName(clusterReleaseName), nil}
+	readReplica1 := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName, 1), model.ImagePullSecretArgs}
+	readReplica2 := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName, 2), nil}
+
+	core1 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 1), append(model.ImagePullSecretArgs, model.NodeSelectorArgs...)}
+	core2 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 2), nil}
+	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3), nil}
+	cores := []clusterCore{core1, core2, core3}
+	readReplicas := []clusterReadReplica{readReplica1, readReplica2}
 
 	t.Cleanup(func() { cleanupTest(t, AsCloseable(closeables)) })
 
@@ -589,6 +625,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
+	subTests = append(subTests, NodeSelectorTests(core1.Name())...)
 	subTests = append(subTests, headLessServiceTests(headlessService.Name())...)
 	subTests = append(subTests, readReplicaTests(readReplica1.Name(), readReplica2.Name(), loadBalancer.Name())...)
 	runSubTests(t, subTests)
