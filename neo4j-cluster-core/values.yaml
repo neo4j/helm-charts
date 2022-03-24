@@ -128,6 +128,13 @@ volumes:
     share:
       name: "data"
 
+#nodeSelector labels
+#please ensure the respective labels are present on one of the cluster nodes or else helm charts will throw an error
+nodeSelector:
+#  label1: value1
+#  label2: value2
+
+
 # Services for Neo4j
 services:
   # A ClusterIP service with the same name as the Helm Release name should be used for Neo4j Driver connections originating inside the

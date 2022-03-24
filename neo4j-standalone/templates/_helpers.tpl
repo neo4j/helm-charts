@@ -25,6 +25,35 @@ Convert a neo4j.conf properties text into valid yaml
 {{- end -}}
 
 
+{{/* checkNodeSelectorLabels checks if there is any node in the cluster which has nodeSelector labels */}}
+{{- define "neo4j.checkNodeSelectorLabels" -}}
+    {{- if not (empty $.Values.nodeSelector) -}}
+        {{- $validNodes := 0 -}}
+        {{- $numberOfLabelsRequired := len $.Values.nodeSelector -}}
+        {{- range $index, $node := (lookup "v1" "Node" .Release.Namespace "").items -}}
+            {{- $nodeLabels :=  $node.metadata.labels -}}
+            {{- $numberOfLabelsFound := 0 -}}
+            {{/* match all the nodeSelector labels with the existing node labels*/}}
+            {{- range $name,$value := $.Values.nodeSelector -}}
+                {{- if hasKey $nodeLabels $name -}}
+                    {{- if eq ($value | toString) (get $nodeLabels $name | toString ) -}}
+                        {{- $numberOfLabelsFound = add1 $numberOfLabelsFound -}}
+                    {{- end -}}
+                {{- end -}}
+            {{- end -}}
+
+            {{/* increment valid nodes if the number of labels required are matching with the number of labels found */}}
+            {{- if eq $numberOfLabelsFound $numberOfLabelsRequired -}}
+                {{- $validNodes = add1 $validNodes -}}
+            {{- end -}}
+        {{- end -}}
+
+        {{- if eq $validNodes 0 -}}
+            {{- fail (print "No node exists in the cluster which has all the below labels (.Values.nodeSelector) \n %s" ($.Values.nodeSelector | join "\n" | toString) ) -}}
+        {{- end -}}
+    {{- end -}}
+{{- end -}}
+
 {{/*
 If no name is set in `Values.neo4j.name` sets it to release name and modifies Values.neo4j so that the same name is available everywhere
 */}}

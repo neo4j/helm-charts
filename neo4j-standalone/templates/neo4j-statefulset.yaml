@@ -4,6 +4,7 @@
 {{- $offlineMaintenanceEnabled :=  .Values.neo4j.offlineMaintenanceModeEnabled }}
 {{- $neo4jImage := include "neo4j.image" . }}
 
+{{- template "neo4j.checkNodeSelectorLabels" . -}}
 {{- template "podSpec.checkLoadBalancerParam" . -}}
 {{- template "neo4j.checkLicenseAgreement" . -}}
 {{- template "neo4j.volumes.validation" . -}}
@@ -78,6 +79,7 @@ spec:
         {{- end }}
       {{- end }}
       {{- include "neo4j.imagePullSecrets" .Values.image.imagePullSecrets | indent 6 }}
+      {{- include "neo4j.nodeSelector" .Values.nodeSelector | indent 6 }}
       containers:
         - name: "neo4j"
           image: "{{ $neo4jImage }}"

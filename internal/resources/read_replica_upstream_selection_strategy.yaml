@@ -1,4 +1,3 @@
 config:
   causal_clustering.connect-randomly-to-server-group: "read-replicas"
-  causal_clustering.multi_dc_license: "true"
   causal_clustering.upstream_selection_strategy: "connect-randomly-to-server-group"
