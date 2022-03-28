@@ -15,7 +15,9 @@ var ImagePullSecretUsername,
 	ImagePullSecretCustomImageName,
 	ImagePullSecretEmail string
 
-var ImagePullSecretArgs []string
+var NodeSelectorArgs, ImagePullSecretArgs []string
+
+var NodeSelectorLabel = "testLabel=1"
 
 func init() {
 	setWorkingDir()
@@ -44,6 +46,9 @@ func init() {
 		"--set", fmt.Sprintf("image.imageCredentials[0].username=%s", ImagePullSecretUsername),
 		"--set", fmt.Sprintf("image.imageCredentials[0].password=%s", ImagePullSecretPass),
 		"--set", fmt.Sprintf("image.imageCredentials[0].email=%s", ImagePullSecretEmail),
+	}
+	NodeSelectorArgs = []string{
+		"--set", fmt.Sprintf("nodeSelector.%s", NodeSelectorLabel),
 	}
 }
 

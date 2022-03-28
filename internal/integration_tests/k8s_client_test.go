@@ -162,6 +162,37 @@ func getAllPods(namespace model.Namespace) (*coreV1.PodList, error) {
 	return Clientset.CoreV1().Pods(string(namespace)).List(context.TODO(), v1.ListOptions{})
 }
 
+func getSpecificPod(namespace model.Namespace, podName string) (*coreV1.Pod, error) {
+	return Clientset.CoreV1().Pods(string(namespace)).Get(context.TODO(), podName, v1.GetOptions{})
+}
+
+func getNodesList() (*coreV1.NodeList, error) {
+	return Clientset.CoreV1().Nodes().List(context.TODO(), v1.ListOptions{})
+}
+
+//getNodeWithLabel returns the node with the given label
+func getNodeWithLabel(labelName string) (*coreV1.Node, error) {
+	nodes, err := getNodesList()
+	if err != nil {
+		return nil, err
+	}
+	labelKey := strings.Split(labelName, "=")[0]
+	labelValue := strings.Split(labelName, "=")[1]
+	var nodeSelectorNode *coreV1.Node
+	for _, node := range nodes.Items {
+		if value, present := node.ObjectMeta.Labels[labelKey]; present {
+			if value == labelValue {
+				nodeSelectorNode = &node
+				break
+			}
+		}
+	}
+	if nodeSelectorNode == nil {
+		return nil, fmt.Errorf("No node with the label %s found", labelName)
+	}
+	return nodeSelectorNode, nil
+}
+
 func getManifest(namespace model.Namespace) (*model.K8sResources, error) {
 
 	pods, err := getAllPods(namespace)

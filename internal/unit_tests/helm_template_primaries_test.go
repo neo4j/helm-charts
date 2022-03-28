@@ -3,6 +3,7 @@ package unit_tests
 import (
 	"errors"
 	"fmt"
+
 	"github.com/neo4j/helm-charts/internal/helpers"
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/neo4j/helm-charts/internal/resources"
@@ -650,6 +651,21 @@ func TestEmptyImagePullSecrets(t *testing.T) {
 		}
 		if !assert.Equal(t, secret2.Name, "secret2") {
 			fmt.Errorf(" secret name %s not matching with secret2", secret2.Name)
+			return
+		}
+	}))
+}
+
+func TestInvalidNodeSelectorLabels(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+		_, err := model.HelmTemplate(t, chart, useDataModeAndAcceptLicense, resources.InvalidNodeSelectorLabels.HelmArgs()...)
+		if !assert.Error(t, err) {
+			return
+		}
+		if !assert.Contains(t, err.Error(), "No node exists in the cluster which has all the below labels") {
+			t.Logf("Invalid nodeselector error message")
 			return
 		}
 	}))
