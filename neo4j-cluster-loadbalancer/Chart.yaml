@@ -1,7 +1,7 @@
 apiVersion: v1
 name: neo4j-cluster-loadbalancer
 home: https://www.neo4j.com
-version: 4.4.4
+version: 4.4.5
 appVersion: "-"
 description: Neo4j is the world's leading graph database
 keywords:
