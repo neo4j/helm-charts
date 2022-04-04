@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+# This creates the expected persistent disk
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+# Required env vars
+AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:?AWS_DEFAULT_REGION is required}"
+AWS_AZ="${AWS_AZ:?AWS_AZ is required}"
+
+# Local vars
+AWS_DISK_SIZE="${DISK_SIZE:-10}"
+
+# Check if there are leftover disks and clean them up
+for volume in `aws ec2 describe-volumes --filters Name=tag:volume,Values=neo4j-k8s-build  --query "Volumes[*].{ID:VolumeId}" --output text`
+do
+  echo "deleting leftover disks"
+  aws ec2 delete-volume --volume-id $volume
+done
