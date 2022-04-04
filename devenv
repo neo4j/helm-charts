@@ -12,6 +12,14 @@ if [ -f ./devenv.local ]; then
     export IPS_PASS
     export IPS_EMAIL
     export NEO4J_DOCKER_IMG
+    export AWS_CLUSTER_NAME
+    export AWS_NODE_GROUP_NAME
+    export AWS_CLUSTER_NODES
+    export AWS_DEFAULT_REGION
+    export AWS_AZ
+    export PUBLIC_KEY_PATH
+    export AWS_KEY_ID
+    export AWS_ACCESS_KEY
 
 else
     echo "Couldn't find ./devenv.local."
