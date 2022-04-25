@@ -5,7 +5,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: "{{ .Release.Name }}-k8s-config"
+  name: "{{ template "neo4j.appName" . }}-k8s-config"
   namespace: "{{ .Release.Namespace }}"
   labels:
     app: "{{ template "neo4j.appName" $ }}"
@@ -23,7 +23,7 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: "{{ .Release.Name }}-user-config"
+  name: "{{ template "neo4j.appName" . }}-user-config"
   namespace: "{{ .Release.Namespace }}"
   labels:
     app: "{{ template "neo4j.appName" $ }}"
@@ -60,11 +60,11 @@ data:
   {{- end }}
   {{- end }}
 ---
-# Default Neo4j config values, these are overridden by user-provided values in {{ .Release.Name }}-user-config
+# Default Neo4j config values, these are overridden by user-provided values in "{{ template "neo4j.appName" . }}-user-config
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: "{{ .Release.Name }}-default-config"
+  name: "{{ template "neo4j.appName" . }}-default-config"
   namespace: "{{ .Release.Namespace }}"
   labels:
     app: "{{ template "neo4j.appName" $ }}"

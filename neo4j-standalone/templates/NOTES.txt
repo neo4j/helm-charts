@@ -13,11 +13,11 @@
 {{- $isReadReplica := index .Values.config "dbms.mode" | default "" | regexMatch "(?i)READ_REPLICA$" }}
 
 {{- if $offlineMaintenanceModeEnabled -}}
-Your "{{ .Release.Name }}" has been placed in offline maintenance mode.
+Your ""{{ template "neo4j.appName" . }}" has been placed in offline maintenance mode.
 
 The Neo4j pod is running with a 'dummy' process (it is not running Neo4j).
 In this state the Neo4j pod will never become "READY" in Kubernetes but you can use kubectl exec to execute commands in the Neo4j pod. To get a shell try:
- $ kubectl exec "{{ .Release.Name }}-0" -it -- bash
+ $ kubectl exec "{{ template "neo4j.appName" . }}-0" -it -- bash
 
 To run a long-running command use nohup to ensure that the job keeps running if kubectl exec is disconnected. E.g.
  $ nohup neo4j-admin check-consistency --database=neo4j &> job.out < /dev/null &
@@ -26,7 +26,7 @@ To run a long-running command use nohup to ensure that the job keeps running if 
 {{- if .Release.IsInstall -}}
 Thank you for installing {{ .Chart.Name }}.
 
-Your release "{{ .Release.Name }}" has been installed {{ if ne "default" .Release.Namespace }} in namespace "{{ .Release.Namespace }}"{{ end }}.
+Your release "{{ template "neo4j.appName" . }}" has been installed {{ if ne "default" .Release.Namespace }} in namespace "{{ .Release.Namespace }}"{{ end }}.
 
 {{- if $authDisabled -}}
 Neo4j user authentication has been disabled, you do not need a username or password to connect to Neo4j in this configuration.
@@ -38,12 +38,12 @@ The neo4j user's password has been set to "{{ template "neo4j.logPassword" . }}"
 {{- if not $clusterEnabled -}}
 To view the progress of the rollout try:
 
-  $ kubectl{{ template "neo4j.namespaceParameter" . }} rollout status --watch --timeout=600s statefulset/{{ .Release.Name }}
+  $ kubectl{{ template "neo4j.namespaceParameter" . }} rollout status --watch --timeout=600s statefulset/{{ template "neo4j.appName" . }}
 
-Once rollout is complete you can log in to Neo4j at "neo4j://{{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:7687". Try:
+Once rollout is complete you can log in to Neo4j at "neo4j://{{ template "neo4j.appName" . }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:7687". Try:
 
   $ kubectl run --rm -it{{ template "neo4j.namespaceParameter" . }} --image "{{ template "neo4j.image" . }}" cypher-shell \
-     -- cypher-shell -a "neo4j://{{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:7687"{{ if not $authDisabled | and .Values.logInitialPassword}} -u neo4j -p "{{ template "neo4j.logPassword" . }}"{{ end }}
+     -- cypher-shell -a "neo4j://{{ template "neo4j.appName" . }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:7687"{{ if not $authDisabled | and .Values.logInitialPassword}} -u neo4j -p "{{ template "neo4j.logPassword" . }}"{{ end }}
 {{- end }}
 
 {{- if and $clusterEnabled (not $isReadReplica ) }}
@@ -72,14 +72,14 @@ Neo4j user authentication has been disabled, you do not need a username or passw
 {{- end }}
 
 {{- if not $clusterEnabled }}
-To view the status of changes to your release "{{ .Release.Name }}" {{ if ne "default" .Release.Namespace }} in namespace "{{ .Release.Namespace }}"{{ end }}, try:
+To view the status of changes to your release "{{ template "neo4j.appName" . }}" {{ if ne "default" .Release.Namespace }} in namespace "{{ .Release.Namespace }}"{{ end }}, try:
 
-  $ kubectl{{ template "neo4j.namespaceParameter" . }} rollout status --watch --timeout=600s statefulset/{{ .Release.Name }}
+  $ kubectl{{ template "neo4j.namespaceParameter" . }} rollout status --watch --timeout=600s statefulset/{{ template "neo4j.appName" . }}
 
-Once rollout is complete you can log in to Neo4j at "neo4j://{{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}". Try:
+Once rollout is complete you can log in to Neo4j at "neo4j://{{ template "neo4j.appName" . }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}". Try:
 
   $ kubectl run --rm -it{{ template "neo4j.namespaceParameter" . }} --image "{{ template "neo4j.image" . }}" cypher-shell \
-     -- cypher-shell -a "neo4j://{{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:7687"
+     -- cypher-shell -a "neo4j://{{ template "neo4j.appName" . }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:7687"
 {{- end }}
 
 Graphs are everywhere!
