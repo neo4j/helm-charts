@@ -42,8 +42,9 @@ spec:
       annotations:
         "checksum/{{ .Release.Name }}-config": {{ include (print $.Template.BasePath "/neo4j-config.yaml") . | sha256sum }}
     spec:
-      {{- if .Values.podSpec.podAntiAffinity }}
+      {{- if (or .Values.podSpec.podAntiAffinity .Values.podSpec.nodeAffinity) }}
       affinity:
+        {{- if .Values.podSpec.podAntiAffinity }}
         {{- if kindIs "bool" .Values.podSpec.podAntiAffinity | and .Values.podSpec.podAntiAffinity }}
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -55,7 +56,11 @@ spec:
         {{- else }}
         podAntiAffinity: {{ toYaml .Values.podSpec.podAntiAffinity | nindent 10 }}
         {{- end }}
-      {{- end }}
+        {{- end }}
+        {{- if .Values.podSpec.nodeAffinity }}
+        nodeAffinity: {{ toYaml .Values.podSpec.nodeAffinity | nindent 10 }}
+        {{- end}}
+      {{- end}}
       {{- if $.Values.podSpec.serviceAccountName | or $clusterEnabled }}
       serviceAccountName: "{{ if kindIs "string" $.Values.podSpec.serviceAccountName | and $.Values.podSpec.serviceAccountName }}{{ $.Values.podSpec.serviceAccountName }}{{ else }}{{ .Release.Name }}{{ end }}"
       {{- end }}
