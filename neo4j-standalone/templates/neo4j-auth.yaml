@@ -23,9 +23,13 @@
   {{- $secretBelongsToSomeoneElse = index $secret.metadata.annotations "meta.helm.sh/release-name" | eq .Release.Name | not }}
 {{- end }}
 
+{{- $skipSecret := coalesce .Values.neo4j.passwodSecretDisabled false }}
+
 {{- if $secretBelongsToSomeoneElse -}}
 
-  {{- if eq (len .Values.neo4j.password) 0 -}}
+  {{- if $skipSecret -}}
+      # Skipping creation of Secret resource for the neo4j password as explicitly requested
+  {{- else if eq (len .Values.neo4j.password) 0 -}}
 
     {{- $password := index $secret.data "NEO4J_AUTH" | b64dec | trimPrefix "neo4j/" -}}
     {{- $ignored := set .Values.neo4j "password" $password -}}

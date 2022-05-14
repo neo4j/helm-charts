@@ -9,6 +9,12 @@ neo4j:
   # If password is not set or empty a random password will be generated during installation
   password: ""
 
+  # A value specifying whether the creation of a Secret object holding the default password
+  # for the neo4j user should be created
+  # If set to true it will prevent the creation of the Secret object
+  # If unset or set to false the default behaviour defined by the 'password' value will apply
+  # passwodSecretDisabled: true
+
   # Neo4j Clustering requires Enterprise Edition
   edition: "enterprise"
 
