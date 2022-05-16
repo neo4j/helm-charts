@@ -23,7 +23,7 @@
   {{- $secretBelongsToSomeoneElse = index $secret.metadata.annotations "meta.helm.sh/release-name" | eq .Release.Name | not }}
 {{- end }}
 
-{{- $skipSecret := coalesce .Values.neo4j.passwodSecretDisabled false }}
+{{- $skipSecret := coalesce .Values.neo4j.passwordSecretDisabled false }}
 
 {{- if $secretBelongsToSomeoneElse -}}
 

@@ -12,7 +12,7 @@ neo4j:
   # for the neo4j user should be created
   # If set to true it will prevent the creation of the Secret object
   # If unset or set to false the default behaviour defined by the 'password' value will apply
-  # passwodSecretDisabled: true
+  # passwordSecretDisabled: true
 
   # Neo4j Edition to use (community|enterprise)
   edition: "community"
