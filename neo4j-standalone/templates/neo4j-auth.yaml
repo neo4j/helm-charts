@@ -25,7 +25,7 @@
 
 {{- $skipSecret := coalesce .Values.neo4j.passwordSecretDisabled false }}
 
-{{- if $secretBelongsToSomeoneElse -}}
+{{- if (or $secretBelongsToSomeoneElse $skipSecret) -}}
 
   {{- if $skipSecret -}}
       # Skipping creation of Secret resource for the neo4j password as explicitly requested
