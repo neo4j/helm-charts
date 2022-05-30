@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+set -o xtrace
+
+dryRunCommand="--dry-run"
+
+if [[ "${DRY_RUN}" == "false" ]]; then
+    dryRunCommand=""
+fi
+
+# Clone repo
+git clone --bare --branch="${PUBLISH_BRANCHES}" --single-branch git@github.com:neo-technology/neo4j-helm-charts.git "${TEMP_REPO_DIR}"
+cd "${TEMP_REPO_DIR}"
+
+git filter-repo --path-regex "^neo4j-*/*" --path artifacthub-repo.yml --path index_public.yaml --path-rename index_public.yaml:index.yaml --path README_public.md --path-rename README_public.md:README.md
+
+# Setup public repo remote
+git remote add pub git@github.com:neo4j/helm-charts.git
+git fetch pub
+
+# Publish
+git push ${dryRunCommand} --follow-tags --atomic pub "${PUBLISH_BRANCHES}"

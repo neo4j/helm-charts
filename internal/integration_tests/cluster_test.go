@@ -633,6 +633,71 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	t.Logf("Succeeded running all tests in '%s'", t.Name())
 }
 
+func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
+	if model.Neo4jEdition != "enterprise" {
+		t.Skip()
+		return
+	}
+	t.Parallel()
+
+	var closeables []Closeable
+	addCloseable := func(closeableList ...Closeable) {
+		for _, closeable := range closeableList {
+			closeables = append([]Closeable{closeable}, closeables...)
+		}
+	}
+
+	clusterReleaseName := model.NewReleaseName("apoc-cluster-" + TestRunIdentifier)
+	loadBalancer := clusterLoadBalancer{model.NewLoadBalancerReleaseName(clusterReleaseName), nil}
+
+	core1 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 1), resources.ApocConfig.HelmArgs()}
+	core2 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 2), resources.ApocConfig.HelmArgs()}
+	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3), resources.ApocConfig.HelmArgs()}
+	cores := []clusterCore{core1, core2, core3}
+
+	t.Cleanup(func() { cleanupTest(t, AsCloseable(closeables)) })
+
+	t.Logf("Starting setup of '%s'", t.Name())
+
+	closeable, err := prepareK8s(t, clusterReleaseName)
+	addCloseable(closeable)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	// Install one core synchronously, if all cores are installed simultaneously they run into conflicts all trying to create a -auth secret
+	result := core1.Install(t)
+	addCloseable(result.Closeable)
+	if !assert.NoError(t, result.error) {
+		return
+	}
+
+	componentsToParallelInstall := []helmComponent{core2, core3, loadBalancer}
+	closeablesNew, err := performBackgroundInstall(t, componentsToParallelInstall, clusterReleaseName)
+	if !assert.NoError(t, err) {
+		return
+	}
+	addCloseable(closeablesNew...)
+
+	for _, core := range cores {
+		err = run(t, "kubectl", "--namespace", string(core.Name().Namespace()), "rollout", "status", "--watch", "--timeout=180s", "statefulset/"+core.Name().String())
+		if !assert.NoError(t, err) {
+			return
+		}
+	}
+
+	t.Logf("Succeeded with setup of '%s'", t.Name())
+
+	subTests, err := clusterTests(loadBalancer.Name())
+	if !assert.NoError(t, err) {
+		return
+	}
+	subTests = append(subTests, NodeSelectorTests(core1.Name())...)
+	runSubTests(t, subTests)
+
+	t.Logf("Succeeded running all tests in '%s'", t.Name())
+}
+
 func performBackgroundInstall(t *testing.T, componentsToParallelInstall []helmComponent, clusterReleaseName model.ReleaseName) ([]Closeable, error) {
 
 	results := make(chan parallelResult)
