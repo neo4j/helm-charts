@@ -213,7 +213,7 @@ config:
 
 #apoc_config:
 #  apoc.trigger.enabled: "true"
-#  apoc.jdbc.harshit.url: "jdbc:foo:bar"
+#  apoc.jdbc.apoctest.url: "jdbc:foo:bar"
 
 # securityContext defines privilege and access control settings for a Pod or Container. Making sure that we dont run Neo4j as root user.
 securityContext:

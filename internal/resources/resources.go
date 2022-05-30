@@ -33,6 +33,7 @@ var MissingImageCredentials = newYamlFile("imagePullSecret/missingImageCreds.yam
 var EmptyImagePullSecrets = newYamlFile("imagePullSecret/emptyImagePullSecrets.yaml")
 var InvalidNodeSelectorLabels = newYamlFile("nodeselector.yaml")
 var ApocConfig = newYamlFile("apocConfig.yaml")
+var ApocClusterTestConfig = newYamlFile("apocClusterTest.yaml")
 
 type YamlFile interface {
 	Path() string

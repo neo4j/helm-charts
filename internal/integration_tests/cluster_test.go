@@ -251,6 +251,16 @@ func headLessServiceTests(headlessService model.ReleaseName) []SubTest {
 	}
 }
 
+//apocConfigTests contains all the tests related to apoc configs
+func apocConfigTests(releaseName model.ReleaseName) []SubTest {
+	return []SubTest{
+		{name: "Execute apoc query", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, CheckApocConfig(t, releaseName), "Apoc Cypher Query failing to execute")
+		}},
+	}
+}
+
 //readReplicaTests contains all the tests related to read replicas
 func readReplicaTests(readReplica1Name model.ReleaseName, readReplica2Name model.ReleaseName, loadBalancerName model.ReleaseName) []SubTest {
 	return []SubTest{
@@ -650,9 +660,10 @@ func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
 	clusterReleaseName := model.NewReleaseName("apoc-cluster-" + TestRunIdentifier)
 	loadBalancer := clusterLoadBalancer{model.NewLoadBalancerReleaseName(clusterReleaseName), nil}
 
-	core1 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 1), resources.ApocConfig.HelmArgs()}
-	core2 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 2), resources.ApocConfig.HelmArgs()}
-	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3), resources.ApocConfig.HelmArgs()}
+	apocCustomArgs := append(model.CustomApocImageArgs, resources.ApocClusterTestConfig.HelmArgs()...)
+	core1 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 1), apocCustomArgs}
+	core2 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 2), apocCustomArgs}
+	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3), apocCustomArgs}
 	cores := []clusterCore{core1, core2, core3}
 
 	t.Cleanup(func() { cleanupTest(t, AsCloseable(closeables)) })
@@ -688,14 +699,13 @@ func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
 
 	t.Logf("Succeeded with setup of '%s'", t.Name())
 
-	subTests, err := clusterTests(loadBalancer.Name())
+	subTests := apocConfigTests(loadBalancer.Name())
 	if !assert.NoError(t, err) {
 		return
 	}
-	subTests = append(subTests, NodeSelectorTests(core1.Name())...)
 	runSubTests(t, subTests)
 
-	t.Logf("Succeeded running all tests in '%s'", t.Name())
+	t.Logf("Succeeded running all apoc config tests in '%s'", t.Name())
 }
 
 func performBackgroundInstall(t *testing.T, componentsToParallelInstall []helmComponent, clusterReleaseName model.ReleaseName) ([]Closeable, error) {
