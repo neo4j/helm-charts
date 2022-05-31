@@ -626,7 +626,7 @@ func TestMissingApocConfigMap(t *testing.T) {
 	}))
 }
 
-//TestMissingApocConfigMap ensure the apoc config map is not created when apoc configs are not provided in values.yaml
+//TestApocConfigMapIsPresent ensure the apoc config map is present when apoc_config is provided in the values.yaml
 func TestApocConfigMapIsPresent(t *testing.T) {
 	t.Parallel()
 
