@@ -170,7 +170,7 @@ func CheckApocConfig(t *testing.T, releaseName model.ReleaseName) error {
 			}
 		}
 	}
-	return fmt.Errorf("no record yielded for apoc cypher query !!!")
+	return fmt.Errorf("no record yielded for apoc cypher query")
 }
 
 //CheckReadReplicaConfiguration checks runs a cypher query to check the read replica configuration

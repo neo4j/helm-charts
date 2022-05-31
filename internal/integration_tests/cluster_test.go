@@ -648,7 +648,10 @@ func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
 		t.Skip()
 		return
 	}
-	t.Parallel()
+
+	//if we make this in parallel with the other cluster tests , it will fail
+	// we need to wait for this cluster test to complete so that the other cluster test can complete
+	//t.Parallel()
 
 	var closeables []Closeable
 	addCloseable := func(closeableList ...Closeable) {
