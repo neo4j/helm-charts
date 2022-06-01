@@ -151,3 +151,29 @@ data:
   dbms.ssl.policy.{{ $name }}.enabled: "true"
   {{- end }}
   {{- end }}
+---
+{{- if not (empty $.Values.apoc_config) -}}
+# User-provided Neo4j Apoc config values
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ .Release.Name }}-apoc-config"
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app: "{{ template "neo4j.appName" $ }}"
+    {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
+data:
+  {{- with .Values.apoc_config }}
+  apoc.conf: |-
+    {{- if hasKey . "dbms.jvm.additional" }}
+      {{- fail "dbms.jvm.additional properties cannot be set in values.apoc_config. Set additional JVM arguments in values.jvm.additionalJvmArguments" }}
+    {{- end }}
+    {{- range $key, $value := . }}
+      {{- if not (kindIs "string" $value) }}
+        {{- cat "config values must be strings." $key "value:" $value "type:" (kindOf $value) " (put values in double quotes so they are treated as strings in yaml)" | fail }}
+      {{- end }}
+     {{- printf "%s=%s" $key $value | nindent 6 }}
+    {{- end }}
+  {{- end }}
+---
+{{- end }}
