@@ -1,0 +1,10 @@
+config:
+  dbms.directories.plugins: "/var/lib/neo4j/plugins"
+  dbms.security.procedures.unrestricted: "apoc.*"
+  dbms.config.strict_validation: "false"
+  dbms.security.procedures.allowlist: "gds.*,apoc.*"
+
+apoc_config:
+  apoc.trigger.enabled: "true"
+  apoc.jdbc.apoctest.url: "jdbc:foo:bar"
+  apoc.import.file.enabled: "true"

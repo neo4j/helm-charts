@@ -145,6 +145,24 @@ chmod -R g+rwx "/{{ $name }}"
 {{- end -}}
 {{- end -}}
 
+{{/* Adds volume mount if apoc config specified */}}
+{{- define "neo4j.apoc.volumeMount" -}}
+    {{- if not (empty .) }}
+- mountPath: "/config/"
+  name: "apoc-conf"
+    {{- end }}
+{{- end -}}
+{{- define "neo4j.apoc.volume" -}}
+    {{- if not (empty $.Values.apoc_config) -}}
+- name: apoc-conf
+  projected:
+    defaultMode: 0440
+    sources:
+      - configMap:
+          name: "{{ .Release.Name }}-apoc-config"
+     {{- end -}}
+{{- end -}}
+
 {{- define "neo4j.volumeMounts" -}}
 {{- range $name, $spec := . }}
 - mountPath: "/{{ $name }}"
