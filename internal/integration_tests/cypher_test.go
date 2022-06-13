@@ -150,6 +150,29 @@ func CreateNodeOnReadReplica(t *testing.T, releaseName model.ReleaseName) error 
 	return err
 }
 
+//CheckApocConfig fires a apoc cypher query
+//It's a way to check if apoc plugin is loaded and the customized apoc config is loaded or not
+func CheckApocConfig(t *testing.T, releaseName model.ReleaseName) error {
+
+	results, err := runQuery(t, releaseName, "CALL apoc.config.list() YIELD key, value WHERE key = \"apoc.jdbc.apoctest.url\" RETURN *;", nil, false)
+	if !assert.NoError(t, err) {
+		t.Logf("%v", err)
+		return fmt.Errorf("error seen while firing apoc cypher \n err := %v", err)
+	}
+	if !assert.NotEqual(t, len(results), 0) {
+		return fmt.Errorf("no results received from cypher query")
+	}
+
+	for _, result := range results {
+		if value, found := result.Get("value"); found {
+			if assert.Equal(t, value, "jdbc:foo:bar") {
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("no record yielded for apoc cypher query")
+}
+
 //CheckReadReplicaConfiguration checks runs a cypher query to check the read replica configuration
 // the configuration dbms.mode so retrieved must contain the value READ_REPLICA
 func CheckReadReplicaConfiguration(t *testing.T, releaseName model.ReleaseName) error {

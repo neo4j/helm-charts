@@ -1,0 +1,4 @@
+apoc_config:
+  apoc.trigger.enabled: "true"
+  apoc.jdbc.apoctest.url: "jdbc:foo:bar"
+  apoc.import.file.enabled: "true"

@@ -2,6 +2,8 @@ package resources
 
 import (
 	"fmt"
+	"gopkg.in/yaml.v3"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -30,10 +32,13 @@ var DuplicateImageCredentials = newYamlFile("imagePullSecret/duplicateImageCreds
 var MissingImageCredentials = newYamlFile("imagePullSecret/missingImageCreds.yaml")
 var EmptyImagePullSecrets = newYamlFile("imagePullSecret/emptyImagePullSecrets.yaml")
 var InvalidNodeSelectorLabels = newYamlFile("nodeselector.yaml")
+var ApocConfig = newYamlFile("apocConfig.yaml")
+var ApocClusterTestConfig = newYamlFile("apocClusterTest.yaml")
 
 type YamlFile interface {
 	Path() string
 	HelmArgs() []string
+	Data() (map[interface{}]interface{}, error)
 }
 
 type yamlFile struct {
@@ -46,6 +51,19 @@ func (y *yamlFile) Path() string {
 
 func (y *yamlFile) HelmArgs() []string {
 	return []string{"-f", y.path}
+}
+
+func (y *yamlFile) Data() (map[interface{}]interface{}, error) {
+	file, err := ioutil.ReadFile(y.Path())
+	if err != nil {
+		return nil, err
+	}
+	data := make(map[interface{}]interface{})
+	err = yaml.Unmarshal(file, &data)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
 func resourceExistsAt(path string) (bool, error) {

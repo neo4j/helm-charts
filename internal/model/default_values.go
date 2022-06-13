@@ -15,7 +15,7 @@ var ImagePullSecretUsername,
 	ImagePullSecretCustomImageName,
 	ImagePullSecretEmail string
 
-var NodeSelectorArgs, ImagePullSecretArgs []string
+var NodeSelectorArgs, ImagePullSecretArgs, CustomApocImageArgs []string
 
 var NodeSelectorLabel = "testLabel=1"
 
@@ -49,6 +49,9 @@ func init() {
 	}
 	NodeSelectorArgs = []string{
 		"--set", fmt.Sprintf("nodeSelector.%s", NodeSelectorLabel),
+	}
+	CustomApocImageArgs = []string{
+		"--set", fmt.Sprintf("image.customImage=%s", "harshitsinghvi22/apoc:v1"),
 	}
 }
 
