@@ -14,7 +14,7 @@ CLOUDSDK_CONTAINER_CLUSTER="${CLOUDSDK_CONTAINER_CLUSTER:?CLOUDSDK_CONTAINER_CLU
 CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
 
 # Parameters
-NODE_MACHINE="e2-highcpu-4"
+NODE_MACHINE="e2-highmem-4"
 NUM_NODES="${NUM_NODES:-6}"
 
 # For more info on release channels see https://cloud.google.com/kubernetes-engine/docs/concepts/release-channels
