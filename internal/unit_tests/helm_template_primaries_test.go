@@ -3,6 +3,7 @@ package unit_tests
 import (
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/neo4j/helm-charts/internal/helpers"
 	"github.com/neo4j/helm-charts/internal/model"
@@ -593,6 +594,88 @@ func TestDuplicateImageCredentials(t *testing.T) {
 			return
 		}
 		if !assert.Contains(t, err.Error(), "Duplicate \"names\" found in imageCredentials list. Please remove duplicates") {
+			return
+		}
+	}))
+}
+
+//TestMissingApocConfigMap ensure the apoc config map is not created when apoc configs are not provided in values.yaml
+func TestMissingApocConfigMap(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+		manifest, err := model.HelmTemplate(t, chart, useDataModeAndAcceptLicense)
+		if !assert.NoError(t, err) {
+			return
+		}
+		configMaps := manifest.OfType(&v1.ConfigMap{})
+		if !assert.NotEqual(t, len(configMaps), 0) {
+			return
+		}
+		var apocConfigMapPresent bool
+		for _, configMap := range configMaps {
+			if strings.Contains(configMap.(*v1.ConfigMap).Name, "apoc-config") {
+				apocConfigMapPresent = true
+				break
+			}
+		}
+		//apoc-config configMap should not be present since we are not passing apoc configs
+		if !assert.Equal(t, apocConfigMapPresent, false, "apocConfigMap present !!! Should NOT BE present infact") {
+			return
+		}
+	}))
+}
+
+//TestApocConfigMapIsPresent ensure the apoc config map is present when apoc_config is provided in the values.yaml
+func TestApocConfigMapIsPresent(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+
+		manifest, err := model.HelmTemplate(t, chart, useDataModeAndAcceptLicense, resources.ApocConfig.HelmArgs()...)
+		if !assert.NoError(t, err) {
+			return
+		}
+		configMaps := manifest.OfType(&v1.ConfigMap{})
+		if !assert.NotEqual(t, len(configMaps), 0, "Number of configMaps are zero !!") {
+			return
+		}
+		var apocConfigMapPresent bool
+		var apocConfigMap *v1.ConfigMap
+		for _, configMap := range configMaps {
+			if strings.Contains(configMap.(*v1.ConfigMap).Name, "apoc-config") {
+				apocConfigMapPresent = true
+				apocConfigMap = configMap.(*v1.ConfigMap)
+				break
+			}
+		}
+		//apoc-config configMap should not be present since we are not passing apoc configs
+		if !assert.Equal(t, apocConfigMapPresent, true, "apocConfigMap not present !!! Should be present infact") {
+			return
+		}
+		apocConfigYamlDataMap, err := resources.ApocConfig.Data()
+		if !assert.NoError(t, err, fmt.Sprintf("error while reading apocConfig.yaml file \n %s", err)) {
+			return
+		}
+		value, present := apocConfigMap.Data["apoc.conf"]
+		if !assert.Equal(t, present, true, "configMap does not contain apoc.conf as key !!") {
+			return
+		}
+		apocConfigMapData := strings.Split(value, "\n")
+		var yamlData []string
+		for key, _ := range apocConfigYamlDataMap {
+			valueMap := apocConfigYamlDataMap[key].(map[string]interface{})
+			for k, _ := range valueMap {
+				yamlData = append(yamlData, fmt.Sprintf("%s=%s", k, valueMap[k]))
+			}
+		}
+		sort.Strings(yamlData)
+		sort.Strings(apocConfigMapData)
+		if !assert.Equal(t, yamlData, apocConfigMapData,
+			fmt.Sprintf("yaml and configMapData mismatch \n "+
+				"yamlData %s \n "+
+				"configMapData %s",
+				yamlData, apocConfigMapData)) {
 			return
 		}
 	}))
