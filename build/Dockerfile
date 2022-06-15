@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
   curl \
   ca-certificates \
   openssl \
+  google-cloud-sdk-gke-gcloud-auth-plugin \
   kubectl \
   awscli \
   jq \
@@ -22,6 +23,7 @@ RUN apt-get update && apt-get install -y \
   && rm -rf /var/lib/apt/lists/* \
   && rm -rf /tmp/*
 
+ENV USE_GKE_GCLOUD_AUTH_PLUGIN True
 # Configure Go
 ENV GOPATH /root/go
 ENV PATH /root/go/bin:/root/.go/bin:$PATH
