@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+# This script deletes the Kubernetes cluster on AWS
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+# delete the current Kubernetes cluster
+#
+aws-delete-eks-cluster
+
+# Clear out env vars
+unset AWS_CLUSTER_NAME
+echo "##teamcity[setParameter name='env.AWS_CLUSTER_NAME' value='']"

@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+# This script deletes the Kubernetes cluster on AWS
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+# Required env vars
+AWS_CLUSTER_NAME="${AWS_CLUSTER_NAME:?AWS_CLUSTER_NAME}"
+AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:?AWS_DEFAULT_REGION is required}"
+
+# Delete EKS Cluster
+eksctl delete cluster $AWS_CLUSTER_NAME
+
+echo "This does not clean up any persistent disks that might have been created by this AWS EKS cluster - those have to be cleaned up separately"
