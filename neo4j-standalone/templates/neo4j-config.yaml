@@ -143,8 +143,10 @@ data:
 
   {{- if .Values.ssl.https.privateKey.secretName }}
   dbms.connector.https.enabled: "true"
+  {{- else }}
+  dbms.connector.https.enabled: "false"
   {{- end }}
-
+  
   {{- range $name, $sslSpec := .Values.ssl }}
   {{- if $sslSpec.privateKey.secretName }}
   # Automatically enable SSL policy for {{ $name }} because privateKey secret is present
