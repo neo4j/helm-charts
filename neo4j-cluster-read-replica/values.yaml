@@ -296,8 +296,8 @@ podSpec:
 
   #Annotations for Neo4j pod
   annotations:
-  #imageregistry: "https://hub.docker.com/"
-  #demo: alpha
+    #imageregistry: "https://hub.docker.com/"
+    #demo: alpha
 
   # Anti Affinity
   # If set to true then an anti-affinity rule is applied to prevent database pods with the same `neo4j.name` running on a single Kubernetes node.
