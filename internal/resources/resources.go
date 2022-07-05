@@ -34,6 +34,7 @@ var EmptyImagePullSecrets = newYamlFile("imagePullSecret/emptyImagePullSecrets.y
 var InvalidNodeSelectorLabels = newYamlFile("nodeselector.yaml")
 var ApocConfig = newYamlFile("apocConfig.yaml")
 var ApocClusterTestConfig = newYamlFile("apocClusterTest.yaml")
+var PodSpecAnnotations = newYamlFile("podSpecAnnotations.yaml")
 
 type YamlFile interface {
 	Path() string
