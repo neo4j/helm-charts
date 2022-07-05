@@ -1,0 +1,4 @@
+podSpec:
+  annotations:
+    demoKey: "alpha"
+

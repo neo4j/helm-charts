@@ -541,6 +541,37 @@ func TestDefaultLabels(t *testing.T) {
 	}))
 }
 
+//TestNeo4jPodAnnotations checks if Neo4j Pod has the annotations or not
+func TestNeo4jPodAnnotations(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+
+		manifest, err := model.HelmTemplate(t, chart, useDataModeAndAcceptLicense, resources.PodSpecAnnotations.HelmArgs()...)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		statefulSet := manifest.OfTypeWithName(&appsv1.StatefulSet{}, model.DefaultHelmTemplateReleaseName.String())
+		if !assert.NotNil(t, statefulSet, fmt.Sprintf("no statefulset found with name %s", model.DefaultHelmTemplateReleaseName)) {
+			return
+		}
+		podAnnotations := statefulSet.(*appsv1.StatefulSet).Spec.Template.Annotations
+		if !assert.NotNil(t, podAnnotations, "no pod annotations found") {
+			return
+		}
+
+		if !assert.Contains(t, podAnnotations, "demoKey", "missing podAnnotation demoKey") {
+			return
+		}
+
+		if !assert.Equal(t, podAnnotations["demoKey"], "alpha", "invalid podAnnotation value for key=demoKey") {
+			return
+		}
+
+	}))
+}
+
 func TestExtraLabels(t *testing.T) {
 	t.Parallel()
 
