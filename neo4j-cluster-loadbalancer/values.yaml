@@ -7,9 +7,6 @@ neo4j:
 # Annotations for the external service
 annotations: { }
 
-# A reserved/static IP that you want the LoadBalancer to use (usually optional, depending on the load balancer implmentation)
-loadBalancerIP: NULL
-
 # Neo4j ports to include in external service
 ports:
   http:
@@ -44,6 +41,10 @@ selector:
 # Add additional Service.spec here if needed
 spec:
   type: LoadBalancer
+
+  # in most cloud environments LoadBalancer type will receive an ephemeral public IP address automatically.
+  # If you need to specify a static ip here use:
+  #loadBalancerIP: ...
 
 # Kubernetes cluster domain suffix
 clusterDomain: "cluster.local"

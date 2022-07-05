@@ -7,9 +7,6 @@ neo4j:
 # Annotations for the external service
 annotations: { }
 
-# A reserved/static IP that you want the LoadBalancer to use (usually optional, depending on the load balancer implmentation)
-loadBalancerIP: NULL
-
 # Neo4j ports to include in external service
 ports:
   http:
