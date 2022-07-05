@@ -41,6 +41,7 @@ spec:
         {{- include "neo4j.labels" $.Values.neo4j | indent 8 }}
       annotations:
         "checksum/{{ .Release.Name }}-config": {{ include (print $.Template.BasePath "/neo4j-config.yaml") . | sha256sum }}
+        {{- include "neo4j.pod.annotations" $.Values.podSpec.annotations | indent 8 }}
     spec:
       {{- if .Values.podSpec.podAntiAffinity }}
       affinity:
