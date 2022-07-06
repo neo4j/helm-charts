@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # This cleans up google cloud resources that are more than 24 hours old. It is intended to be run on a regular schedule (once a day) in Team City but it can be
-# run manually by a developer as well. 
-# 
+# run manually by a developer as well.
+#
 # If developers want long-lived clusters they must use a different Google Cloud project to the one that CI uses!
 
 # make bash play nicely
@@ -34,8 +34,18 @@ gcloud container images list-tags "${GCR_REPO}" --filter="timestamp.datetime<${C
   | xargs -I{} gcloud container images delete "${GCR_REPO}@{}" --force-delete-tags
 
 # Kubernetes Clusters
-gcloud container clusters list --filter="createTime<${CUT_OFF_DATE}" --format="get(name)" \
- | xargs -I{} gcloud container clusters delete {}
+#read the cluster name and zone in an array and trigger the cluster delete command
+readarray -t clusters_list < <(gcloud container clusters list --filter="createTime<${CUT_OFF_DATE}" --format='value[separator=","](name,location)')
+for i in "${clusters_list[@]}"
+do
+   cluster_name=$(echo $i | awk -F "," '{print $1}')
+   cluster_zone=$(echo $i | awk -F "," '{print $2}')
+   echo "Deleting cluster ${cluster_name} in zone ${cluster_zone}"
+   gcloud container clusters delete "${cluster_name}" --zone "${cluster_zone}" &
+done
+#wait for the above clusters to be deleted
+wait
+
 
 # Compute Disks (have to come after clusters)
 gcloud compute disks list --filter="creationTimestamp<${CUT_OFF_DATE}" --format="get(selfLink)" \
@@ -48,3 +58,4 @@ gcloud filestore instances list --filter="createTime<${CUT_OFF_DATE}" --format="
 function count_leaked_resources {
   gcloud asset search-all-resources --scope="projects/${CLOUDSDK_CORE_PROJECT}" | wc -l
 }
+
