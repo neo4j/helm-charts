@@ -35,6 +35,7 @@ var InvalidNodeSelectorLabels = newYamlFile("nodeselector.yaml")
 var ApocConfig = newYamlFile("apocConfig.yaml")
 var ApocClusterTestConfig = newYamlFile("apocClusterTest.yaml")
 var PodSpecAnnotations = newYamlFile("podSpecAnnotations.yaml")
+var StatefulSetAnnotations = newYamlFile("statefulSetAnnotations.yaml")
 
 type YamlFile interface {
 	Path() string
