@@ -32,6 +32,7 @@ neo4j:
   #add labels if required
   labels:
 
+# Volumes for Neo4j
 volumes:
   data:
     # REQUIRED: specify a volume mode to use for data
