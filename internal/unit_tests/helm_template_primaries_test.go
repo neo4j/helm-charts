@@ -603,6 +603,25 @@ func TestNeo4jStatefulSetAnnotations(t *testing.T) {
 	}))
 }
 
+//TestNeo4jPodPriorityClassName checks for Neo4j PriorityClassName
+//error should be thrown since we are not creating priorityClass in the cluster in advance
+func TestNeo4jPodPriorityClassName(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+
+		_, err := model.HelmTemplate(t, chart, useDataModeAndAcceptLicense, resources.PriorityClassName.HelmArgs()...)
+		if !assert.Error(t, err, "error should be thrown for priorityClass") {
+			return
+		}
+
+		if assert.Contains(t, err.Error(), "PriorityClass demo is missing in the cluster", fmt.Sprintf("priorityClass error message missing \n err := %s", err.Error())) {
+			return
+		}
+
+	}))
+}
+
 func TestExtraLabels(t *testing.T) {
 	t.Parallel()
 
