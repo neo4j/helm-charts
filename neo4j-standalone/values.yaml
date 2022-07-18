@@ -32,7 +32,6 @@ neo4j:
   #add labels if required
   labels:
 
-
 # Volumes for Neo4j
 volumes:
   data:
@@ -296,6 +295,12 @@ image:
 #      email: ""
 #      name: ""
 
+statefulset:
+  metadata:
+    #Annotations for Neo4j StatefulSet
+    annotations:
+#      imageregistry: "https://hub.docker.com/"
+#      demo: alpha
 
 # additional environment variables for the Neo4j Container
 env: {}
@@ -305,8 +310,8 @@ podSpec:
 
   #Annotations for Neo4j pod
   annotations:
-    #imageregistry: "https://hub.docker.com/"
-    #demo: alpha
+#   imageregistry: "https://hub.docker.com/"
+#   demo: alpha
 
   # Anti Affinity
   # If set to true then an anti-affinity rule is applied to prevent database pods with the same `neo4j.name` running on a single Kubernetes node.

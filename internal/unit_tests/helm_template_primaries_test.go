@@ -572,6 +572,37 @@ func TestNeo4jPodAnnotations(t *testing.T) {
 	}))
 }
 
+//TestNeo4jStatefulSetAnnotations checks if Neo4j StatefulSet has the annotations or not
+func TestNeo4jStatefulSetAnnotations(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+
+		manifest, err := model.HelmTemplate(t, chart, useDataModeAndAcceptLicense, resources.StatefulSetAnnotations.HelmArgs()...)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		statefulSet := manifest.OfTypeWithName(&appsv1.StatefulSet{}, model.DefaultHelmTemplateReleaseName.String())
+		if !assert.NotNil(t, statefulSet, fmt.Sprintf("no statefulset found with name %s", model.DefaultHelmTemplateReleaseName)) {
+			return
+		}
+		statefulSetAnnotations := statefulSet.(*appsv1.StatefulSet).ObjectMeta.Annotations
+		if !assert.NotNil(t, statefulSetAnnotations, "no statefulset annotations found") {
+			return
+		}
+
+		if !assert.Contains(t, statefulSetAnnotations, "demoKey", "missing statefulSet annotation demoKey") {
+			return
+		}
+
+		if !assert.Equal(t, statefulSetAnnotations["demoKey"], "alpha", "invalid statefulSet annotation value for key=demoKey") {
+			return
+		}
+
+	}))
+}
+
 func TestExtraLabels(t *testing.T) {
 	t.Parallel()
 

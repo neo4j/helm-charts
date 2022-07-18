@@ -21,6 +21,10 @@ metadata:
     {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
   name: "{{ .Release.Name }}"
   namespace: "{{ .Release.Namespace }}"
+  {{- if not (empty $.Values.statefulset.metadata.annotations) }}
+  annotations:
+    {{- include "neo4j.annotations" $.Values.statefulset.metadata.annotations | indent 4 }}
+  {{- end }}
 spec:
   serviceName: "{{ .Release.Name }}"
   podManagementPolicy: "Parallel" # This setting means that the StatefulSet controller doesn't block applying changes until the existing Pod is READY.
@@ -41,7 +45,7 @@ spec:
         {{- include "neo4j.labels" $.Values.neo4j | indent 8 }}
       annotations:
         "checksum/{{ .Release.Name }}-config": {{ include (print $.Template.BasePath "/neo4j-config.yaml") . | sha256sum }}
-        {{- include "neo4j.pod.annotations" $.Values.podSpec.annotations | indent 8 }}
+        {{- include "neo4j.annotations" $.Values.podSpec.annotations | indent 8 }}
     spec:
       {{- if .Values.podSpec.podAntiAffinity }}
       affinity:
