@@ -273,10 +273,12 @@ func readReplicaTests(readReplica1Name model.ReleaseName, readReplica2Name model
 		//	t.Parallel()
 		//	assert.NoError(t, CheckLogsFormat(t, readReplica1Name), "Checks Read Replica Logs Format")
 		//}},
-		{name: "Check Read Replica Configuration", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, CheckReadReplicaConfiguration(t, readReplica1Name), "Checks Read Replica Configuration")
-		}},
+
+		//TODO: need to replace dbms.mode with the new configuration in 5.0.0
+		//{name: "Check Read Replica Configuration", test: func(t *testing.T) {
+		//	t.Parallel()
+		//	assert.NoError(t, CheckReadReplicaConfiguration(t, readReplica1Name), "Checks Read Replica Configuration")
+		//}},
 		{name: "Check ReadReplica2 Neo4j Logs For Any Errors", test: func(t *testing.T) {
 			t.Parallel()
 			assert.NoError(t, CheckNeo4jLogsForAnyErrors(t, readReplica2Name), "Neo4j Logs check should succeed")
