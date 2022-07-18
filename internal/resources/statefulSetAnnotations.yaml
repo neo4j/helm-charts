@@ -1,0 +1,5 @@
+statefulset:
+  metadata:
+    annotations:
+      demoKey: "alpha"
+

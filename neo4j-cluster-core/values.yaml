@@ -295,6 +295,14 @@ image:
   #      name: ""
 
 
+statefulset:
+  metadata:
+    #Annotations for Neo4j StatefulSet
+    annotations:
+#      imageregistry: "https://hub.docker.com/"
+#      demo: alpha
+
+
 # additional environment variables for the Neo4j Container
 env: {}
 

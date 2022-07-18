@@ -17,7 +17,7 @@ nodeSelector:
 {{- end -}}
 {{- end }}
 
-{{- define "neo4j.pod.annotations" -}}
+{{- define "neo4j.annotations" -}}
     {{- with . -}}
         {{- range $name, $value := . }}
 {{ $name }}: "{{ $value }}"
