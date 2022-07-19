@@ -136,6 +136,7 @@ spec:
             {{- end }}
           {{- end }}
           securityContext: {{ omit .Values.securityContext "fsGroupChangePolicy" "fsGroup" | toYaml  | nindent 14 }}
+          {{- include "neo4j.priorityClassName" . | nindent 6 }}
           volumeMounts:
             - mountPath: "/config/neo4j.conf"
               name: neo4j-conf
