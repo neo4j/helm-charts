@@ -115,6 +115,10 @@ func clusterTests(loadBalancerName model.ReleaseName) ([]SubTest, error) {
 			t.Parallel()
 			assert.NoError(t, ImagePullSecretTests(t, loadBalancerName), "Perform ImagePullSecret Tests")
 		}},
+		{name: "Check PriorityClassName", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, CheckPriorityClassName(t, loadBalancerName), "priorityClassName should match")
+		}},
 		{name: "Check Cluster Password failure", test: func(t *testing.T) {
 			t.Parallel()
 			assert.NoError(t, CheckClusterCorePasswordFailure(t), "Cluster core installation should not succeed with incorrect password")
@@ -184,6 +188,24 @@ func DatabaseCreationTests(t *testing.T, loadBalancerName model.ReleaseName, dat
 	t.Run("Check Database customers exists", func(t *testing.T) {
 		assert.NoError(t, CheckDataBaseExists(t, loadBalancerName, dataBaseName), "Checks if database exists or not")
 	})
+	return nil
+}
+
+//CheckPriorityClassName checks the priorityClassName is set to the pod or not
+func CheckPriorityClassName(t *testing.T, releaseName model.ReleaseName) error {
+
+	pods, err := getAllPods(releaseName.Namespace())
+	if !assert.NoError(t, err) {
+		return err
+	}
+	for _, pod := range pods.Items {
+		if strings.Contains(pod.Name, "core-2") {
+			if !assert.Equal(t, model.PriorityClassName, pod.Spec.PriorityClassName) {
+				return fmt.Errorf("priorityClassName %s not matching with %s", pod.Spec.PriorityClassName, model.PriorityClassName)
+			}
+			break
+		}
+	}
 	return nil
 }
 
@@ -584,7 +606,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	readReplica2 := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName, 2), nil}
 
 	core1 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 1), append(model.ImagePullSecretArgs, model.NodeSelectorArgs...)}
-	core2 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 2), nil}
+	core2 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 2), model.PriorityClassNameArgs}
 	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3), nil}
 	cores := []clusterCore{core1, core2, core3}
 	readReplicas := []clusterReadReplica{readReplica1, readReplica2}
@@ -598,7 +620,11 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-
+	cleanPriorityClass, err := createPriorityClass(t, clusterReleaseName)
+	addCloseable(cleanPriorityClass)
+	if !assert.NoError(t, err) {
+		return
+	}
 	// Install one core synchronously, if all cores are installed simultaneously they run into conflicts all trying to create a -auth secret
 	result := core1.Install(t)
 	addCloseable(result.Closeable)
