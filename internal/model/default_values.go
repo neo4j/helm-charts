@@ -15,7 +15,7 @@ var ImagePullSecretUsername,
 	ImagePullSecretCustomImageName,
 	ImagePullSecretEmail string
 
-var NodeSelectorArgs, ImagePullSecretArgs, CustomApocImageArgs []string
+var NodeSelectorArgs, ImagePullSecretArgs, CustomApocImageArgs, PriorityClassNameArgs []string
 
 var NodeSelectorLabel = "testLabel=1"
 
@@ -53,6 +53,9 @@ func init() {
 	CustomApocImageArgs = []string{
 		"--set", fmt.Sprintf("image.customImage=%s", "harshitsinghvi22/apoc:v1"),
 	}
+	PriorityClassNameArgs = []string{
+		"--set", fmt.Sprintf("podSpec.priorityClassName=%s", PriorityClassName),
+	}
 }
 
 const StorageSize = "10Gi"
@@ -60,3 +63,4 @@ const cpuRequests = "500m"
 const memoryRequests = "2Gi"
 const cpuLimits = "1500m"
 const memoryLimits = "2Gi"
+const PriorityClassName = "high-priority"

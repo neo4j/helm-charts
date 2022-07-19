@@ -36,6 +36,7 @@ var ApocConfig = newYamlFile("apocConfig.yaml")
 var ApocClusterTestConfig = newYamlFile("apocClusterTest.yaml")
 var PodSpecAnnotations = newYamlFile("podSpecAnnotations.yaml")
 var StatefulSetAnnotations = newYamlFile("statefulSetAnnotations.yaml")
+var PriorityClassName = newYamlFile("priorityClassName.yaml")
 
 type YamlFile interface {
 	Path() string
