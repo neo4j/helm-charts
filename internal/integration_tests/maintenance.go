@@ -11,18 +11,18 @@ import "testing"
 func maintenanceTests(name model.ReleaseName, chart model.Neo4jHelmChart) []SubTest {
 	return []SubTest{
 		{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, createNode(t, name), "Create Node should succeed") }},
-		{name: "Maintenance Mode", test: func(t *testing.T) { assert.NoError(t, CheckMaintenanceMode(t, name, chart), "Check maintenance mode") }},
+		{name: "Maintenance Mode", test: func(t *testing.T) { assert.NoError(t, checkMaintenanceMode(t, name, chart), "Check maintenance mode") }},
 		{name: "Count Nodes", test: func(t *testing.T) { assert.NoError(t, checkNodeCount(t, name), "Count Nodes should succeed") }},
 	}
 }
 
-func CheckMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart) error {
+func checkMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart) error {
 	err := checkNeo4jRunning(t, releaseName)
 	if err != nil {
 		return err
 	}
 
-	err = EnterMaintenanceMode(t, releaseName, chart)
+	err = enterMaintenanceMode(t, releaseName, chart)
 	if !assert.NoError(t, err) {
 		return err
 	}
@@ -32,7 +32,7 @@ func CheckMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart mod
 		return err
 	}
 
-	err = ExitMaintenanceMode(t, releaseName, chart)
+	err = exitMaintenanceMode(t, releaseName, chart)
 	if !assert.NoError(t, err) {
 		return err
 	}
@@ -40,7 +40,7 @@ func CheckMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart mod
 	return err
 }
 
-func ExitMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart, extraArgs ...string) error {
+func exitMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart, extraArgs ...string) error {
 	diskName := releaseName.DiskName()
 	err := run(
 		t, "helm", model.BaseHelmCommand("upgrade", releaseName, chart, model.Neo4jEdition, &diskName,
@@ -58,7 +58,7 @@ func ExitMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart mode
 	return err
 }
 
-func EnterMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart) error {
+func enterMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart) error {
 	diskName := releaseName.DiskName()
 	err := run(t, "helm", model.BaseHelmCommand("upgrade", releaseName, chart, model.Neo4jEdition, &diskName, "--set", "neo4j.offlineMaintenanceModeEnabled=true")...)
 
@@ -75,10 +75,6 @@ func EnterMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart mod
 	time.Sleep(30 * time.Second)
 
 	return err
-}
-
-func UninstallRelease(t *testing.T, releaseName model.ReleaseName) error {
-	return run(t, "helm", "uninstall", releaseName.String(), "--namespace", string(releaseName.Namespace()))
 }
 
 func checkNeo4jNotRunning(t *testing.T, releaseName model.ReleaseName) error {

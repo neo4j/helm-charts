@@ -13,17 +13,17 @@ import "testing"
 func volumesTests(name model.ReleaseName, chart model.Neo4jHelmChart) []SubTest {
 	return []SubTest{
 		{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, createNode(t, name), "Create Node should succeed") }},
-		{name: "Check Volumes", test: func(t *testing.T) { assert.NoError(t, CheckVolumes(t, name), "Check volumes") }},
-		{name: "Enter maintenance mode", test: func(t *testing.T) { assert.NoError(t, EnterMaintenanceMode(t, name, chart), "Enter maintenance mode") }},
-		{name: "Check Volumes", test: func(t *testing.T) { assert.NoError(t, CheckVolumes(t, name), "Check volumes") }},
+		{name: "Check Volumes", test: func(t *testing.T) { assert.NoError(t, checkVolumes(t, name), "Check volumes") }},
+		{name: "Enter maintenance mode", test: func(t *testing.T) { assert.NoError(t, enterMaintenanceMode(t, name, chart), "Enter maintenance mode") }},
+		{name: "Check Volumes", test: func(t *testing.T) { assert.NoError(t, checkVolumes(t, name), "Check volumes") }},
 		{name: "Exit maintenance mode and install plugins", test: func(t *testing.T) {
-			assert.NoError(t, ExitMaintenanceMode(t, name, chart, resources.PluginsInitContainer.HelmArgs()...), "Exit maintenance mode and install plugins")
+			assert.NoError(t, exitMaintenanceMode(t, name, chart, resources.PluginsInitContainer.HelmArgs()...), "Exit maintenance mode and install plugins")
 		}},
-		{name: "Check Apoc", test: func(t *testing.T) { assert.NoError(t, CheckApoc(t, name), "Check APOC") }},
+		{name: "Check Apoc", test: func(t *testing.T) { assert.NoError(t, checkApoc(t, name), "Check APOC") }},
 	}
 }
 
-func CheckApoc(t *testing.T, releaseName model.ReleaseName) error {
+func checkApoc(t *testing.T, releaseName model.ReleaseName) error {
 	results, err := runQuery(t, releaseName, "CALL apoc.help('apoc')", nil, false)
 	if !assert.NoError(t, err) {
 		return err
@@ -46,7 +46,7 @@ func checkVolume(t *testing.T, releaseName model.ReleaseName, volumePath string,
 
 }
 
-func CheckVolumes(t *testing.T, releaseName model.ReleaseName) error {
+func checkVolumes(t *testing.T, releaseName model.ReleaseName) error {
 	volumePathsThatShouldContainFiles := []string{
 		"/logs",
 		"/data",
