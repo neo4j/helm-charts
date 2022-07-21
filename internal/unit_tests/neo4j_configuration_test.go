@@ -68,7 +68,7 @@ func TestJvmAdditionalConfig(t *testing.T) {
 
 	doTestCase := func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
 		manifest, err := model.HelmTemplate(t, chart, useDataModeAndAcceptLicense,
-			"-f", "internal/resources/jvmAdditionalSettings.yaml",
+			"-f", "internal/resources/testData/jvmAdditionalSettings.yaml",
 			"--set", "neo4j.edition="+edition,
 		)
 		if !assert.NoError(t, err) {
@@ -98,7 +98,7 @@ func TestMetaspaceConfigs(t *testing.T) {
 
 	doTestCase := func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
 		manifest, err := model.HelmTemplate(t, chart, useDataModeAndAcceptLicense,
-			"-f", "internal/resources/metaspaceconfigs.yaml",
+			"-f", "internal/resources/testData/metaspaceconfigs.yaml",
 			"--set", "neo4j.edition="+edition,
 		)
 		if !assert.NoError(t, err) {
