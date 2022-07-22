@@ -25,7 +25,7 @@ var createdNodes = map[model.ReleaseName]*int64{}
 // empty param map (makes queries without params more readable)
 var noParams = map[string]interface{}{}
 
-func CheckNeo4jConfiguration(t *testing.T, releaseName model.ReleaseName, expectedConfiguration *model.Neo4jConfiguration) (err error) {
+func checkNeo4jConfiguration(t *testing.T, releaseName model.ReleaseName, expectedConfiguration *model.Neo4jConfiguration) (err error) {
 
 	var runtimeConfig []*neo4j.Record
 	var expectedOverrides = map[string]string{
@@ -80,7 +80,7 @@ func CheckNeo4jConfiguration(t *testing.T, releaseName model.ReleaseName, expect
 	return err
 }
 
-func CreateNode(t *testing.T, releaseName model.ReleaseName) error {
+func createNode(t *testing.T, releaseName model.ReleaseName) error {
 	_, err := runQuery(t, releaseName, "CREATE (n:Item { id: $id, name: $name }) RETURN n.id, n.name", map[string]interface{}{
 		"id":   1,
 		"name": "Item 1",
@@ -96,8 +96,8 @@ func CreateNode(t *testing.T, releaseName model.ReleaseName) error {
 	return err
 }
 
-//CreateDatabase runs a cypher query to create a database with the given name
-func CreateDatabase(t *testing.T, releaseName model.ReleaseName, databaseName string) error {
+//createDatabase runs a cypher query to create a database with the given name
+func createDatabase(t *testing.T, releaseName model.ReleaseName, databaseName string) error {
 	cypherQuery := fmt.Sprintf("CREATE DATABASE %s", databaseName)
 	_, err := runQuery(t, releaseName, cypherQuery, nil, false)
 	if !assert.NoError(t, err) {
@@ -110,8 +110,8 @@ func CreateDatabase(t *testing.T, releaseName model.ReleaseName, databaseName st
 	return nil
 }
 
-//CheckDataBaseExists runs a cypher query to check if the given database name exists or not
-func CheckDataBaseExists(t *testing.T, releaseName model.ReleaseName, databaseName string) error {
+//checkDataBaseExists runs a cypher query to check if the given database name exists or not
+func checkDataBaseExists(t *testing.T, releaseName model.ReleaseName, databaseName string) error {
 	cypherQuery := fmt.Sprintf("SHOW DATABASE %s YIELD name", databaseName)
 	results, err := runQuery(t, releaseName, cypherQuery, nil, false)
 	if !assert.NoError(t, err) {
@@ -132,9 +132,9 @@ func CheckDataBaseExists(t *testing.T, releaseName model.ReleaseName, databaseNa
 	return fmt.Errorf("no record yielded for cypher query %s", cypherQuery)
 }
 
-//CreateNodeOnReadReplica fires a cypher query to create a node
+//createNodeOnReadReplica fires a cypher query to create a node
 //It's a way to check write requests to read replica are routed to the cluster core since read replica DOES NOT perform writes
-func CreateNodeOnReadReplica(t *testing.T, releaseName model.ReleaseName) error {
+func createNodeOnReadReplica(t *testing.T, releaseName model.ReleaseName) error {
 	_, err := runQuery(t, releaseName, "CREATE (n:Item { id: $id, name: $name }) RETURN n.id, n.name", map[string]interface{}{
 		"id":   1,
 		"name": "Item 1",
@@ -150,9 +150,9 @@ func CreateNodeOnReadReplica(t *testing.T, releaseName model.ReleaseName) error 
 	return err
 }
 
-//CheckApocConfig fires a apoc cypher query
+//checkApocConfig fires a apoc cypher query
 //It's a way to check if apoc plugin is loaded and the customized apoc config is loaded or not
-func CheckApocConfig(t *testing.T, releaseName model.ReleaseName) error {
+func checkApocConfig(t *testing.T, releaseName model.ReleaseName) error {
 
 	results, err := runQuery(t, releaseName, "CALL apoc.config.list() YIELD key, value WHERE key = \"apoc.jdbc.apoctest.url\" RETURN *;", nil, false)
 	if !assert.NoError(t, err) {
@@ -173,9 +173,9 @@ func CheckApocConfig(t *testing.T, releaseName model.ReleaseName) error {
 	return fmt.Errorf("no record yielded for apoc cypher query")
 }
 
-//CheckReadReplicaConfiguration checks runs a cypher query to check the read replica configuration
+//checkReadReplicaConfiguration checks runs a cypher query to check the read replica configuration
 // the configuration dbms.mode so retrieved must contain the value READ_REPLICA
-func CheckReadReplicaConfiguration(t *testing.T, releaseName model.ReleaseName) error {
+func checkReadReplicaConfiguration(t *testing.T, releaseName model.ReleaseName) error {
 	result, err := runReadOnlyQuery(t, releaseName, "CALL dbms.listConfig(\"dbms.mode\") YIELD value", noParams)
 	if err != nil {
 		return err
@@ -193,8 +193,8 @@ func CheckReadReplicaConfiguration(t *testing.T, releaseName model.ReleaseName) 
 	return fmt.Errorf("unable to get dbms.mode using cypher")
 }
 
-//CheckReadReplicaServerGroupsConfiguration checks if the server_groups config contains "read-replicas" or not for read replica cluster
-func CheckReadReplicaServerGroupsConfiguration(t *testing.T, releaseName model.ReleaseName) error {
+//checkReadReplicaServerGroupsConfiguration checks if the server_groups config contains "read-replicas" or not for read replica cluster
+func checkReadReplicaServerGroupsConfiguration(t *testing.T, releaseName model.ReleaseName) error {
 	result, err := runReadOnlyQuery(t, releaseName, "CALL dbms.cluster.overview() YIELD groups", noParams)
 	if err != nil {
 		return err
@@ -225,8 +225,8 @@ func CheckReadReplicaServerGroupsConfiguration(t *testing.T, releaseName model.R
 	return nil
 }
 
-//CheckNodeCount runs the cypher query to get the number of nodes on a cluster core
-func CheckNodeCount(t *testing.T, releaseName model.ReleaseName) error {
+//checkNodeCount runs the cypher query to get the number of nodes on a cluster core
+func checkNodeCount(t *testing.T, releaseName model.ReleaseName) error {
 	result, err := runQuery(t, releaseName, "MATCH (n) RETURN COUNT(n) AS count", noParams, false)
 
 	if err != nil {
@@ -242,8 +242,8 @@ func CheckNodeCount(t *testing.T, releaseName model.ReleaseName) error {
 	}
 }
 
-//UpdateReadReplicaConfig updates the read replica upstream strategy on the provided chart
-func UpdateReadReplicaConfig(t *testing.T, releaseName model.ReleaseName, extraArgs ...string) error {
+//updateReadReplicaConfig updates the read replica upstream strategy on the provided chart
+func updateReadReplicaConfig(t *testing.T, releaseName model.ReleaseName, extraArgs ...string) error {
 
 	diskName := releaseName.DiskName()
 	err := run(
@@ -270,9 +270,9 @@ func UpdateReadReplicaConfig(t *testing.T, releaseName model.ReleaseName, extraA
 	return nil
 }
 
-//CheckNodeCountOnReadReplica performs a cypher query to check node count.
+//checkNodeCountOnReadReplica performs a cypher query to check node count.
 //We are not using here createdNodes Map since it does not contain the correct count of nodes retrieved via read replica
-func CheckNodeCountOnReadReplica(t *testing.T, releaseName model.ReleaseName, expectedCount int64) error {
+func checkNodeCountOnReadReplica(t *testing.T, releaseName model.ReleaseName, expectedCount int64) error {
 
 	countnodes := func() ([]*neo4j.Record, error) {
 		return runQuery(t, releaseName, "MATCH (n) RETURN COUNT(n) AS count", noParams, true)
