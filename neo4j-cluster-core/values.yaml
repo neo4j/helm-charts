@@ -128,6 +128,16 @@ volumes:
     share:
       name: "data"
 
+#add additional volumes and their respective mounts
+#additionalVolumes:
+#  - name: neo4j1-conf
+#    emptyDir: {}
+#
+#additionalVolumeMounts:
+#  - mountPath: "/config/neo4j1.conf"
+#    name: neo4j1-conf
+
+
 #nodeSelector labels
 #please ensure the respective labels are present on one of the cluster nodes or else helm charts will throw an error
 nodeSelector:
