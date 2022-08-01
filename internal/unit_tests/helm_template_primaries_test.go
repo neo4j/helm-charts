@@ -835,6 +835,55 @@ func TestInvalidNodeSelectorLabels(t *testing.T) {
 	}))
 }
 
+//TestAdditionalVolumesAndMounts checks if the additionalVolumes and additionalVolumeMounts are present or not
+func TestAdditionalVolumesAndMounts(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+		manifest, err := model.HelmTemplate(t, chart, useDataModeAndAcceptLicense, resources.AdditionalVolumesAndMounts.HelmArgs()...)
+		if !assert.NoError(t, err) {
+			return
+		}
+		neo4jStatefulSet := manifest.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
+		if !assert.NotNil(t, neo4jStatefulSet, "missing statefulSet object") {
+			return
+		}
+		podVolumes := neo4jStatefulSet.Spec.Template.Spec.Volumes
+		if !assert.Len(t, podVolumes, 2, fmt.Sprintf("more than two volumes present")) {
+			return
+		}
+		var volumePresent bool
+		for _, podVolumes := range podVolumes {
+			if podVolumes.Name == "neo4j1-conf" {
+				volumePresent = true
+				break
+			}
+		}
+		if !assert.True(t, volumePresent, "neo4j1-conf volume not found") {
+			return
+		}
+
+		containers := neo4jStatefulSet.Spec.Template.Spec.Containers
+		if !assert.Len(t, containers, 1, "more than one container found") {
+			return
+		}
+		volumeMounts := containers[0].VolumeMounts
+		var volumeMountPresent bool
+		for _, volumeMount := range volumeMounts {
+			if volumeMount.Name == "neo4j1-conf" {
+				if volumeMount.MountPath == "/config/neo4j1.conf" {
+					volumeMountPresent = true
+					break
+				}
+			}
+		}
+		if !assert.True(t, volumeMountPresent, "neo4j1-conf volumeMount not found") {
+			return
+		}
+
+	}))
+}
+
 func TestErrorIsThrownForInvalidMemoryResources(t *testing.T) {
 
 	t.Parallel()
