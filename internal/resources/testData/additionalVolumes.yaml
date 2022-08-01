@@ -1,0 +1,7 @@
+additionalVolumes:
+  - name: neo4j1-conf
+    emptyDir: {}
+
+additionalVolumeMounts:
+  - mountPath: "/config/neo4j1.conf"
+    name: neo4j1-conf

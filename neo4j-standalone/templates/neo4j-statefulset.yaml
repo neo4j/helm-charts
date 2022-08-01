@@ -140,6 +140,7 @@ spec:
           volumeMounts:
             - mountPath: "/config/neo4j.conf"
               name: neo4j-conf
+            {{- include "neo4j.additionalVolumeMounts" .Values.additionalVolumeMounts | nindent 12 }}
             {{- include "neo4j.apoc.volumeMount" .Values.apoc_config | indent 12 }}
             {{- include "neo4j.volumeMounts" .Values.volumes | indent 12 }}
             {{- include "neo4j.ssl.volumeMountsFromSecrets" .Values.ssl | indent 12 }}
@@ -193,6 +194,7 @@ spec:
                   name: "{{ .Release.Name }}-user-config"
               - configMap:
                   name: "{{ .Release.Name }}-k8s-config"
+        {{- include "neo4j.additionalVolumes" .Values.additionalVolumes | nindent 8 }}
         {{- include "neo4j.apoc.volume" . | nindent 8 }}
         {{- with include "neo4j.ssl.volumesFromSecrets" .Values.ssl }}{{ nindent 8 .}}{{ end -}}
         {{- with include "neo4j.volumes" . }}{{ nindent 8 . }}{{ end -}}
