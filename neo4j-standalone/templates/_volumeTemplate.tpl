@@ -163,6 +163,22 @@ chmod -R g+rwx "/{{ $name }}"
      {{- end -}}
 {{- end -}}
 
+{{- define "neo4j.additionalVolumes" -}}
+    {{- if . -}}
+{{ toYaml . }}
+    {{- end -}}
+
+{{- end -}}
+
+{{- define "neo4j.additionalVolumeMounts" -}}
+
+    {{- if . -}}
+{{ toYaml . }}
+    {{- end -}}
+
+{{- end -}}
+
+
 {{- define "neo4j.volumeMounts" -}}
 {{- range $name, $spec := . }}
 - mountPath: "/{{ $name }}"
