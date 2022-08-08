@@ -330,6 +330,17 @@ podSpec:
   # If set to an object then that object is used for the Neo4j podAntiAffinity
   podAntiAffinity: true
 
+  #Add tolerations to the Neo4j pod
+  tolerations:
+#    - key: "key1"
+#      operator: "Equal"
+#      value: "value1"
+#      effect: "NoSchedule"
+#    - key: "key2"
+#      operator: "Equal"
+#      value: "value2"
+#      effect: "NoSchedule"
+
   #Priority indicates the importance of a Pod relative to other Pods.
   # More Information : https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/
   priorityClassName: ""

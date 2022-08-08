@@ -66,6 +66,7 @@ spec:
       {{- end }}
       securityContext: {{ toYaml .Values.securityContext | nindent 8 }}
       {{- include "neo4j.priorityClassName" . | nindent 6 }}
+      {{- include "neo4j.tolerations" .Values.podSpec.tolerations | nindent 6 }}
       terminationGracePeriodSeconds: {{ if $offlineMaintenanceEnabled  }}0{{ else }}{{ .Values.podSpec.terminationGracePeriodSeconds }}{{ end }}
       {{- $initContainers := .Values.podSpec.initContainers }}
       {{- $initChmodContainer := include "neo4j.initChmodContainer" . }}

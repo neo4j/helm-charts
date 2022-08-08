@@ -622,6 +622,36 @@ func TestNeo4jPodPriorityClassName(t *testing.T) {
 	}))
 }
 
+//TestNeo4jPodTolerations checks for tolerations in the statefulset
+func TestNeo4jPodTolerations(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+
+		manifest, err := model.HelmTemplate(t, chart, useDataModeAndAcceptLicense, resources.Tolerations.HelmArgs()...)
+		if !assert.NoError(t, err) {
+			return
+		}
+		neo4jStatefulSet := manifest.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
+		podTolerations := neo4jStatefulSet.Spec.Template.Spec.Tolerations
+		if !assert.Len(t, podTolerations, 2, "more than two tolerations found") {
+			return
+		}
+		var invalidTolerationFound bool
+		for _, podToleration := range podTolerations {
+			if podToleration.Key != "key1" && podToleration.Key != "key2" {
+				invalidTolerationFound = true
+				break
+			}
+		}
+
+		if !assert.NotEqual(t, invalidTolerationFound, true, "invalid toleration found") {
+			return
+		}
+
+	}))
+}
+
 func TestExtraLabels(t *testing.T) {
 	t.Parallel()
 
