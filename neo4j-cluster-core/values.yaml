@@ -331,7 +331,7 @@ podSpec:
   podAntiAffinity: true
 
   #Add tolerations to the Neo4j pod
-#  tolerations:
+  tolerations:
 #    - key: "key1"
 #      operator: "Equal"
 #      value: "value1"
