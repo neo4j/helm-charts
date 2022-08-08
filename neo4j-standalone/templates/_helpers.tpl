@@ -317,3 +317,11 @@ priorityClassName: "{{ .Values.podSpec.priorityClassName }}"
             {{- end -}}
     {{- end -}}
 {{- end -}}
+
+{{- define "neo4j.tolerations" -}}
+{{/* Add tolerations only if .Values.podSpec.tolerations contains entries */}}
+    {{- if . -}}
+tolerations:
+{{ toYaml . }}
+    {{- end -}}
+{{- end -}}
