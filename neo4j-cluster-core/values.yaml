@@ -324,6 +324,24 @@ podSpec:
     #imageregistry: "https://hub.docker.com/"
     #demo: alpha
 
+  nodeAffinity:
+  #    requiredDuringSchedulingIgnoredDuringExecution:
+  #      nodeSelectorTerms:
+  #        - matchExpressions:
+  #            - key: topology.kubernetes.io/zone
+  #              operator: In
+  #              values:
+  #                - antarctica-east1
+  #                - antarctica-west1
+  #    preferredDuringSchedulingIgnoredDuringExecution:
+  #      - weight: 1
+  #        preference:
+  #          matchExpressions:
+  #            - key: another-node-label-key
+  #              operator: In
+  #              values:
+  #                - another-node-label-value
+
   # Anti Affinity
   # If set to true then an anti-affinity rule is applied to prevent database pods with the same `neo4j.name` running on a single Kubernetes node.
   # If set to false then no anti-affinity rules are applied
