@@ -356,8 +356,8 @@ podSpec:
 #      effect: "NoSchedule"
 #    - key: "key2"
 #      operator: "Equal"
-#      value: "value2"
 #      effect: "NoSchedule"
+#      value: "value2"
 
   #Priority indicates the importance of a Pod relative to other Pods.
   # More Information : https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/
