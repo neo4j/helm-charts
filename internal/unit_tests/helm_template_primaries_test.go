@@ -622,6 +622,60 @@ func TestNeo4jPodPriorityClassName(t *testing.T) {
 	}))
 }
 
+//TestNeo4jPodTolerations checks for tolerations in the statefulset
+func TestNeo4jPodTolerations(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+
+		manifest, err := model.HelmTemplate(t, chart, useDataModeAndAcceptLicense, resources.Tolerations.HelmArgs()...)
+		if !assert.NoError(t, err) {
+			return
+		}
+		neo4jStatefulSet := manifest.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
+		podTolerations := neo4jStatefulSet.Spec.Template.Spec.Tolerations
+		if !assert.Len(t, podTolerations, 2, "more than two tolerations found") {
+			return
+		}
+		var invalidTolerationFound bool
+		for _, podToleration := range podTolerations {
+			if podToleration.Key != "key1" && podToleration.Key != "key2" {
+				invalidTolerationFound = true
+				break
+			}
+		}
+
+		if !assert.NotEqual(t, invalidTolerationFound, true, "invalid toleration found") {
+			return
+		}
+
+	}))
+}
+
+//TestNeo4jPodNodeAffinity checks for nodeAffinity setting in statefulset
+func TestNeo4jPodNodeAffinity(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
+
+		manifest, err := model.HelmTemplate(t, chart, useDataModeAndAcceptLicense, resources.NodeAffinity.HelmArgs()...)
+		if !assert.NoError(t, err) {
+			return
+		}
+		neo4jStatefulSet := manifest.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
+		nodeAffinity := neo4jStatefulSet.Spec.Template.Spec.Affinity.NodeAffinity
+		if !assert.NotNil(t, nodeAffinity, "nil nodeAffinity found") {
+			return
+		}
+		if !assert.NotNil(t, nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution) {
+			return
+		}
+		if !assert.NotEqual(t, len(nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution), 0) {
+			return
+		}
+	}))
+}
+
 func TestExtraLabels(t *testing.T) {
 	t.Parallel()
 

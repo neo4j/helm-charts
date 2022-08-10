@@ -1,7 +1,7 @@
 apiVersion: v1
 name: neo4j-docker-desktop-pv
 home: https://www.neo4j.com
-version: 4.4.9
+version: 4.4.10
 appVersion: "-"
 description: Sets up persistent disks suitable for simple development tasks with Neo4j Helm when using Kubernetes provided by Docker Desktop
 keywords:

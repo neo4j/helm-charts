@@ -324,11 +324,40 @@ podSpec:
     #imageregistry: "https://hub.docker.com/"
     #demo: alpha
 
+  nodeAffinity:
+#    requiredDuringSchedulingIgnoredDuringExecution:
+#      nodeSelectorTerms:
+#        - matchExpressions:
+#            - key: topology.kubernetes.io/zone
+#              operator: In
+#              values:
+#                - antarctica-east1
+#                - antarctica-west1
+#    preferredDuringSchedulingIgnoredDuringExecution:
+#      - weight: 1
+#        preference:
+#          matchExpressions:
+#            - key: another-node-label-key
+#              operator: In
+#              values:
+#                - another-node-label-value
+
   # Anti Affinity
   # If set to true then an anti-affinity rule is applied to prevent database pods with the same `neo4j.name` running on a single Kubernetes node.
   # If set to false then no anti-affinity rules are applied
   # If set to an object then that object is used for the Neo4j podAntiAffinity
   podAntiAffinity: true
+
+  #Add tolerations to the Neo4j pod
+  tolerations:
+#    - key: "key1"
+#      operator: "Equal"
+#      value: "value1"
+#      effect: "NoSchedule"
+#    - key: "key2"
+#      operator: "Equal"
+#      effect: "NoSchedule"
+#      value: "value2"
 
   #Priority indicates the importance of a Pod relative to other Pods.
   # More Information : https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/

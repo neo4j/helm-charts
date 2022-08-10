@@ -318,3 +318,30 @@ priorityClassName: "{{ .Values.podSpec.priorityClassName }}"
             {{- end -}}
     {{- end -}}
 {{- end -}}
+
+{{- define "neo4j.tolerations" -}}
+{{/* Add tolerations only if .Values.podSpec.tolerations contains entries */}}
+    {{- if . -}}
+tolerations:
+{{ toYaml . }}
+    {{- end -}}
+{{- end -}}
+
+{{- define "neo4j.affinity" -}}
+    {{- if or (.Values.podSpec.nodeAffinity) (.Values.podSpec.podAntiAffinity) }}
+affinity:
+    {{- if .Values.podSpec.podAntiAffinity }}
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app: "{{ template "neo4j.appName" . }}"
+              helm.neo4j.com/pod_category: "neo4j-instance"
+          topologyKey: kubernetes.io/hostname
+    {{- end }}
+    {{- if .Values.podSpec.nodeAffinity }}
+    nodeAffinity:
+{{ toYaml .Values.podSpec.nodeAffinity | indent 6 }}
+    {{- end }}
+    {{- end }}
+{{- end -}}
