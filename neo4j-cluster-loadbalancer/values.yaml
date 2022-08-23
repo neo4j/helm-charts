@@ -41,7 +41,8 @@ selector:
 # Add additional Service.spec here if needed
 spec:
   type: LoadBalancer
-  publishNotReadyAddresses: true
+  #enable this flag if you are deploying a multi region/zone Neo4j Cluster
+  #publishNotReadyAddresses: true
   # in most cloud environments LoadBalancer type will receive an ephemeral public IP address automatically.
   # If you need to specify a static ip here use:
   #loadBalancerIP: ...
@@ -52,5 +53,5 @@ clusterDomain: "cluster.local"
 # Neo4j.conf
 config: {}
 
-#this flag allows you to open internal neo4j ports necessary in multi neo4j cluster scenario
+#this flag allows you to open internal neo4j ports necessary in multi zone /region neo4j cluster scenario
 multiCluster: false
