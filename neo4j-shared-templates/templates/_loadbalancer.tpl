@@ -36,6 +36,9 @@ metadata:
   annotations: {{ toYaml . | nindent 4 }}
   {{- end }}
 spec:
+  {{- if $.Values.multiCluster }}
+  publishNotReadyAddresses: true
+  {{- end }}
   type: "{{ $spec.type | required "service type must be specified" }}"
   {{- omit $spec "type" "ports" "selector" | include "neo4j.services.extraSpec"  | nindent 2 }}
   ports:
