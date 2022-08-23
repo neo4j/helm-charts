@@ -203,7 +203,7 @@ services:
 # Neo4j Configuration (yaml format)
 config:
   dbms.mode: "CORE"
-  dbms.config.strict_validation: "true"
+  dbms.config.strict_validation: "false"
   causal_clustering.middleware.akka.allow_any_core_to_bootstrap: "true"
   # The amount of memory to use for mapping the store files.
   # The default page cache memory assumes the machine is dedicated to running
