@@ -93,7 +93,6 @@ data:
 
 
   # Other
-  dbms.config.strict_validation: "true"
   dbms.logs.user.stdout_enabled: "false"
   unsupported.dbms.ssl.system.ignore_dot_files: "true"
 

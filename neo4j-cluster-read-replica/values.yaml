@@ -202,7 +202,7 @@ services:
 # Neo4j Configuration (yaml format)
 config:
   dbms.mode: "READ_REPLICA"
-  dbms.config.strict_validation: "true"
+  dbms.config.strict_validation: "false"
   # The amount of memory to use for mapping the store files.
   # The default page cache memory assumes the machine is dedicated to running
   # Neo4j, and is heuristically set to 50% of RAM minus the Java heap size.
