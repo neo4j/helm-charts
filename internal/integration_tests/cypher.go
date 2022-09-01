@@ -310,8 +310,7 @@ func runQuery(t *testing.T, releaseName model.ReleaseName, cypher string, params
 		return nil, proxyErr
 	}
 
-	driver, err := neo4j.NewDriver(fmt.Sprintf("%s:%d", dbUri, boltPort), authToUse, func(config *neo4j.Config) {
-	})
+	driver, err := neo4j.NewDriver(fmt.Sprintf("%s:%d", dbUri, boltPort), authToUse)
 	// Handle driver lifetime based on your application lifetime requirements  driver's lifetime is usually
 	// bound by the application lifetime, which usually implies one driver instance per application
 	defer driver.Close()
@@ -345,8 +344,7 @@ func runReadOnlyQuery(t *testing.T, releaseName model.ReleaseName, cypher string
 		return nil, proxyErr
 	}
 
-	driver, err := neo4j.NewDriver(fmt.Sprintf("%s:%d", dbUri, boltPort), authToUse, func(config *neo4j.Config) {
-	})
+	driver, err := neo4j.NewDriver(fmt.Sprintf("%s:%d", dbUri, boltPort), authToUse)
 	// Handle driver lifetime based on your application lifetime requirements  driver's lifetime is usually
 	// bound by the application lifetime, which usually implies one driver instance per application
 	defer driver.Close()
