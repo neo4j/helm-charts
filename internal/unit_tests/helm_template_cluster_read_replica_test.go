@@ -25,7 +25,7 @@ func TestDefaultNeo4jNameClusterReadReplica(t *testing.T) {
 	assert.Equal(t, selector["app"], "neo4j-cluster")
 }
 
-//TestReadReplicaInstallationFailure checks whether read replica installation is failing or not when clusters are not setup
+// TestReadReplicaInstallationFailure checks whether read replica installation is failing or not when clusters are not setup
 // Since it's a unit test case failure will occur as cluster is not in place
 func TestReadReplicaInstallationFailure(t *testing.T) {
 	t.Parallel()
@@ -41,8 +41,8 @@ func TestReadReplicaInstallationFailure(t *testing.T) {
 	}
 }
 
-//TODO : assert dbms mode to be READ_REPLICA
-//TestReadReplicaInternalPorts checks if the internals services for read replica contains the expected ports
+// TODO : assert dbms mode to be READ_REPLICA
+// TestReadReplicaInternalPorts checks if the internals services for read replica contains the expected ports
 func TestReadReplicaInternalPorts(t *testing.T) {
 	t.Parallel()
 
@@ -67,7 +67,7 @@ func TestReadReplicaInternalPorts(t *testing.T) {
 	checkPortsMatchExpected(t, expectedPorts, internalService)
 }
 
-//TestReadReplicaServerGroups checks if the configMap data has an entry called causal_clustering.server_groups
+// TestReadReplicaServerGroups checks if the configMap data has an entry called causal_clustering.server_groups
 // It also checks if the key causal_clustering.server_groups contains a value "read-replicas" or not
 func TestReadReplicaServerGroups(t *testing.T) {
 	t.Parallel()
@@ -84,7 +84,7 @@ func TestReadReplicaServerGroups(t *testing.T) {
 	assert.Contains(t, defaultConfigMap.Data["causal_clustering.server_groups"], "read-replicas")
 }
 
-//TestReadReplicaAntiAffinityRule checks if the podSpec.podAntiAffinity rule exists under statefulset or not
+// TestReadReplicaAntiAffinityRule checks if the podSpec.podAntiAffinity rule exists under statefulset or not
 func TestReadReplicaAntiAffinityRuleExists(t *testing.T) {
 	t.Parallel()
 
@@ -99,7 +99,7 @@ func TestReadReplicaAntiAffinityRuleExists(t *testing.T) {
 	assert.NotEqual(t, statefulSet.Spec.Template.Spec.Affinity.PodAntiAffinity, nil)
 }
 
-//TestReadReplicaAntiAffinityRule checks that podAntiAffinity rule should not exist when --set podSpec.podAntiAffinity=false is passed
+// TestReadReplicaAntiAffinityRule checks that podAntiAffinity rule should not exist when --set podSpec.podAntiAffinity=false is passed
 func TestReadReplicaAntiAffinityRuleDoesNotExists(t *testing.T) {
 	t.Parallel()
 
@@ -120,7 +120,7 @@ func TestReadReplicaAntiAffinityRuleDoesNotExists(t *testing.T) {
 	assert.Empty(t, statefulSet.Spec.Template.Spec.Affinity)
 }
 
-//TestReadReplicaPanicOnShutDownConfig checks whether the dbms.panic.shutdown_on_panic attribute is set to the default value true or not
+// TestReadReplicaPanicOnShutDownConfig checks whether the dbms.panic.shutdown_on_panic attribute is set to the default value true or not
 func TestReadReplicaPanicOnShutDownConfig(t *testing.T) {
 	t.Parallel()
 

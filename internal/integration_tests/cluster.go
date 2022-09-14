@@ -16,7 +16,7 @@ import (
 	"testing"
 )
 
-//labelNodes labels all the node with testLabel=<number>
+// labelNodes labels all the node with testLabel=<number>
 func labelNodes(t *testing.T) error {
 
 	var errors *multierror.Error
@@ -37,7 +37,7 @@ func labelNodes(t *testing.T) error {
 	return errors.ErrorOrNil()
 }
 
-//removeLabelFromNodes removes label testLabel from all the nodes added via labelNodes func
+// removeLabelFromNodes removes label testLabel from all the nodes added via labelNodes func
 func removeLabelFromNodes(t *testing.T) error {
 
 	var errors *multierror.Error
@@ -57,7 +57,7 @@ func removeLabelFromNodes(t *testing.T) error {
 	return errors.ErrorOrNil()
 }
 
-//clusterTests contains all the tests related to cluster
+// clusterTests contains all the tests related to cluster
 func clusterTests(loadBalancerName model.ReleaseName) ([]SubTest, error) {
 	expectedConfiguration, err := (&model.Neo4jConfiguration{}).PopulateFromFile(Neo4jConfFile)
 	if err != nil {
@@ -118,7 +118,7 @@ func clusterTests(loadBalancerName model.ReleaseName) ([]SubTest, error) {
 //	return nil
 //}
 
-//imagePullSecretTests runs tests related to imagePullSecret feature
+// imagePullSecretTests runs tests related to imagePullSecret feature
 func imagePullSecretTests(t *testing.T, name model.ReleaseName) error {
 	t.Run("Check cluster core has imagePullSecret image", func(t *testing.T) {
 		t.Parallel()
@@ -131,7 +131,7 @@ func imagePullSecretTests(t *testing.T, name model.ReleaseName) error {
 	return nil
 }
 
-//nodeSelectorTests runs tests related to nodeSelector feature
+// nodeSelectorTests runs tests related to nodeSelector feature
 func nodeSelectorTests(name model.ReleaseName) []SubTest {
 	return []SubTest{
 		{name: fmt.Sprintf("Check cluster core 1 is assigned with label %s", model.NodeSelectorLabel), test: func(t *testing.T) {
@@ -141,7 +141,7 @@ func nodeSelectorTests(name model.ReleaseName) []SubTest {
 	}
 }
 
-//databaseCreationTests creates a database against a cluster and checks if its created or not
+// databaseCreationTests creates a database against a cluster and checks if its created or not
 func databaseCreationTests(t *testing.T, loadBalancerName model.ReleaseName, dataBaseName string) error {
 	t.Run("Create Database customers", func(t *testing.T) {
 		assert.NoError(t, createDatabase(t, loadBalancerName, dataBaseName), "Creates database")
@@ -152,7 +152,7 @@ func databaseCreationTests(t *testing.T, loadBalancerName model.ReleaseName, dat
 	return nil
 }
 
-//checkPriorityClassName checks the priorityClassName is set to the pod or not
+// checkPriorityClassName checks the priorityClassName is set to the pod or not
 func checkPriorityClassName(t *testing.T, releaseName model.ReleaseName) error {
 
 	pods, err := getAllPods(releaseName.Namespace())
@@ -170,7 +170,7 @@ func checkPriorityClassName(t *testing.T, releaseName model.ReleaseName) error {
 	return nil
 }
 
-//checkCoreImageName checks whether core-1 image is matching with imagePullSecret image or not
+// checkCoreImageName checks whether core-1 image is matching with imagePullSecret image or not
 func checkCoreImageName(t *testing.T, releaseName model.ReleaseName) error {
 
 	pods, err := getAllPods(releaseName.Namespace())
@@ -189,7 +189,7 @@ func checkCoreImageName(t *testing.T, releaseName model.ReleaseName) error {
 	return nil
 }
 
-//checkNodeSelectorLabel checks whether the given pod is associated with the correct node or not
+// checkNodeSelectorLabel checks whether the given pod is associated with the correct node or not
 func checkNodeSelectorLabel(t *testing.T, releaseName model.ReleaseName, labelName string) error {
 
 	nodeSelectorNode, err := getNodeWithLabel(labelName)
@@ -207,7 +207,7 @@ func checkNodeSelectorLabel(t *testing.T, releaseName model.ReleaseName, labelNa
 	return nil
 }
 
-//checkImagePullSecret checks whether a secret of type docker-registry is created or not
+// checkImagePullSecret checks whether a secret of type docker-registry is created or not
 func checkImagePullSecret(t *testing.T, releaseName model.ReleaseName) error {
 
 	secret, err := getSpecificSecret(releaseName.Namespace(), "demo")
@@ -220,7 +220,7 @@ func checkImagePullSecret(t *testing.T, releaseName model.ReleaseName) error {
 	return nil
 }
 
-//headLessServiceTests contains all the tests related to headless service
+// headLessServiceTests contains all the tests related to headless service
 func headLessServiceTests(headlessService model.ReleaseName) []SubTest {
 	return []SubTest{
 		{name: "Check Headless Service Configuration", test: func(t *testing.T) {
@@ -234,7 +234,7 @@ func headLessServiceTests(headlessService model.ReleaseName) []SubTest {
 	}
 }
 
-//apocConfigTests contains all the tests related to apoc configs
+// apocConfigTests contains all the tests related to apoc configs
 func apocConfigTests(releaseName model.ReleaseName) []SubTest {
 	return []SubTest{
 		{name: "Execute apoc query", test: func(t *testing.T) {
@@ -244,7 +244,7 @@ func apocConfigTests(releaseName model.ReleaseName) []SubTest {
 	}
 }
 
-//readReplicaTests contains all the tests related to read replicas
+// readReplicaTests contains all the tests related to read replicas
 func readReplicaTests(readReplica1Name model.ReleaseName, readReplica2Name model.ReleaseName, loadBalancerName model.ReleaseName) []SubTest {
 	return []SubTest{
 		//TODO: This is to be enabled in 5.0
@@ -289,7 +289,7 @@ func readReplicaTests(readReplica1Name model.ReleaseName, readReplica2Name model
 	}
 }
 
-//checkClusterCorePasswordFailure checks if a cluster core is failing on installation or not with an incorrect password
+// checkClusterCorePasswordFailure checks if a cluster core is failing on installation or not with an incorrect password
 func checkClusterCorePasswordFailure(t *testing.T) error {
 	//creating a sample cluster core definition (which is not supposed to get installed)
 	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
@@ -375,8 +375,8 @@ func checkK8s(t *testing.T, name model.ReleaseName) error {
 	return nil
 }
 
-//checkLoadBalancerService checks whether the loadbalancer exists or not
-//It also checks that the number of endpoints should match with the given number of expected endpoints
+// checkLoadBalancerService checks whether the loadbalancer exists or not
+// It also checks that the number of endpoints should match with the given number of expected endpoints
 func checkLoadBalancerService(t *testing.T, name model.ReleaseName, expectedEndPoints int) error {
 
 	serviceName := fmt.Sprintf("%s-neo4j", name.String())
@@ -398,7 +398,7 @@ func checkLoadBalancerService(t *testing.T, name model.ReleaseName, expectedEndP
 	return nil
 }
 
-//checkPods checks for the number of pods which should be 5 (3 cluster core + 2 read replica)
+// checkPods checks for the number of pods which should be 5 (3 cluster core + 2 read replica)
 func checkPods(t *testing.T, name model.ReleaseName) error {
 	pods, err := getAllPods(name.Namespace())
 	if !assert.NoError(t, err) {
@@ -420,7 +420,7 @@ func checkPods(t *testing.T, name model.ReleaseName) error {
 	return nil
 }
 
-//checkNeo4jLogsForAnyErrors checks whether neo4j.log and debug.log contain any errors or not
+// checkNeo4jLogsForAnyErrors checks whether neo4j.log and debug.log contain any errors or not
 func checkNeo4jLogsForAnyErrors(t *testing.T, name model.ReleaseName) error {
 	cmd := []string{
 		"bash",
@@ -444,7 +444,7 @@ func checkNeo4jLogsForAnyErrors(t *testing.T, name model.ReleaseName) error {
 	return nil
 }
 
-//checkHeadlessServiceConfiguration checks whether the provided service is headless service or not
+// checkHeadlessServiceConfiguration checks whether the provided service is headless service or not
 func checkHeadlessServiceConfiguration(t *testing.T, service model.ReleaseName) error {
 
 	serviceName := fmt.Sprintf("%s-neo4j", service.String())
@@ -463,7 +463,7 @@ func checkHeadlessServiceConfiguration(t *testing.T, service model.ReleaseName) 
 	return nil
 }
 
-//checkHeadlessServiceEndpoints checks whether the headless endpoints have the cluster cores or not
+// checkHeadlessServiceEndpoints checks whether the headless endpoints have the cluster cores or not
 // By default , headless service includes cluster core only and no read replicas
 func checkHeadlessServiceEndpoints(t *testing.T, service model.ReleaseName) error {
 

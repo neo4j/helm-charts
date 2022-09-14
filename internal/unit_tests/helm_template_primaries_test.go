@@ -541,7 +541,7 @@ func TestDefaultLabels(t *testing.T) {
 	}))
 }
 
-//TestNeo4jPodAnnotations checks if Neo4j Pod has the annotations or not
+// TestNeo4jPodAnnotations checks if Neo4j Pod has the annotations or not
 func TestNeo4jPodAnnotations(t *testing.T) {
 	t.Parallel()
 
@@ -572,7 +572,7 @@ func TestNeo4jPodAnnotations(t *testing.T) {
 	}))
 }
 
-//TestNeo4jStatefulSetAnnotations checks if Neo4j StatefulSet has the annotations or not
+// TestNeo4jStatefulSetAnnotations checks if Neo4j StatefulSet has the annotations or not
 func TestNeo4jStatefulSetAnnotations(t *testing.T) {
 	t.Parallel()
 
@@ -603,8 +603,8 @@ func TestNeo4jStatefulSetAnnotations(t *testing.T) {
 	}))
 }
 
-//TestNeo4jPodPriorityClassName checks for Neo4j PriorityClassName
-//error should be thrown since we are not creating priorityClass in the cluster in advance
+// TestNeo4jPodPriorityClassName checks for Neo4j PriorityClassName
+// error should be thrown since we are not creating priorityClass in the cluster in advance
 func TestNeo4jPodPriorityClassName(t *testing.T) {
 	t.Parallel()
 
@@ -622,7 +622,7 @@ func TestNeo4jPodPriorityClassName(t *testing.T) {
 	}))
 }
 
-//TestNeo4jPodTolerations checks for tolerations in the statefulset
+// TestNeo4jPodTolerations checks for tolerations in the statefulset
 func TestNeo4jPodTolerations(t *testing.T) {
 	t.Parallel()
 
@@ -652,7 +652,7 @@ func TestNeo4jPodTolerations(t *testing.T) {
 	}))
 }
 
-//TestNeo4jPodNodeAffinity checks for nodeAffinity setting in statefulset
+// TestNeo4jPodNodeAffinity checks for nodeAffinity setting in statefulset
 func TestNeo4jPodNodeAffinity(t *testing.T) {
 	t.Parallel()
 
@@ -734,7 +734,7 @@ func TestDuplicateImageCredentials(t *testing.T) {
 	}))
 }
 
-//TestMissingApocConfigMap ensure the apoc config map is not created when apoc configs are not provided in values.yaml
+// TestMissingApocConfigMap ensure the apoc config map is not created when apoc configs are not provided in values.yaml
 func TestMissingApocConfigMap(t *testing.T) {
 	t.Parallel()
 
@@ -761,7 +761,7 @@ func TestMissingApocConfigMap(t *testing.T) {
 	}))
 }
 
-//TestApocConfigMapIsPresent ensure the apoc config map is present when apoc_config is provided in the values.yaml
+// TestApocConfigMapIsPresent ensure the apoc config map is present when apoc_config is provided in the values.yaml
 func TestApocConfigMapIsPresent(t *testing.T) {
 	t.Parallel()
 
@@ -830,7 +830,7 @@ func TestMissingImageCredentials(t *testing.T) {
 	}))
 }
 
-//TestEmptyImagePullSecrets ensures empty imagePullSecret names or names with just spaces are not included in the cluster formation
+// TestEmptyImagePullSecrets ensures empty imagePullSecret names or names with just spaces are not included in the cluster formation
 func TestEmptyImagePullSecrets(t *testing.T) {
 	t.Parallel()
 
@@ -889,7 +889,7 @@ func TestInvalidNodeSelectorLabels(t *testing.T) {
 	}))
 }
 
-//TestAdditionalVolumesAndMounts checks if the additionalVolumes and additionalVolumeMounts are present or not
+// TestAdditionalVolumesAndMounts checks if the additionalVolumes and additionalVolumeMounts are present or not
 func TestAdditionalVolumesAndMounts(t *testing.T) {
 	t.Parallel()
 
@@ -1070,7 +1070,7 @@ func TestNeo4jResourcesAndLimits(t *testing.T) {
 	}))
 }
 
-//checkMemoryResources runs helm template on all charts of all editions with invalid memory values
+// checkMemoryResources runs helm template on all charts of all editions with invalid memory values
 func checkMemoryResources(t *testing.T, chart model.Neo4jHelmChart, edition string, memorySlice []string, containsErrMsg string) {
 
 	var args []string
@@ -1089,7 +1089,7 @@ func checkMemoryResources(t *testing.T, chart model.Neo4jHelmChart, edition stri
 	}
 }
 
-//checkCPUResources runs helm template on all charts of all editions with invalid cpu values
+// checkCPUResources runs helm template on all charts of all editions with invalid cpu values
 func checkCPUResources(t *testing.T, chart model.Neo4jHelmChart, edition string, cpuSlice []string, containsErrMsg string) {
 
 	var args []string
@@ -1108,7 +1108,7 @@ func checkCPUResources(t *testing.T, chart model.Neo4jHelmChart, edition string,
 	}
 }
 
-//checkCPUResources runs helm template on all charts of all editions with invalid cpu values
+// checkCPUResources runs helm template on all charts of all editions with invalid cpu values
 func checkResourcesAndLimits(t *testing.T, chart model.Neo4jHelmChart, edition string, testCase Neo4jResourceTestCase) {
 
 	var args []string

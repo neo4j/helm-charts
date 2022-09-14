@@ -48,7 +48,7 @@ func checkCoreManifestHasPodMatchingSelector(t *testing.T, manifest *model.K8sRe
 	}
 }
 
-//TestClusterCoreInternalPorts checks if the internals services for cluster core contains the expected ports
+// TestClusterCoreInternalPorts checks if the internals services for cluster core contains the expected ports
 func TestClusterCoreInternalPorts(t *testing.T) {
 	t.Parallel()
 
@@ -75,7 +75,7 @@ func TestClusterCoreInternalPorts(t *testing.T) {
 	checkPortsMatchExpected(t, expectedPorts, internalService)
 }
 
-//TestReadReplicaServerGroups checks if the configMap data has an entry called causal_clustering.server_groups
+// TestReadReplicaServerGroups checks if the configMap data has an entry called causal_clustering.server_groups
 // It also checks if the key causal_clustering.server_groups contains a value "cores" or not
 func TestClusterCoreServerGroups(t *testing.T) {
 	t.Parallel()
@@ -93,7 +93,7 @@ func TestClusterCoreServerGroups(t *testing.T) {
 	assert.NotContains(t, defaultConfigMap.Data["causal_clustering.server_groups"], "read-replicas")
 }
 
-//TestClusterCorePanicOnShutDownConfig checks whether the dbms.panic.shutdown_on_panic attribut is set to the default value true or not
+// TestClusterCorePanicOnShutDownConfig checks whether the dbms.panic.shutdown_on_panic attribut is set to the default value true or not
 func TestClusterCorePanicOnShutDownConfig(t *testing.T) {
 	t.Parallel()
 
