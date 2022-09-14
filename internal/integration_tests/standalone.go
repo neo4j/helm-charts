@@ -268,7 +268,7 @@ func createNamespace(t *testing.T, releaseName model.ReleaseName) (Closeable, er
 	}, err
 }
 
-//createPriorityClass create priority class to test the priorityClassName feature
+// createPriorityClass create priority class to test the priorityClassName feature
 func createPriorityClass(t *testing.T, releaseName model.ReleaseName) (Closeable, error) {
 	//kubectl create priorityclass high-priority --value=1000 --description="high priority -n <namespace>"
 	err := run(t, "kubectl", "create", "priorityclass", "high-priority", "--value=1000", "--description=\"high priority\"", "-n", string(releaseName.Namespace()))
