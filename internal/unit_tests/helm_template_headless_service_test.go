@@ -25,7 +25,7 @@ func TestHeadlessServiceDefaults(t *testing.T) {
 	assert.Equal(t, service.Spec.ClusterIP, "None")
 }
 
-//TestHeadlessServiceForPortRemapping checks whether headless service issues an error during port remapping or not
+// TestHeadlessServiceForPortRemapping checks whether headless service issues an error during port remapping or not
 func TestHeadlessServiceForPortRemapping(t *testing.T) {
 
 	t.Parallel()

@@ -170,7 +170,7 @@ func getNodesList() (*coreV1.NodeList, error) {
 	return Clientset.CoreV1().Nodes().List(context.TODO(), v1.ListOptions{})
 }
 
-//getNodeWithLabel returns the node with the given label
+// getNodeWithLabel returns the node with the given label
 func getNodeWithLabel(labelName string) (*coreV1.Node, error) {
 	nodes, err := getNodesList()
 	if err != nil {
