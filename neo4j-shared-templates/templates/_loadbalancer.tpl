@@ -14,7 +14,6 @@ LoadBalancer:
 {{- if hasKey . "type" }}{{ fail "field 'type' is not supported in Neo4j Helm Chart service.*.spec" }}{{ end }}
 {{- if hasKey . "selector" }}{{ fail "field 'selector' is not supported in Neo4j Helm Chart service.*.spec" }}{{ end }}
 {{- if hasKey . "ports" }}{{ fail "field 'ports' is not supported in Neo4j Helm Chart service.*.spec" }}{{ end }}
-{{- if hasKey . "publishNotReadyAddresses" }}{{ fail "field 'publishNotReadyAddresses' is not supported in Neo4j Helm Chart service.*.spec" }}{{ end }}
 {{ toYaml . }}
 {{- end }}
 
@@ -37,6 +36,9 @@ metadata:
   annotations: {{ toYaml . | nindent 4 }}
   {{- end }}
 spec:
+  {{- if $.Values.multiCluster }}
+  publishNotReadyAddresses: true
+  {{- end }}
   type: "{{ $spec.type | required "service type must be specified" }}"
   {{- omit $spec "type" "ports" "selector" | include "neo4j.services.extraSpec"  | nindent 2 }}
   ports:
@@ -67,6 +69,25 @@ spec:
       name: tcp-backup
     {{- end }}
     {{- end }}
+    {{- end }}
+    {{/* this condition opens internal ports only when multi-k8s-cluster is enabled */}}
+    {{- if .Values.multiCluster }}
+    - name: tcp-boltrouting
+      protocol: TCP
+      port: 7688
+      targetPort: 7688
+    - name: tcp-discovery
+      protocol: TCP
+      port: 5000
+      targetPort: 5000
+    - name: tcp-raft
+      protocol: TCP
+      port: 7000
+      targetPort: 7000
+    - name: tcp-tx
+      protocol: TCP
+      port: 6000
+      targetPort: 6000
     {{- end }}
   selector:
     {{- with .Values.selector }}
