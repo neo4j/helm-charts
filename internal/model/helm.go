@@ -158,7 +158,7 @@ func LoadBalancerHelmCommand(helmCommand string, releaseName ReleaseName, extraH
 	return helmArgs
 }
 
-//HeadlessServiceHelmCommand will perform helm install or helm uninstall on headless service chart
+// HeadlessServiceHelmCommand will perform helm install or helm uninstall on headless service chart
 func HeadlessServiceHelmCommand(helmCommand string, releaseName ReleaseName, extraHelmArguments ...string) []string {
 
 	var helmArgs []string
