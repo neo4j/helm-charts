@@ -1,5 +1,5 @@
 {{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
-{{- $clusterEnabled := or ( index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" ) ( index .Values.config "dbms.clustering.enable" | default "" | regexMatch "(?i)true|yes" ) }}
+{{- $clusterEnabled := not (eq (index .Values.config "dbms.cluster.minimum_initial_system_primaries_count" | default "") "1" ) }}
 {{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "" | regexMatch "(?i)no|false" -}}
 {{- $offlineMaintenanceEnabled :=  .Values.neo4j.offlineMaintenanceModeEnabled }}
 {{- $neo4jImage := include "neo4j.image" . }}
@@ -15,7 +15,7 @@ kind: StatefulSet
 metadata:
   labels:
     helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" $ }}"
-    helm.neo4j.com/dbms.mode: "{{ index $.Values.config "dbms.mode" | default "SINGLE" | upper }}"
+{{/*    #helm.neo4j.com/dbms.mode: "{{ index $.Values.config "dbms.mode" | default "SINGLE" | upper }}"*/}}
     app: "{{ template "neo4j.appName" . }}"
     helm.neo4j.com/instance: "{{ .Release.Name }}"
     {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
@@ -38,7 +38,7 @@ spec:
       labels:
         app: "{{ template "neo4j.appName" $ }}"
         helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" $ }}"
-        helm.neo4j.com/dbms.mode: "{{ index $.Values.config "dbms.mode" | default "SINGLE" | upper }}"
+{{/*        helm.neo4j.com/dbms.mode: "{{ index $.Values.config "dbms.mode" | default "SINGLE" | upper }}"*/}}
         helm.neo4j.com/pod_category: "neo4j-instance" # used for anti affinity rules
         helm.neo4j.com/neo4j.loadbalancer: "{{ $.Values.podSpec.loadbalancer }}"
         helm.neo4j.com/instance: "{{ .Release.Name }}"

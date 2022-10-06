@@ -9,7 +9,7 @@ neo4j:
   password: ""
 
   # Neo4j Edition to use (community|enterprise)
-  edition: "community"
+  edition: "enterprise"
   # set edition: "enterprise" to use Neo4j Enterprise Edition
   #
   # To use Neo4j Enterprise Edition you must have a Neo4j license agreement.
@@ -18,7 +18,7 @@ neo4j:
   # Email inquiries can be directed to: licensing@neo4j.com
   #
   # Set acceptLicenseAgreement: "yes" to confirm that you have a Neo4j license agreement.
-  acceptLicenseAgreement: "no"
+  acceptLicenseAgreement: "yes"
   #
   # set offlineMaintenanceModeEnabled: true to restart the StatefulSet without the Neo4j process running
   # this can be used to perform tasks that cannot be performed when Neo4j is running such as `neo4j-admin dump`
@@ -204,8 +204,8 @@ services:
 
 # Neo4j Configuration (yaml format)
 config:
-  dbms.config.strict_validation: "false"
-
+  server.config.strict_validation.enabled: "false"
+  # dbms.cluster.minimum_initial_system_primaries_count: "1"
   # The amount of memory to use for mapping the store files.
   # The default page cache memory assumes the machine is dedicated to running
   # Neo4j, and is heuristically set to 50% of RAM minus the Java heap size.
@@ -289,7 +289,7 @@ clusterDomain: "cluster.local"
 image:
   imagePullPolicy: IfNotPresent
   # set a customImage if you want to use your own docker image
-  # customImage: my-image:my-tag
+  customImage: eu.gcr.io/neo4j-helm/neo4j:v5
 
   #imagePullSecrets list
   #  imagePullSecrets:

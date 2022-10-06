@@ -1,5 +1,6 @@
 {{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
-{{- $clusterEnabled := or ( index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" ) ( index .Values.config "dbms.clustering.enable" | default "" | regexMatch "(?i)true|yes" ) }}
+{{/*{{- $clusterEnabled := or ( index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" ) ( index .Values.config "dbms.clustering.enable" | default "" | regexMatch "(?i)true|yes" ) }}*/}}
+{{- $clusterEnabled := not (eq (index .Values.config "dbms.cluster.minimum_initial_system_primaries_count" | default "1") "1" ) }}
 {{- template "neo4j.checkLicenseAgreement" . -}}
 # Neo4j config values that are required for neo4j to work correctly in Kubernetes, these are not overridden by user-provided values
 apiVersion: v1
@@ -11,7 +12,7 @@ metadata:
     app: "{{ template "neo4j.appName" $ }}"
     {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
 data:
-  dbms.default_listen_address: "0.0.0.0"
+  server.default_listen_address: "0.0.0.0"
 ---
 {{- $confFileName := "neo4j-community.conf" -}}
 {{- if $isEnterprise }}
@@ -31,8 +32,8 @@ metadata:
 data:
   {{- /* imported config first */}}
   {{- with $configImport }}
-  {{- if regexMatch "dbms\\.jvm\\.additional" . }}
-    {{- fail "dbms.jvm.additional properties cannot be set in values.configImport. Set additional JVM arguments in values.jvm.additionalJvmArguments." }}
+  {{- if regexMatch "server\\.jvm\\.additional" . }}
+    {{- fail "server.jvm.additional properties cannot be set in values.configImport. Set additional JVM arguments in values.jvm.additionalJvmArguments." }}
   {{- end }}
   {{- include "neo4j.configYaml" . | nindent 2 }}
   {{- end }}
@@ -40,8 +41,8 @@ data:
   {{- /* then explicit config - throw an error if it contains jvm additional */}}
 
   {{- with .Values.config }}
-  {{- if hasKey . "dbms.jvm.additional" }}
-    {{- fail "dbms.jvm.additional properties cannot be set in values.config. Set additional JVM arguments in values.jvm.additionalJvmArguments" }}
+  {{- if hasKey . "server.jvm.additional" }}
+    {{- fail "server.jvm.additional properties cannot be set in values.config. Set additional JVM arguments in values.jvm.additionalJvmArguments" }}
   {{- end }}
   {{- range $key, $value := . }}
   {{- if not (kindIs "string" $value) }}
@@ -53,10 +54,10 @@ data:
 
   {{- /* then default jvm config */}}
   {{- if .Values.jvm.useNeo4jDefaultJvmArguments | or .Values.jvm.additionalJvmArguments }}
-  dbms.jvm.additional: |-
+  server.jvm.additional: |-
   {{- if .Values.jvm.useNeo4jDefaultJvmArguments }}{{ include "neo4j.configJvmAdditionalYaml" $confFile | indent 2 }}{{ end }}
   {{- range $ignored, $argument := .Values.jvm.additionalJvmArguments }}
-  {{- trim $argument | replace "dbms.jvm.additional=" "" | trim | nindent 4 }}
+  {{- trim $argument | replace "server.jvm.additional=" "" | trim | nindent 4 }}
   {{- end }}
   {{- end }}
 ---
@@ -76,59 +77,64 @@ data:
   {{- include "neo4j.configYaml" $confFile | nindent 2 }}
 
   # Helm defaults
-  dbms.mode: "{{ index .Values.config "dbms.mode" | default "SINGLE" | upper }}"
+  #dbms.mode: "{{ index .Values.config "dbms.mode" | default "SINGLE" | upper }}"
+  initial.server.mode_constraint: "{{ index .Values.config "initial.server.mode_constraint" | default "NONE" | upper }}"
+  initial.dbms.default_primaries_count: "1"
 
   # Bolt keep alive
   # this helps to ensure that LoadBalancers do not close bolt connections that are in use but appear idle
-  dbms.connector.bolt.connection_keep_alive: "30s"
-  dbms.connector.bolt.connection_keep_alive_for_requests: "ALL"
-  dbms.connector.bolt.connection_keep_alive_streaming_scheduling_interval: "30s"
+  server.bolt.connection_keep_alive: "30s"
+  server.bolt.connection_keep_alive_for_requests: "ALL"
+  server.bolt.connection_keep_alive_streaming_scheduling_interval: "30s"
 
   # If we set default advertised address it over-rides the bolt address used to populate the browser in a really annoying way
   # dbms.default_advertised_address: "$(bash -c 'echo ${SERVICE_DOMAIN}')"
 
   {{- if $isEnterprise }}
-  dbms.backup.listen_address: "0.0.0.0:6362"
+  server.backup.listen_address: "0.0.0.0:6362"
   {{- end }}
 
 
   # Other
-  dbms.logs.user.stdout_enabled: "false"
-  unsupported.dbms.ssl.system.ignore_dot_files: "true"
+  internal.dbms.ssl.system.ignore_dot_files: "true"
 
   {{- if $clusterEnabled }}
   # Clustering
-  causal_clustering.discovery_type: K8S
-  causal_clustering.kubernetes.service_port_name: "tcp-discovery"
-  causal_clustering.kubernetes.label_selector: "app={{ template "neo4j.appName" . }},helm.neo4j.com/service=internals,helm.neo4j.com/dbms.mode=CORE"
+  #causal_clustering.discovery_type: K8S
+  dbms.cluster.discovery.type: K8S
+  #causal_clustering.kubernetes.service_port_name: "tcp-discovery"
+  dbms.kubernetes.service_port_name: "tcp-discovery"
+  #causal_clustering.kubernetes.label_selector: "app={{ template "neo4j.appName" . }},helm.neo4j.com/service=internals,helm.neo4j.com/dbms.mode=CORE"
+  dbms.kubernetes.label_selector: "app={{ template "neo4j.appName" . }},helm.neo4j.com/service=internals"
   dbms.routing.default_router: "SERVER"
   dbms.routing.client_side.enforce_for_domains: "*.{{ .Values.clusterDomain }}"
   dbms.routing.enabled: "true"
-  causal_clustering.server_groups: "$(bash -c 'echo pod-${POD_NAME}'),{{ template "neo4j.cluster.server_groups" . }}"
+  #causal_clustering.server_groups: "$(bash -c 'echo pod-${POD_NAME}'),{{ template "neo4j.cluster.server_groups" . }}"
+  server.groups: "$(bash -c 'echo pod-${POD_NAME}'),{{ template "neo4j.cluster.server_groups" . }}"
 
 
   # Because "if we set default advertised address it over-rides the bolt address used to populate the browser in a really annoying way" we have to set the
   # advertised address for each cluster service individually instead
-  dbms.connector.bolt.advertised_address: "$(bash -c 'echo ${SERVICE_NEO4J}')"
-  causal_clustering.discovery_advertised_address: "$(bash -c 'echo ${SERVICE_NEO4J_INTERNALS}')"
-  causal_clustering.raft_advertised_address: "$(bash -c 'echo ${SERVICE_NEO4J_INTERNALS}')"
-  causal_clustering.transaction_advertised_address: "$(bash -c 'echo ${SERVICE_NEO4J_INTERNALS}')"
-  dbms.routing.advertised_address: "$(bash -c 'echo ${SERVICE_NEO4J_INTERNALS}')"
+  server.bolt.advertised_address: "$(bash -c 'echo ${SERVICE_NEO4J}')"
+  server.discovery.advertised_address: "$(bash -c 'echo ${SERVICE_NEO4J_INTERNALS}')"
+  server.cluster.raft.advertised_address: "$(bash -c 'echo ${SERVICE_NEO4J_INTERNALS}')"
+  server.cluster.advertised_address: "$(bash -c 'echo ${SERVICE_NEO4J_INTERNALS}')"
+  server.routing.advertised_address: "$(bash -c 'echo ${SERVICE_NEO4J_INTERNALS}')"
   {{- end }}
 
   {{- if .Values.volumes.logs }}
   # Logging
-  dbms.directories.logs: "/logs"
+  server.directories.logs: "/logs"
   {{- end }}
 
   {{- if $isEnterprise | and .Values.volumes.metrics }}
   # Metrics
-  dbms.directories.metrics: "/metrics"
+  server.directories.metrics: "/metrics"
   {{- end }}
 
   {{- if .Values.volumes.import }}
   # Import
-  dbms.directories.import: "/import"
+  server.directories.import: "/import"
   {{- end }}
 
   # Use more reliable defaults SSL / TLS settings for K8s
@@ -137,11 +143,11 @@ data:
 
   {{- /* https and bolt+ssl specific settings */}}
   {{- if .Values.ssl.bolt.privateKey.secretName }}
-  dbms.connector.bolt.tls_level: "REQUIRED"
+  server.bolt.tls_level: "REQUIRED"
   {{- end }}
 
   {{- if .Values.ssl.https.privateKey.secretName }}
-  dbms.connector.https.enabled: "true"
+  server.https.enabled: "true"
   {{- end }}
 
   {{- range $name, $sslSpec := .Values.ssl }}
@@ -164,8 +170,8 @@ metadata:
 data:
   {{- with .Values.apoc_config }}
   apoc.conf: |-
-    {{- if hasKey . "dbms.jvm.additional" }}
-      {{- fail "dbms.jvm.additional properties cannot be set in values.apoc_config. Set additional JVM arguments in values.jvm.additionalJvmArguments" }}
+    {{- if hasKey . "server.jvm.additional" }}
+      {{- fail "server.jvm.additional properties cannot be set in values.apoc_config. Set additional JVM arguments in values.jvm.additionalJvmArguments" }}
     {{- end }}
     {{- range $key, $value := . }}
       {{- if not (kindIs "string" $value) }}
