@@ -8,7 +8,7 @@
 {{- $ignored := set $values.selector "app" ( include "neo4j.appName" $ ) }}
 {{- if $values.selectCluster }}
 {{- $ignored = set $values.selector "helm.neo4j.com/neo4j.name" ( include "neo4j.name" $ ) }}
-{{- $ignored = set $values.selector "helm.neo4j.com/dbms.mode" ( index $.Values.config "dbms.mode" | default "CORE" | upper ) }}
+{{/*{{- $ignored = set $values.selector "helm.neo4j.com/dbms.mode" ( index $.Values.config "dbms.mode" | default "CORE" | upper ) }}*/}}
 {{- else }}
 {{- $ignored = set $values.selector "helm.neo4j.com/instance" $.Release.Name }}
 {{- end }}

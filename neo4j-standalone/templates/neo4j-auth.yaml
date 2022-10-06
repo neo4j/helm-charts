@@ -1,9 +1,9 @@
-{{- $isReadReplica := index .Values.config "dbms.mode" | default "" | regexMatch "(?i)READ_REPLICA$" }}
+{{/*{{- $isReadReplica := index .Values.config "dbms.mode" | default "" | regexMatch "(?i)READ_REPLICA$" }}*/}}
 
 {{/* .Values.testing is being set to true in unit test cases for read replica*/}}
-{{- if and $isReadReplica (not .Values.testing | default false ) -}}
-    {{- include "neo4j.checkIfClusterIsPresent" . -}}
-{{- end -}}
+{{/*{{- if and $isReadReplica (not .Values.testing | default false ) -}}*/}}
+{{/*    {{- include "neo4j.checkIfClusterIsPresent" . -}}*/}}
+{{/*{{- end -}}*/}}
 
 {{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "true" | regexMatch "(?i)no|false" -}}
 
