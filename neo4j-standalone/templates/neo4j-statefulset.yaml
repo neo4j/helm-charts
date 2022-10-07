@@ -1,5 +1,5 @@
 {{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
-{{- $clusterEnabled := not (eq (index .Values.config "dbms.cluster.minimum_initial_system_primaries_count" | default "") "1" ) }}
+{{- $clusterEnabled := eq (include "neo4j.isClusterEnabled" .) "true" }}
 {{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "" | regexMatch "(?i)no|false" -}}
 {{- $offlineMaintenanceEnabled :=  .Values.neo4j.offlineMaintenanceModeEnabled }}
 {{- $neo4jImage := include "neo4j.image" . }}

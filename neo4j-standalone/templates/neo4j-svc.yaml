@@ -3,7 +3,7 @@
 {{- $backupEnabled := false }}
 {{- if $isEnterprise }}
 {{/*{{- $clusterEnabled = or ( index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" ) ( index .Values.config "dbms.clustering.enable" | default "" | regexMatch "(?i)true|yes" ) }}*/}}
-{{- $clusterEnabled := not (eq (index .Values.config "dbms.cluster.minimum_initial_system_primaries_count" | default "") "1" ) }}
+{{- $clusterEnabled := eq (include "neo4j.isClusterEnabled" .) "true" }}
 {{- $backupEnabled = index $.Values.config "dbms.backup.enabled" | default "true" | regexMatch "(?i)yes|true" }}
 {{- end }}
 {{- $jmxEnabled := index $.Values.config "metrics.jmx.enabled" | default "" | regexMatch "(?i)yes|true" }}

@@ -1,6 +1,5 @@
 {{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
-{{/*{{- $clusterEnabled := or ( index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" ) ( index .Values.config "dbms.clustering.enable" | default "" | regexMatch "(?i)true|yes" ) }}*/}}
-{{- $clusterEnabled := not (eq (index .Values.config "dbms.cluster.minimum_initial_system_primaries_count" | default "1") "1" ) }}
+{{- $clusterEnabled := eq (include "neo4j.isClusterEnabled" .) "true" }}
 {{- template "neo4j.checkLicenseAgreement" . -}}
 # Neo4j config values that are required for neo4j to work correctly in Kubernetes, these are not overridden by user-provided values
 apiVersion: v1
@@ -77,9 +76,9 @@ data:
   {{- include "neo4j.configYaml" $confFile | nindent 2 }}
 
   # Helm defaults
-  #dbms.mode: "{{ index .Values.config "dbms.mode" | default "SINGLE" | upper }}"
-  initial.server.mode_constraint: "{{ index .Values.config "initial.server.mode_constraint" | default "NONE" | upper }}"
-  initial.dbms.default_primaries_count: "1"
+{{/*  #dbms.mode: "{{ index .Values.config "dbms.mode" | default "SINGLE" | upper }}"*/}}
+{{/*  initial.server.mode_constraint: "{{ index .Values.config "initial.server.mode_constraint" | default "NONE" | upper }}"*/}}
+{{/*  initial.dbms.default_primaries_count: "1"*/}}
 
   # Bolt keep alive
   # this helps to ensure that LoadBalancers do not close bolt connections that are in use but appear idle
