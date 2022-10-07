@@ -99,16 +99,13 @@ data:
 
   {{- if $clusterEnabled }}
   # Clustering
-  #causal_clustering.discovery_type: K8S
   dbms.cluster.discovery.type: K8S
-  #causal_clustering.kubernetes.service_port_name: "tcp-discovery"
   dbms.kubernetes.service_port_name: "tcp-discovery"
-  #causal_clustering.kubernetes.label_selector: "app={{ template "neo4j.appName" . }},helm.neo4j.com/service=internals,helm.neo4j.com/dbms.mode=CORE"
-  dbms.kubernetes.label_selector: "app={{ template "neo4j.appName" . }},helm.neo4j.com/service=internals"
+  dbms.kubernetes.label_selector: "app={{ template "neo4j.appName" . }},helm.neo4j.com/service=internals,helm.neo4j.com/clustering=true"
   dbms.routing.default_router: "SERVER"
   dbms.routing.client_side.enforce_for_domains: "*.{{ .Values.clusterDomain }}"
   dbms.routing.enabled: "true"
-  #causal_clustering.server_groups: "$(bash -c 'echo pod-${POD_NAME}'),{{ template "neo4j.cluster.server_groups" . }}"
+{{/*  #causal_clustering.server_groups: "$(bash -c 'echo pod-${POD_NAME}'),{{ template "neo4j.cluster.server_groups" . }}"*/}}
   server.groups: "$(bash -c 'echo pod-${POD_NAME}'),{{ template "neo4j.cluster.server_groups" . }}"
 
 

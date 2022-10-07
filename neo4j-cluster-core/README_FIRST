@@ -1,3 +1,0 @@
-The template directory is just a symlink to neo4j-standalone!
-
-Changes to templates must take into account that templates are shared between cores and standalone!

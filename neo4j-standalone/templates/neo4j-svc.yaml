@@ -3,7 +3,7 @@
 {{- $backupEnabled := false }}
 {{- if $isEnterprise }}
 {{/*{{- $clusterEnabled = or ( index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" ) ( index .Values.config "dbms.clustering.enable" | default "" | regexMatch "(?i)true|yes" ) }}*/}}
-{{- $clusterEnabled := eq (include "neo4j.isClusterEnabled" .) "true" }}
+{{- $clusterEnabled = eq (include "neo4j.isClusterEnabled" .) "true" }}
 {{- $backupEnabled = index $.Values.config "dbms.backup.enabled" | default "true" | regexMatch "(?i)yes|true" }}
 {{- end }}
 {{- $jmxEnabled := index $.Values.config "metrics.jmx.enabled" | default "" | regexMatch "(?i)yes|true" }}
@@ -121,7 +121,7 @@ metadata:
     helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" $ }}"
     helm.neo4j.com/instance: "{{ $.Release.Name }}"
     app: "{{ template "neo4j.appName" $ }}"
-{{/*    helm.neo4j.com/dbms.mode: "{{ index $.Values.config "dbms.mode" | default "SINGLE" | upper }}"*/}}
+    helm.neo4j.com/clustering: "{{ $clusterEnabled }}"
     helm.neo4j.com/service: "internals"
     {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
   {{- with .annotations }}
