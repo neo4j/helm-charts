@@ -7,7 +7,7 @@
 {{ if .Values.logInitialPassword }}{{ template "neo4j.password" . }}{{ else }}**********{{ end }}
 {{- end -}}
 
-{{- $clusterEnabled := index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" -}}
+{{- $clusterEnabled := eq (include "neo4j.isClusterEnabled" .) "true" }}
 {{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "" | regexMatch "(?i)no|false" -}}
 {{- $offlineMaintenanceModeEnabled := .Values.neo4j.offlineMaintenanceModeEnabled }}
 {{- $isReadReplica := index .Values.config "dbms.mode" | default "" | regexMatch "(?i)READ_REPLICA$" }}

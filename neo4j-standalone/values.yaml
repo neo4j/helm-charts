@@ -205,7 +205,7 @@ services:
 # Neo4j Configuration (yaml format)
 config:
   server.config.strict_validation.enabled: "false"
-  # dbms.cluster.minimum_initial_system_primaries_count: "1"
+  # dbms.cluster.minimum_initial_system_primaries_count: "4"
   # The amount of memory to use for mapping the store files.
   # The default page cache memory assumes the machine is dedicated to running
   # Neo4j, and is heuristically set to 50% of RAM minus the Java heap size.

@@ -15,6 +15,15 @@ Convert a neo4j.conf properties text into valid yaml
   {{- .Values.neo4j.name | default .Release.Name }}
 {{- end -}}
 
+{{- define "neo4j.isClusterEnabled" -}}
+  {{- $value := index $.Values.config "dbms.cluster.minimum_initial_system_primaries_count" | default "1" | int -}}
+  {{- if ge $value 3 -}}
+        true
+  {{- else -}}
+        false
+  {{- end -}}
+{{- end -}}
+
 {{- define "neo4j.cluster.server_groups" -}}
   {{- $replicaEnabled := index .Values.config "dbms.mode" | default "" | regexMatch "(?i)READ_REPLICA$" }}
   {{- if $replicaEnabled }}
@@ -63,15 +72,6 @@ If no name is set in `Values.neo4j.name` sets it to release name and modifies Va
     {{- $ignored := set .Values.neo4j "name" $name }}
   {{- end -}}
   {{- .Values.neo4j.name }}
-{{- end -}}
-
-{{- define "neo4j.isClusterEnabled" -}}
-  {{ $value := index $.Values.config "dbms.cluster.minimum_initial_system_primaries_count" | default "1" }}
-  {{- if eq $value "1" }}
-       {{ false }}
-  {{- else -}}
-       {{ true }}
-  {{- end -}}
 {{- end -}}
 
 {{/*
