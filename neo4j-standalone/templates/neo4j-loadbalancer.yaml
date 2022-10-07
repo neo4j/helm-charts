@@ -1,17 +1,100 @@
 {{- $clusterEnabled := eq (include "neo4j.isClusterEnabled" .) "true" }}
-{{- $setName := include "neo4j.name" . }}
-{{- with .Values.services.neo4j }}
-{{- $values := deepCopy . -}}
-{{- $values = set $values "neo4j" $.Values.neo4j }}
-{{- if not $values.selector }}
-{{- $values = set $values "selector" dict }}
-{{- end }}
-{{- $ignored := set $values.selector "app" ( include "neo4j.appName" $ ) }}
-{{- if $values.selectCluster }}
-{{- $ignored = set $values.selector "helm.neo4j.com/neo4j.name" ( include "neo4j.name" $ ) }}
-{{- $ignored = set $values.selector "helm.neo4j.com/clustering" $clusterEnabled }}
-{{- else }}
-{{- $ignored = set $values.selector "helm.neo4j.com/instance" $.Release.Name }}
-{{- end }}
-{{- dict "Release" $.Release "Values" $values | include "neo4j.services.neo4j" }}
-{{- end }}
+{{- $ignored := required "neo4j.name is required" .Values.neo4j.name }}
+{{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
+{{- $isLoadBalancerEnabled := index .Values.services.neo4j.enabled }}
+{{- $loadBalancer := (lookup "v1" "Service" .Release.Namespace (printf "%s-lb-neo4j" (include "neo4j.appName" $))) }}
+{{- $loadBalancerExists := $loadBalancer | all }}
+
+{{- if and $loadBalancerExists $isLoadBalancerEnabled -}}
+  {{- $loadBalancerSelector :=  $loadBalancer.spec.selector -}}
+  {{- if hasKey $loadBalancerSelector "helm.neo4j.com/clustering" -}}
+      {{- if eq (get $loadBalancerSelector "helm.neo4j.com/clustering") "false" -}}
+        {{- if eq (get $loadBalancerSelector "app") (include "neo4j.appName" $) -}}
+          {{ fail (printf "%s %v %s" "A Neo4j installation already exists in this namespace with the name" .Values.neo4j.name "Please use a different neo4j name using --set neo4j.name") }}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if and (not $loadBalancerExists) ($isEnterprise) ($isLoadBalancerEnabled) -}}
+{{- $defaultSpec := include "neo4j.services.neo4j.defaultSpec" . | fromYaml }}
+{{- $spec := get $defaultSpec .Values.services.neo4j.spec.type | merge .Values.services.neo4j.spec  }}
+# Service for applications that need access to neo4j
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ include "neo4j.appName" $ }}-lb-neo4j"
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    helm.neo4j.com/neo4j.name: "{{ template "neo4j.appName" $ }}"
+    app: "{{ template "neo4j.appName" . }}"
+    helm.neo4j.com/service: "neo4j"
+    {{- include "neo4j.labels" .Values.neo4j | indent 4 }}
+  {{- with .Values.services.neo4j.annotations }}
+  annotations: {{ toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if $.Values.services.neo4j.multiCluster }}
+  publishNotReadyAddresses: true
+  {{- end }}
+  type: "{{ $spec.type | required "service type must be specified" }}"
+  {{- omit $spec "type" "ports" "selector" | include "neo4j.services.extraSpec"  | nindent 2 }}
+  ports:
+    {{- with .Values.services.neo4j.ports }}
+    {{- if .http.enabled }}
+    - protocol: TCP
+      port: {{ .http.port | default 7474 }}
+      targetPort: 7474
+      name: http
+    {{- end }}
+    {{- if .https.enabled }}
+    - protocol: TCP
+      port: {{ .https.port | default 7473 }}
+      targetPort: 7473
+      name: https
+    {{- end }}
+    {{- if .bolt.enabled }}
+    - protocol: TCP
+      port: {{ .bolt.port | default 7687 }}
+      targetPort: 7687
+      name: tcp-bolt
+    {{- end }}
+    {{ with .backup }}
+    {{- if .enabled }}
+    - protocol: TCP
+      port: {{ .port | default 6362 }}
+      targetPort: 6362
+      name: tcp-backup
+    {{- end }}
+    {{- end }}
+    {{- end }}
+    {{/* this condition opens internal ports only when multi-k8s-cluster is enabled */}}
+    {{- if .Values.services.neo4j.multiCluster }}
+    - name: tcp-boltrouting
+      protocol: TCP
+      port: 7688
+      targetPort: 7688
+    - name: tcp-discovery
+      protocol: TCP
+      port: 5000
+      targetPort: 5000
+    - name: tcp-raft
+      protocol: TCP
+      port: 7000
+      targetPort: 7000
+    - name: tcp-tx
+      protocol: TCP
+      port: 6000
+      targetPort: 6000
+    {{- end }}
+  selector:
+    app: "{{ template "neo4j.appName" . }}"
+    {{- if $clusterEnabled }}
+    helm.neo4j.com/clustering: "true"
+    {{- else }}
+    helm.neo4j.com/clustering: "false"
+    {{- end }}
+    {{- with .Values.services.neo4j.selector }}
+    {{- . | toYaml | nindent 4 }}
+    {{- end }}
+{{- end -}}

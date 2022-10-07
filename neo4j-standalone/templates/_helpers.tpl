@@ -2,6 +2,7 @@
 {{/*
 Convert a neo4j.conf properties text into valid yaml
 */}}
+
 {{- define "neo4j.configYaml" -}}
   {{- regexReplaceAll "(?m)^([^=]*?)=" ( regexReplaceAllLiteral "\\s*(#|dbms\\.jvm\\.additional).*" . "" )  "${1}: " | trim | replace ": true\n" ": 'true'\n" | replace ": true" ": 'true'\n" | replace ": false\n" ": 'false'\n" | replace ": false" ": 'false'\n"  | replace ": yes\n" ": 'yes'\n" | replace ": yes" ": 'yes'\n" | replace ": no" ": 'no'\n" | replace ": no\n" ": 'no'\n" }}
 {{- end -}}
@@ -12,7 +13,11 @@ Convert a neo4j.conf properties text into valid yaml
 {{- end -}}
 
 {{- define "neo4j.appName" -}}
-  {{- .Values.neo4j.name | default .Release.Name }}
+  {{- if eq (len (trim $.Values.neo4j.name)) 0 -}}
+    {{- fail (printf "neo4j.name is required") -}}
+  {{- else -}}
+    {{ .Values.neo4j.name }}
+  {{- end -}}
 {{- end -}}
 
 {{- define "neo4j.isClusterEnabled" -}}
@@ -66,13 +71,13 @@ Convert a neo4j.conf properties text into valid yaml
 {{/*
 If no name is set in `Values.neo4j.name` sets it to release name and modifies Values.neo4j so that the same name is available everywhere
 */}}
-{{- define "neo4j.name" -}}
-  {{- if not .Values.neo4j.name }}
-    {{- $name := .Release.Name }}
-    {{- $ignored := set .Values.neo4j "name" $name }}
-  {{- end -}}
-  {{- .Values.neo4j.name }}
-{{- end -}}
+{{/*{{- define "neo4j.name" -}}*/}}
+{{/*  {{- if not .Values.neo4j.name }}*/}}
+{{/*    {{- $name := .Release.Name }}*/}}
+{{/*    {{- $ignored := set .Values.neo4j "name" $name }}*/}}
+{{/*  {{- end -}}*/}}
+{{/*  {{- .Values.neo4j.name }}*/}}
+{{/*{{- end -}}*/}}
 
 {{/*
 If no password is set in `Values.neo4j.password` generates a new random password and modifies Values.neo4j so that the same password is available everywhere
