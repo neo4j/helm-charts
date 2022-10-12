@@ -1,11 +1,52 @@
 {{- /* In almost all cases the selector should be unspecified and the default selector should be used. */ -}}
 {{- template "neo4j.checkPortMapping" . -}}
-{{- $alwaysEnabled := set .Values "enabled" true }}
-{{- if not .Values.selectorOverride }}
-{{- /* Default selector. TODO move this to a shared template */ -}}
-{{- $ignored := set .Values.selector "app" ( include "neo4j.appName" $ ) }}
-{{- $ignored = required "neo4j.name is required" .Values.neo4j.name | set .Values.selector "helm.neo4j.com/neo4j.name" }}
-{{- else }}
-{{- $ignored := set .Values "selector" .Values.selectorOverride }}
-{{- end }}
-{{- template "neo4j.services.neo4j" . }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ include "neo4j.appName" $ }}-headless"
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    helm.neo4j.com/neo4j.name: "{{ template "neo4j.appName" $ }}"
+    app: "{{ template "neo4j.appName" . }}"
+  {{- with .Values.annotations }}
+  annotations: {{ toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  sessionAffinity: None
+  ports:
+    {{- with .Values.ports }}
+    {{- if .http.enabled }}
+    - protocol: TCP
+      port: {{ .http.port | default 7474 }}
+      targetPort: 7474
+      name: http
+    {{- end }}
+    {{- if .https.enabled }}
+    - protocol: TCP
+      port: {{ .https.port | default 7473 }}
+      targetPort: 7473
+      name: https
+    {{- end }}
+    {{- if .bolt.enabled }}
+    - protocol: TCP
+      port: {{ .bolt.port | default 7687 }}
+      targetPort: 7687
+      name: tcp-bolt
+    {{- end }}
+    {{ with .backup }}
+    {{- if .enabled }}
+    - protocol: TCP
+      port: {{ .port | default 6362 }}
+      targetPort: 6362
+      name: tcp-backup
+    {{- end }}
+    {{- end }}
+    {{- end }}
+
+  selector:
+    app: "{{ template "neo4j.appName" . }}"
+    {{- with .Values.selector }}
+    {{- . | toYaml | nindent 4 }}
+    {{- end }}

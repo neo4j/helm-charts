@@ -42,7 +42,7 @@ func forEachPrimaryChart(t *testing.T, test func(*testing.T, model.Neo4jHelmChar
 }
 
 // forEachSupportedEdition runs the given test on each Neo4j edition supported by the provided Helm Chart.
-// Neo4j editions are "community" and "enterprise". Some helm charts support multiple editions (e.g. neo4j-standalone) and others only support one edition
+// Neo4j editions are "community" and "enterprise". Some helm charts support multiple editions (e.g. neo4j) and others only support one edition
 // (e.g. neo4j-cluster-core only supports Neo4j enterprise edition)
 // n.b. forEachSupportedEdition runs the tests in parallel.
 func forEachSupportedEdition(t *testing.T, chart model.Neo4jHelmChart, test func(*testing.T, model.Neo4jHelmChart, string)) {
@@ -471,11 +471,11 @@ func TestAuthSecrets(t *testing.T) {
 			assert.Len(t, secrets, 1)
 			authSecret := secrets[0].(*v1.Secret)
 
-			// Slightly complicated set of rules here. The reason is neo4j-cluster charts default neo4j.name to 'neo4j-cluster' but the neo4j-standalone chart
+			// Slightly complicated set of rules here. The reason is neo4j-cluster charts default neo4j.name to 'neo4j-cluster' but the neo4j chart
 			// defaults the neo4j.name to the name of the release.
 			if testCase.neo4jName != nil {
 				assert.Equal(t, *testCase.neo4jName+"-auth", authSecret.Name)
-			} else if chart.Name() == "neo4j-standalone" {
+			} else if chart.Name() == "neo4j" {
 				assert.Equal(t, "my-release-auth", authSecret.Name)
 			} else {
 				assert.Equal(t, "neo4j-cluster-auth", authSecret.Name)
