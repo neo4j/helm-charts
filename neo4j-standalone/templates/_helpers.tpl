@@ -29,16 +29,6 @@ Convert a neo4j.conf properties text into valid yaml
   {{- end -}}
 {{- end -}}
 
-{{- define "neo4j.cluster.server_groups" -}}
-  {{- $replicaEnabled := index .Values.config "dbms.mode" | default "" | regexMatch "(?i)READ_REPLICA$" }}
-  {{- if $replicaEnabled }}
-       {{- "read-replicas" }}
-  {{ else }}
-       {{- "cores" }}
-  {{- end -}}
-{{- end -}}
-
-
 {{/* checkNodeSelectorLabels checks if there is any node in the cluster which has nodeSelector labels */}}
 {{- define "neo4j.checkNodeSelectorLabels" -}}
     {{- if not (empty $.Values.nodeSelector) -}}
