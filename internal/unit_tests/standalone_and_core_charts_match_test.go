@@ -10,7 +10,7 @@ import (
 )
 
 var acceptableChartsDifferences = []string{
-	"name: neo4j-standalone",
+	"name: neo4j",
 	"name: neo4j-cluster-core",
 }
 
@@ -18,7 +18,7 @@ var acceptableChartsDifferences = []string{
 // The only permitted difference between them is the name
 func TestCoreChartMatchesStandalone(t *testing.T) {
 
-	standaloneChartFile := "neo4j-standalone/Chart.yaml"
+	standaloneChartFile := "neo4j/Chart.yaml"
 	clusterChartFile := "neo4j-cluster-core/Chart.yaml"
 
 	assertDiffIsAcceptable(t, standaloneChartFile, clusterChartFile, acceptableChartsDifferences)
@@ -39,7 +39,7 @@ var acceptableValuesDifferences = []string{
 // The only permitted difference between them is the default dbms.mode
 func TestCoreValuesMatchesStandalone(t *testing.T) {
 
-	standaloneValuesFile := "neo4j-standalone/values.yaml"
+	standaloneValuesFile := "neo4j/values.yaml"
 	clusterCoreValuesFile := "neo4j-cluster-core/values.yaml"
 
 	assertDiffIsAcceptable(t, standaloneValuesFile, clusterCoreValuesFile, acceptableValuesDifferences)
@@ -48,7 +48,7 @@ func TestCoreValuesMatchesStandalone(t *testing.T) {
 // The Neo4j Enterprise default configuration files for Standalone and Core installations must be kept in sync.
 func TestCoreEnterpriseConfMatchesStandalone(t *testing.T) {
 
-	standaloneValuesFile := "neo4j-standalone/neo4j-enterprise.conf"
+	standaloneValuesFile := "neo4j/neo4j-enterprise.conf"
 	clusterCoreValuesFile := "neo4j-cluster-core/neo4j-enterprise.conf"
 
 	assertDiffIsAcceptable(t, standaloneValuesFile, clusterCoreValuesFile, nil)

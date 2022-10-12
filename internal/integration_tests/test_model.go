@@ -13,7 +13,7 @@ var (
 	TestRunIdentifier string
 )
 
-var Neo4jConfFile = fmt.Sprintf("neo4j-standalone/neo4j-%s.conf", model.Neo4jEdition)
+var Neo4jConfFile = fmt.Sprintf("neo4j/neo4j-%s.conf", model.Neo4jEdition)
 
 func init() {
 	dt := time.Now()

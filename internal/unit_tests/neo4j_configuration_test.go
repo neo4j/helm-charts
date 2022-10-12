@@ -34,7 +34,7 @@ func TestPopulateFromFile(t *testing.T) {
 
 	doTestCase := func(t *testing.T, edition string) {
 		t.Parallel()
-		conf, err := (&model.Neo4jConfiguration{}).PopulateFromFile(fmt.Sprintf("neo4j-standalone/neo4j-%s.conf", edition))
+		conf, err := (&model.Neo4jConfiguration{}).PopulateFromFile(fmt.Sprintf("neo4j/neo4j-%s.conf", edition))
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -118,7 +118,7 @@ func TestMetaspaceConfigs(t *testing.T) {
 
 func checkConfigMapContainsJvmAdditionalFromDefaultConf(t *testing.T, edition string, userConfigMap *v1.ConfigMap) error {
 	// check that we picked up jvm additional from the conf file
-	file, err := os.Open(fmt.Sprintf("neo4j-standalone/neo4j-%s.conf", edition))
+	file, err := os.Open(fmt.Sprintf("neo4j/neo4j-%s.conf", edition))
 	defer file.Close()
 	if err != nil {
 		return err
