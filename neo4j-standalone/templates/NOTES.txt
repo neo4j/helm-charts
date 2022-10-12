@@ -10,7 +10,6 @@
 {{- $clusterEnabled := eq (include "neo4j.isClusterEnabled" .) "true" }}
 {{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "" | regexMatch "(?i)no|false" -}}
 {{- $offlineMaintenanceModeEnabled := .Values.neo4j.offlineMaintenanceModeEnabled }}
-{{- $isReadReplica := index .Values.config "dbms.mode" | default "" | regexMatch "(?i)READ_REPLICA$" }}
 
 {{- if $offlineMaintenanceModeEnabled -}}
 Your "{{ .Release.Name }}" has been placed in offline maintenance mode.
@@ -34,7 +33,6 @@ Neo4j user authentication has been disabled, you do not need a username or passw
 
 The neo4j user's password has been set to "{{ template "neo4j.logPassword" . }}".
 {{- end }}
-
 {{- if not $clusterEnabled -}}
 To view the progress of the rollout try:
 
@@ -44,21 +42,13 @@ Once rollout is complete you can log in to Neo4j at "neo4j://{{ .Release.Name }}
 
   $ kubectl run --rm -it{{ template "neo4j.namespaceParameter" . }} --image "{{ template "neo4j.image" . }}" cypher-shell \
      -- cypher-shell -a "neo4j://{{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:7687"{{ if not $authDisabled | and .Values.logInitialPassword}} -u neo4j -p "{{ template "neo4j.logPassword" . }}"{{ end }}
-{{- end }}
 
-{{- if and $clusterEnabled (not $isReadReplica ) }}
+{{- else  }}
 
-This release creates a single Neo4j Core instance. It  will not become ready until it is able to form a working Neo4j cluster by joining other Neo4j Core instances. To create a working cluster requires at least 3 Core instances.
+This release creates a single member of a Neo4j cluster. It will not become ready until it is able to form a working Neo4j cluster by joining other Neo4j servers. To create a working cluster at least 3 servers are required.
 
-Once you have a working Neo4j cluster you must install at least one Neo4j Service before you can connect applications to Neo4j. Available Neo4j services are:
-  neo4j-headless-service - for connecting applications running inside Kubernetes to Neo4j
-  neo4j-loadbalancer - for connecting applications running outside Kubernetes to Neo4j
-
-{{- end }}
-
-{{- if $isReadReplica }}
-
-This release creates a single Neo4j Read Replica instance. It  will not become ready until it is able to join a working Neo4j cluster.
+Once you have a working Neo4j cluster, you can access the Neo4j browser using the IP address of the {{ template "neo4j.appName" . }}-lb-neo4j service
+eg. http://[SERVICE_IP]:7474
 
 {{- end }}
 
