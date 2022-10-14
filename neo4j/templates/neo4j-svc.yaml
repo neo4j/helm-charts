@@ -17,8 +17,8 @@ metadata:
   name: "{{ $.Release.Name }}"
   namespace: "{{ $.Release.Namespace }}"
   labels:
-    helm.neo4j.com/neo4j.name: "{{ template "neo4j.appName" $ }}"
-    app: "{{ template "neo4j.appName" $ }}"
+    helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" $ }}"
+    app: "{{ template "neo4j.name" $ }}"
     helm.neo4j.com/instance: "{{ $.Release.Name }}"
     helm.neo4j.com/service: "default"
     {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
@@ -30,7 +30,7 @@ spec:
   type: ClusterIP
   {{- with .spec }}{{- include "neo4j.services.extraSpec" . | nindent 2 }}{{- end }}
   selector:
-    app: "{{ template "neo4j.appName" $ }}"
+    app: "{{ template "neo4j.name" $ }}"
     helm.neo4j.com/instance: "{{ $.Release.Name }}"
   ports:
     - protocol: TCP
@@ -55,8 +55,8 @@ metadata:
   name: "{{ $.Release.Name }}-admin"
   namespace: "{{ $.Release.Namespace }}"
   labels:
-    helm.neo4j.com/neo4j.name: "{{ template "neo4j.appName" $ }}"
-    app: "{{ template "neo4j.appName" $ }}"
+    helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" $ }}"
+    app: "{{ template "neo4j.name" $ }}"
     helm.neo4j.com/instance: "{{ $.Release.Name }}"
     helm.neo4j.com/service: "admin"
     {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
@@ -68,7 +68,7 @@ spec:
   type: "{{ .spec.type | required "The 'type' field is required in service.admin.spec" }}"
   {{- with omit .spec "type" }}{{- include "neo4j.services.extraSpec" . | nindent 2 }}{{- end }}
   selector:
-    app: "{{ template "neo4j.appName" $ }}"
+    app: "{{ template "neo4j.name" $ }}"
     helm.neo4j.com/instance: "{{ $.Release.Name }}"
   ports:
     - protocol: TCP
@@ -118,9 +118,9 @@ metadata:
   name: "{{ $.Release.Name }}-internals"
   namespace: "{{ $.Release.Namespace }}"
   labels:
-    helm.neo4j.com/neo4j.name: "{{ template "neo4j.appName" $ }}"
+    helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" $ }}"
     helm.neo4j.com/instance: "{{ $.Release.Name }}"
-    app: "{{ template "neo4j.appName" $ }}"
+    app: "{{ template "neo4j.name" $ }}"
     helm.neo4j.com/clustering: "{{ $clusterEnabled }}"
     helm.neo4j.com/service: "internals"
     {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
@@ -132,7 +132,7 @@ spec:
   clusterIP: None
   {{- with .spec }}{{ include "neo4j.services.extraSpec" . | nindent 2 }}{{ end }}
   selector:
-    app: "{{ template "neo4j.appName" $ }}"
+    app: "{{ template "neo4j.name" $ }}"
     helm.neo4j.com/instance: "{{ $.Release.Name }}"
   ports:
     - protocol: TCP

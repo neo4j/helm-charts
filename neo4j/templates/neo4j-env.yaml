@@ -4,7 +4,7 @@ metadata:
   name: "{{ .Release.Name }}-env"
   namespace: "{{ .Release.Namespace }}"
   labels:
-    app: "{{ template "neo4j.appName" $ }}"
+    app: "{{ template "neo4j.name" $ }}"
     {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
 data:
   # It should not be necessary for neo4j users/administrators to modify this configMap
@@ -14,7 +14,7 @@ data:
   {{- end }}
   NEO4J_EDITION: "{{ .Values.neo4j.edition | upper }}_K8S"
   NEO4J_CONF: "/config/"
-  K8S_NEO4J_NAME: "{{ template "neo4j.appName" . }}"
+  K8S_NEO4J_NAME: "{{ template "neo4j.name" . }}"
   EXTENDED_CONF: "yes"
   {{- if .Values.env }}
   {{- .Values.env | toYaml | nindent 2 }}

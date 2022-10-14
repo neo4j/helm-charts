@@ -2,14 +2,14 @@
 {{- $ignored := required "neo4j.name is required" .Values.neo4j.name }}
 {{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
 {{- $isLoadBalancerEnabled := index .Values.services.neo4j.enabled }}
-{{- $loadBalancer := (lookup "v1" "Service" .Release.Namespace (printf "%s-lb-neo4j" (include "neo4j.appName" $))) }}
+{{- $loadBalancer := (lookup "v1" "Service" .Release.Namespace (printf "%s-lb-neo4j" (include "neo4j.name" $))) }}
 {{- $loadBalancerExists := $loadBalancer | all }}
 
 {{- if and $loadBalancerExists $isLoadBalancerEnabled -}}
   {{- $loadBalancerSelector :=  $loadBalancer.spec.selector -}}
   {{- if hasKey $loadBalancerSelector "helm.neo4j.com/clustering" -}}
       {{- if eq (get $loadBalancerSelector "helm.neo4j.com/clustering") "false" -}}
-        {{- if eq (get $loadBalancerSelector "app") (include "neo4j.appName" $) -}}
+        {{- if eq (get $loadBalancerSelector "app") (include "neo4j.name" $) -}}
           {{ fail (printf "%s %v %s" "A Neo4j installation already exists in this namespace with the name" .Values.neo4j.name "Please use a different neo4j name using --set neo4j.name") }}
       {{- end -}}
     {{- end -}}
@@ -23,11 +23,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: "{{ include "neo4j.appName" $ }}-lb-neo4j"
+  name: "{{ include "neo4j.name" $ }}-lb-neo4j"
   namespace: "{{ .Release.Namespace }}"
   labels:
-    helm.neo4j.com/neo4j.name: "{{ template "neo4j.appName" $ }}"
-    app: "{{ template "neo4j.appName" . }}"
+    helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" $ }}"
+    app: "{{ template "neo4j.name" . }}"
     helm.neo4j.com/service: "neo4j"
     {{- include "neo4j.labels" .Values.neo4j | indent 4 }}
   {{- with .Values.services.neo4j.annotations }}
@@ -88,7 +88,7 @@ spec:
       targetPort: 6000
     {{- end }}
   selector:
-    app: "{{ template "neo4j.appName" . }}"
+    app: "{{ template "neo4j.name" . }}"
     {{- if $clusterEnabled }}
     helm.neo4j.com/clustering: "true"
     {{- else }}

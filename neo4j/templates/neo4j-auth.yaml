@@ -8,7 +8,7 @@
 
   {{- else -}}
 
-{{- $secretName := include "neo4j.appName" . | printf "%s-auth" }}
+{{- $secretName := include "neo4j.name" . | printf "%s-auth" }}
 {{- $secret := (lookup "v1" "Secret" .Release.Namespace $secretName) }}
 {{- $secretExists := $secret | all }}
 
@@ -45,7 +45,7 @@ metadata:
   name: "{{ $secretName }}"
   namespace: "{{ .Release.Namespace }}"
   labels:
-    app: "{{ template "neo4j.appName" . }}"
+    app: "{{ template "neo4j.name" . }}"
     {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
 type: Opaque
 data:

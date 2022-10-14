@@ -12,7 +12,7 @@ Convert a neo4j.conf properties text into valid yaml
   {{- range ( regexFindAll "(?m)^\\s*(dbms\\.jvm\\.additional=).+" . -1 ) }}{{ trim . | replace "dbms.jvm.additional=" "" | trim | nindent 2 }}{{- end }}
 {{- end -}}
 
-{{- define "neo4j.appName" -}}
+{{- define "neo4j.name" -}}
   {{- if eq (len (trim $.Values.neo4j.name)) 0 -}}
     {{- fail (printf "neo4j.name is required") -}}
   {{- else -}}
@@ -75,7 +75,7 @@ If no password is set in `Values.neo4j.password` generates a new random password
 {{- define "neo4j.password" -}}
   {{- if not .Values.neo4j.password }}
     {{- $password :=  randAlphaNum 14 }}
-    {{- $secretName := include "neo4j.appName" . | printf "%s-auth" }}
+    {{- $secretName := include "neo4j.name" . | printf "%s-auth" }}
     {{- $secret := (lookup "v1" "Secret" .Release.Namespace $secretName) }}
 
     {{- if $secret }}
@@ -338,7 +338,7 @@ affinity:
       requiredDuringSchedulingIgnoredDuringExecution:
         - labelSelector:
             matchLabels:
-              app: "{{ template "neo4j.appName" . }}"
+              app: "{{ template "neo4j.name" . }}"
               helm.neo4j.com/pod_category: "neo4j-instance"
           topologyKey: kubernetes.io/hostname
     {{- end }}

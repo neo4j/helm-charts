@@ -70,7 +70,7 @@ If selector is chosen process the selector template and then overwrite "dynamic"
 {{- end }}
 
 {{- define "neo4j.volumeClaimTemplates" -}}
-{{- $neo4jName := include "neo4j.appName" . }}
+{{- $neo4jName := include "neo4j.name" . }}
 {{- $template := .Template -}}
 {{- range $name, $spec := .Values.volumes -}}
 {{- if $spec -}}
