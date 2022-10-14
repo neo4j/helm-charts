@@ -39,11 +39,11 @@ func TestPopulateFromFile(t *testing.T) {
 			return
 		}
 
-		value, found := conf.Conf()["dbms.windows_service_name"]
+		value, found := conf.Conf()["server.windows_service_name"]
 		assert.True(t, found)
 		assert.Equal(t, "neo4j", value)
 
-		_, jvmKeyFound := conf.Conf()["dbms.jvm.additional"]
+		_, jvmKeyFound := conf.Conf()["server.jvm.additional"]
 		assert.False(t, jvmKeyFound)
 
 		//TODO: This is to be enabled in 5.0
@@ -66,28 +66,35 @@ func TestPopulateFromFile(t *testing.T) {
 func TestJvmAdditionalConfig(t *testing.T) {
 	t.Parallel()
 
-	doTestCase := func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
-		manifest, err := model.HelmTemplate(t, chart, useDataModeAndAcceptLicense,
-			"-f", "internal/resources/testData/jvmAdditionalSettings.yaml",
-			"--set", "neo4j.edition="+edition,
-		)
+	doTestCase := func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		aditionalJvmArgs := []string{
+			"-XX:+HeapDumpOnOutOfMemoryError",
+			"-XX:HeapDumpPath=./java_pid<pid>.hprof",
+			"-XX:+UseGCOverheadLimit",
+			"-XX:MaxMetaspaceSize=180m",
+			"-XX:ReservedCodeCacheSize=40m",
+		}
+		helmValues := model.DefaultEnterpriseValues
+		helmValues.Jvm.UseNeo4JDefaultJvmArguments = true
+		helmValues.Jvm.AdditionalJvmArguments = aditionalJvmArgs
+		manifest, err := model.HelmTemplateFromStruct(t, model.HelmChart, helmValues)
 		if !assert.NoError(t, err) {
 			return
 		}
 
 		userConfigMap := manifest.OfTypeWithName(&v1.ConfigMap{}, model.DefaultHelmTemplateReleaseName.UserConfigMapName()).(*v1.ConfigMap)
-		assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:+HeapDumpOnOutOfMemoryError")
-		assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:HeapDumpPath=./java_pid<pid>.hprof")
-		assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:+UseGCOverheadLimit")
-		assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:MaxMetaspaceSize=180m")
-		assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], "-XX:ReservedCodeCacheSize=40m")
+		assert.Contains(t, userConfigMap.Data["server.jvm.additional"], "-XX:+HeapDumpOnOutOfMemoryError")
+		assert.Contains(t, userConfigMap.Data["server.jvm.additional"], "-XX:HeapDumpPath=./java_pid<pid>.hprof")
+		assert.Contains(t, userConfigMap.Data["server.jvm.additional"], "-XX:+UseGCOverheadLimit")
+		assert.Contains(t, userConfigMap.Data["server.jvm.additional"], "-XX:MaxMetaspaceSize=180m")
+		assert.Contains(t, userConfigMap.Data["server.jvm.additional"], "-XX:ReservedCodeCacheSize=40m")
 
 		err = checkConfigMapContainsJvmAdditionalFromDefaultConf(t, edition, userConfigMap)
 		if !assert.NoError(t, err) {
 			return
 		}
 
-		checkNeo4jManifest(t, manifest)
+		checkNeo4jManifest(t, manifest, 3)
 	}
 
 	forEachPrimaryChart(t, andEachSupportedEdition(doTestCase))
@@ -96,20 +103,23 @@ func TestJvmAdditionalConfig(t *testing.T) {
 func TestMetaspaceConfigs(t *testing.T) {
 	t.Parallel()
 
-	doTestCase := func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
-		manifest, err := model.HelmTemplate(t, chart, useDataModeAndAcceptLicense,
-			"-f", "internal/resources/testData/metaspaceconfigs.yaml",
-			"--set", "neo4j.edition="+edition,
-		)
+	doTestCase := func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		metaSpaceConfig := make(map[string]string)
+		metaSpaceConfig["server.memory.pagecache.size"] = "74m"
+		metaSpaceConfig["server.memory.heap.initial_size"] = "317m"
+		metaSpaceConfig["server.memory.heap.max_size"] = "317m"
+		helmValues := model.DefaultEnterpriseValues
+		helmValues.Config = metaSpaceConfig
+		manifest, err := model.HelmTemplateFromStruct(t, model.HelmChart, helmValues)
+
 		if !assert.NoError(t, err) {
 			return
 		}
 
 		userConfigMap := manifest.OfTypeWithName(&v1.ConfigMap{}, model.DefaultHelmTemplateReleaseName.UserConfigMapName()).(*v1.ConfigMap)
-		assert.Equal(t, userConfigMap.Data["dbms.memory.heap.initial_size"], "317m")
-		assert.Equal(t, userConfigMap.Data["dbms.memory.heap.max_size"], "317m")
-		assert.Equal(t, userConfigMap.Data["dbms.memory.pagecache.size"], "74m")
-		assert.Equal(t, userConfigMap.Data["dbms.query_cache_size"], "10")
+		assert.Equal(t, userConfigMap.Data["server.memory.heap.initial_size"], "317m")
+		assert.Equal(t, userConfigMap.Data["server.memory.heap.max_size"], "317m")
+		assert.Equal(t, userConfigMap.Data["server.memory.pagecache.size"], "74m")
 
 	}
 
@@ -129,9 +139,9 @@ func checkConfigMapContainsJvmAdditionalFromDefaultConf(t *testing.T, edition st
 	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
 		var line = scanner.Text()
-		if strings.HasPrefix(strings.TrimSpace(line), "dbms.jvm.additional") {
-			line = strings.Replace(line, "dbms.jvm.additional=", "", 1)
-			assert.Contains(t, userConfigMap.Data["dbms.jvm.additional"], line)
+		if strings.HasPrefix(strings.TrimSpace(line), "server.jvm.additional") {
+			line = strings.Replace(line, "server.jvm.additional=", "", 1)
+			assert.Contains(t, userConfigMap.Data["server.jvm.additional"], line)
 			n++
 		}
 		if err != nil {

@@ -3,12 +3,17 @@
 
 neo4j:
   # Name of your cluster
-  name: "neo4j-cluster"
+  name: ""
   # If password is not set or empty a random password will be generated during installation
   password: ""
 
   # Neo4j Edition to use (community|enterprise)
-  edition: "enterprise"
+  edition: "community"
+
+  # Minimum number of machines initially required to form a clustered database. The StatefulSet will not reach the ready state
+  # until at least this many members have discovered each other. The default 1 (standalone)
+  #minimumClusterSize: 1
+
   # set edition: "enterprise" to use Neo4j Enterprise Edition
   #
   # To use Neo4j Enterprise Edition you must have a Neo4j license agreement.
@@ -17,7 +22,7 @@ neo4j:
   # Email inquiries can be directed to: licensing@neo4j.com
   #
   # Set acceptLicenseAgreement: "yes" to confirm that you have a Neo4j license agreement.
-  acceptLicenseAgreement: "yes"
+  acceptLicenseAgreement: "no"
   #
   # set offlineMaintenanceModeEnabled: true to restart the StatefulSet without the Neo4j process running
   # this can be used to perform tasks that cannot be performed when Neo4j is running such as `neo4j-admin dump`
@@ -127,18 +132,17 @@ volumes:
       name: "data"
 
 #add additional volumes and their respective mounts
-#additionalVolumes:
+additionalVolumes: []
 #  - name: neo4j1-conf
 #    emptyDir: {}
-#
-#additionalVolumeMounts:
+additionalVolumeMounts: []
 #  - mountPath: "/config/neo4j1.conf"
 #    name: neo4j1-conf
 
 
 #nodeSelector labels
 #please ensure the respective labels are present on one of the cluster nodes or else helm charts will throw an error
-nodeSelector:
+nodeSelector: {}
 #  "label1: "value1"
 #  "label2: "value2"
 
@@ -217,7 +221,7 @@ services:
 # Neo4j Configuration (yaml format)
 config:
   server.config.strict_validation.enabled: "false"
-  dbms.cluster.minimum_initial_system_primaries_count: "3"
+#  dbms.cluster.minimum_initial_system_primaries_count: "3"
   # The amount of memory to use for mapping the store files.
   # The default page cache memory assumes the machine is dedicated to running
   # Neo4j, and is heuristically set to 50% of RAM minus the Java heap size.
@@ -331,11 +335,11 @@ env: {}
 podSpec:
 
   #Annotations for Neo4j pod
-  annotations:
+  annotations: {}
 #   imageregistry: "https://hub.docker.com/"
 #   demo: alpha
 
-  nodeAffinity:
+  nodeAffinity: {}
 #    requiredDuringSchedulingIgnoredDuringExecution:
 #      nodeSelectorTerms:
 #        - matchExpressions:
@@ -360,7 +364,7 @@ podSpec:
   podAntiAffinity: true
 
   #Add tolerations to the Neo4j pod
-  tolerations:
+  tolerations: []
 #    - key: "key1"
 #      operator: "Equal"
 #      value: "value1"
@@ -405,3 +409,134 @@ jvm:
   # - "-XX:HeapDumpPath=/logs/neo4j.hprof"
   # - "-XX:MaxMetaspaceSize=180m"
   # - "-XX:ReservedCodeCacheSize=40m"
+
+logging:
+  serverLogsXml: |-
+#    <?xml version="1.0" encoding="UTF-8"?>
+#    <!--
+#
+#    Copyright (c) "Neo4j"
+#    Neo4j Sweden AB [http://neo4j.com]
+#    This file is a commercial add-on to Neo4j Enterprise Edition.
+#
+#    -->
+#    <!--
+#    This is a log4j 2 configuration file.
+#
+#    It is highly recommended to keep the original "debug.log" as is, to make sure enough data is captured in case
+#    of errors in a format that neo4j developers can work with.
+#
+#    All configuration values can be queried with the lookup prefix "config:". You can for example, resolve
+#    the path to your neo4j home directory with ${config:dbms.directories.neo4j_home}.
+#
+#    Please consult https://logging.apache.org/log4j/2.x/manual/configuration.html for instructions and
+#    available configuration options.
+#    -->
+#    <Configuration status="ERROR" monitorInterval="30" packages="org.neo4j.logging.log4j">
+#    <Appenders>
+#    <!-- Default debug.log, please keep -->
+#    <RollingRandomAccessFile name="DebugLog" fileName="${config:server.directories.logs}/debug.log"
+#    filePattern="$${config:server.directories.logs}/debug.log.%02i">
+#    <Neo4jDebugLogLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSSZ}{GMT+0} %-5p [%c{1.}] %m%n"/>
+#    <Policies>
+#    <SizeBasedTriggeringPolicy size="20 MB"/>
+#    </Policies>
+#    <DefaultRolloverStrategy fileIndex="min" max="7"/>
+#    </RollingRandomAccessFile>
+#
+#    <RollingRandomAccessFile name="HttpLog" fileName="${config:server.directories.logs}/http.log"
+#    filePattern="$${config:server.directories.logs}/http.log.%02i">
+#    <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSSZ}{GMT+0} %-5p %m%n"/>
+#    <Policies>
+#    <SizeBasedTriggeringPolicy size="20 MB"/>
+#    </Policies>
+#    <DefaultRolloverStrategy fileIndex="min" max="5"/>
+#    </RollingRandomAccessFile>
+#
+#    <RollingRandomAccessFile name="QueryLog" fileName="${config:server.directories.logs}/query.log"
+#    filePattern="$${config:server.directories.logs}/query.log.%02i">
+#    <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSSZ}{GMT+0} %-5p %m%n"/>
+#    <Policies>
+#    <SizeBasedTriggeringPolicy size="20 MB"/>
+#    </Policies>
+#    <DefaultRolloverStrategy fileIndex="min" max="7"/>
+#    </RollingRandomAccessFile>
+#
+#    <RollingRandomAccessFile name="SecurityLog" fileName="${config:server.directories.logs}/security.log"
+#    filePattern="$${config:server.directories.logs}/security.log.%02i">
+#    <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSSZ}{GMT+0} %-5p %m%n"/>
+#    <Policies>
+#    <SizeBasedTriggeringPolicy size="20 MB"/>
+#    </Policies>
+#    <DefaultRolloverStrategy fileIndex="min" max="7"/>
+#    </RollingRandomAccessFile>
+#    </Appenders>
+#
+#    <Loggers>
+#    <!-- Log levels. One of DEBUG, INFO, WARN, ERROR or OFF -->
+#
+#    <!-- The debug log is used as the root logger to catch everything -->
+#    <Root level="INFO">
+#    <AppenderRef ref="DebugLog"/> <!-- Keep this -->
+#    </Root>
+#
+#    <!-- The query log, must be named "QueryLogger" -->
+#    <Logger name="QueryLogger" level="INFO" additivity="false">
+#    <AppenderRef ref="QueryLog"/>
+#    </Logger>
+#
+#    <!-- The http request log, must be named "HttpLogger" -->
+#    <Logger name="HttpLogger" level="INFO" additivity="false">
+#    <AppenderRef ref="HttpLog"/>
+#    </Logger>
+#
+#    <!-- The security log, must be named "SecurityLogger" -->
+#    <Logger name="SecurityLogger" level="INFO" additivity="false">
+#    <AppenderRef ref="SecurityLog"/>
+#    </Logger>
+#    </Loggers>
+#    </Configuration>
+  userLogsXml: |-
+#    <?xml version="1.0" encoding="UTF-8"?>
+#    <!--
+#    Copyright (c) "Neo4j"
+#    Neo4j Sweden AB [http://neo4j.com]
+#    This file is a commercial add-on to Neo4j Enterprise Edition.
+#
+#    -->
+#    <!--
+#    This is a log4j 2 configuration file that provides maximum flexibility.
+#
+#    All configuration values can be queried with the lookup prefix "config:". You can for example, resolve
+#    the path to your neo4j home directory with ${config:dbms.directories.neo4j_home}.
+#
+#    Please consult https://logging.apache.org/log4j/2.x/manual/configuration.html for instructions and
+#    available configuration options.
+#    -->
+#    <Configuration status="ERROR" monitorInterval="30" packages="org.neo4j.logging.log4j">
+#
+#    <Appenders>
+#    <RollingRandomAccessFile name="Neo4jLog" fileName="${config:server.directories.logs}/neo4j.log"
+#    filePattern="$${config:server.directories.logs}/neo4j.log.%02i">
+#    <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSSZ}{GMT+0} %-5p %m%n"/>
+#    <Policies>
+#    <SizeBasedTriggeringPolicy size="20 MB"/>
+#    </Policies>
+#    <DefaultRolloverStrategy fileIndex="min" max="7"/>
+#    </RollingRandomAccessFile>
+#
+#    <!-- Only used by "neo4j console", will be ignored otherwise -->
+#    <Console name="ConsoleAppender" target="SYSTEM_OUT">
+#    <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSSZ}{GMT+0} %-5p %m%n"/>
+#    </Console>
+#    </Appenders>
+#
+#    <Loggers>
+#    <!-- Log level for the neo4j log. One of DEBUG, INFO, WARN, ERROR or OFF -->
+#    <Root level="INFO">
+#    <AppenderRef ref="Neo4jLog"/>
+#    <AppenderRef ref="ConsoleAppender"/>
+#    </Root>
+#    </Loggers>
+#
+#    </Configuration>

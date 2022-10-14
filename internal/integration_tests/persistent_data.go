@@ -52,7 +52,7 @@ func ResourcesCleanup(t *testing.T, releaseName model.ReleaseName) error {
 	return errors.ErrorOrNil()
 }
 
-func ResourcesReinstall(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart) error {
+func ResourcesReinstall(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChartBuilder) error {
 	_, err := createNamespace(t, releaseName)
 	if err != nil {
 		t.Log("Creating namespace failed:", err)

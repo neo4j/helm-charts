@@ -13,6 +13,8 @@ type ReleaseName interface {
 	UserConfigMapName() string
 	InternalServiceName() string
 	DefaultConfigMapName() string
+	UserLogsConfigMapName() string
+	ServerLogsConfigMapName() string
 }
 
 func NewReleaseName(name string) ReleaseName {
@@ -50,6 +52,13 @@ func (r *releaseName) UserConfigMapName() string {
 	return string(*r) + "-user-config"
 }
 
+func (r *releaseName) UserLogsConfigMapName() string {
+	return string(*r) + "-user-logs-config"
+}
+
+func (r *releaseName) ServerLogsConfigMapName() string {
+	return string(*r) + "-server-logs-config"
+}
 func (r *releaseName) InternalServiceName() string {
 	return string(*r) + "-internals"
 }
@@ -103,6 +112,13 @@ func (r *clusterMemberReleaseName) UserConfigMapName() string {
 	return r.memberName.UserConfigMapName()
 }
 
+func (r *clusterMemberReleaseName) UserLogsConfigMapName() string {
+	return r.memberName.UserLogsConfigMapName()
+}
+func (r *clusterMemberReleaseName) ServerLogsConfigMapName() string {
+	return r.memberName.ServerLogsConfigMapName()
+}
+
 func (r *clusterMemberReleaseName) InternalServiceName() string {
 	return r.memberName.InternalServiceName()
 }
@@ -113,3 +129,28 @@ func (r *clusterMemberReleaseName) DefaultConfigMapName() string {
 
 type Namespace string
 type PersistentDiskName string
+
+var DefaultEnterpriseValues = HelmValues{
+	Neo4J: Neo4J{
+		Name:                   "test",
+		AcceptLicenseAgreement: "yes",
+		Edition:                "enterprise",
+	},
+	Volumes: Volumes{
+		Data: Data{
+			Mode: "selector",
+		},
+	},
+}
+
+var DefaultCommunityValues = HelmValues{
+	Neo4J: Neo4J{
+		Name:    "test",
+		Edition: "community",
+	},
+	Volumes: Volumes{
+		Data: Data{
+			Mode: "selector",
+		},
+	},
+}

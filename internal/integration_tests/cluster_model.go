@@ -29,7 +29,7 @@ func (c clusterCore) Name() model.ReleaseName {
 func (c clusterCore) Install(t *testing.T) parallelResult {
 	var err error
 	var cleanup Closeable
-	cleanup, err = InstallNeo4jInGcloud(t, gcloud.CurrentZone(), gcloud.CurrentProject(), c.name, model.ClusterCoreHelmChart, c.extraHelmInstallArgs...)
+	cleanup, err = InstallNeo4jInGcloud(t, gcloud.CurrentZone(), gcloud.CurrentProject(), c.name, model.HelmChart, c.extraHelmInstallArgs...)
 	return parallelResult{cleanup, err}
 }
 

@@ -77,8 +77,9 @@ data:
 
   # Helm defaults
   {{- if $clusterEnabled }}
-    {{- $primariesCount := index .Values.config "dbms.cluster.minimum_initial_system_primaries_count" }}
+    {{- $primariesCount := index $.Values.neo4j "minimumClusterSize" }}
   initial.dbms.default_primaries_count: "{{ $primariesCount }}"
+  dbms.cluster.minimum_initial_system_primaries_count: "{{ $primariesCount }}"
   {{- end }}
 
   # Bolt keep alive
@@ -176,3 +177,37 @@ data:
   {{- end }}
 ---
 {{- end }}
+# server-logs.xml as configmap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ .Release.Name }}-server-logs-config"
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app: "{{ template "neo4j.name" $ }}"
+    {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
+data:
+  server-logs.xml: |-
+    {{- if not (empty $.Values.logging.serverLogsXml) -}}
+        {{ $.Values.logging.serverLogsXml | nindent 4 }}
+    {{- else -}}
+        {{ .Files.Get "server-logs.xml" | nindent 4 }}
+    {{- end }}
+---
+# user-logs.xml as configmap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ .Release.Name }}-user-logs-config"
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app: "{{ template "neo4j.name" $ }}"
+    {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
+data:
+  user-logs.xml: |-
+    {{- if not (empty $.Values.logging.userLogsXml) -}}
+        {{ $.Values.logging.userLogsXml | nindent 4 }}
+    {{- else -}}
+        {{ .Files.Get "user-logs.xml" | nindent 4 }}
+    {{- end }}
+---
