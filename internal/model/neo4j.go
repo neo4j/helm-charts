@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-const neo4jConfJvmAdditionalKey = "dbms.jvm.additional"
+const neo4jConfJvmAdditionalKey = "server.jvm.additional"
 
 type Neo4jConfiguration struct {
 	conf    map[string]string

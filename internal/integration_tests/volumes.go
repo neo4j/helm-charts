@@ -10,7 +10,7 @@ import (
 )
 import "testing"
 
-func volumesTests(name model.ReleaseName, chart model.Neo4jHelmChart) []SubTest {
+func volumesTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) []SubTest {
 	return []SubTest{
 		{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, createNode(t, name), "Create Node should succeed") }},
 		{name: "Check Volumes", test: func(t *testing.T) { assert.NoError(t, checkVolumes(t, name), "Check volumes") }},

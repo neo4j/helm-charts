@@ -29,12 +29,12 @@ func checkNeo4jConfiguration(t *testing.T, releaseName model.ReleaseName, expect
 
 	var runtimeConfig []*neo4j.Record
 	var expectedOverrides = map[string]string{
-		"dbms.connector.https.enabled":  "true",
-		"dbms.connector.bolt.tls_level": "REQUIRED",
-		"dbms.directories.logs":         "/logs",
-		"dbms.directories.metrics":      "/metrics",
-		"dbms.directories.import":       "/import",
-		"dbms.panic.shutdown_on_panic":  "true",
+		"dbms.connector.https.enabled":   "true",
+		"dbms.connector.bolt.tls_level":  "REQUIRED",
+		"dbms.directories.logs":          "/logs",
+		"dbms.directories.metrics":       "/metrics",
+		"dbms.directories.import":        "/import",
+		"server.panic.shutdown_on_panic": "true",
 	}
 
 	deadline := time.Now().Add(3 * time.Minute)

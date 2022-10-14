@@ -96,7 +96,7 @@ func CheckProbes(t *testing.T, releaseName model.ReleaseName) error {
 	return nil
 }
 
-func CheckServiceAnnotations(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart) (err error) {
+func CheckServiceAnnotations(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChartBuilder) (err error) {
 	services, err := getAllServices(releaseName.Namespace())
 	if err != nil {
 		return err

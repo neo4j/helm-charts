@@ -303,7 +303,7 @@ func checkClusterCorePasswordFailure(t *testing.T) error {
 		model.BaseHelmCommand(
 			"install",
 			releaseName,
-			model.ClusterCoreHelmChart,
+			model.HelmChart,
 			model.Neo4jEdition,
 			&diskName,
 			"--set", "neo4j.password=my-password")...).CombinedOutput()

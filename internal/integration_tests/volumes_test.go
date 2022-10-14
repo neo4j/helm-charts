@@ -8,7 +8,7 @@ import (
 import "testing"
 
 func TestVolumesInGCloudK8s(t *testing.T) {
-	chart := model.StandaloneHelmChart
+	chart := model.Neo4jHelmChartCommunityAndEnterprise
 	releaseName := model.NewReleaseName("volumes-" + TestRunIdentifier)
 	t.Parallel()
 

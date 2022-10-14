@@ -17,7 +17,7 @@ func TestHeadlessServiceDefaults(t *testing.T) {
 	}
 
 	services := k8s.OfType(&v1.Service{})
-	assert.Len(t, k8s.All(), 1, "the loadbalancer chart should only create a single K8s object (a Service)")
+	assert.Len(t, k8s.All(), 1, "the headless service chart should only create a single K8s object (a Service)")
 	assert.Len(t, services, 1)
 
 	service := services[0].(*v1.Service)

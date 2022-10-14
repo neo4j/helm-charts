@@ -303,7 +303,7 @@ func AsCloseable(closeables []Closeable) Closeable {
 	}
 }
 
-func InstallNeo4jInGcloud(t *testing.T, zone gcloud.Zone, project gcloud.Project, releaseName model.ReleaseName, chart model.Neo4jHelmChart, extraHelmInstallArgs ...string) (Closeable, error) {
+func InstallNeo4jInGcloud(t *testing.T, zone gcloud.Zone, project gcloud.Project, releaseName model.ReleaseName, chart model.Neo4jHelmChartBuilder, extraHelmInstallArgs ...string) (Closeable, error) {
 
 	var closeables []Closeable
 	addCloseable := func(closeable Closeable) {
@@ -383,7 +383,7 @@ func runSubTests(t *testing.T, subTests []SubTest) {
 	}
 }
 
-func installNeo4j(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart, extraHelmInstallArgs ...string) (Closeable, error) {
+func installNeo4j(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChartBuilder, extraHelmInstallArgs ...string) (Closeable, error) {
 	closeables := []Closeable{}
 	addCloseable := func(closeable Closeable) {
 		closeables = append([]Closeable{closeable}, closeables...)
@@ -405,7 +405,7 @@ func installNeo4j(t *testing.T, releaseName model.ReleaseName, chart model.Neo4j
 	return AsCloseable(closeables), err
 }
 
-func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChart) ([]SubTest, error) {
+func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubTest, error) {
 	expectedConfiguration, err := (&model.Neo4jConfiguration{}).PopulateFromFile(Neo4jConfFile)
 	if err != nil {
 		return nil, err
