@@ -47,7 +47,7 @@ Once rollout is complete you can log in to Neo4j at "neo4j://{{ .Release.Name }}
 
 This release creates a single member of a Neo4j cluster. It will not become ready until it is able to form a working Neo4j cluster by joining other Neo4j servers. To create a working cluster at least 3 servers are required.
 
-Once you have a working Neo4j cluster, you can access the Neo4j browser using the IP address of the {{ template "neo4j.appName" . }}-lb-neo4j service
+Once you have a working Neo4j cluster, you can access the Neo4j browser using the IP address of the {{ template "neo4j.name" . }}-lb-neo4j service
 eg. http://[SERVICE_IP]:7474
 
 {{- end }}

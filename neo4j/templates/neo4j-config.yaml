@@ -8,7 +8,7 @@ metadata:
   name: "{{ .Release.Name }}-k8s-config"
   namespace: "{{ .Release.Namespace }}"
   labels:
-    app: "{{ template "neo4j.appName" $ }}"
+    app: "{{ template "neo4j.name" $ }}"
     {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
 data:
   server.default_listen_address: "0.0.0.0"
@@ -26,7 +26,7 @@ metadata:
   name: "{{ .Release.Name }}-user-config"
   namespace: "{{ .Release.Namespace }}"
   labels:
-    app: "{{ template "neo4j.appName" $ }}"
+    app: "{{ template "neo4j.name" $ }}"
     {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
 data:
   {{- /* imported config first */}}
@@ -67,7 +67,7 @@ metadata:
   name: "{{ .Release.Name }}-default-config"
   namespace: "{{ .Release.Namespace }}"
   labels:
-    app: "{{ template "neo4j.appName" $ }}"
+    app: "{{ template "neo4j.name" $ }}"
     {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
 data:
 
@@ -102,7 +102,7 @@ data:
   # Clustering
   dbms.cluster.discovery.type: K8S
   dbms.kubernetes.service_port_name: "tcp-discovery"
-  dbms.kubernetes.label_selector: "app={{ template "neo4j.appName" . }},helm.neo4j.com/service=internals,helm.neo4j.com/clustering=true"
+  dbms.kubernetes.label_selector: "app={{ template "neo4j.name" . }},helm.neo4j.com/service=internals,helm.neo4j.com/clustering=true"
   dbms.routing.default_router: "SERVER"
   dbms.routing.client_side.enforce_for_domains: "*.{{ .Values.clusterDomain }}"
   dbms.routing.enabled: "true"
@@ -159,7 +159,7 @@ metadata:
   name: "{{ .Release.Name }}-apoc-config"
   namespace: "{{ .Release.Namespace }}"
   labels:
-    app: "{{ template "neo4j.appName" $ }}"
+    app: "{{ template "neo4j.name" $ }}"
     {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
 data:
   {{- with .Values.apoc_config }}

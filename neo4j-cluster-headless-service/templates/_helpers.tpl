@@ -1,9 +1,9 @@
 {{- define "neo4j.name" -}}
-  {{- required "neo4j.name is required" .Values.neo4j.name }}
-{{- end -}}
-
-{{- define "neo4j.appName" -}}
-  {{- required "neo4j.name is required" .Values.neo4j.name }}
+  {{- if eq (len (trim $.Values.neo4j.name)) 0 -}}
+    {{- fail (printf "neo4j.name is required") -}}
+  {{- else -}}
+    {{ .Values.neo4j.name }}
+  {{- end -}}
 {{- end -}}
 
 {{- define "neo4j.checkPortMapping" -}}
