@@ -21,6 +21,9 @@ Convert a neo4j.conf properties text into valid yaml
 {{- end -}}
 
 {{- define "neo4j.isClusterEnabled" -}}
+  {{- if not (eq $.Values.neo4j.edition "enterprise") -}}
+    {{- fail (printf "Please use enterprise edition for clustering. You can set edition via --set neo4j.edition=enterprise") -}}
+  {{- end -}}
   {{- $value := index $.Values.config "dbms.cluster.minimum_initial_system_primaries_count" | default "1" | int -}}
   {{- if ge $value 3 -}}
         true
