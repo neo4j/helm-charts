@@ -129,7 +129,6 @@ command:
 {{- range $name, $spec := .Values.volumes -}}
 {{- if (index $spec $spec.mode).setOwnerAndGroupWritableFilePermissions -}}
 {{- if $securityContext -}}{{- if $securityContext.runAsUser }}
-
 # change owner
 chown -R "{{ $securityContext.runAsUser }}" "/{{ $name }}"
 {{- end -}}{{- end -}}

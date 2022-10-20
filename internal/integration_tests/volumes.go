@@ -15,6 +15,7 @@ func volumesTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) []S
 		{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, createNode(t, name), "Create Node should succeed") }},
 		{name: "Check Volumes", test: func(t *testing.T) { assert.NoError(t, checkVolumes(t, name), "Check volumes") }},
 		{name: "Enter maintenance mode", test: func(t *testing.T) { assert.NoError(t, enterMaintenanceMode(t, name, chart), "Enter maintenance mode") }},
+		{name: "Check maintenance mode", test: func(t *testing.T) { assert.NoError(t, checkNeo4jNotRunning(t, name), "Check maintenance mode") }},
 		{name: "Check Volumes", test: func(t *testing.T) { assert.NoError(t, checkVolumes(t, name), "Check volumes") }},
 		{name: "Exit maintenance mode and install plugins", test: func(t *testing.T) {
 			assert.NoError(t, exitMaintenanceMode(t, name, chart, resources.PluginsInitContainer.HelmArgs()...), "Exit maintenance mode and install plugins")

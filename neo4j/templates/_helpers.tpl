@@ -316,7 +316,9 @@ memory value cannot be less than 2Gb or 2Gi
 {{/* Checks if the provided priorityClassName already exists in the cluster or not*/}}
 {{- define "neo4j.priorityClassName" -}}
     {{- if not (empty $.Values.podSpec.priorityClassName) -}}
-        {{- $priorityClassName := (lookup "scheduling.k8s.io/v1" "PriorityClass" .Release.Namespace $.Values.podSpec.priorityClassName) -}}
+
+        {{- $priorityClassName := (lookup "scheduling.k8s.io/v1" "PriorityClass" "" $.Values.podSpec.priorityClassName) -}}
+{{/*        {{- fail (printf "PriorityClass %s is missing in the cluster" $priorityClassName) -}}*/}}
             {{- if empty $priorityClassName -}}
                 {{- fail (printf "PriorityClass %s is missing in the cluster" $.Values.podSpec.priorityClassName) -}}
             {{- else -}}

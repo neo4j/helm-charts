@@ -1,11 +1,2 @@
-neo4j:
-  labels:
-    "antiAffinityLabel": "testing"
-
 podSpec:
-  podAntiAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-          matchLabels:
-            "antiAffinityLabel": "testing"
-        topologyKey: kubernetes.io/hostname
+  podAntiAffinity: true

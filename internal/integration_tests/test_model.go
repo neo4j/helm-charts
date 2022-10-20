@@ -27,7 +27,6 @@ func cleanupTest(t *testing.T, cleanupWork Closeable) {
 
 	t.Logf("Beginning cleanup of '%s'", t.Name())
 	defer t.Logf("Finished cleanup of '%s'", t.Name())
-
 	if cleanupWork != nil {
 		err := cleanupWork()
 		if err != nil {

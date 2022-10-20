@@ -1,6 +1,6 @@
 config:
-  "dbms.security.procedures.unrestricted": "apoc.*"
-  "dbms.directories.plugins": "/plugins"
+  "server.security.procedures.unrestricted": "apoc.*"
+  "server.directories.plugins": "/plugins"
 
 volumes:
   plugins:

@@ -109,13 +109,10 @@ func CheckServiceAnnotations(t *testing.T, releaseName model.ReleaseName, chart 
 	}
 
 	// when we add annotations via helm
-	diskName := releaseName.DiskName()
 	err = runAll(t, "helm", [][]string{
-		model.BaseHelmCommand("upgrade", releaseName, chart, model.Neo4jEdition, &diskName,
-			"--set", "services.neo4j.annotations.foo=bar",
-			"--set", "services.admin.annotations.foo=bar",
-			"--set", "services.default.annotations.foo=bar",
-		),
+		model.BaseHelmCommand("upgrade", releaseName, chart, model.Neo4jEdition,
+			"--set", "services.neo4j.annotations.foo=bar", "--set", "services.admin.annotations.foo=bar",
+			"--set", "services.default.annotations.foo=bar", "--set", "neo4j.name="+model.DefaultNeo4jName),
 	}, true)
 	if err != nil {
 		return err
