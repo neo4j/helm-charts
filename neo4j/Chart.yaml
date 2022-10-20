@@ -1,8 +1,8 @@
 apiVersion: v1
-name: neo4j-standalone
+name: neo4j
 home: https://www.neo4j.com
-version: 4.4.9
-appVersion: 4.4.9
+version: 5.1.0
+appVersion: 5.1.0
 description: Neo4j is the world's leading graph database
 keywords:
   - graph

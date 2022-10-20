@@ -8,15 +8,17 @@
 {{- if and $loadBalancerExists $isLoadBalancerEnabled -}}
   {{- $loadBalancerSelector :=  $loadBalancer.spec.selector -}}
   {{- if hasKey $loadBalancerSelector "helm.neo4j.com/clustering" -}}
-      {{- if eq (get $loadBalancerSelector "helm.neo4j.com/clustering") "false" -}}
-        {{- if eq (get $loadBalancerSelector "app") (include "neo4j.name" $) -}}
+    {{- if eq (get $loadBalancerSelector "helm.neo4j.com/clustering") "false" -}}
+      {{- if eq (get $loadBalancerSelector "app") (include "neo4j.name" $) -}}
+        {{- if not .Release.IsUpgrade -}}
           {{ fail (printf "%s %v %s" "A Neo4j installation already exists in this namespace with the name" .Values.neo4j.name "Please use a different neo4j name using --set neo4j.name") }}
+        {{- end -}}
       {{- end -}}
     {{- end -}}
   {{- end -}}
 {{- end -}}
 
-{{- if and (not $loadBalancerExists) ($isEnterprise) ($isLoadBalancerEnabled) -}}
+{{- if and (or (not $loadBalancerExists) (.Release.IsUpgrade)) ($isEnterprise) ($isLoadBalancerEnabled) -}}
 {{- $defaultSpec := include "neo4j.services.neo4j.defaultSpec" . | fromYaml }}
 {{- $spec := get $defaultSpec .Values.services.neo4j.spec.type | merge .Values.services.neo4j.spec  }}
 # Service for applications that need access to neo4j

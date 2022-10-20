@@ -11,7 +11,7 @@ import (
 func TestHeadlessServiceDefaults(t *testing.T) {
 	t.Parallel()
 
-	k8s, err := model.HelmTemplate(t, model.HeadlessServiceHelmChart, nil)
+	k8s, err := model.HelmTemplate(t, model.HeadlessServiceHelmChart, useNeo4jClusterName)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -36,7 +36,7 @@ func TestHeadlessServiceForPortRemapping(t *testing.T) {
 		"--set", "ports.http.port=9000", // this should fail since only 7474 port is allowed
 	}
 
-	_, err := model.HelmTemplate(t, model.HeadlessServiceHelmChart, portRemappingArgs)
+	_, err := model.HelmTemplate(t, model.HeadlessServiceHelmChart, append(useNeo4jClusterName, portRemappingArgs...))
 	if !assert.Error(t, err) {
 		return
 	}
@@ -49,7 +49,7 @@ func TestHeadlessServiceForPortRemapping(t *testing.T) {
 		"--set", "ports.http.port=7474",
 	}
 
-	_, err = model.HelmTemplate(t, model.HeadlessServiceHelmChart, portRemappingArgs)
+	_, err = model.HelmTemplate(t, model.HeadlessServiceHelmChart, append(useNeo4jClusterName, portRemappingArgs...))
 	if !assert.NoError(t, err) {
 		return
 	}

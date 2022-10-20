@@ -11,7 +11,7 @@ neo4j:
   edition: "community"
 
   # Minimum number of machines initially required to form a clustered database. The StatefulSet will not reach the ready state
-  # until at least this many members have discovered each other. The default 1 (standalone)
+  # until at least this many members have discovered each other. The default is 1 (standalone)
   #minimumClusterSize: 1
 
   # set edition: "enterprise" to use Neo4j Enterprise Edition

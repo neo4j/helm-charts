@@ -1,7 +1,7 @@
 # Shared neo4j object
 neo4j:
   # neo4j.name is required and must match the name of the neo4j instances this service should use
-  name: "neo4j-cluster"
+  name: ""
   edition: "enterprise"
 
 # Annotations for the external service

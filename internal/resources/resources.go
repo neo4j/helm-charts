@@ -2,6 +2,7 @@ package resources
 
 var TestAntiAffinityRule = newYamlFile("testData/testAntiAffinityRule.yaml")
 var PluginsInitContainer = newYamlFile("testData/pluginsInitContainer.yaml")
+var JsonLogging = newYamlFile("testData/jsonLogging.yaml")
 var AcceptLicenseAgreementBoolYes = newYamlFile("testData/acceptLicenseAgreementBoolYes.yaml")
 var AcceptLicenseAgreementBoolTrue = newYamlFile("testData/acceptLicenseAgreementBoolTrue.yaml")
 var AcceptLicenseAgreement = newYamlFile("testData/acceptLicenseAgreement.yaml")

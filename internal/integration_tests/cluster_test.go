@@ -1,7 +1,9 @@
 package integration_tests
 
 import (
+	"fmt"
 	. "github.com/neo4j/helm-charts/internal/helpers"
+	"github.com/neo4j/helm-charts/internal/integration_tests/gcloud"
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/neo4j/helm-charts/internal/resources"
 	"github.com/stretchr/testify/assert"
@@ -31,18 +33,20 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	}
 
 	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
-	loadBalancer := clusterLoadBalancer{model.NewLoadBalancerReleaseName(clusterReleaseName), nil}
-	headlessService := clusterHeadLessService{model.NewHeadlessServiceReleaseName(clusterReleaseName), nil}
-	readReplica1 := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName, 1), model.ImagePullSecretArgs}
-	readReplica2 := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName, 2), nil}
-
-	core1 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 1), append(model.ImagePullSecretArgs, model.NodeSelectorArgs...)}
-	core2 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 2), model.PriorityClassNameArgs}
-	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3), nil}
+	defaultHelmArgs := []string{}
+	defaultHelmArgs = append(defaultHelmArgs, model.DefaultNeo4jNameArg...)
+	headlessService := clusterHeadLessService{model.NewHeadlessServiceReleaseName(clusterReleaseName), defaultHelmArgs}
+	defaultHelmArgs = append(defaultHelmArgs, model.DefaultClusterSizeArg...)
+	core1HelmArgs := append(defaultHelmArgs, model.ImagePullSecretArgs...)
+	core1HelmArgs = append(core1HelmArgs, model.NodeSelectorArgs...)
+	core2HelmArgs := append(defaultHelmArgs, model.PriorityClassNameArgs...)
+	core1 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 1), core1HelmArgs}
+	core2 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 2), core2HelmArgs}
+	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3), defaultHelmArgs}
 	cores := []clusterCore{core1, core2, core3}
-	readReplicas := []clusterReadReplica{readReplica1, readReplica2}
 
-	t.Cleanup(func() { cleanupTest(t, AsCloseable(closeables)) })
+	//t.Cleanup(func() { cleanupTest(t, AsCloseable(closeables)) })
+	t.Cleanup(clusterTestCleanup(t, clusterReleaseName, core1, core2, core3))
 
 	t.Logf("Starting setup of '%s'", t.Name())
 
@@ -63,7 +67,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 		return
 	}
 
-	componentsToParallelInstall := []helmComponent{core2, core3, loadBalancer, headlessService}
+	componentsToParallelInstall := []helmComponent{core2, core3, headlessService}
 	closeablesNew, err := performBackgroundInstall(t, componentsToParallelInstall, clusterReleaseName)
 	if !assert.NoError(t, err) {
 		return
@@ -76,30 +80,16 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 			return
 		}
 	}
-	//install read replicas after cores are completed and cluster is formed or else the read replica installation will fail
-	componentsToParallelInstall = []helmComponent{readReplica1, readReplica2}
-	closeablesNew, err = performBackgroundInstall(t, componentsToParallelInstall, clusterReleaseName)
-	if !assert.NoError(t, err) {
-		return
-	}
 	addCloseable(closeablesNew...)
-
-	for _, readReplica := range readReplicas {
-		err = run(t, "kubectl", "--namespace", string(readReplica.Name().Namespace()), "rollout", "status", "--watch", "--timeout=180s", "statefulset/"+readReplica.Name().String())
-		if !assert.NoError(t, err) {
-			return
-		}
-	}
 
 	t.Logf("Succeeded with setup of '%s'", t.Name())
 
-	subTests, err := clusterTests(loadBalancer.Name())
+	subTests, err := clusterTests(core1.Name())
 	if !assert.NoError(t, err) {
 		return
 	}
 	subTests = append(subTests, nodeSelectorTests(core1.Name())...)
 	subTests = append(subTests, headLessServiceTests(headlessService.Name())...)
-	subTests = append(subTests, readReplicaTests(readReplica1.Name(), readReplica2.Name(), loadBalancer.Name())...)
 	runSubTests(t, subTests)
 
 	t.Logf("Succeeded running all tests in '%s'", t.Name())
@@ -123,15 +113,17 @@ func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
 	}
 
 	clusterReleaseName := model.NewReleaseName("apoc-cluster-" + TestRunIdentifier)
-	loadBalancer := clusterLoadBalancer{model.NewLoadBalancerReleaseName(clusterReleaseName), nil}
-
-	apocCustomArgs := append(model.CustomApocImageArgs, resources.ApocClusterTestConfig.HelmArgs()...)
-	core1 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 1), apocCustomArgs}
-	core2 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 2), apocCustomArgs}
-	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3), apocCustomArgs}
+	defaultHelmArgs := []string{}
+	defaultHelmArgs = append(defaultHelmArgs, model.DefaultNeo4jNameArg...)
+	defaultHelmArgs = append(defaultHelmArgs, model.DefaultClusterSizeArg...)
+	defaultHelmArgs = append(defaultHelmArgs, resources.ApocClusterTestConfig.HelmArgs()...)
+	//defaultHelmArgs = append(defaultHelmArgs, model.CustomApocImageArgs...)
+	core1 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 1), defaultHelmArgs}
+	core2 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 2), defaultHelmArgs}
+	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3), defaultHelmArgs}
 	cores := []clusterCore{core1, core2, core3}
 
-	t.Cleanup(func() { cleanupTest(t, AsCloseable(closeables)) })
+	t.Cleanup(clusterTestCleanup(t, clusterReleaseName, core1, core2, core3))
 
 	t.Logf("Starting setup of '%s'", t.Name())
 
@@ -148,7 +140,7 @@ func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
 		return
 	}
 
-	componentsToParallelInstall := []helmComponent{core2, core3, loadBalancer}
+	componentsToParallelInstall := []helmComponent{core2, core3}
 	closeablesNew, err := performBackgroundInstall(t, componentsToParallelInstall, clusterReleaseName)
 	if !assert.NoError(t, err) {
 		return
@@ -164,11 +156,39 @@ func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
 
 	t.Logf("Succeeded with setup of '%s'", t.Name())
 
-	subTests := apocConfigTests(loadBalancer.Name())
+	subTests := apocConfigTests(clusterReleaseName)
 	if !assert.NoError(t, err) {
 		return
 	}
 	runSubTests(t, subTests)
 
 	t.Logf("Succeeded running all apoc config tests in '%s'", t.Name())
+}
+
+func clusterTestCleanup(t *testing.T, clusterReleaseName model.ReleaseName, core1 clusterCore, core2 clusterCore, core3 clusterCore) func() {
+	return func() {
+		runAll(t, "helm", [][]string{
+			{"uninstall", core1.name.String(), "--wait", "--timeout", "1m", "--namespace", string(clusterReleaseName.Namespace())},
+			{"uninstall", core2.name.String(), "--wait", "--timeout", "1m", "--namespace", string(clusterReleaseName.Namespace())},
+			{"uninstall", core3.name.String(), "--wait", "--timeout", "1m", "--namespace", string(clusterReleaseName.Namespace())},
+			{"uninstall", clusterReleaseName.String() + "-headless", "--wait", "--timeout", "1m", "--namespace", string(clusterReleaseName.Namespace())},
+		}, false)
+		runAll(t, "kubectl", [][]string{
+			{"delete", "pvc", fmt.Sprintf("%s-pvc", core1.name.String()), "--namespace", string(clusterReleaseName.Namespace()), "--ignore-not-found"},
+			{"delete", "pvc", fmt.Sprintf("%s-pvc", core2.name.String()), "--namespace", string(clusterReleaseName.Namespace()), "--ignore-not-found"},
+			{"delete", "pvc", fmt.Sprintf("%s-pvc", core3.name.String()), "--namespace", string(clusterReleaseName.Namespace()), "--ignore-not-found"},
+			{"delete", "pv", fmt.Sprintf("%s-pv", core1.name.String()), "--ignore-not-found"},
+			{"delete", "pv", fmt.Sprintf("%s-pv", core2.name.String()), "--ignore-not-found"},
+			{"delete", "pv", fmt.Sprintf("%s-pv", core3.name.String()), "--ignore-not-found"},
+		}, false)
+		runAll(t, "gcloud", [][]string{
+			{"compute", "disks", "delete", fmt.Sprintf("neo4j-data-disk-%s", core1.name), "--zone=" + string(gcloud.CurrentZone()), "--project=" + string(gcloud.CurrentProject())},
+			{"compute", "disks", "delete", fmt.Sprintf("neo4j-data-disk-%s", core2.name), "--zone=" + string(gcloud.CurrentZone()), "--project=" + string(gcloud.CurrentProject())},
+			{"compute", "disks", "delete", fmt.Sprintf("neo4j-data-disk-%s", core3.name), "--zone=" + string(gcloud.CurrentZone()), "--project=" + string(gcloud.CurrentProject())},
+		}, false)
+		runAll(t, "kubectl", [][]string{
+			{"delete", "namespace", string(clusterReleaseName.Namespace()), "--ignore-not-found", "--force", "--grace-period=0"},
+			{"delete", "priorityClass", "high-priority", "--force", "--grace-period=0"},
+		}, false)
+	}
 }

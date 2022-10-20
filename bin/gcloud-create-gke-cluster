@@ -24,6 +24,7 @@ RELEASE_CHANNEL="stable"
 #
 gcloud container clusters create "${CLOUDSDK_CONTAINER_CLUSTER}" \
      --release-channel=${RELEASE_CHANNEL} \
+     --cluster-version 1.22 \
      --zone="${CLOUDSDK_COMPUTE_ZONE}" \
      --num-nodes "${NUM_NODES}" \
      --workload-pool="${CLOUDSDK_CORE_PROJECT}.svc.id.goog" \
