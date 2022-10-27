@@ -14,14 +14,21 @@ data:
   # n.b. in Google Cloud disk IOPS are proportional to disk size. For good performance of Neo4j you may need to specify a disk size significantly larger than the
   # amount of storage that Neo4j requires.
   # We recommend a disk size of at least 1Ti for performance or load testing and at least 100Gi for development work.
-  gcePersistentDisk: ""
 
+  # CSI driver for storage provisioning. For AWS use ebs.csi.aws.com, GCP use pd.csi.storage.gke.io and Azure use disk.csi.azure.com
+  driver: ""
+  # The reference to pre-created disk.
+  # For AWS use Volume ID,
+  # GCP use projects/{project_id}/zones/{zone_name}/disks/{disk_name}
+  # Azure use /subscriptions/{sub-id}/resourcegroups/{group-name}/providers/microsoft.compute/disks/{disk-id}
+  volumeHandle: ""
   # size of disk used by K8s when scheduling and binding, this has to be passed explicitly to K8s, it's not capable of figuring this out for itself.
   capacity:
     storage: ""
 
   # storageClassName to attach to the PersistentVolume in K8s. Can be set to empty string.
-  storageClassName: "manual"
+  storageClassName: ""
+  fsType: "ext4"
 
 
 # Neo4j ops volume (a Google Cloud Filestore File Share)

@@ -305,7 +305,7 @@ clusterDomain: "cluster.local"
 image:
   imagePullPolicy: IfNotPresent
   # set a customImage if you want to use your own docker image
-  customImage: eu.gcr.io/neo4j-helm/neo4j:v5
+#  customImage: eu.gcr.io/neo4j-helm/neo4j:v5
 
   #imagePullSecrets list
   #  imagePullSecrets:

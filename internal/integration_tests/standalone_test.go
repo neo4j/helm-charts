@@ -38,17 +38,17 @@ func TestInstallStandaloneOnGCloudK8s(t *testing.T) {
 
 func standaloneCleanup(t *testing.T, releaseName model.ReleaseName) func() {
 	return func() {
-		runAll(t, "helm", [][]string{
+		_ = runAll(t, "helm", [][]string{
 			{"uninstall", releaseName.String(), "--wait", "--timeout", "1m", "--namespace", string(releaseName.Namespace())},
 		}, false)
-		runAll(t, "kubectl", [][]string{
+		_ = runAll(t, "kubectl", [][]string{
 			{"delete", "pvc", fmt.Sprintf("%s-pvc", releaseName.String()), "--namespace", string(releaseName.Namespace()), "--ignore-not-found"},
 			{"delete", "pv", fmt.Sprintf("%s-pv", releaseName.String()), "--ignore-not-found"},
 		}, false)
-		runAll(t, "gcloud", [][]string{
+		_ = runAll(t, "gcloud", [][]string{
 			{"compute", "disks", "delete", fmt.Sprintf("neo4j-data-disk-%s", releaseName), "--zone=" + string(gcloud.CurrentZone()), "--project=" + string(gcloud.CurrentProject())},
 		}, false)
-		runAll(t, "kubectl", [][]string{
+		_ = runAll(t, "kubectl", [][]string{
 			{"delete", "namespace", string(releaseName.Namespace()), "--ignore-not-found", "--force", "--grace-period=0"},
 		}, false)
 	}

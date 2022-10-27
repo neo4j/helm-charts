@@ -37,7 +37,7 @@ echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-cluster-loadbalan
 echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-cluster-read-replica --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
 echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-cluster-headless-service --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
 # echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-docker-desktop-pv --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
-# echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-gcloud-pv --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
+# echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-persistent-volume --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
 
 echo "Copying packaged files to ${BUILD_OUT_DIR}"
 

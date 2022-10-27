@@ -56,37 +56,37 @@ func removeLabelFromNodes(t *testing.T) error {
 }
 
 // clusterTests contains all the tests related to cluster
-func clusterTests(loadBalancerName model.ReleaseName) ([]SubTest, error) {
+func clusterTests(clusterRelease model.ReleaseName) ([]SubTest, error) {
 
 	subTests := []SubTest{
 
 		{name: "Check Cluster Core Logs Format", test: func(t *testing.T) {
 			t.Parallel()
-			assert.NoError(t, CheckLogsFormat(t, loadBalancerName), "Cluster core logs format should be in JSON")
+			assert.NoError(t, CheckLogsFormat(t, clusterRelease), "Cluster core logs format should be in JSON")
 		}},
 		{name: "ImagePullSecret tests", test: func(t *testing.T) {
 			t.Parallel()
-			assert.NoError(t, imagePullSecretTests(t, loadBalancerName), "Perform ImagePullSecret Tests")
+			assert.NoError(t, imagePullSecretTests(t, clusterRelease), "Perform ImagePullSecret Tests")
 		}},
 		{name: "Check PriorityClassName", test: func(t *testing.T) {
 			t.Parallel()
-			assert.NoError(t, checkPriorityClassName(t, loadBalancerName), "priorityClassName should match")
+			assert.NoError(t, checkPriorityClassName(t, clusterRelease), "priorityClassName should match")
 		}},
 		{name: "Check Cluster Password failure", test: func(t *testing.T) {
 			t.Parallel()
 			assert.NoError(t, checkClusterCorePasswordFailure(t), "Cluster core installation should not succeed with incorrect password")
 		}},
 		{name: "Check K8s", test: func(t *testing.T) {
-			assert.NoError(t, checkK8s(t, loadBalancerName), "Neo4j Config check should succeed")
+			assert.NoError(t, checkK8s(t, clusterRelease), "Neo4j Config check should succeed")
 		}},
 		{name: "Create Node", test: func(t *testing.T) {
-			assert.NoError(t, createNode(t, loadBalancerName), "Create Node should succeed")
+			assert.NoError(t, createNode(t, clusterRelease), "Create Node should succeed")
 		}},
 		{name: "Count Nodes", test: func(t *testing.T) {
-			assert.NoError(t, checkNodeCount(t, loadBalancerName), "Count Nodes should succeed")
+			assert.NoError(t, checkNodeCount(t, clusterRelease), "Count Nodes should succeed")
 		}},
 		{name: "Database Creation Tests", test: func(t *testing.T) {
-			assert.NoError(t, databaseCreationTests(t, loadBalancerName, "customers"), "Creates \"customer\" database and checks for its existence")
+			assert.NoError(t, databaseCreationTests(t, clusterRelease, "customers"), "Creates \"customer\" database and checks for its existence")
 		}},
 	}
 	return subTests, nil
