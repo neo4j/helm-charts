@@ -1,10 +1,9 @@
 {{- with .Values.data }}
-{{- if or .gcePersistentDisk .storageClassName -}}
 kind: "PersistentVolume"
 apiVersion: "v1"
 metadata:
   # n.b. persistent volumes don't seem to belong to namespaces
-  name: "{{ $.Release.Name }}"
+  name: "{{ $.Release.Name }}-pv"
   labels:
     # the app name is used to link this persistent volume to the Neo4j StatefulSet
     app: "{{ template "neo4j.appName" $ }}"
@@ -14,27 +13,29 @@ spec:
     - ReadWriteOnce
   capacity:
     storage: "{{ required "data.capacity.storage must be set explicitly" .capacity.storage }}"
-  gcePersistentDisk:
-    pdName: "{{ required "data.gcePersistentDisk is required (e.g. my-disk)" .gcePersistentDisk }}"
+  csi:
+    driver: "{{ required "data.driver is required (e.g. my-disk)" .driver }}"
+    volumeHandle: "{{ required "data.volumeHandle is required (e.g. my-disk)" .volumeHandle }}"
+    fsType: "{{ .fsType }}"
+  claimRef:
+    name: "{{ $.Release.Name }}-pvc"
+    namespace: {{ $.Release.Namespace }}
   persistentVolumeReclaimPolicy: Retain
   storageClassName: "{{ .storageClassName }}"
-{{- if .createPersistentVolumeClaim}}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: "{{ $.Release.Name }}"
+  name: "{{ $.Release.Name }}-pvc"
   labels:
     helm.neo4j.com/volume-role: "data"
     app: "{{ template "neo4j.appName" $ }}"
 spec:
   storageClassName: "{{ .storageClassName }}"
-  volumeName: "{{ $.Release.Name }}"
+  volumeName: "{{ $.Release.Name }}-pv"
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
       storage: "{{ required "data.capacity.storage must be set explicitly" .capacity.storage }}"
-{{- end }}
-{{- end }}
 {{- end }}

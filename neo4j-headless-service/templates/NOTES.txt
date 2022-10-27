@@ -25,6 +25,6 @@ You have updated {{ .Chart.Name }} in namespace "{{ .Release.Namespace }}".
 Once rollout is complete you can connect to your Neo4j cluster using "neo4j://{{ .Release.Name }}-neo4j.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:{{ $boltPort }}". Try:
 
   $ kubectl run --rm -it{{ template "neo4j.namespaceParameter" . }} --image "{{ template "neo4j.image" . }}" cypher-shell \
-     -- cypher-shell -a "neo4j://{{ .Release.Name }}-neo4j.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:{{ $boltPort }}"{{ if not $authDisabled | and .Values.neo4j.password |and .Values.logInitialPassword}} -u neo4j -p "{{ template "neo4j.logPassword" . }}"{{ end }}
+     -- cypher-shell -a "neo4j://{{ template "neo4j.name" . }}-headless.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:{{ $boltPort }}"{{ if not $authDisabled | and .Values.neo4j.password |and .Values.logInitialPassword}} -u neo4j -p "{{ template "neo4j.logPassword" . }}"{{ end }}
 
 Graphs are everywhere!

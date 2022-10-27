@@ -84,7 +84,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 
 	t.Logf("Succeeded with setup of '%s'", t.Name())
 
-	subTests, err := clusterTests(core1.Name())
+	subTests, err := clusterTests(clusterReleaseName)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -100,10 +100,7 @@ func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
 		t.Skip()
 		return
 	}
-
-	//if we make this in parallel with the other cluster tests , it will fail
-	// we need to wait for this cluster test to complete so that the other cluster test can complete
-	//t.Parallel()
+	t.Parallel()
 
 	var closeables []Closeable
 	addCloseable := func(closeableList ...Closeable) {
@@ -167,13 +164,13 @@ func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
 
 func clusterTestCleanup(t *testing.T, clusterReleaseName model.ReleaseName, core1 clusterCore, core2 clusterCore, core3 clusterCore) func() {
 	return func() {
-		runAll(t, "helm", [][]string{
+		_ = runAll(t, "helm", [][]string{
 			{"uninstall", core1.name.String(), "--wait", "--timeout", "1m", "--namespace", string(clusterReleaseName.Namespace())},
 			{"uninstall", core2.name.String(), "--wait", "--timeout", "1m", "--namespace", string(clusterReleaseName.Namespace())},
 			{"uninstall", core3.name.String(), "--wait", "--timeout", "1m", "--namespace", string(clusterReleaseName.Namespace())},
 			{"uninstall", clusterReleaseName.String() + "-headless", "--wait", "--timeout", "1m", "--namespace", string(clusterReleaseName.Namespace())},
 		}, false)
-		runAll(t, "kubectl", [][]string{
+		_ = runAll(t, "kubectl", [][]string{
 			{"delete", "pvc", fmt.Sprintf("%s-pvc", core1.name.String()), "--namespace", string(clusterReleaseName.Namespace()), "--ignore-not-found"},
 			{"delete", "pvc", fmt.Sprintf("%s-pvc", core2.name.String()), "--namespace", string(clusterReleaseName.Namespace()), "--ignore-not-found"},
 			{"delete", "pvc", fmt.Sprintf("%s-pvc", core3.name.String()), "--namespace", string(clusterReleaseName.Namespace()), "--ignore-not-found"},
@@ -181,12 +178,12 @@ func clusterTestCleanup(t *testing.T, clusterReleaseName model.ReleaseName, core
 			{"delete", "pv", fmt.Sprintf("%s-pv", core2.name.String()), "--ignore-not-found"},
 			{"delete", "pv", fmt.Sprintf("%s-pv", core3.name.String()), "--ignore-not-found"},
 		}, false)
-		runAll(t, "gcloud", [][]string{
+		_ = runAll(t, "gcloud", [][]string{
 			{"compute", "disks", "delete", fmt.Sprintf("neo4j-data-disk-%s", core1.name), "--zone=" + string(gcloud.CurrentZone()), "--project=" + string(gcloud.CurrentProject())},
 			{"compute", "disks", "delete", fmt.Sprintf("neo4j-data-disk-%s", core2.name), "--zone=" + string(gcloud.CurrentZone()), "--project=" + string(gcloud.CurrentProject())},
 			{"compute", "disks", "delete", fmt.Sprintf("neo4j-data-disk-%s", core3.name), "--zone=" + string(gcloud.CurrentZone()), "--project=" + string(gcloud.CurrentProject())},
 		}, false)
-		runAll(t, "kubectl", [][]string{
+		_ = runAll(t, "kubectl", [][]string{
 			{"delete", "namespace", string(clusterReleaseName.Namespace()), "--ignore-not-found", "--force", "--grace-period=0"},
 			{"delete", "priorityClass", "high-priority", "--force", "--grace-period=0"},
 		}, false)
