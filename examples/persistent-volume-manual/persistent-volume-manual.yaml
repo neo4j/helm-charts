@@ -1,0 +1,8 @@
+neo4j:
+  name: volume-manual
+volumes:
+  data:
+    mode: volume
+    volume:
+      persistentVolumeClaim:
+        claimName: volume-manual-disk-pvc

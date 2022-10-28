@@ -1,0 +1,23 @@
+neo4j:
+  name: multicluster
+  minimumClusterSize: 3
+  acceptLicenseAgreement: "yes"
+  edition: enterprise
+volumes:
+  data:
+    mode: defaultStorageClass
+services:
+  neo4j:
+    annotations:
+      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+    spec:
+      loadBalancerIP: 10.30.3.101
+    multiCluster: true
+config:
+  dbms.cluster.discovery.type: LIST
+  dbms.cluster.discovery.endpoints: "10.30.1.101:5000, 10.30.2.101:5000, 10.30.3.101:5000"
+  server.discovery.advertised_address: "10.30.3.101:5000"
+  server.cluster.advertised_address: "10.30.3.101:6000"
+  server.cluster.raft.advertised_address: "10.30.3.101:7000"
+  server.bolt.advertised_address: "10.30.3.101:7687"
+  server.routing.advertised_address: "10.30.3.101:7688"

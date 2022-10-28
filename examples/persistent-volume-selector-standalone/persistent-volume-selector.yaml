@@ -1,0 +1,11 @@
+neo4j:
+  name: volume-selector
+volumes:
+  data:
+    mode: selector
+    selector:
+      storageClassName: "manual"
+      accessModes:
+        - ReadWriteOnce
+      requests:
+        storage: 10Gi

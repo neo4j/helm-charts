@@ -17,11 +17,12 @@ spec:
     driver: "{{ required "data.driver is required (e.g. my-disk)" .driver }}"
     volumeHandle: "{{ required "data.volumeHandle is required (e.g. my-disk)" .volumeHandle }}"
     fsType: "{{ .fsType }}"
+  persistentVolumeReclaimPolicy: "{{ .reclaimPolicy }}"
+  storageClassName: "{{ .storageClassName }}"
+{{- if .createPvc}}
   claimRef:
     name: "{{ $.Release.Name }}-pvc"
     namespace: {{ $.Release.Namespace }}
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: "{{ .storageClassName }}"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -38,4 +39,18 @@ spec:
   resources:
     requests:
       storage: "{{ required "data.capacity.storage must be set explicitly" .capacity.storage }}"
+{{- end }}
+{{- if .createStorageClass}}
+    {{- $storageClass := (lookup "storage.k8s.io/v1" "StorageClass" $.Release.Namespace $.Values.data.storageClassName) }}
+    {{- if not $storageClass }}
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: manual
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+
+{{- end }}
+{{- end }}
 {{- end }}

@@ -1,0 +1,14 @@
+neo4j:
+  name: volume-selector
+  minimumClusterSize: 3
+  acceptLicenseAgreement: "yes"
+  edition: enterprise
+volumes:
+  data:
+    mode: selector
+    selector:
+      storageClassName: "manual"
+      accessModes:
+        - ReadWriteOnce
+      requests:
+        storage: 10Gi
