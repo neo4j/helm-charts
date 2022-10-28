@@ -2,7 +2,11 @@
 {{/*
 Convert a neo4j.conf properties text into valid yaml
 */}}
-
+{{- template "neo4j.checkLicenseAgreement" . -}}
+{{- template "neo4j.checkNodeSelectorLabels" . -}}
+{{- template "podSpec.checkLoadBalancerParam" . -}}
+{{- template "neo4j.volumes.validation" . -}}
+{{- template "neo4j.checkResources" . -}}
 {{- define "neo4j.configYaml" -}}
   {{- regexReplaceAll "(?m)^([^=]*?)=" ( regexReplaceAllLiteral "\\s*(#|dbms\\.jvm\\.additional).*" . "" )  "${1}: " | trim | replace ": true\n" ": 'true'\n" | replace ": true" ": 'true'\n" | replace ": false\n" ": 'false'\n" | replace ": false" ": 'false'\n"  | replace ": yes\n" ": 'yes'\n" | replace ": yes" ": 'yes'\n" | replace ": no" ": 'no'\n" | replace ": no\n" ": 'no'\n" }}
 {{- end -}}

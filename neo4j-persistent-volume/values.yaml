@@ -27,8 +27,11 @@ data:
     storage: ""
 
   # storageClassName to attach to the PersistentVolume in K8s. Can be set to empty string.
-  storageClassName: ""
+  storageClassName: "manual"
   fsType: "ext4"
+  createPvc: true
+  createStorageClass: false
+  reclaimPolicy: Retain
 
 
 # Neo4j ops volume (a Google Cloud Filestore File Share)

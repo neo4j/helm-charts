@@ -1,0 +1,12 @@
+neo4j:
+  name: neo4j-volume-claim-template
+volumes:
+  data:
+    mode: volumeClaimTemplate
+    volumeClaimTemplate:
+      storageClassName: "premium-rwo"
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
