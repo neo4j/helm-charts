@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 readonly AKS_GROUP=multiClusterGroup
+
 cleanup() {
     az aks delete -y --name clusterone -g ${AKS_GROUP}
     az aks delete -y --name clustertwo -g ${AKS_GROUP}
