@@ -1,9 +1,9 @@
 # Example - Install Neo4j Cluster using manually created disks and a Persistent Volume selector
 
-This example uses manually provisioned cloud disks for the Neo4j storage volumes.
-The `neo4j-persistent-volume` chart is used to configure a PV and storage class for the disk.
-The `neo4j` chart then configures the statefulset to use a selector based volume claim template. 
-A PVC will be dynamically provisioned using the created PV.
+This example uses manually provisioned cloud disks for the Neo4j storage volumes and installs a Neo4j 3 server cluster.
+The `neo4j-persistent-volume` chart is used to configure 3 persistent volumes for each disk and manual storage class.
+The `neo4j` chart then configures the StatefulSet to use a selector based volume claim template. 
+A PVC will be dynamically provisioned for each PV.
 
 ## Install in AWS
 ```shell
