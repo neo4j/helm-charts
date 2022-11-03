@@ -84,7 +84,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 
 	t.Logf("Succeeded with setup of '%s'", t.Name())
 
-	subTests, err := clusterTests(clusterReleaseName)
+	subTests, err := clusterTests(core1.Name())
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -165,9 +165,7 @@ func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
 func clusterTestCleanup(t *testing.T, clusterReleaseName model.ReleaseName, core1 clusterCore, core2 clusterCore, core3 clusterCore) func() {
 	return func() {
 		_ = runAll(t, "helm", [][]string{
-			{"uninstall", core1.name.String(), "--wait", "--timeout", "1m", "--namespace", string(clusterReleaseName.Namespace())},
-			{"uninstall", core2.name.String(), "--wait", "--timeout", "1m", "--namespace", string(clusterReleaseName.Namespace())},
-			{"uninstall", core3.name.String(), "--wait", "--timeout", "1m", "--namespace", string(clusterReleaseName.Namespace())},
+			{"uninstall", core1.name.String(), core2.name.String(), core3.name.String(), "--wait", "--timeout", "3m", "--namespace", string(clusterReleaseName.Namespace())},
 			{"uninstall", clusterReleaseName.String() + "-headless", "--wait", "--timeout", "1m", "--namespace", string(clusterReleaseName.Namespace())},
 		}, false)
 		_ = runAll(t, "kubectl", [][]string{

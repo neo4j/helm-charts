@@ -65,7 +65,10 @@ func CheckProbes(t *testing.T, releaseName model.ReleaseName) error {
 	podsReadiness := "neo4j_ReadinessProbe"
 
 	for start := time.Now(); time.Since(start) < 60*time.Second; {
-		pods, err := Clientset.CoreV1().Pods(string(releaseName.Namespace())).List(context.TODO(), v1.ListOptions{})
+		options := v1.ListOptions{
+			LabelSelector: fmt.Sprintf("helm.neo4j.com/instance=%s", releaseName.String()),
+		}
+		pods, err := Clientset.CoreV1().Pods(string(releaseName.Namespace())).List(context.TODO(), options)
 		if err != nil {
 			return fmt.Errorf("Failed to get Pods options: %v", err)
 		}
@@ -111,7 +114,7 @@ func CheckServiceAnnotations(t *testing.T, releaseName model.ReleaseName, chart 
 	// when we add annotations via helm
 	err = runAll(t, "helm", [][]string{
 		model.BaseHelmCommand("upgrade", releaseName, chart, model.Neo4jEdition,
-			"--set", "services.neo4j.annotations.foo=bar", "--set", "services.admin.annotations.foo=bar",
+			"--set", "services.admin.annotations.foo=bar",
 			"--set", "services.default.annotations.foo=bar", "--set", "neo4j.name="+model.DefaultNeo4jName),
 	}, true)
 	if err != nil {
@@ -127,7 +130,9 @@ func CheckServiceAnnotations(t *testing.T, releaseName model.ReleaseName, chart 
 	assert.Equal(t, 3, len(services.Items))
 
 	for _, service := range services.Items {
-		assert.Equal(t, "bar", getOurAnnotations(service)["foo"])
+		if service.Name != fmt.Sprintf("%s-lb-neo4j", model.DefaultNeo4jName) {
+			assert.Equal(t, "bar", getOurAnnotations(service)["foo"])
+		}
 	}
 	return err
 }
@@ -137,6 +142,7 @@ func getOurAnnotations(service coreV1.Service) map[string]string {
 	prefixesToIgnore := []string{
 		"cloud.google.com/",
 		"meta.helm.sh/",
+		"helm.sh/",
 	}
 	for key, value := range service.Annotations {
 		if !matchesAnyPrefix(prefixesToIgnore, key) {
@@ -237,7 +243,10 @@ func getSpecificSecret(namespace model.Namespace, secretName string) (*coreV1.Se
 }
 
 func RunAsNonRoot(t *testing.T, releaseName model.ReleaseName) error {
-	pods, err := Clientset.CoreV1().Pods(string(releaseName.Namespace())).List(context.TODO(), v1.ListOptions{})
+	options := v1.ListOptions{
+		LabelSelector: fmt.Sprintf("helm.neo4j.com/instance=%s", releaseName.String()),
+	}
+	pods, err := Clientset.CoreV1().Pods(string(releaseName.Namespace())).List(context.TODO(), options)
 	if err != nil {
 		return fmt.Errorf("Failed to get Pods options: %v", err)
 	}

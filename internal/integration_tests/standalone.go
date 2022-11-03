@@ -368,8 +368,8 @@ func createPersistentVolume(name *model.PersistentDiskName, zone gcloud.Zone, pr
 					FSType:       "ext4",
 				},
 			},
-			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
-			//PersistentVolumeReclaimPolicy: v1.PersistentVolumeReclaimDelete,
+			AccessModes:                   []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
+			PersistentVolumeReclaimPolicy: v1.PersistentVolumeReclaimDelete,
 			ClaimRef: &v1.ObjectReference{
 				Kind:       "PersistentVolumeClaim",
 				Namespace:  string(release.Namespace()),

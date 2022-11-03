@@ -3,6 +3,11 @@
 {{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "" | regexMatch "(?i)no|false" -}}
 {{- $offlineMaintenanceEnabled :=  .Values.neo4j.offlineMaintenanceModeEnabled }}
 {{- $neo4jImage := include "neo4j.image" . }}
+{{- template "neo4j.volumes.validation" . -}}
+{{- template "neo4j.checkNodeSelectorLabels" . -}}
+{{- template "neo4j.checkLicenseAgreement" . -}}
+{{- template "podSpec.checkLoadBalancerParam" . -}}
+{{- template "neo4j.checkResources" . -}}
 
 apiVersion: apps/v1
 kind: StatefulSet

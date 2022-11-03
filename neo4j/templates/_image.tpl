@@ -25,3 +25,20 @@
 {{- end -}}
 {{ $image }}
 {{- end -}}
+
+{{- define "cleanup.image" -}}
+{{- with .Values.services.neo4j.cleanup.image -}}
+    {{- $registryName := .registry -}}
+    {{- $repositoryName := .repository -}}
+    {{- $separator := ":" -}}
+    {{- $termination := printf "%s.%s" $.Capabilities.KubeVersion.Major $.Capabilities.KubeVersion.Minor -}}
+    {{- if not (empty (.tag | trim)) -}}
+        {{- $termination := .tag | toString -}}
+    {{- end -}}
+    {{- if .digest }}
+        {{- $separator = "@" -}}
+        {{- $termination = .digest | toString -}}
+    {{- end -}}
+    {{- printf "%s/%s%s%s" $registryName $repositoryName $separator $termination -}}
+{{- end -}}
+{{- end -}}

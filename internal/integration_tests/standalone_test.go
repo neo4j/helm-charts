@@ -39,7 +39,7 @@ func TestInstallStandaloneOnGCloudK8s(t *testing.T) {
 func standaloneCleanup(t *testing.T, releaseName model.ReleaseName) func() {
 	return func() {
 		_ = runAll(t, "helm", [][]string{
-			{"uninstall", releaseName.String(), "--wait", "--timeout", "1m", "--namespace", string(releaseName.Namespace())},
+			{"uninstall", releaseName.String(), "--wait", "--timeout", "3m", "--namespace", string(releaseName.Namespace())},
 		}, false)
 		_ = runAll(t, "kubectl", [][]string{
 			{"delete", "pvc", fmt.Sprintf("%s-pvc", releaseName.String()), "--namespace", string(releaseName.Namespace()), "--ignore-not-found"},

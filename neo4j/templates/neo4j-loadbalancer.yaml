@@ -18,7 +18,7 @@
   {{- end -}}
 {{- end -}}
 
-{{- if and (or (not $loadBalancerExists) (.Release.IsUpgrade)) ($isEnterprise) ($isLoadBalancerEnabled) -}}
+{{- if and (not $loadBalancerExists) ($isEnterprise) ($isLoadBalancerEnabled) -}}
 {{- $defaultSpec := include "neo4j.services.neo4j.defaultSpec" . | fromYaml }}
 {{- $spec := get $defaultSpec .Values.services.neo4j.spec.type | merge .Values.services.neo4j.spec  }}
 # Service for applications that need access to neo4j
@@ -32,8 +32,10 @@ metadata:
     app: "{{ template "neo4j.name" . }}"
     helm.neo4j.com/service: "neo4j"
     {{- include "neo4j.labels" .Values.neo4j | indent 4 }}
-  {{- with .Values.services.neo4j.annotations }}
-  annotations: {{ toYaml . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+  {{- range $key, $value := .Values.services.neo4j.annotations }}
+    {{ $key }}: {{ $value | quote }}
   {{- end }}
 spec:
   {{- if $.Values.services.neo4j.multiCluster }}
