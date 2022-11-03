@@ -159,8 +159,7 @@ services:
     enabled: true
 
     # Annotations for the K8s Service object
-    annotations: { }
-
+    annotations: {}
     spec:
       # Type of service.
       type: LoadBalancer
@@ -198,6 +197,21 @@ services:
 
     #this flag allows you to open internal neo4j ports necessary in multi zone /region neo4j cluster scenario
     multiCluster: false
+
+    # The neo4j LoadBalancer service is shared between all servers in the cluster. Because of this, the `helm.sh/resource-policy: keep`
+    # annotation is used to avoid helm ownership conflicts when another release attempts to update the service.
+    # To prevent the service being orphaned when uninstalling a release, a pre-delete helm hook is provided by the template `delete-loadbalancer-hook.yaml`
+    # This is enabled by default, and will create a Job, Service Account, Role and Role Binding that will run a kubectl image and delete the service
+    # If enabled: is set to false, the LoadBalancer will be orphaned and will have to manually deleted post uninstall and the hook job will not be created
+    cleanup:
+      enabled: true
+      image:
+        registry: docker.io
+        repository: bitnami/kubectl
+        # Will default to use the Kubernetes server version where the chart is deployed, eg 1.22
+        tag: ""
+        digest: ""
+        imagePullPolicy: IfNotPresent
 
   # A service for admin/ops tasks including taking backups
   # This service is available even if the deployment is not "ready"

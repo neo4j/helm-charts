@@ -2,11 +2,6 @@
 {{/*
 Convert a neo4j.conf properties text into valid yaml
 */}}
-{{- template "neo4j.checkLicenseAgreement" . -}}
-{{- template "neo4j.checkNodeSelectorLabels" . -}}
-{{- template "podSpec.checkLoadBalancerParam" . -}}
-{{- template "neo4j.volumes.validation" . -}}
-{{- template "neo4j.checkResources" . -}}
 {{- define "neo4j.configYaml" -}}
   {{- regexReplaceAll "(?m)^([^=]*?)=" ( regexReplaceAllLiteral "\\s*(#|dbms\\.jvm\\.additional).*" . "" )  "${1}: " | trim | replace ": true\n" ": 'true'\n" | replace ": true" ": 'true'\n" | replace ": false\n" ": 'false'\n" | replace ": false" ": 'false'\n"  | replace ": yes\n" ": 'yes'\n" | replace ": yes" ": 'yes'\n" | replace ": no" ": 'no'\n" | replace ": no\n" ": 'no'\n" }}
 {{- end -}}
@@ -142,13 +137,9 @@ E.g. by adding `--set podSpec.loadbalancer=include`
 {{ end -}}
 
 {{- define "neo4j.checkResources" -}}
-
     {{- template "neo4j.resources.checkForEmptyResources" . -}}
-
     {{- template "neo4j.resources.evaluateCPU" . -}}
-
     {{- template "neo4j.resources.evaluateMemory" . -}}
-
 {{- end -}}
 
 {{/* checks if the resources are empty or not */}}
@@ -236,8 +227,6 @@ E.g. by adding `--set podSpec.loadbalancer=include`
 
 
 {{- define "neo4j.resources.evaluateMemory" -}}
-
-
     {{/* check regex here :- https://regex101.com/r/68NEQV/1 */}}
     {{ $memoryRegex := "(^\\d+)((\\.?[^\\.a-zA-Z\\s])?)(\\d*)(([EkMGTP]?|[EKMGTP]i?|e[+-]?\\d*[EKMGTP]?)$)" -}}
 
@@ -286,9 +275,8 @@ E.g. by adding `--set podSpec.loadbalancer=include`
         {{ $memoryFloat = divf ($memory | float64) 1000000000 -}}
     {{- end -}}
 
-
     {{- if lt $memoryFloat 2.0 }}
-        {{ fail (printf "Provided memory value %s is less than minimum. \n %s" $memoryOrig (include "neo4j.resources.invalidMemoryMessage" .)) }}
+        {{ fail (printf "Provided memory value %s is less than minimum. \n %s" $memoryOrig "Please set memory to be a minimum of 2Gi or 2G via --set neo4j.resources.memory=2Gi or --set neo4j.resources.memory=2G") }}
     {{- end -}}
 
 {{- end -}}

@@ -6,7 +6,7 @@ import (
 )
 
 func ResourcesCleanup(t *testing.T, releaseName model.ReleaseName) error {
-	return run(t, "helm", "uninstall", releaseName.String(), "--namespace", string(releaseName.Namespace()), "--wait", "--timeout=2m")
+	return run(t, "helm", "uninstall", releaseName.String(), "--namespace", string(releaseName.Namespace()), "--wait", "--timeout=3m")
 }
 
 func ResourcesReinstall(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChartBuilder) error {
