@@ -25,7 +25,7 @@ func volumesTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) []S
 }
 
 func checkApoc(t *testing.T, releaseName model.ReleaseName) error {
-	results, err := runQuery(t, releaseName, "CALL apoc.help('apoc')", nil, false)
+	results, err := runQuery(t, releaseName, "CALL apoc.help('apoc')", nil, model.Neo4jEdition == "community")
 	if !assert.NoError(t, err) {
 		return err
 	}
@@ -52,9 +52,10 @@ func checkVolumes(t *testing.T, releaseName model.ReleaseName) error {
 		"/logs",
 		"/data",
 		"/backups",
-		"/metrics",
 	}
-
+	if model.Neo4jEdition == "enterprise" {
+		volumePathsThatShouldContainFiles = append(volumePathsThatShouldContainFiles, "/metrics")
+	}
 	volumePathsThatShouldExist := append(
 		volumePathsThatShouldContainFiles,
 		"/licenses",
