@@ -104,7 +104,14 @@ func CheckServiceAnnotations(t *testing.T, releaseName model.ReleaseName, chart 
 	if err != nil {
 		return err
 	}
-	assert.Equal(t, 3, len(services.Items))
+	var expectedServiceCount int
+	if model.Neo4jEdition == "community" {
+		expectedServiceCount = 2
+	} else {
+		expectedServiceCount = 3
+	}
+
+	assert.Equal(t, expectedServiceCount, len(services.Items))
 
 	// by default they should have no annotations
 	for _, service := range services.Items {
@@ -127,7 +134,7 @@ func CheckServiceAnnotations(t *testing.T, releaseName model.ReleaseName, chart 
 		return err
 	}
 
-	assert.Equal(t, 3, len(services.Items))
+	assert.Equal(t, expectedServiceCount, len(services.Items))
 
 	for _, service := range services.Items {
 		if service.Name != fmt.Sprintf("%s-lb-neo4j", model.DefaultNeo4jName) {

@@ -32,11 +32,12 @@ func checkNeo4jConfiguration(t *testing.T, releaseName model.ReleaseName, expect
 		"server.https.enabled":           "true",
 		"server.bolt.tls_level":          "REQUIRED",
 		"server.directories.logs":        "/logs",
-		"server.directories.metrics":     "/metrics",
 		"server.directories.import":      "/import",
 		"server.panic.shutdown_on_panic": "true",
 	}
-
+	if model.Neo4jEdition == "enterprise" {
+		expectedOverrides["server.directories.metrics"] = "/metrics"
+	}
 	deadline := time.Now().Add(3 * time.Minute)
 	for true {
 		if !time.Now().Before(deadline) {
@@ -44,7 +45,7 @@ func checkNeo4jConfiguration(t *testing.T, releaseName model.ReleaseName, expect
 			t.Error(msg)
 			return errors.New(msg)
 		}
-		runtimeConfig, err = runQuery(t, releaseName, "CALL dbms.listConfig() YIELD name, value", nil, false)
+		runtimeConfig, err = runQuery(t, releaseName, "CALL dbms.listConfig() YIELD name, value", nil, model.Neo4jEdition == "community")
 		if err != nil {
 			return err
 		}
@@ -85,7 +86,7 @@ func createNode(t *testing.T, releaseName model.ReleaseName) error {
 		"id":   1,
 		"name": "Item 1",
 	},
-		false)
+		model.Neo4jEdition == "community")
 	if _, found := createdNodes[releaseName]; !found {
 		var initialValue int64 = 0
 		createdNodes[releaseName] = &initialValue
@@ -149,7 +150,7 @@ func checkApocConfig(t *testing.T, releaseName model.ReleaseName) error {
 
 // checkNodeCount runs the cypher query to get the number of nodes on a cluster core
 func checkNodeCount(t *testing.T, releaseName model.ReleaseName) error {
-	result, err := runQuery(t, releaseName, "MATCH (n) RETURN COUNT(n) AS count", noParams, false)
+	result, err := runQuery(t, releaseName, "MATCH (n) RETURN COUNT(n) AS count", noParams, model.Neo4jEdition == "community")
 
 	if err != nil {
 		return err
