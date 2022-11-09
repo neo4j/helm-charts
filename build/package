@@ -33,9 +33,7 @@ HELM_CHARTS_LIST=("neo4j-standalone" "neo4j-cluster-core" "neo4j-cluster-read-re
 
 for chart in "${HELM_CHARTS_LIST[@]}"
 do
-  echo "Performing helm dep update and helm package on ${chart} chart !!"
-  ##perform helm dependency updates
-  helm dependency update "${chart}"
+  echo "Performing helm package on ${chart} chart !!"
   ## create the package!
   echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./"${chart}" --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
 done
