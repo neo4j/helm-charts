@@ -1,14 +1,13 @@
 {{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
-{{- $clusterEnabled := or ( index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" ) ( index .Values.config "dbms.clustering.enable" | default "" | regexMatch "(?i)true|yes" ) }}
+{{- $clusterEnabled := or ( index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" ) ( index .Values.config "dbms.clustering.enable" | default "" | regexMatch "(?i)true|yes" ) -}}
 {{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "" | regexMatch "(?i)no|false" -}}
-{{- $offlineMaintenanceEnabled :=  .Values.neo4j.offlineMaintenanceModeEnabled }}
-{{- $neo4jImage := include "neo4j.image" . }}
-
+{{- $offlineMaintenanceEnabled :=  .Values.neo4j.offlineMaintenanceModeEnabled -}}
+{{- $neo4jImage := include "neo4j.image" . -}}
 {{- template "neo4j.checkNodeSelectorLabels" . -}}
 {{- template "podSpec.checkLoadBalancerParam" . -}}
 {{- template "neo4j.checkLicenseAgreement" . -}}
 {{- template "neo4j.volumes.validation" . -}}
-{{- template "neo4j.checkResources" . -}}
+{{- template "neo4j.checkResources" . }}
 
 apiVersion: apps/v1
 kind: StatefulSet
