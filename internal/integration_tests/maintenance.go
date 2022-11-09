@@ -41,9 +41,8 @@ func checkMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart mod
 }
 
 func exitMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart, extraArgs ...string) error {
-	diskName := releaseName.DiskName()
 	err := run(
-		t, "helm", model.BaseHelmCommand("upgrade", releaseName, chart, model.Neo4jEdition, &diskName,
+		t, "helm", model.BaseHelmCommand("upgrade", releaseName, chart, model.Neo4jEdition,
 			append(extraArgs, "--set", "neo4j.offlineMaintenanceModeEnabled=false", "--wait", "--timeout", "300s")...,
 		)...,
 	)
@@ -59,8 +58,7 @@ func exitMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart mode
 }
 
 func enterMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart) error {
-	diskName := releaseName.DiskName()
-	err := run(t, "helm", model.BaseHelmCommand("upgrade", releaseName, chart, model.Neo4jEdition, &diskName, "--set", "neo4j.offlineMaintenanceModeEnabled=true")...)
+	err := run(t, "helm", model.BaseHelmCommand("upgrade", releaseName, chart, model.Neo4jEdition, "--set", "neo4j.offlineMaintenanceModeEnabled=true")...)
 
 	if !assert.NoError(t, err) {
 		return err

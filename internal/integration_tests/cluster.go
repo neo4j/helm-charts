@@ -295,7 +295,6 @@ func checkClusterCorePasswordFailure(t *testing.T) error {
 	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
 	core := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 4), nil}
 	releaseName := core.Name()
-	diskName := releaseName.DiskName()
 	// we are not using the customized run() func here since we need to assert the error received on stdout
 	//(present in out variable and not in err)
 	out, err := exec.Command(
@@ -305,7 +304,6 @@ func checkClusterCorePasswordFailure(t *testing.T) error {
 			releaseName,
 			model.ClusterCoreHelmChart,
 			model.Neo4jEdition,
-			&diskName,
 			"--set", "neo4j.password=my-password")...).CombinedOutput()
 	if !assert.Error(t, err) {
 		return fmt.Errorf("helm install should fail without the default password")

@@ -245,7 +245,6 @@ func checkNodeCount(t *testing.T, releaseName model.ReleaseName) error {
 // updateReadReplicaConfig updates the read replica upstream strategy on the provided chart
 func updateReadReplicaConfig(t *testing.T, releaseName model.ReleaseName, extraArgs ...string) error {
 
-	diskName := releaseName.DiskName()
 	err := run(
 		t,
 		"helm",
@@ -254,7 +253,6 @@ func updateReadReplicaConfig(t *testing.T, releaseName model.ReleaseName, extraA
 			releaseName,
 			model.ClusterReadReplicaHelmChart,
 			model.Neo4jEdition,
-			&diskName,
 			append(extraArgs, "--wait", "--timeout", "300s")...,
 		)...,
 	)
