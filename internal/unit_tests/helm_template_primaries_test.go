@@ -370,8 +370,7 @@ func TestBaseHelmTemplate(t *testing.T) {
 	t.Parallel()
 
 	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
-		diskName := model.DefaultHelmTemplateReleaseName.DiskName()
-		_, err := model.RunHelmCommand(t, model.BaseHelmCommand("template", &model.DefaultHelmTemplateReleaseName, chart, edition, &diskName))
+		_, err := model.RunHelmCommand(t, model.BaseHelmCommand("template", &model.DefaultHelmTemplateReleaseName, chart, edition))
 		if !assert.NoError(t, err) {
 			return
 		}

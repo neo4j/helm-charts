@@ -3,6 +3,7 @@ package integration_tests
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -16,6 +17,9 @@ import (
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/stretchr/testify/assert"
 	"io"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -165,7 +169,7 @@ func kCreateSecret(namespace model.Namespace) ([][]string, Closeable, error) {
 
 func helmCleanupCommands(releaseName model.ReleaseName) [][]string {
 	return [][]string{
-		{"uninstall", releaseName.String(), "--namespace", string(releaseName.Namespace())},
+		{"uninstall", releaseName.String(), "--wait", "--timeout", "2m", "--namespace", string(releaseName.Namespace())},
 	}
 }
 
@@ -321,10 +325,11 @@ func InstallNeo4jInGcloud(t *testing.T, zone gcloud.Zone, project gcloud.Project
 	}()
 
 	cleanupGcloud, diskName, err := gcloud.InstallGcloud(t, zone, project, releaseName)
-	addCloseable(cleanupGcloud)
+	createPersistentVolume(diskName, zone, project, releaseName)
 	if err != nil {
 		return AsCloseable(closeables), err
 	}
+	addCloseable(cleanupGcloud)
 
 	addCloseable(func() error { return runAll(t, "helm", helmCleanupCommands(releaseName), false) })
 	// delete the statefulset like this otherwise the pods will hang around for their termination grace period
@@ -332,9 +337,12 @@ func InstallNeo4jInGcloud(t *testing.T, zone gcloud.Zone, project gcloud.Project
 		return runAll(t, "kubectl", [][]string{
 			{"delete", "statefulset", releaseName.String(), "--namespace", string(releaseName.Namespace()), "--grace-period=0", "--force", "--ignore-not-found"},
 			{"delete", "pod", releaseName.PodName(), "--namespace", string(releaseName.Namespace()), "--grace-period=0", "--wait", "--timeout=120s", "--ignore-not-found"},
+			{"delete", "pvc", fmt.Sprintf("%s-pvc", releaseName.String()), "--grace-period=0", "--wait", "--timeout=120s", "--ignore-not-found"},
+			{"delete", "pv", fmt.Sprintf("%s-pv", releaseName.String()), "--grace-period=0", "--wait", "--timeout=10s", "--ignore-not-found"},
 		}, false)
 	})
-	err = run(t, "helm", model.BaseHelmCommand("install", releaseName, chart, model.Neo4jEdition, diskName, extraHelmInstallArgs...)...)
+	addCloseable(func() error { return runAll(t, "helm", helmCleanupCommands(releaseName), false) })
+	err = run(t, "helm", model.BaseHelmCommand("install", releaseName, chart, model.Neo4jEdition, extraHelmInstallArgs...)...)
 
 	if err != nil {
 		return AsCloseable(closeables), err
@@ -342,6 +350,56 @@ func InstallNeo4jInGcloud(t *testing.T, zone gcloud.Zone, project gcloud.Project
 
 	completed = true
 	return AsCloseable(closeables), err
+}
+
+func createPersistentVolume(name *model.PersistentDiskName, zone gcloud.Zone, project gcloud.Project, release model.ReleaseName) (*v1.PersistentVolumeClaim, error) {
+	pv := &v1.PersistentVolume{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-pv", release.String()),
+			Namespace: string(release.Namespace()),
+		},
+		Spec: v1.PersistentVolumeSpec{
+			Capacity: v1.ResourceList{
+				v1.ResourceStorage: *resource.NewQuantity(10*1024*1024*1024, resource.BinarySI),
+			},
+			PersistentVolumeSource: v1.PersistentVolumeSource{
+				CSI: &v1.CSIPersistentVolumeSource{
+					Driver:       "pd.csi.storage.gke.io",
+					VolumeHandle: fmt.Sprintf("projects/%s/zones/%s/disks/%s", project, zone, string(*name)),
+					FSType:       "ext4",
+				},
+			},
+			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
+			//PersistentVolumeReclaimPolicy: v1.PersistentVolumeReclaimDelete,
+			ClaimRef: &v1.ObjectReference{
+				Kind:       "PersistentVolumeClaim",
+				Namespace:  string(release.Namespace()),
+				Name:       fmt.Sprintf("%s-pvc", release.String()),
+				APIVersion: "v1",
+			},
+
+			StorageClassName: "",
+		},
+	}
+	pvc := &v1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-pvc", release.String()),
+			Namespace: string(release.Namespace()),
+		},
+		Spec: v1.PersistentVolumeClaimSpec{
+			AccessModes: pv.Spec.AccessModes,
+			Resources: v1.ResourceRequirements{
+				Requests: pv.Spec.Capacity,
+			},
+			VolumeName:       pv.Name,
+			StorageClassName: &pv.Spec.StorageClassName,
+		},
+	}
+	_, err := Clientset.CoreV1().PersistentVolumes().Create(context.TODO(), pv, metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return Clientset.CoreV1().PersistentVolumeClaims(string(release.Namespace())).Create(context.TODO(), pvc, metav1.CreateOptions{})
 }
 
 func prepareK8s(t *testing.T, releaseName model.ReleaseName) (Closeable, error) {
@@ -432,4 +490,22 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChart) ([]SubTest, er
 		{name: "Check RunAsNonRoot", test: func(t *testing.T) { assert.NoError(t, RunAsNonRoot(t, name), "RunAsNonRoot check should succeed") }},
 		{name: "Exec in Pod", test: func(t *testing.T) { assert.NoError(t, CheckExecInPod(t, name), "Exec in Pod should succeed") }},
 	}, err
+}
+
+func standaloneCleanup(t *testing.T, releaseName model.ReleaseName) func() {
+	return func() {
+		runAll(t, "helm", [][]string{
+			{"uninstall", releaseName.String(), "--wait", "--timeout", "1m", "--namespace", string(releaseName.Namespace())},
+		}, false)
+		runAll(t, "kubectl", [][]string{
+			{"delete", "pvc", fmt.Sprintf("%s-pvc", releaseName.String()), "--namespace", string(releaseName.Namespace()), "--ignore-not-found"},
+			{"delete", "pv", fmt.Sprintf("%s-pv", releaseName.String()), "--ignore-not-found"},
+		}, false)
+		runAll(t, "gcloud", [][]string{
+			{"compute", "disks", "delete", fmt.Sprintf("neo4j-data-disk-%s", releaseName), "--zone=" + string(gcloud.CurrentZone()), "--project=" + string(gcloud.CurrentProject())},
+		}, false)
+		runAll(t, "kubectl", [][]string{
+			{"delete", "namespace", string(releaseName.Namespace()), "--ignore-not-found", "--force", "--grace-period=0"},
+		}, false)
+	}
 }

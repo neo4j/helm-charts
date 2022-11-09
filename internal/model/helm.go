@@ -98,12 +98,13 @@ func minHelmCommand(helmCommand string, releaseName ReleaseName, chart HelmChart
 	return []string{helmCommand, releaseName.String(), chart.getPath(), "--namespace", string(releaseName.Namespace())}
 }
 
-func BaseHelmCommand(helmCommand string, releaseName ReleaseName, chart Neo4jHelmChart, edition string, diskName *PersistentDiskName, extraHelmArguments ...string) []string {
+func BaseHelmCommand(helmCommand string, releaseName ReleaseName, chart Neo4jHelmChart, edition string, extraHelmArguments ...string) []string {
 
 	var helmArgs = minHelmCommand(helmCommand, releaseName, chart)
 	helmArgs = append(helmArgs,
 		"--set", "volumes.data.mode=volume",
-		"--set", "volumes.data.volume.gcePersistentDisk.pdName="+string(*diskName),
+		"--set", "volumes.data.volume.persistentVolumeClaim.claimName="+fmt.Sprintf("%s-pvc", releaseName.String()),
+		//"--set", "volumes.data.volume.gcePersistentDisk.pdName="+string(*diskName),
 		"--set", "neo4j.password="+DefaultPassword,
 		"--set", "neo4j.resources.requests.cpu="+cpuRequests,
 		"--set", "neo4j.resources.requests.memory="+memoryRequests,
