@@ -35,6 +35,26 @@ entries:
         - https://github.com/neo4j/helm-charts/releases/download/5.1.0/neo4j-headless-service-5.1.0.tgz
       version: 5.1.0
   neo4j-standalone:
+    - created: 2022-11-10T09:29:54.740516000+00:00
+      description: Neo4j Standalone 4.4.13
+      digest: fd0a4812daee093584823fe6e139626cd10bf63e27420974c704a2c95389130c
+      home: https://github.com/neo4j/helm-charts
+      name: neo4j-standalone
+      sources:
+        - https://github.com/neo4j/helm-charts/tree/4.4/neo4j-standalone
+      urls:
+        - https://github.com/neo4j/helm-charts/releases/download/4.4.13/neo4j-standalone-4.4.13.tgz
+      version: 4.4.13
+    - created: 2022-11-10T09:29:54.740516000+00:00
+      description: Neo4j Standalone 4.4.12
+      digest: dcfe968f14dd7ec6d7126d6d371ece4c699ba1cb5fb363ef1393549e678b13e5
+      home: https://github.com/neo4j/helm-charts
+      name: neo4j-standalone
+      sources:
+        - https://github.com/neo4j/helm-charts/tree/4.4/neo4j-standalone
+      urls:
+        - https://github.com/neo4j/helm-charts/releases/download/4.4.12/neo4j-standalone-4.4.12.tgz
+      version: 4.4.12
     - created: 2022-08-10T15:50:18.517974000+01:00
       description: Neo4j Standalone 4.4.10
       digest: 286ff4688e4b98557d58276acd237ec228ebb2637245ac486fc0c04fdd565ee7
@@ -216,6 +236,26 @@ entries:
         - https://github.com/neo4j/helm-charts/releases/download/4.3.2/neo4j-standalone-4.3.2.tgz
       version: 4.3.2
   neo4j-cluster-core:
+    - created: 2022-11-10T09:31:21.733223000+00:00
+      description: Neo4j Cluster Core 4.4.13
+      digest: 5035ba1eae9d1a293caeaea446b78a4406b3db86cb870d8beb487f7a07bb7d0b
+      home: https://github.com/neo4j/helm-charts
+      name: neo4j-cluster-core
+      sources:
+        - https://github.com/neo4j/helm-charts/tree/4.4/neo4j-cluster-core
+      urls:
+        - https://github.com/neo4j/helm-charts/releases/download/4.4.13/neo4j-cluster-core-4.4.13.tgz
+      version: 4.4.13
+    - created: 2022-11-10T09:31:21.733223000+00:00
+      description: Neo4j Cluster Core 4.4.12
+      digest: 86a5c80a0f93cf4d65e9d9df7e7750f3f474ca5f2b55f6c69aaf495ee2f003e2
+      home: https://github.com/neo4j/helm-charts
+      name: neo4j-cluster-core
+      sources:
+        - https://github.com/neo4j/helm-charts/tree/4.4/neo4j-cluster-core
+      urls:
+        - https://github.com/neo4j/helm-charts/releases/download/4.4.12/neo4j-cluster-core-4.4.12.tgz
+      version: 4.4.12
     - created: 2022-08-10T15:51:09.048480000+01:00
       description: Neo4j Cluster Core 4.4.10
       digest: a04e417567fdfd91d23882da1f3e9e3ab429911b15f78381f6913b43c376431d
@@ -327,6 +367,26 @@ entries:
         - https://github.com/neo4j/helm-charts/releases/download/4.4.0/neo4j-cluster-core-4.4.0.tgz
       version: 4.4.0
   neo4j-cluster-read-replica:
+    - created: 2022-11-10T09:37:24.956170000+00:00
+      description: Neo4j Cluster Read Replica 4.4.13
+      digest: 04b88b9a59724cfa9b2c1c9aa6184cf2e9907a04aef31c7d53afdaca4a898049
+      home: https://github.com/neo4j/helm-charts
+      name: neo4j-cluster-read-replica
+      sources:
+        - https://github.com/neo4j/helm-charts/tree/4.4/neo4j-cluster-read-replica
+      urls:
+        - https://github.com/neo4j/helm-charts/releases/download/4.4.13/neo4j-cluster-read-replica-4.4.13.tgz
+      version: 4.4.13
+    - created: 2022-11-10T09:37:24.956170000+00:00
+      description: Neo4j Cluster Read Replica 4.4.12
+      digest: 5330d912601e4e4119033e5199375f2c8e5c7b619f852b448a6a373d07708e92
+      home: https://github.com/neo4j/helm-charts
+      name: neo4j-cluster-read-replica
+      sources:
+        - https://github.com/neo4j/helm-charts/tree/4.4/neo4j-cluster-read-replica
+      urls:
+        - https://github.com/neo4j/helm-charts/releases/download/4.4.12/neo4j-cluster-read-replica-4.4.12.tgz
+      version: 4.4.12
     - created: 2022-08-10T15:51:09.048480000+01:00
       description: Neo4j Cluster Read Replica 4.4.10
       digest: f55188fd09b689f65cef300f2fa34ec97fbc062381d1cb2e5a2d04e445131ef3
@@ -438,6 +498,26 @@ entries:
         - https://github.com/neo4j/helm-charts/releases/download/4.4.0/neo4j-cluster-read-replica-4.4.0.tgz
       version: 4.4.0
   neo4j-cluster-loadbalancer:
+    - created: 2022-11-10T09:40:21.062605000+00:00
+      description: Neo4j Cluster LoadBalancer 4.4.13
+      digest: d9d02c1197eccfbc1cc5392a25db8ba7e77a68c84e04bf551f6d2b6aa0db7ee8
+      home: https://github.com/neo4j/helm-charts
+      name: neo4j-cluster-loadbalancer
+      sources:
+        - https://github.com/neo4j/helm-charts/tree/4.4/neo4j-cluster-loadbalancer
+      urls:
+        - https://github.com/neo4j/helm-charts/releases/download/4.4.13/neo4j-cluster-loadbalancer-4.4.13.tgz
+      version: 4.4.13
+    - created: 2022-11-10T09:40:21.062605000+00:00
+      description: Neo4j Cluster LoadBalancer 4.4.12
+      digest: 9a31b60a96b90c971616940b627feeae7a066040310d9c330504b84c2ff8186e
+      home: https://github.com/neo4j/helm-charts
+      name: neo4j-cluster-loadbalancer
+      sources:
+        - https://github.com/neo4j/helm-charts/tree/4.4/neo4j-cluster-loadbalancer
+      urls:
+        - https://github.com/neo4j/helm-charts/releases/download/4.4.12/neo4j-cluster-loadbalancer-4.4.12.tgz
+      version: 4.4.12
     - created: 2022-08-10T15:51:09.048480000+01:00
       description: Neo4j Cluster LoadBalancer 4.4.10
       digest: 938bac28d48ac8ec11d91e676a6741d9aba4240d5040011f075533be4345c1f3
@@ -549,6 +629,26 @@ entries:
         - https://github.com/neo4j/helm-charts/releases/download/4.4.0/neo4j-cluster-loadbalancer-4.4.0.tgz
       version: 4.4.0
   neo4j-cluster-headless-service:
+    - created: 2022-11-10T09:41:17.676941000+00:00
+      description: Neo4j Cluster Headless Service 4.4.13
+      digest: 3ddef642bfddf79766a45a814999cccfba075168954f1e51941bca5bf5623fca
+      home: https://github.com/neo4j/helm-charts
+      name: neo4j-cluster-headless-service
+      sources:
+        - https://github.com/neo4j/helm-charts/tree/4.4/neo4j-cluster-headless-service
+      urls:
+        - https://github.com/neo4j/helm-charts/releases/download/4.4.13/neo4j-cluster-headless-service-4.4.13.tgz
+      version: 4.4.13
+    - created: 2022-11-10T09:41:17.676941000+00:00
+      description: Neo4j Cluster Headless Service 4.4.12
+      digest: 34c65efa5f06c920b89a87ebad657a229ef4d56848141fadb9cb6f4e0e9decc1
+      home: https://github.com/neo4j/helm-charts
+      name: neo4j-cluster-headless-service
+      sources:
+        - https://github.com/neo4j/helm-charts/tree/4.4/neo4j-cluster-headless-service
+      urls:
+        - https://github.com/neo4j/helm-charts/releases/download/4.4.12/neo4j-cluster-headless-service-4.4.12.tgz
+      version: 4.4.12
     - created: 2022-08-10T15:51:09.048480000+01:00
       description: Neo4j Cluster Headless Service 4.4.10
       digest: eeb307833a0f2b7f20b172ad9ca6af577634aad45d15d405db12db9abf561bd6
