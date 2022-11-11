@@ -2,6 +2,16 @@ apiVersion: v1
 generated: 2022-01-28T12:15:12.380915000+00:00
 entries:
   neo4j:
+    - created: 2022-11-11T15:02:01.879563000+00:00
+      description: Neo4j 5.1.1
+      digest: 8bb4aea4b9483813344be17d996563b164378bf6b259ef0aeb3f41862bc4c087
+      home: https://github.com/neo4j/helm-charts
+      name: neo4j
+      sources:
+        - https://github.com/neo4j/helm-charts/tree/5.1/neo4j
+      urls:
+        - https://github.com/neo4j/helm-charts/releases/download/5.1.1/neo4j-5.1.1.tgz
+      version: 5.1.1
     - created: 2022-11-09T15:53:01.189063000+00:00
       description: Neo4j 5.1.0
       digest: 21c989a31aa158a5ee583165c2a67b7148fa980d59e17743fefbd84aa00da5b8
@@ -13,17 +23,37 @@ entries:
         - https://github.com/neo4j/helm-charts/releases/download/5.1.0/neo4j-5.1.0.tgz
       version: 5.1.0
   neo4j-persistent-volume:
+    - created: 2022-11-11T15:02:01.879563000+00:00
+      description: Neo4j Persistent Volume 5.1.1
+      digest: 234e67b220c47400a83b27c827d53c70e137a5faf605e2befee87c32212b7a37
+      home: https://github.com/neo4j/helm-charts
+      name: neo4j-persistent-volume
+      sources:
+        - https://github.com/neo4j/helm-charts/tree/5.1/neo4j-persistent-volume
+      urls:
+        - https://github.com/neo4j/helm-charts/releases/download/5.1.1/neo4j-persistent-volume-5.1.1.tgz
+      version: 5.1.1
     - created: 2022-11-09T15:53:01.189063000+00:00
-      description: Neo4j Headless Service 5.1.0
+      description: Neo4j Persistent Volume 5.1.0
       digest: 3d6dc2b9b3712a2b6f301113aab8034e681836e4d9309d913dad46bdbe9b3df0
       home: https://github.com/neo4j/helm-charts
       name: neo4j-persistent-volume
       sources:
         - https://github.com/neo4j/helm-charts/tree/5.1/neo4j-persistent-volume
       urls:
-        - https://github.com/neo4j/helm-charts/releases/download/5.1.0/neo4j-persistent-volume-5.1.0.tgz
+        - https://github.com/neo4j/helm-charts/releases/download/5.1.1/neo4j-persistent-volume-5.1.1.tgz
       version: 5.1.0
   neo4j-headless-service:
+    - created: 2022-11-11T15:02:01.879563000+00:00
+      description: Neo4j Headless Service 5.1.1
+      digest: 39a3e1e37e84dd6eaede9e427b633e96f2f59062b3977c8f657466a655e6bf4f
+      home: https://github.com/neo4j/helm-charts
+      name: neo4j-headless-service
+      sources:
+        - https://github.com/neo4j/helm-charts/tree/5.1/neo4j-headless-service
+      urls:
+        - https://github.com/neo4j/helm-charts/releases/download/5.1.1/neo4j-headless-service-5.1.1.tgz
+      version: 5.1.1
     - created: 2022-11-09T15:53:01.189063000+00:00
       description: Neo4j Headless Service 5.1.0
       digest: 7e185963295d2c6ada90a55c6418d9b2965893c7047cfad113a0e3e91e958cb0
