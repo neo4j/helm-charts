@@ -4,6 +4,18 @@ This example uses manually provisioned cloud disks for the Neo4j storage volumes
 The `neo4j-persistent-volume` chart is used to configure a PV and PVC for the disk.
 The `neo4j` chart then configures the statefulset to mount the PVC
 
+The example will use the following Helm values
+```yaml
+neo4j:
+  name: volume-manual
+volumes:
+  data:
+    mode: volume
+    volume:
+      persistentVolumeClaim:
+        claimName: volume-manual-disk-pvc
+```
+
 ## Install in AWS
 ```shell
 export AWS_ZONE=us-east-1a
