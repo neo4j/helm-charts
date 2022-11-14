@@ -1,17 +1,4 @@
 {{/* vim: set filetype=mustache: */}}
-{{/*
-Expand the name of the chart.
-*/}}
-{{- define "neo4j.defaultName" -}}
-    {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-
-{{/*
-Create chart name and version as used by the chart label.
-*/}}
-{{- define "neo4j.chart" -}}
-    {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
 
 {{/*
 Create a default fully qualified app name.
@@ -96,17 +83,6 @@ Convert a neo4j.conf properties text into valid yaml
 {{- end -}}
 
 {{/*
-If no name is set in `Values.neo4j.name` sets it to release name and modifies Values.neo4j so that the same name is available everywhere
-*/}}
-{{/*{{- define "neo4j.name" -}}*/}}
-{{/*  {{- if not .Values.neo4j.name }}*/}}
-{{/*    {{- $name := .Release.Name }}*/}}
-{{/*    {{- $ignored := set .Values.neo4j "name" $name }}*/}}
-{{/*  {{- end -}}*/}}
-{{/*  {{- .Values.neo4j.name }}*/}}
-{{/*{{- end -}}*/}}
-
-{{/*
 If no password is set in `Values.neo4j.password` generates a new random password and modifies Values.neo4j so that the same password is available everywhere
 */}}
 {{- define "neo4j.password" -}}
@@ -122,39 +98,6 @@ If no password is set in `Values.neo4j.password` generates a new random password
   {{- end -}}
   {{- .Values.neo4j.password }}
 {{- end -}}
-
-{{/*{{- define "neo4j.checkIfClusterIsPresent" -}}*/}}
-
-{{/*    {{- $name := .Values.neo4j.name -}}*/}}
-{{/*    {{- $clusterList := list -}}*/}}
-{{/*    {{- range $index,$pod := (lookup "v1" "Pod" .Release.Namespace "").items -}}*/}}
-{{/*        {{- if eq $name (index $pod.metadata.labels "helm.neo4j.com/neo4j.name" | toString) -}}*/}}
-{{/*            {{- if eq (index $pod.metadata.labels "helm.neo4j.com/dbms.mode" | toString) "CORE" -}}*/}}
-
-{{/*                {{- $noOfContainers := len (index $pod.status.containerStatuses) -}}*/}}
-{{/*                {{- $noOfReadyContainers := 0 -}}*/}}
-
-{{/*                {{- range $index,$value := index $pod.status.containerStatuses -}}*/}}
-{{/*                    {{- if $value.ready }}*/}}
-{{/*                        {{- $noOfReadyContainers = add1 $noOfReadyContainers -}}*/}}
-{{/*                    {{- end -}}*/}}
-{{/*                {{- end -}}*/}}
-
-{{/*                */}}{{/* Number of Ready Containers should be equal to the number of containers in the pod */}}
-{{/*                */}}{{/* Pod should be in running state */}}
-{{/*                {{- if and (eq $noOfReadyContainers $noOfContainers) (eq (index $pod.status.phase | toString) "Running") -}}*/}}
-{{/*                    {{- $clusterList = append $clusterList (index $pod.metadata.name) -}}*/}}
-{{/*                {{- end -}}*/}}
-
-{{/*            {{- end -}}*/}}
-{{/*        {{- end -}}*/}}
-{{/*    {{- end -}}*/}}
-
-{{/*    {{- if lt (len $clusterList) 3 -}}*/}}
-{{/*        {{ fail "Cannot install Read Replica until a cluster of 3 or more cores is formed" }}*/}}
-{{/*    {{- end -}}*/}}
-
-{{/*{{- end -}}*/}}
 
 {{- define "podSpec.checkLoadBalancerParam" }}
 {{- $isLoadBalancerValuePresent := required (include "podSpec.loadBalancer.mustBeSetMessage" .) .Values.podSpec.loadbalancer | regexMatch "(?i)include$|(?i)exclude$" -}}

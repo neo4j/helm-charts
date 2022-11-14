@@ -3,6 +3,8 @@ package model
 import v1 "k8s.io/api/core/v1"
 
 type HelmValues struct {
+	FullnameOverride       string            `yaml:"fullnameOverride,omitempty"`
+	NameOverride           string            `yaml:"nameOverride,omitempty"`
 	Neo4J                  Neo4J             `yaml:"neo4j,omitempty"`
 	Volumes                Volumes           `yaml:"volumes,omitempty"`
 	AdditionalVolumes      []interface{}     `yaml:"additionalVolumes,omitempty"`
