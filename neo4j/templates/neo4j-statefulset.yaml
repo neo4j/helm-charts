@@ -16,22 +16,22 @@ metadata:
     helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" $ }}"
     helm.neo4j.com/clustering: "{{ $clusterEnabled }}"
     app: "{{ template "neo4j.name" . }}"
-    helm.neo4j.com/instance: "{{ .Release.Name }}"
+    helm.neo4j.com/instance: {{ include "neo4j.fullname" . }}
     {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
-  name: "{{ .Release.Name }}"
+  name: {{ include "neo4j.fullname" . }}
   namespace: "{{ .Release.Namespace }}"
   {{- if not (empty $.Values.statefulset.metadata.annotations) }}
   annotations:
     {{- include "neo4j.annotations" $.Values.statefulset.metadata.annotations | indent 4 }}
   {{- end }}
 spec:
-  serviceName: "{{ .Release.Name }}"
+  serviceName: "{{ include "neo4j.fullname" . }}"
   podManagementPolicy: "Parallel" # This setting means that the StatefulSet controller doesn't block applying changes until the existing Pod is READY.
   replicas: 1
   selector:
     matchLabels:
       app: "{{ template "neo4j.name" . }}"
-      helm.neo4j.com/instance: "{{ .Release.Name }}"
+      helm.neo4j.com/instance: "{{ include "neo4j.fullname" . }}"
   template:
     metadata:
       labels:
@@ -40,15 +40,15 @@ spec:
         helm.neo4j.com/clustering: "{{ $clusterEnabled }}"
         helm.neo4j.com/pod_category: "neo4j-instance" # used for anti affinity rules
         helm.neo4j.com/neo4j.loadbalancer: "{{ $.Values.podSpec.loadbalancer }}"
-        helm.neo4j.com/instance: "{{ .Release.Name }}"
+        helm.neo4j.com/instance: "{{ include "neo4j.fullname" . }}"
         {{- include "neo4j.labels" $.Values.neo4j | indent 8 }}
       annotations:
-        "checksum/{{ .Release.Name }}-config": {{ include (print $.Template.BasePath "/neo4j-config.yaml") . | sha256sum }}
+        "checksum/{{ include "neo4j.fullname" . }}-config": {{ include (print $.Template.BasePath "/neo4j-config.yaml") . | sha256sum }}
         {{- include "neo4j.annotations" $.Values.podSpec.annotations | indent 8 }}
     spec:
       {{- include "neo4j.affinity" . | indent 6 }}
       {{- if $.Values.podSpec.serviceAccountName | or $clusterEnabled }}
-      serviceAccountName: "{{ if kindIs "string" $.Values.podSpec.serviceAccountName | and $.Values.podSpec.serviceAccountName }}{{ $.Values.podSpec.serviceAccountName }}{{ else }}{{ .Release.Name }}{{ end }}"
+      serviceAccountName: "{{ if kindIs "string" $.Values.podSpec.serviceAccountName | and $.Values.podSpec.serviceAccountName }}{{ $.Values.podSpec.serviceAccountName }}{{ else }}{{ include "neo4j.fullname" . }}{{ end }}"
       {{- end }}
       securityContext: {{ toYaml .Values.securityContext | nindent 8 }}
       {{- include "neo4j.tolerations" .Values.podSpec.tolerations | nindent 6 }}
@@ -85,7 +85,7 @@ spec:
           {{- end }}
           envFrom:
             - configMapRef:
-                name: "{{ .Release.Name }}-env"
+                name: "{{ include "neo4j.fullname" . }}-env"
             {{- if not $authDisabled }}
             - secretRef:
                 name: "{{ template "neo4j.name" . }}-auth"
@@ -100,11 +100,11 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: SERVICE_NEO4J_ADMIN
-              value: "{{ .Release.Name }}-admin.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}"
+              value: "{{ include "neo4j.fullname" . }}-admin.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}"
             - name: SERVICE_NEO4J_INTERNALS
-              value: "{{ .Release.Name }}-internals.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}"
+              value: "{{ include "neo4j.fullname" . }}-internals.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}"
             - name: SERVICE_NEO4J
-              value: "{{ .Release.Name }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}"
+              value: "{{ include "neo4j.fullname" . }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}"
           ports:
             - containerPort: 7474
               name: http
@@ -180,17 +180,17 @@ spec:
             defaultMode: 0440
             sources:
               - configMap:
-                  name: "{{ .Release.Name }}-default-config"
+                  name: "{{ include "neo4j.fullname" . }}-default-config"
               - configMap:
-                  name: "{{ .Release.Name }}-user-config"
+                  name: "{{ include "neo4j.fullname" . }}-user-config"
               - configMap:
-                  name: "{{ .Release.Name }}-k8s-config"
+                  name: "{{ include "neo4j.fullname" . }}-k8s-config"
         - name: neo4j-server-logs
           configMap:
-            name: "{{ .Release.Name }}-server-logs-config"
+            name: "{{ include "neo4j.fullname" . }}-server-logs-config"
         - name: neo4j-user-logs
           configMap:
-            name: "{{ .Release.Name }}-user-logs-config"
+            name: "{{ include "neo4j.fullname" . }}-user-logs-config"
         {{- include "neo4j.additionalVolumes" .Values.additionalVolumes | nindent 8 }}
         {{- include "neo4j.apoc.volume" . | nindent 8 }}
         {{- with include "neo4j.ssl.volumesFromSecrets" .Values.ssl }}{{ nindent 8 .}}{{ end -}}
