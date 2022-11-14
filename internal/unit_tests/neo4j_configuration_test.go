@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/stretchr/testify/assert"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"os"
 	"strings"
@@ -121,6 +122,92 @@ func TestMetaspaceConfigs(t *testing.T) {
 		assert.Equal(t, userConfigMap.Data["server.memory.heap.max_size"], "317m")
 		assert.Equal(t, userConfigMap.Data["server.memory.pagecache.size"], "74m")
 
+	}
+
+	forEachPrimaryChart(t, andEachSupportedEdition(doTestCase))
+}
+
+func TestFullnameOverrideStatefulSet(t *testing.T) {
+	t.Parallel()
+
+	doTestCase := func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		helmValues := model.DefaultEnterpriseValues
+		fullNameOverride := "use-this-name-instead"
+		helmValues.FullnameOverride = fullNameOverride
+		helmValues.Neo4J.Edition = edition
+		manifest, err := model.HelmTemplateFromStruct(t, model.HelmChart, helmValues)
+
+		if !assert.NoError(t, err) {
+			return
+		}
+		neo4jStatefulSet := manifest.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
+		assert.Equal(t, neo4jStatefulSet.GetName(), fullNameOverride)
+		assert.Equal(t, neo4jStatefulSet.Labels["helm.neo4j.com/instance"], fullNameOverride)
+		assert.Equal(t, neo4jStatefulSet.Spec.ServiceName, fullNameOverride)
+		assert.Equal(t, neo4jStatefulSet.Spec.Selector.MatchLabels["helm.neo4j.com/instance"], fullNameOverride)
+		assert.Equal(t, neo4jStatefulSet.Spec.Template.ObjectMeta.Labels["helm.neo4j.com/instance"], fullNameOverride)
+		assert.Contains(t, neo4jStatefulSet.Spec.Template.ObjectMeta.Annotations, fmt.Sprintf("checksum/%s-config", fullNameOverride))
+		neo4jContainer := neo4jStatefulSet.Spec.Template.Spec.Containers[0]
+		assert.Contains(t, neo4jContainer.EnvFrom, v1.EnvFromSource{
+			ConfigMapRef: &v1.ConfigMapEnvSource{
+				LocalObjectReference: v1.LocalObjectReference{Name: fmt.Sprintf("%s-env", fullNameOverride)},
+			},
+		})
+		assert.Contains(t, neo4jContainer.Env, v1.EnvVar{
+			Name:  "SERVICE_NEO4J_ADMIN",
+			Value: fmt.Sprintf("%s-admin.neo4j-my-release.svc.cluster.local", fullNameOverride),
+		})
+		assert.Contains(t, neo4jContainer.Env, v1.EnvVar{
+			Name:  "SERVICE_NEO4J_INTERNALS",
+			Value: fmt.Sprintf("%s-internals.neo4j-my-release.svc.cluster.local", fullNameOverride),
+		})
+		assert.Contains(t, neo4jContainer.Env, v1.EnvVar{
+			Name:  "SERVICE_NEO4J",
+			Value: fmt.Sprintf("%s.neo4j-my-release.svc.cluster.local", fullNameOverride),
+		})
+	}
+
+	forEachPrimaryChart(t, andEachSupportedEdition(doTestCase))
+}
+
+func TestNameOverrideStatefulSet(t *testing.T) {
+	t.Parallel()
+
+	doTestCase := func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		helmValues := model.DefaultEnterpriseValues
+		helmValues.NameOverride = "use-this-name-instead"
+		nameOverride := "my-release-use-this-name-instead"
+		helmValues.Neo4J.Edition = edition
+		manifest, err := model.HelmTemplateFromStruct(t, model.HelmChart, helmValues)
+
+		if !assert.NoError(t, err) {
+			return
+		}
+		neo4jStatefulSet := manifest.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
+		assert.Equal(t, neo4jStatefulSet.GetName(), nameOverride)
+		assert.Equal(t, neo4jStatefulSet.Labels["helm.neo4j.com/instance"], nameOverride)
+		assert.Equal(t, neo4jStatefulSet.Spec.ServiceName, nameOverride)
+		assert.Equal(t, neo4jStatefulSet.Spec.Selector.MatchLabels["helm.neo4j.com/instance"], nameOverride)
+		assert.Equal(t, neo4jStatefulSet.Spec.Template.ObjectMeta.Labels["helm.neo4j.com/instance"], nameOverride)
+		assert.Contains(t, neo4jStatefulSet.Spec.Template.ObjectMeta.Annotations, fmt.Sprintf("checksum/%s-config", nameOverride))
+		neo4jContainer := neo4jStatefulSet.Spec.Template.Spec.Containers[0]
+		assert.Contains(t, neo4jContainer.EnvFrom, v1.EnvFromSource{
+			ConfigMapRef: &v1.ConfigMapEnvSource{
+				LocalObjectReference: v1.LocalObjectReference{Name: fmt.Sprintf("%s-env", nameOverride)},
+			},
+		})
+		assert.Contains(t, neo4jContainer.Env, v1.EnvVar{
+			Name:  "SERVICE_NEO4J_ADMIN",
+			Value: fmt.Sprintf("%s-admin.neo4j-my-release.svc.cluster.local", nameOverride),
+		})
+		assert.Contains(t, neo4jContainer.Env, v1.EnvVar{
+			Name:  "SERVICE_NEO4J_INTERNALS",
+			Value: fmt.Sprintf("%s-internals.neo4j-my-release.svc.cluster.local", nameOverride),
+		})
+		assert.Contains(t, neo4jContainer.Env, v1.EnvVar{
+			Name:  "SERVICE_NEO4J",
+			Value: fmt.Sprintf("%s.neo4j-my-release.svc.cluster.local", nameOverride),
+		})
 	}
 
 	forEachPrimaryChart(t, andEachSupportedEdition(doTestCase))
