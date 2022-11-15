@@ -1,9 +1,9 @@
-apiVersion: v2
-name: neo4j-shared-templates
+apiVersion: v1
+name: neo4j-persistent-volume
 home: https://www.neo4j.com
-version: 4.4.14
-appVersion: 4.4.14
-description: Neo4j is the world's leading graph database
+version: 5.1.1
+appVersion: "-"
+description: Sets up persistent disks suitable for a Neo4j Helm installation
 keywords:
   - graph
   - database

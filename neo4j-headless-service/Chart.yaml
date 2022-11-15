@@ -1,8 +1,8 @@
-apiVersion: v2
-name: neo4j-standalone
+apiVersion: v1
+name: neo4j-headless-service
 home: https://www.neo4j.com
-version: 4.4.14
-appVersion: 4.4.14
+version: 5.1.1
+appVersion: "-"
 description: Neo4j is the world's leading graph database
 keywords:
   - graph
@@ -17,7 +17,3 @@ maintainers:
     email: bledi.feshti@neotechnology.com
   - name: harshitsinghvi22
     email: harshit.singhvi@neotechnology.com
-dependencies:
-  - name: neo4j-shared-templates
-    version: "4.4.14"
-    repository: "file://../neo4j-shared-templates"

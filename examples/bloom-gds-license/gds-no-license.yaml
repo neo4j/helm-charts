@@ -1,0 +1,11 @@
+neo4j:
+  name: gds-no-license
+  acceptLicenseAgreement: "yes"
+  edition: enterprise
+volumes:
+  data:
+    mode: defaultStorageClass
+env:
+  NEO4J_PLUGINS: '["graph-data-science"]'
+config:
+  dbms.security.procedures.unrestricted: "gds.*,apoc.*"

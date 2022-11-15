@@ -5,6 +5,24 @@ The `neo4j-persistent-volume` chart is used to configure 3 persistent volumes fo
 The `neo4j` chart then configures the StatefulSet to use a selector based volume claim template. 
 A PVC will be dynamically provisioned for each PV.
 
+The example will use the following Helm values
+```yaml
+neo4j:
+  name: volume-selector
+  minimumClusterSize: 3
+  acceptLicenseAgreement: "yes"
+  edition: enterprise
+volumes:
+  data:
+    mode: selector
+    selector:
+      storageClassName: "manual"
+      accessModes:
+        - ReadWriteOnce
+      requests:
+        storage: 10Gi
+```
+
 ## Install in AWS
 ```shell
 export AWS_ZONE=us-east-1a
