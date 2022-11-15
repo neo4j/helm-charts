@@ -48,12 +48,12 @@ func getNewChartEntries() []*Entry {
 
 		err := getHelmPackages(chartPath, version)
 		if err != nil {
-			log.Fatal(fmt.Sprintf("Error while downloading package %s version %s", chartPath, version))
+			log.Fatalf(fmt.Sprintf("Error while downloading package %s version %s \n %v", chartPath, version, err))
 		}
 
 		sha, err := getSha256Sum(fmt.Sprintf("%s-%s.tgz", chart, version))
 		if err != nil {
-			log.Fatal(fmt.Sprintf("Error while calculating sha256sum for %s version %s", chartPath, version))
+			log.Fatalf(fmt.Sprintf("Error while calculating sha256sum for %s version %s \n %v", chartPath, version, err))
 		}
 
 		newEntries = append(newEntries, NewEntry(sha, chart, branch))
