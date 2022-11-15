@@ -1,3 +1,9 @@
+{{- $isReadReplica := index .Values.config "dbms.mode" | default "" | regexMatch "(?i)READ_REPLICA$" }}
+
+{{/* .Values.testing is being set to true in unit test cases for read replica*/}}
+{{- if and $isReadReplica (not .Values.testing | default false ) -}}
+    {{- include "neo4j.checkIfClusterIsPresent" . -}}
+{{- end -}}
 
 {{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "true" | regexMatch "(?i)no|false" -}}
 
@@ -8,7 +14,7 @@
 
   {{- else -}}
 
-{{- $secretName := include "neo4j.name" . | printf "%s-auth" }}
+{{- $secretName := include "neo4j.appName" . | printf "%s-auth" }}
 {{- $secret := (lookup "v1" "Secret" .Release.Namespace $secretName) }}
 {{- $secretExists := $secret | all }}
 
@@ -45,7 +51,7 @@ metadata:
   name: "{{ $secretName }}"
   namespace: "{{ .Release.Namespace }}"
   labels:
-    app: "{{ template "neo4j.name" . }}"
+    app: "{{ template "neo4j.appName" . }}"
     {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
 type: Opaque
 data:

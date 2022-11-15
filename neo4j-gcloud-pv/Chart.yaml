@@ -1,0 +1,19 @@
+apiVersion: v2
+name: neo4j-gcloud-pv
+home: https://www.neo4j.com
+version: 4.4.14
+appVersion: "-"
+description: Sets up persistent disks suitable for simple development tasks with Neo4j Helm when using Kubernetes provided Google Kubernetes Engine
+keywords:
+  - graph
+  - database
+  - cypher
+icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
+sources:
+  - https://github.com/neo4j/neo4j
+  - https://github.com/neo4j/docker-neo4j
+maintainers:
+  - name: bfeshti
+    email: bledi.feshti@neotechnology.com
+  - name: harshitsinghvi22
+    email: harshit.singhvi@neotechnology.com

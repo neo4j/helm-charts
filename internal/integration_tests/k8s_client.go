@@ -47,7 +47,7 @@ func CheckProbes(t *testing.T, releaseName model.ReleaseName) error {
 		} `yaml:"livenessProbe"`
 	}
 
-	var fileName = "neo4j/values.yaml"
+	var fileName = "neo4j-standalone/values.yaml"
 
 	yamlFile, err := ioutil.ReadFile(fileName)
 	if err != nil {
@@ -65,10 +65,7 @@ func CheckProbes(t *testing.T, releaseName model.ReleaseName) error {
 	podsReadiness := "neo4j_ReadinessProbe"
 
 	for start := time.Now(); time.Since(start) < 60*time.Second; {
-		options := v1.ListOptions{
-			LabelSelector: fmt.Sprintf("helm.neo4j.com/instance=%s", releaseName.String()),
-		}
-		pods, err := Clientset.CoreV1().Pods(string(releaseName.Namespace())).List(context.TODO(), options)
+		pods, err := Clientset.CoreV1().Pods(string(releaseName.Namespace())).List(context.TODO(), v1.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("Failed to get Pods options: %v", err)
 		}
@@ -99,19 +96,12 @@ func CheckProbes(t *testing.T, releaseName model.ReleaseName) error {
 	return nil
 }
 
-func CheckServiceAnnotations(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChartBuilder) (err error) {
+func CheckServiceAnnotations(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart) (err error) {
 	services, err := getAllServices(releaseName.Namespace())
 	if err != nil {
 		return err
 	}
-	var expectedServiceCount int
-	if model.Neo4jEdition == "community" {
-		expectedServiceCount = 2
-	} else {
-		expectedServiceCount = 3
-	}
-
-	assert.Equal(t, expectedServiceCount, len(services.Items))
+	assert.Equal(t, 3, len(services.Items))
 
 	// by default they should have no annotations
 	for _, service := range services.Items {
@@ -121,8 +111,10 @@ func CheckServiceAnnotations(t *testing.T, releaseName model.ReleaseName, chart 
 	// when we add annotations via helm
 	err = runAll(t, "helm", [][]string{
 		model.BaseHelmCommand("upgrade", releaseName, chart, model.Neo4jEdition,
+			"--set", "services.neo4j.annotations.foo=bar",
 			"--set", "services.admin.annotations.foo=bar",
-			"--set", "services.default.annotations.foo=bar", "--set", "neo4j.name="+model.DefaultNeo4jName),
+			"--set", "services.default.annotations.foo=bar",
+		),
 	}, true)
 	if err != nil {
 		return err
@@ -134,12 +126,10 @@ func CheckServiceAnnotations(t *testing.T, releaseName model.ReleaseName, chart 
 		return err
 	}
 
-	assert.Equal(t, expectedServiceCount, len(services.Items))
+	assert.Equal(t, 3, len(services.Items))
 
 	for _, service := range services.Items {
-		if service.Name != fmt.Sprintf("%s-lb-neo4j", model.DefaultNeo4jName) {
-			assert.Equal(t, "bar", getOurAnnotations(service)["foo"])
-		}
+		assert.Equal(t, "bar", getOurAnnotations(service)["foo"])
 	}
 	return err
 }
@@ -149,7 +139,6 @@ func getOurAnnotations(service coreV1.Service) map[string]string {
 	prefixesToIgnore := []string{
 		"cloud.google.com/",
 		"meta.helm.sh/",
-		"helm.sh/",
 	}
 	for key, value := range service.Annotations {
 		if !matchesAnyPrefix(prefixesToIgnore, key) {
@@ -250,10 +239,7 @@ func getSpecificSecret(namespace model.Namespace, secretName string) (*coreV1.Se
 }
 
 func RunAsNonRoot(t *testing.T, releaseName model.ReleaseName) error {
-	options := v1.ListOptions{
-		LabelSelector: fmt.Sprintf("helm.neo4j.com/instance=%s", releaseName.String()),
-	}
-	pods, err := Clientset.CoreV1().Pods(string(releaseName.Namespace())).List(context.TODO(), options)
+	pods, err := Clientset.CoreV1().Pods(string(releaseName.Namespace())).List(context.TODO(), v1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to get Pods options: %v", err)
 	}

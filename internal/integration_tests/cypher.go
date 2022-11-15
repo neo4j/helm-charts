@@ -29,15 +29,14 @@ func checkNeo4jConfiguration(t *testing.T, releaseName model.ReleaseName, expect
 
 	var runtimeConfig []*neo4j.Record
 	var expectedOverrides = map[string]string{
-		"server.https.enabled":           "true",
-		"server.bolt.tls_level":          "REQUIRED",
-		"server.directories.logs":        "/logs",
-		"server.directories.import":      "/import",
-		"server.panic.shutdown_on_panic": "true",
+		"dbms.connector.https.enabled":  "true",
+		"dbms.connector.bolt.tls_level": "REQUIRED",
+		"dbms.directories.logs":         "/logs",
+		"dbms.directories.metrics":      "/metrics",
+		"dbms.directories.import":       "/import",
+		"dbms.panic.shutdown_on_panic":  "true",
 	}
-	if model.Neo4jEdition == "enterprise" {
-		expectedOverrides["server.directories.metrics"] = "/metrics"
-	}
+
 	deadline := time.Now().Add(3 * time.Minute)
 	for true {
 		if !time.Now().Before(deadline) {
@@ -45,7 +44,7 @@ func checkNeo4jConfiguration(t *testing.T, releaseName model.ReleaseName, expect
 			t.Error(msg)
 			return errors.New(msg)
 		}
-		runtimeConfig, err = runQuery(t, releaseName, "CALL dbms.listConfig() YIELD name, value", nil, model.Neo4jEdition == "community")
+		runtimeConfig, err = runQuery(t, releaseName, "CALL dbms.listConfig() YIELD name, value", nil, false)
 		if err != nil {
 			return err
 		}
@@ -70,7 +69,7 @@ func checkNeo4jConfiguration(t *testing.T, releaseName model.ReleaseName, expect
 			assert.Equal(t, strings.ToLower(expectedValue), strings.ToLower(value),
 				"Expected runtime config for %s to match provided value", name)
 		}
-		if name == "server.jvm.additional" {
+		if name == "dbms.jvm.additional" {
 			assert.Equal(t, expectedConfiguration.JvmArgs(), strings.Split(value, "\n"))
 		}
 	}
@@ -86,7 +85,7 @@ func createNode(t *testing.T, releaseName model.ReleaseName) error {
 		"id":   1,
 		"name": "Item 1",
 	},
-		model.Neo4jEdition == "community")
+		false)
 	if _, found := createdNodes[releaseName]; !found {
 		var initialValue int64 = 0
 		createdNodes[releaseName] = &initialValue
@@ -133,11 +132,29 @@ func checkDataBaseExists(t *testing.T, releaseName model.ReleaseName, databaseNa
 	return fmt.Errorf("no record yielded for cypher query %s", cypherQuery)
 }
 
+// createNodeOnReadReplica fires a cypher query to create a node
+// It's a way to check write requests to read replica are routed to the cluster core since read replica DOES NOT perform writes
+func createNodeOnReadReplica(t *testing.T, releaseName model.ReleaseName) error {
+	_, err := runQuery(t, releaseName, "CREATE (n:Item { id: $id, name: $name }) RETURN n.id, n.name", map[string]interface{}{
+		"id":   1,
+		"name": "Item 1",
+	},
+		true)
+	if _, found := createdNodes[releaseName]; !found {
+		var initialValue int64 = 0
+		createdNodes[releaseName] = &initialValue
+	}
+	if err == nil {
+		atomic.AddInt64(createdNodes[releaseName], 1)
+	}
+	return err
+}
+
 // checkApocConfig fires a apoc cypher query
 // It's a way to check if apoc plugin is loaded and the customized apoc config is loaded or not
 func checkApocConfig(t *testing.T, releaseName model.ReleaseName) error {
 
-	results, err := runQuery(t, releaseName, "CALL apoc.create.node([\"Person\", \"Actor\"], {name: \"Tom Hanks\"});", nil, false)
+	results, err := runQuery(t, releaseName, "CALL apoc.config.list() YIELD key, value WHERE key = \"apoc.jdbc.apoctest.url\" RETURN *;", nil, false)
 	if !assert.NoError(t, err) {
 		t.Logf("%v", err)
 		return fmt.Errorf("error seen while firing apoc cypher \n err := %v", err)
@@ -145,12 +162,72 @@ func checkApocConfig(t *testing.T, releaseName model.ReleaseName) error {
 	if !assert.NotEqual(t, len(results), 0) {
 		return fmt.Errorf("no results received from cypher query")
 	}
+
+	for _, result := range results {
+		if value, found := result.Get("value"); found {
+			if assert.Equal(t, value, "jdbc:foo:bar") {
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("no record yielded for apoc cypher query")
+}
+
+// checkReadReplicaConfiguration checks runs a cypher query to check the read replica configuration
+// the configuration dbms.mode so retrieved must contain the value READ_REPLICA
+func checkReadReplicaConfiguration(t *testing.T, releaseName model.ReleaseName) error {
+	result, err := runReadOnlyQuery(t, releaseName, "CALL dbms.listConfig(\"dbms.mode\") YIELD value", noParams)
+	if err != nil {
+		return err
+	}
+
+	if !assert.Equal(t, len(result), 1) {
+		return fmt.Errorf("unexpected results from cypher query")
+	}
+
+	if value, found := result[0].Get("value"); found {
+		assert.Equal(t, value, "READ_REPLICA")
+		return nil
+	}
+
+	return fmt.Errorf("unable to get dbms.mode using cypher")
+}
+
+// checkReadReplicaServerGroupsConfiguration checks if the server_groups config contains "read-replicas" or not for read replica cluster
+func checkReadReplicaServerGroupsConfiguration(t *testing.T, releaseName model.ReleaseName) error {
+	result, err := runReadOnlyQuery(t, releaseName, "CALL dbms.cluster.overview() YIELD groups", noParams)
+	if err != nil {
+		return err
+	}
+
+	//if result is empty throw error
+	if !assert.NotEmpty(t, result) {
+		return fmt.Errorf("No results received from cypher query for read replica server groups")
+	}
+
+	var readReplicasCount int
+	for _, resultRow := range result {
+		if rowValues, found := resultRow.Get("groups"); found {
+			for _, value := range rowValues.([]interface{}) {
+				if groupName, ok := value.(string); ok {
+					if groupName == "read-replicas" {
+						readReplicasCount++
+					}
+				}
+			}
+		}
+	}
+
+	if !assert.Equal(t, readReplicasCount, 2) {
+		return fmt.Errorf("unable to get any group from dbms.cluster.overview() containing read-replicas using cypher")
+	}
+
 	return nil
 }
 
 // checkNodeCount runs the cypher query to get the number of nodes on a cluster core
 func checkNodeCount(t *testing.T, releaseName model.ReleaseName) error {
-	result, err := runQuery(t, releaseName, "MATCH (n) RETURN COUNT(n) AS count", noParams, model.Neo4jEdition == "community")
+	result, err := runQuery(t, releaseName, "MATCH (n) RETURN COUNT(n) AS count", noParams, false)
 
 	if err != nil {
 		return err
@@ -162,6 +239,64 @@ func checkNodeCount(t *testing.T, releaseName model.ReleaseName) error {
 		return err
 	} else {
 		return fmt.Errorf("expected at least one result")
+	}
+}
+
+// updateReadReplicaConfig updates the read replica upstream strategy on the provided chart
+func updateReadReplicaConfig(t *testing.T, releaseName model.ReleaseName, extraArgs ...string) error {
+
+	err := run(
+		t,
+		"helm",
+		model.BaseHelmCommand(
+			"upgrade",
+			releaseName,
+			model.ClusterReadReplicaHelmChart,
+			model.Neo4jEdition,
+			append(extraArgs, "--wait", "--timeout", "300s")...,
+		)...,
+	)
+	if !assert.NoError(t, err) {
+		return err
+	}
+
+	err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()), "rollout", "status", "--watch", "--timeout=120s", "statefulset/"+releaseName.String())
+	if !assert.NoError(t, err) {
+		return err
+	}
+
+	return nil
+}
+
+// checkNodeCountOnReadReplica performs a cypher query to check node count.
+// We are not using here createdNodes Map since it does not contain the correct count of nodes retrieved via read replica
+func checkNodeCountOnReadReplica(t *testing.T, releaseName model.ReleaseName, expectedCount int64) error {
+
+	countnodes := func() ([]*neo4j.Record, error) {
+		return runQuery(t, releaseName, "MATCH (n) RETURN COUNT(n) AS count", noParams, true)
+	}
+
+	timeout := time.After(2 * time.Minute)
+	for {
+		select {
+		case <-timeout:
+			return fmt.Errorf("timeout reached while counting nodes on read replica")
+		default:
+			var result []*neo4j.Record
+			var err error
+			if result, err = countnodes(); err != nil {
+				return fmt.Errorf("Missing count from cypher query %s", err)
+			}
+
+			if value, found := result[0].Get("count"); found {
+				countedNodes := value.(int64)
+				if expectedCount != countedNodes {
+					continue
+				}
+				return nil
+			}
+			return fmt.Errorf("count key is not received from read replica")
+		}
 	}
 }
 
@@ -197,6 +332,49 @@ func runQuery(t *testing.T, releaseName model.ReleaseName, cypher string, params
 	}
 
 	return result.Collect()
+}
+
+// runReadOnlyQuery triggers a read only cypher query used by read replica
+func runReadOnlyQuery(t *testing.T, releaseName model.ReleaseName, cypher string, params map[string]interface{}) ([]*neo4j.Record, error) {
+
+	boltPort, cleanupProxy, proxyErr := proxyBolt(t, releaseName, true)
+	defer cleanupProxy()
+	if proxyErr != nil {
+		return nil, proxyErr
+	}
+
+	driver, err := neo4j.NewDriver(fmt.Sprintf("%s:%d", dbUri, boltPort), authToUse, func(config *neo4j.Config) {
+	})
+	// Handle driver lifetime based on your application lifetime requirements  driver's lifetime is usually
+	// bound by the application lifetime, which usually implies one driver instance per application
+	defer driver.Close()
+
+	if err := awaitConnectivity(t, err, driver); err != nil {
+		return nil, err
+	}
+
+	// Sessions are shortlived, cheap to create and NOT thread safe. Typically create one or more sessions
+	// per request in your web application. Make sure to call Close on the session when done.
+	// For multidatabase support, set sessionConfig.DatabaseName to requested database
+	// Session config will default to write mode, if only reads are to be used configure session for
+	// read mode.
+	session := driver.NewSession(neo4j.SessionConfig{DatabaseName: dbName})
+	defer session.Close()
+
+	transactionWork := func(tx neo4j.Transaction) (interface{}, error) {
+		result, err := tx.Run(cypher, params)
+		if err != nil {
+			return nil, err
+		}
+		return result.Collect()
+	}
+
+	result, err := session.ReadTransaction(transactionWork)
+	if err != nil {
+		return nil, err
+	}
+
+	return result.([]*neo4j.Record), nil
 }
 
 func awaitConnectivity(t *testing.T, err error, driver neo4j.Driver) error {

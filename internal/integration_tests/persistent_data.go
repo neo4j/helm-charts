@@ -9,12 +9,9 @@ func ResourcesCleanup(t *testing.T, releaseName model.ReleaseName) error {
 	return run(t, "helm", "uninstall", releaseName.String(), "--namespace", string(releaseName.Namespace()), "--wait", "--timeout=3m")
 }
 
-func ResourcesReinstall(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChartBuilder) error {
+func ResourcesReinstall(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart) error {
 
-	defaultHelmArgs := []string{}
-	defaultHelmArgs = append(defaultHelmArgs, model.DefaultNeo4jNameArg...)
-	defaultHelmArgs = append(defaultHelmArgs, "--wait", "--timeout", "300s")
-	err := run(t, "helm", model.BaseHelmCommand("install", releaseName, chart, model.Neo4jEdition, defaultHelmArgs...)...)
+	err := run(t, "helm", model.BaseHelmCommand("install", releaseName, chart, model.Neo4jEdition, "--wait", "--timeout", "300s")...)
 	if err != nil {
 		t.Log("Helm Install failed:", err)
 		_ = run(t, "kubectl", "get", "events")

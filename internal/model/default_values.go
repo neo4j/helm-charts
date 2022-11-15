@@ -6,7 +6,6 @@ import (
 	"k8s.io/utils/env"
 	"log"
 	"os"
-	"strconv"
 )
 
 var DefaultPassword = fmt.Sprintf("defaulthelmpassword%da", RandomIntBetween(100000, 999999999))
@@ -19,11 +18,6 @@ var ImagePullSecretUsername,
 var NodeSelectorArgs, ImagePullSecretArgs, CustomApocImageArgs, PriorityClassNameArgs []string
 
 var NodeSelectorLabel = "testLabel=1"
-var DefaultNeo4jName = "test-cluster"
-var DefaultClusterSize = 3
-var DefaultNeo4jNameArg = []string{"--set", "neo4j.name=" + DefaultNeo4jName}
-var DefaultClusterSizeArg = []string{"--set", "neo4j.minimumClusterSize=" + strconv.Itoa(DefaultClusterSize)}
-var DefaultEnterpriseSizeArgs = []string{"--set", "neo4j.edition=enterprise", "--set", "neo4j.acceptLicenseAgreement=yes"}
 
 func init() {
 	setWorkingDir()

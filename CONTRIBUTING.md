@@ -62,3 +62,4 @@ And we'll do our best to help you promote and co-ordinate your Neo ecosystem pro
 ## Further reading
 
 If you want to find out more about how you can contribute, head over to our website for [more information](http://neo4j.com/developer/contributing-code/).
+

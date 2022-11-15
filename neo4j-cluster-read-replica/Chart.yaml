@@ -1,0 +1,23 @@
+apiVersion: v2
+name: neo4j-cluster-read-replica
+home: https://www.neo4j.com
+version: 4.4.14
+appVersion: 4.4.14
+description: Neo4j is the world's leading graph database
+keywords:
+  - graph
+  - database
+  - cypher
+icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
+sources:
+  - https://github.com/neo4j/neo4j
+  - https://github.com/neo4j/docker-neo4j
+maintainers:
+  - name: bfeshti
+    email: bledi.feshti@neotechnology.com
+  - name: harshitsinghvi22
+    email: harshit.singhvi@neotechnology.com
+dependencies:
+  - name: neo4j-shared-templates
+    version: "4.4.14"
+    repository: "file://../neo4j-shared-templates"

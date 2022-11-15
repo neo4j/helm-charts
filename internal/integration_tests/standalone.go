@@ -187,7 +187,7 @@ func proxyBolt(t *testing.T, releaseName model.ReleaseName, connectToPod bool) (
 
 	args := []string{"--namespace", string(releaseName.Namespace()), "port-forward", fmt.Sprintf("pod/%s", releaseName.PodName()), fmt.Sprintf("%d:7474", localHttpPort), fmt.Sprintf("%d:7687", localBoltPort)}
 	if !connectToPod {
-		args = []string{"--namespace", string(releaseName.Namespace()), "port-forward", fmt.Sprintf("service/%s-lb-neo4j", model.DefaultNeo4jName), fmt.Sprintf("%d:7474", localHttpPort), fmt.Sprintf("%d:7687", localBoltPort)}
+		args = []string{"--namespace", string(releaseName.Namespace()), "port-forward", fmt.Sprintf("service/%s-neo4j", releaseName), fmt.Sprintf("%d:7474", localHttpPort), fmt.Sprintf("%d:7687", localBoltPort)}
 	}
 
 	t.Logf("running: %s %s\n", program, args)
@@ -307,7 +307,7 @@ func AsCloseable(closeables []Closeable) Closeable {
 	}
 }
 
-func InstallNeo4jInGcloud(t *testing.T, zone gcloud.Zone, project gcloud.Project, releaseName model.ReleaseName, chart model.Neo4jHelmChartBuilder, extraHelmInstallArgs ...string) (Closeable, error) {
+func InstallNeo4jInGcloud(t *testing.T, zone gcloud.Zone, project gcloud.Project, releaseName model.ReleaseName, chart model.Neo4jHelmChart, extraHelmInstallArgs ...string) (Closeable, error) {
 
 	var closeables []Closeable
 	addCloseable := func(closeable Closeable) {
@@ -330,6 +330,8 @@ func InstallNeo4jInGcloud(t *testing.T, zone gcloud.Zone, project gcloud.Project
 		return AsCloseable(closeables), err
 	}
 	addCloseable(cleanupGcloud)
+
+	addCloseable(func() error { return runAll(t, "helm", helmCleanupCommands(releaseName), false) })
 	// delete the statefulset like this otherwise the pods will hang around for their termination grace period
 	addCloseable(func() error {
 		return runAll(t, "kubectl", [][]string{
@@ -340,7 +342,6 @@ func InstallNeo4jInGcloud(t *testing.T, zone gcloud.Zone, project gcloud.Project
 		}, false)
 	})
 	addCloseable(func() error { return runAll(t, "helm", helmCleanupCommands(releaseName), false) })
-
 	err = run(t, "helm", model.BaseHelmCommand("install", releaseName, chart, model.Neo4jEdition, extraHelmInstallArgs...)...)
 
 	if err != nil {
@@ -368,8 +369,8 @@ func createPersistentVolume(name *model.PersistentDiskName, zone gcloud.Zone, pr
 					FSType:       "ext4",
 				},
 			},
-			AccessModes:                   []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
-			PersistentVolumeReclaimPolicy: v1.PersistentVolumeReclaimDelete,
+			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
+			//PersistentVolumeReclaimPolicy: v1.PersistentVolumeReclaimDelete,
 			ClaimRef: &v1.ObjectReference{
 				Kind:       "PersistentVolumeClaim",
 				Namespace:  string(release.Namespace()),
@@ -440,7 +441,7 @@ func runSubTests(t *testing.T, subTests []SubTest) {
 	}
 }
 
-func installNeo4j(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChartBuilder, extraHelmInstallArgs ...string) (Closeable, error) {
+func installNeo4j(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart, extraHelmInstallArgs ...string) (Closeable, error) {
 	closeables := []Closeable{}
 	addCloseable := func(closeable Closeable) {
 		closeables = append([]Closeable{closeable}, closeables...)
@@ -462,7 +463,7 @@ func installNeo4j(t *testing.T, releaseName model.ReleaseName, chart model.Neo4j
 	return AsCloseable(closeables), err
 }
 
-func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubTest, error) {
+func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChart) ([]SubTest, error) {
 	expectedConfiguration, err := (&model.Neo4jConfiguration{}).PopulateFromFile(Neo4jConfFile)
 	if err != nil {
 		return nil, err
@@ -489,4 +490,22 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 		{name: "Check RunAsNonRoot", test: func(t *testing.T) { assert.NoError(t, RunAsNonRoot(t, name), "RunAsNonRoot check should succeed") }},
 		{name: "Exec in Pod", test: func(t *testing.T) { assert.NoError(t, CheckExecInPod(t, name), "Exec in Pod should succeed") }},
 	}, err
+}
+
+func standaloneCleanup(t *testing.T, releaseName model.ReleaseName) func() {
+	return func() {
+		runAll(t, "helm", [][]string{
+			{"uninstall", releaseName.String(), "--wait", "--timeout", "1m", "--namespace", string(releaseName.Namespace())},
+		}, false)
+		runAll(t, "kubectl", [][]string{
+			{"delete", "pvc", fmt.Sprintf("%s-pvc", releaseName.String()), "--namespace", string(releaseName.Namespace()), "--ignore-not-found"},
+			{"delete", "pv", fmt.Sprintf("%s-pv", releaseName.String()), "--ignore-not-found"},
+		}, false)
+		runAll(t, "gcloud", [][]string{
+			{"compute", "disks", "delete", fmt.Sprintf("neo4j-data-disk-%s", releaseName), "--zone=" + string(gcloud.CurrentZone()), "--project=" + string(gcloud.CurrentProject())},
+		}, false)
+		runAll(t, "kubectl", [][]string{
+			{"delete", "namespace", string(releaseName.Namespace()), "--ignore-not-found", "--force", "--grace-period=0"},
+		}, false)
+	}
 }

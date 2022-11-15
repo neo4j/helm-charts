@@ -1,21 +1,21 @@
 {{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
-{{- $clusterEnabled := eq (include "neo4j.isClusterEnabled" .) "true" }}
+{{- $clusterEnabled := or ( index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" ) ( index .Values.config "dbms.clustering.enable" | default "" | regexMatch "(?i)true|yes" ) -}}
 {{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "" | regexMatch "(?i)no|false" -}}
-{{- $offlineMaintenanceEnabled :=  .Values.neo4j.offlineMaintenanceModeEnabled }}
-{{- $neo4jImage := include "neo4j.image" . }}
-{{- template "neo4j.volumes.validation" . -}}
+{{- $offlineMaintenanceEnabled :=  .Values.neo4j.offlineMaintenanceModeEnabled -}}
+{{- $neo4jImage := include "neo4j.image" . -}}
 {{- template "neo4j.checkNodeSelectorLabels" . -}}
-{{- template "neo4j.checkLicenseAgreement" . -}}
 {{- template "podSpec.checkLoadBalancerParam" . -}}
-{{- template "neo4j.checkResources" . -}}
+{{- template "neo4j.checkLicenseAgreement" . -}}
+{{- template "neo4j.volumes.validation" . -}}
+{{- template "neo4j.checkResources" . }}
 
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   labels:
     helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" $ }}"
-    helm.neo4j.com/clustering: "{{ $clusterEnabled }}"
-    app: "{{ template "neo4j.name" . }}"
+    helm.neo4j.com/dbms.mode: "{{ index $.Values.config "dbms.mode" | default "SINGLE" | upper }}"
+    app: "{{ template "neo4j.appName" . }}"
     helm.neo4j.com/instance: "{{ .Release.Name }}"
     {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
   name: "{{ .Release.Name }}"
@@ -30,14 +30,14 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: "{{ template "neo4j.name" . }}"
+      app: "{{ template "neo4j.appName" . }}"
       helm.neo4j.com/instance: "{{ .Release.Name }}"
   template:
     metadata:
       labels:
-        app: "{{ template "neo4j.name" $ }}"
+        app: "{{ template "neo4j.appName" $ }}"
         helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" $ }}"
-        helm.neo4j.com/clustering: "{{ $clusterEnabled }}"
+        helm.neo4j.com/dbms.mode: "{{ index $.Values.config "dbms.mode" | default "SINGLE" | upper }}"
         helm.neo4j.com/pod_category: "neo4j-instance" # used for anti affinity rules
         helm.neo4j.com/neo4j.loadbalancer: "{{ $.Values.podSpec.loadbalancer }}"
         helm.neo4j.com/instance: "{{ .Release.Name }}"
@@ -51,8 +51,8 @@ spec:
       serviceAccountName: "{{ if kindIs "string" $.Values.podSpec.serviceAccountName | and $.Values.podSpec.serviceAccountName }}{{ $.Values.podSpec.serviceAccountName }}{{ else }}{{ .Release.Name }}{{ end }}"
       {{- end }}
       securityContext: {{ toYaml .Values.securityContext | nindent 8 }}
-      {{- include "neo4j.tolerations" .Values.podSpec.tolerations | nindent 6 }}
       {{- include "neo4j.priorityClassName" . | nindent 6 }}
+      {{- include "neo4j.tolerations" .Values.podSpec.tolerations | nindent 6 }}
       terminationGracePeriodSeconds: {{ if $offlineMaintenanceEnabled  }}0{{ else }}{{ .Values.podSpec.terminationGracePeriodSeconds }}{{ end }}
       {{- $initContainers := .Values.podSpec.initContainers }}
       {{- $initChmodContainer := include "neo4j.initChmodContainer" . }}
@@ -88,7 +88,7 @@ spec:
                 name: "{{ .Release.Name }}-env"
             {{- if not $authDisabled }}
             - secretRef:
-                name: "{{ template "neo4j.name" . }}-auth"
+                name: "{{ template "neo4j.appName" . }}-auth"
             {{- end }}
           env:
             - name: HELM_NEO4J_VERSION
@@ -127,10 +127,6 @@ spec:
           volumeMounts:
             - mountPath: "/config/neo4j.conf"
               name: neo4j-conf
-            - mountPath: "/config/server-logs.xml"
-              name: neo4j-server-logs
-            - mountPath: "/config/user-logs.xml"
-              name: neo4j-user-logs
             {{- include "neo4j.additionalVolumeMounts" .Values.additionalVolumeMounts | nindent 12 }}
             {{- include "neo4j.apoc.volumeMount" .Values.apoc_config | indent 12 }}
             {{- include "neo4j.volumeMounts" .Values.volumes | indent 12 }}
@@ -185,12 +181,6 @@ spec:
                   name: "{{ .Release.Name }}-user-config"
               - configMap:
                   name: "{{ .Release.Name }}-k8s-config"
-        - name: neo4j-server-logs
-          configMap:
-            name: "{{ .Release.Name }}-server-logs-config"
-        - name: neo4j-user-logs
-          configMap:
-            name: "{{ .Release.Name }}-user-logs-config"
         {{- include "neo4j.additionalVolumes" .Values.additionalVolumes | nindent 8 }}
         {{- include "neo4j.apoc.volume" . | nindent 8 }}
         {{- with include "neo4j.ssl.volumesFromSecrets" .Values.ssl }}{{ nindent 8 .}}{{ end -}}
@@ -199,4 +189,3 @@ spec:
   {{- if $volumeClaimTemplates }}
   volumeClaimTemplates: {{ $volumeClaimTemplates | nindent 4 }}
   {{- end }}
-
