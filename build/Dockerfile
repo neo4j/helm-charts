@@ -27,4 +27,4 @@ ENV USE_GKE_GCLOUD_AUTH_PLUGIN True
 # Configure Go
 ENV GOPATH /root/go
 ENV PATH /root/go/bin:/root/.go/bin:$PATH
-RUN mkdir -p ${GOPATH}/src ${GOPATH}/bin && helm repo add neo4j https://helm.neo4j.com/neo4j && helm repo update
+RUN mkdir -p ${GOPATH}/src ${GOPATH}/bin
