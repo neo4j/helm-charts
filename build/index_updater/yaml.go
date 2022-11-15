@@ -21,6 +21,7 @@ func readIndexYaml() ([]byte, error) {
 }
 
 func updateIndexYaml(indexYaml *IndexYaml) error {
+
 	var b bytes.Buffer
 	yamlEncoder := yaml.NewEncoder(&b)
 	yamlEncoder.SetIndent(2)

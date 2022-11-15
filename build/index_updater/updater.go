@@ -6,7 +6,6 @@ import (
 	"log"
 	"os/exec"
 	"strings"
-	"time"
 )
 
 func getSha256Sum(packageName string) (string, error) {
@@ -32,10 +31,6 @@ func getHelmPackages(packageName string, version string) error {
 		return err
 	}
 	return nil
-}
-
-func getCurrentDateAndTime() string {
-	return time.Now().Format("2006-01-02T15:04:05.000000000")
 }
 
 // getNewChartEntries returns the latest helm charts details as a list of entries

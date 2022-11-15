@@ -1,6 +1,9 @@
 package index_updater
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 type Entry struct {
 	Created     string   `yaml:"created"`
@@ -16,7 +19,7 @@ type Entry struct {
 // NewEntry creates a new entry type with the provided info
 func NewEntry(sha string, chartName string, branchName string) *Entry {
 	e := &Entry{
-		Created: getCurrentDateAndTime(),
+		Created: time.Now().String(),
 		Digest:  sha,
 		Home:    "https://github.com/neo4j/helm-charts",
 		Name:    chartName,
