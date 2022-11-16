@@ -19,7 +19,7 @@ type Entry struct {
 // NewEntry creates a new entry type with the provided info
 func NewEntry(sha string, chartName string, branchName string) *Entry {
 	e := &Entry{
-		Created: time.Now().String(),
+		Created: fmt.Sprintf("%s+00:00", time.Now().Format("2006-01-02T15:04:05.000000000")),
 		Digest:  sha,
 		Home:    "https://github.com/neo4j/helm-charts",
 		Name:    chartName,

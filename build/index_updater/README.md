@@ -1,6 +1,6 @@
-# index_updater/
+# index_updater
 
-This directory contains Go code written to automate the index.Yaml update during a helm chart release
+This directory contains Go code written to automate the index.yaml update during a helm chart release
 
 ## Building the executable
 
