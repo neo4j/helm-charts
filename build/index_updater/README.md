@@ -11,3 +11,6 @@ Run the following command to create an indexUpdater executable:
 - env GOOS=linux GOARCH=amd64 go build -o indexUpdater_linux main/main.go
 ```
 - The above command creates an executable which works on TeamCity agents (linux based)
+
+## Assumptions
+- NEO4JVERSION and BRANCH environment variables must be set in your team city build
