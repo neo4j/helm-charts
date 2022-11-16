@@ -47,7 +47,7 @@ func init() {
 	if strings.HasPrefix(branch, "5.") && strings.HasPrefix(version, "4.") {
 		log.Fatalf("Invalid combination of branch %s and version %s", branch, version)
 	}
-
+	// not making the conditions super strict so that I can test it on TC via different branch name
 	if strings.HasPrefix(branch, "5.") {
 		chartsList = chartsv5
 	}
