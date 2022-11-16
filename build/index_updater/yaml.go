@@ -22,15 +22,15 @@ func readIndexYaml() ([]byte, error) {
 
 func updateIndexYaml(indexYaml *IndexYaml) error {
 
-	var b bytes.Buffer
-	yamlEncoder := yaml.NewEncoder(&b)
-	yamlEncoder.SetIndent(2)
-	yamlEncoder.Encode(&indexYaml)
-
 	dir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
+
+	var b bytes.Buffer
+	yamlEncoder := yaml.NewEncoder(&b)
+	yamlEncoder.SetIndent(2)
+	yamlEncoder.Encode(&indexYaml)
 
 	path := fmt.Sprintf("%s/index.yaml", dir)
 	err = os.WriteFile(path, b.Bytes(), 0)
