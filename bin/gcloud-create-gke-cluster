@@ -22,6 +22,7 @@ RELEASE_CHANNEL="stable"
 # make a new Kubernetes cluster
 #
 gcloud container clusters create "${CLOUDSDK_CONTAINER_CLUSTER}" \
+     --cluster-version 1.21 \
      --release-channel=${RELEASE_CHANNEL} \
      --zone="${CLOUDSDK_COMPUTE_ZONE}" \
      --num-nodes "2" \
