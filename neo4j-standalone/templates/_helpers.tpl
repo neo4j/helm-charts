@@ -1,5 +1,25 @@
 {{/* vim: set filetype=mustache: */}}
 {{/*
+Create a default fully qualified app name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+*/}}
+{{- define "neo4j.fullname" -}}
+    {{- if .Values.fullnameOverride -}}
+        {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+    {{- else -}}
+        {{- if .Values.nameOverride -}}
+            {{- $name := default .Chart.Name .Values.nameOverride -}}
+            {{- if contains $name .Release.Name -}}
+                {{- .Release.Name | trunc 63 | trimSuffix "-" -}}
+            {{- else -}}
+                {{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
+            {{- end -}}
+       {{- else -}}
+            {{- printf "%s" .Release.Name | trunc 63 | trimSuffix "-" -}}
+       {{- end -}}
+    {{- end -}}
+{{- end -}}
+{{/*
 Convert a neo4j.conf properties text into valid yaml
 */}}
 {{- define "neo4j.configYaml" -}}
@@ -12,7 +32,8 @@ Convert a neo4j.conf properties text into valid yaml
 {{- end -}}
 
 {{- define "neo4j.appName" -}}
-  {{- .Values.neo4j.name | default .Release.Name }}
+  {{- $fullname := include "neo4j.fullname" .}}
+  {{- .Values.neo4j.name | default $fullname }}
 {{- end -}}
 
 {{- define "neo4j.cluster.server_groups" -}}

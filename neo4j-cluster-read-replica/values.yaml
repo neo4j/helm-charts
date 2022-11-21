@@ -1,6 +1,11 @@
 # Default values for Neo4j.
 # This is a YAML-formatted file.
 
+## @param nameOverride String to partially override common.names.fullname
+nameOverride: ""
+## @param fullnameOverride String to fully override common.names.fullname
+fullnameOverride: ""
+
 neo4j:
   # A common name for all helm deployments that are part of the same Neo4j Cluster
   # To deploy multiple Neo4j clusters in the same Kubernetes namespace each Neo4j cluster should have a different name.

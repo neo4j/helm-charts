@@ -5,7 +5,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: "{{ .Release.Name }}-k8s-config"
+  name: "{{ include "neo4j.fullname" . }}-k8s-config"
   namespace: "{{ .Release.Namespace }}"
   labels:
     app: "{{ template "neo4j.appName" $ }}"
@@ -23,7 +23,7 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: "{{ .Release.Name }}-user-config"
+  name: "{{ include "neo4j.fullname" . }}-user-config"
   namespace: "{{ .Release.Namespace }}"
   labels:
     app: "{{ template "neo4j.appName" $ }}"
@@ -64,7 +64,7 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: "{{ .Release.Name }}-default-config"
+  name: "{{ include "neo4j.fullname" . }}-default-config"
   namespace: "{{ .Release.Namespace }}"
   labels:
     app: "{{ template "neo4j.appName" $ }}"
@@ -156,7 +156,7 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: "{{ .Release.Name }}-apoc-config"
+  name: "{{ include "neo4j.fullname" . }}-apoc-config"
   namespace: "{{ .Release.Namespace }}"
   labels:
     app: "{{ template "neo4j.appName" $ }}"

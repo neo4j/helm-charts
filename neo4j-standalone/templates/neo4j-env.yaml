@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: "{{ .Release.Name }}-env"
+  name: "{{ include "neo4j.fullname" . }}-env"
   namespace: "{{ .Release.Namespace }}"
   labels:
     app: "{{ template "neo4j.appName" $ }}"
     {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
 data:
   # It should not be necessary for neo4j users/administrators to modify this configMap
-  # Neo4j configuration is set in the {{ .Release.Name }}-user-config ConfigMap
+  # Neo4j configuration is set in the {{ include "neo4j.fullname" . }}-user-config ConfigMap
   {{- if eq .Values.neo4j.acceptLicenseAgreement "yes" }}
   NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
   {{- end }}

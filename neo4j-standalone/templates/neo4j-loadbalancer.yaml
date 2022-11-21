@@ -10,7 +10,8 @@
 {{- $ignored = set $values.selector "helm.neo4j.com/neo4j.name" ( include "neo4j.name" $ ) }}
 {{- $ignored = set $values.selector "helm.neo4j.com/dbms.mode" ( index $.Values.config "dbms.mode" | default "CORE" | upper ) }}
 {{- else }}
-{{- $ignored = set $values.selector "helm.neo4j.com/instance" $.Release.Name }}
+{{- $fullname := include "neo4j.fullname" $ }}
+{{- $ignored = set $values.selector "helm.neo4j.com/instance" $fullname }}
 {{- end }}
 {{- dict "Release" $.Release "Values" $values | include "neo4j.services.neo4j" }}
 {{- end }}
