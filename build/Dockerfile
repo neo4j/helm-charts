@@ -1,7 +1,7 @@
 # This dockerfile provides all the dependencies necessart to run go test on this project
 FROM gcr.io/google.com/cloudsdktool/cloud-sdk:slim
 
-ENV HELM_VERSION="v3.6.0" VERIFY_CHECKSUM="true" VERIFY_SIGNATURES="true" GO_VERSION="1.17" SHELL=bash
+ENV HELM_VERSION="v3.9.4" VERIFY_CHECKSUM="true" VERIFY_SIGNATURES="false" GO_VERSION="1.19" SHELL=bash
 COPY docker_resources/* /tmp/
 
 # use bash as the default shell (https://unix.stackexchange.com/questions/442510/how-to-use-bash-for-sh-in-ubuntu)
