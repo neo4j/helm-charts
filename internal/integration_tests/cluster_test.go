@@ -168,6 +168,9 @@ func clusterTestCleanup(t *testing.T, clusterReleaseName model.ReleaseName, core
 			{"uninstall", clusterReleaseName.String() + "-headless", "--wait", "--timeout", "1m", "--namespace", string(clusterReleaseName.Namespace())},
 		}, false)
 		_ = runAll(t, "kubectl", [][]string{
+			{"patch", "pvc", fmt.Sprintf("%s-pvc", core1.name.String()), "--namespace", string(clusterReleaseName.Namespace()), "-p", "'{\"metadata\":{\"finalizers\":null}}'"},
+			{"patch", "pvc", fmt.Sprintf("%s-pvc", core2.name.String()), "--namespace", string(clusterReleaseName.Namespace()), "-p", "'{\"metadata\":{\"finalizers\":null}}'"},
+			{"patch", "pvc", fmt.Sprintf("%s-pvc", core3.name.String()), "--namespace", string(clusterReleaseName.Namespace()), "-p", "'{\"metadata\":{\"finalizers\":null}}'"},
 			{"delete", "pvc", fmt.Sprintf("%s-pvc", core1.name.String()), "--namespace", string(clusterReleaseName.Namespace()), "--ignore-not-found"},
 			{"delete", "pvc", fmt.Sprintf("%s-pvc", core2.name.String()), "--namespace", string(clusterReleaseName.Namespace()), "--ignore-not-found"},
 			{"delete", "pvc", fmt.Sprintf("%s-pvc", core3.name.String()), "--namespace", string(clusterReleaseName.Namespace()), "--ignore-not-found"},

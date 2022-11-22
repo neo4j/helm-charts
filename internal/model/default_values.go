@@ -10,6 +10,7 @@ import (
 )
 
 var DefaultPassword = fmt.Sprintf("defaulthelmpassword%da", RandomIntBetween(100000, 999999999))
+var DefaultAuthSecretName = "neo4j-auth"
 
 var ImagePullSecretUsername,
 	ImagePullSecretPass,

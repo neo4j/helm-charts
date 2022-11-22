@@ -342,7 +342,7 @@ affinity:
 
 {{- define "neo4j.passwordWarning" -}}
 {{- if .Values.neo4j.password  -}}
-WARNING: Passwords set using 'neo4j.password' will be stored in plain text in the Helm release ConfigMap."
-Please consider using 'neo4j.passwordFromSecret' for improved security."
+WARNING: Passwords set using 'neo4j.password' will be stored in plain text in the Helm release ConfigMap.
+Please consider using 'neo4j.passwordFromSecret' for improved security.
 {{- end -}}
 {{- end -}}
