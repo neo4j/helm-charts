@@ -1,13 +1,13 @@
-
+{{- template "neo4j.passwordWarning" . -}}
 {{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "true" | regexMatch "(?i)no|false" -}}
 
   {{- if $authDisabled -}}
-    {{- if .Values.neo4j.password -}}
-      {{ fail "unsupported State: Cannot set neo4j.password when Neo4j authis disabled (dbms.security.auth_enabled=false). Either remove neo4j.password setting or enable Neo4j auth" }}
+    {{- if (or (.Values.neo4j.passwordFromSecret) (.Values.neo4j.password)  ) -}}
+      {{ fail "unsupported State: Cannot set neo4j.password or neo4j.passwordFromSecret when Neo4j authis disabled (dbms.security.auth_enabled=false). Either remove neo4j.password setting or enable Neo4j auth" }}
     {{- end -}}
 
   {{- else -}}
-
+  {{- if not (.Values.neo4j.passwordFromSecret ) -}}
 {{- $secretName := include "neo4j.name" . | printf "%s-auth" }}
 {{- $secret := (lookup "v1" "Secret" .Release.Namespace $secretName) }}
 {{- $secretExists := $secret | all }}
@@ -51,6 +51,6 @@ type: Opaque
 data:
   NEO4J_AUTH: "{{ $password }}"
 {{- end -}}
-
+{{- end -}}
 {{- end -}}
 

@@ -19,12 +19,13 @@ NUM_NODES="${NUM_NODES:-6}"
 
 # For more info on release channels see https://cloud.google.com/kubernetes-engine/docs/concepts/release-channels
 RELEASE_CHANNEL="stable"
-
+CLUSTER_LABELS="owned-by=${CLUSTER_LABELS:-${USER}}"
 # make a new Kubernetes cluster
 #
 gcloud container clusters create "${CLOUDSDK_CONTAINER_CLUSTER}" \
      --release-channel=${RELEASE_CHANNEL} \
      --cluster-version 1.22 \
+     --labels="${CLUSTER_LABELS}" \
      --zone="${CLOUDSDK_COMPUTE_ZONE}" \
      --num-nodes "${NUM_NODES}" \
      --workload-pool="${CLOUDSDK_CORE_PROJECT}.svc.id.goog" \

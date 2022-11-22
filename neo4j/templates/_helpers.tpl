@@ -323,3 +323,26 @@ affinity:
     {{- end }}
     {{- end }}
 {{- end -}}
+
+{{- define "neo4j.secretName" -}}
+    {{- if .Values.neo4j.passwordFromSecret -}}
+        {{- $secret := (lookup "v1" "Secret" .Release.Namespace .Values.neo4j.passwordFromSecret) }}
+        {{- $secretExists := $secret | all }}
+        {{- if not ( $secretExists ) -}}
+            {{ fail (printf "Secret %s configured in 'neo4j.passwordFromSecret' not found" .Values.neo4j.passwordFromSecret) }}
+        {{- else if not (hasKey $secret.data "NEO4J_AUTH") -}}
+            {{ fail (printf "Secret %s must contain key NEO4J_DATA" .Values.neo4j.passwordFromSecret) }}
+        {{- else -}}
+            {{- printf "%s" (tpl .Values.neo4j.passwordFromSecret $) -}}
+         {{- end -}}
+    {{- else -}}
+        {{- printf "%s-auth" (include "neo4j.fullname" .) -}}
+    {{- end -}}
+{{- end -}}
+
+{{- define "neo4j.passwordWarning" -}}
+{{- if .Values.neo4j.password  -}}
+WARNING: Passwords set using 'neo4j.password' will be stored in plain text in the Helm release ConfigMap."
+Please consider using 'neo4j.passwordFromSecret' for improved security."
+{{- end -}}
+{{- end -}}

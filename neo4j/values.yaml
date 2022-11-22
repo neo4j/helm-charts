@@ -9,9 +9,12 @@ fullnameOverride: ""
 neo4j:
   # Name of your cluster
   name: ""
-  # If password is not set or empty a random password will be generated during installation
+  # If password is not set or empty a random password will be generated during installation.
+  # Ignored if `neo4j.passwordFromSecret` is provided
   password: ""
 
+  # Existing secret to use for initial database password
+  passwordFromSecret: ""
   # Neo4j Edition to use (community|enterprise)
   edition: "community"
 

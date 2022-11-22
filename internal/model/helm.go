@@ -201,7 +201,7 @@ func HelmTemplateFromStruct(t *testing.T, chart HelmChartBuilder, values HelmVal
 	cmd := exec.Command("helm", args...)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		t.Fatal(err)
+		return nil, multierror.Append(errors.New("Error running helm template"), err)
 	}
 	go func() {
 		defer stdin.Close()
@@ -212,8 +212,7 @@ func HelmTemplateFromStruct(t *testing.T, chart HelmChartBuilder, values HelmVal
 	t.Logf("Running %s\n", cmd.Args)
 	t.Logf("With StdIn:\n%s\n", helmValues)
 	if err != nil {
-		t.Error(string(stdErrOut))
-		t.Fatal(err)
+		return nil, multierror.Append(errors.New("Error running helm template"), err, fmt.Errorf(string(stdErrOut)))
 	}
 	return decodeK8s(stdErrOut)
 }
