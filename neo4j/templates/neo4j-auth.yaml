@@ -1,4 +1,3 @@
-{{- template "neo4j.passwordWarning" . -}}
 {{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "true" | regexMatch "(?i)no|false" -}}
 
   {{- if $authDisabled -}}

@@ -66,7 +66,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 		return
 	}
 
-	componentsToParallelInstall := []helmComponent{core1, core2, core3, headlessService}
+	componentsToParallelInstall := []helmComponent{core2, core3, headlessService}
 	closeablesNew, err := performBackgroundInstall(t, componentsToParallelInstall, clusterReleaseName)
 	if !assert.NoError(t, err) {
 		return
