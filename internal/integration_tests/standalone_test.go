@@ -41,7 +41,7 @@ func TestInstallStandaloneOnGCloudK8s(t *testing.T) {
 
 func TestAuthSecretsWrongKey(t *testing.T) {
 	t.Parallel()
-	releaseName := model.NewReleaseName("install-" + TestRunIdentifier)
+	releaseName := model.NewReleaseName("auth-wrong-key-" + TestRunIdentifier)
 	_, err := createNamespace(t, releaseName)
 	if err != nil {
 		return
@@ -77,7 +77,7 @@ func TestAuthSecretsWrongKey(t *testing.T) {
 
 func TestAuthSecretsInvalidPassword(t *testing.T) {
 	t.Parallel()
-	releaseName := model.NewReleaseName("install-" + TestRunIdentifier)
+	releaseName := model.NewReleaseName("auth-invalid-password-" + TestRunIdentifier)
 	_, err := createNamespace(t, releaseName)
 	if err != nil {
 		return
@@ -117,8 +117,8 @@ func TestAuthPasswordCannotBeDifferent(t *testing.T) {
 		return
 	}
 	t.Parallel()
-	releaseName1 := model.NewReleaseName("install1-" + TestRunIdentifier)
-	releaseName2 := model.NewReleaseName("install2-" + TestRunIdentifier)
+	releaseName1 := model.NewReleaseName("auth-pass-1-" + TestRunIdentifier)
+	releaseName2 := model.NewReleaseName("auth-pass-2-" + TestRunIdentifier)
 	releaseName2.Namespace()
 	_, err := createNamespace(t, releaseName1)
 	if err != nil {
