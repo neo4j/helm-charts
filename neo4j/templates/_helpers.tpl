@@ -86,7 +86,7 @@ Convert a neo4j.conf properties text into valid yaml
 If no password is set in `Values.neo4j.password` generates a new random password and modifies Values.neo4j so that the same password is available everywhere
 */}}
 {{- define "neo4j.password" -}}
-  {{- if not .Values.neo4j.password }}
+  {{- if not .Values.neo4j.password | and (not .Values.neo4j.passwordFromSecret) }}
     {{- $password :=  randAlphaNum 14 }}
     {{- $secretName := include "neo4j.name" . | printf "%s-auth" }}
     {{- $secret := (lookup "v1" "Secret" .Release.Namespace $secretName) }}
@@ -96,7 +96,12 @@ If no password is set in `Values.neo4j.password` generates a new random password
     {{- end -}}
     {{- $ignored := set .Values.neo4j "password" $password }}
   {{- end -}}
+  {{- if not .Values.neo4j.passwordFromSecret | and .Values.neo4j.password  -}}
   {{- .Values.neo4j.password }}
+{{- end -}}
+  {{- if .Values.neo4j.passwordFromSecret  -}}
+{{- printf "$(kubectl get secret %s -o go-template='{{.data.NEO4J_AUTH | base64decode }}' | cut -d '/' -f2) " .Values.neo4j.passwordFromSecret -}}
+{{- end -}}
 {{- end -}}
 
 {{- define "podSpec.checkLoadBalancerParam" }}
@@ -341,7 +346,7 @@ affinity:
 {{- end -}}
 
 {{- define "neo4j.passwordWarning" -}}
-{{- if .Values.neo4j.password  -}}
+{{- if not .Values.neo4j.passwordFromSecret | and .Values.neo4j.password   -}}
 WARNING: Passwords set using 'neo4j.password' will be stored in plain text in the Helm release ConfigMap.
 Please consider using 'neo4j.passwordFromSecret' for improved security.
 {{- end -}}

@@ -78,4 +78,4 @@ Thank you for using {{ .Chart.Name }}.
 {{- end }}
 {{- end }}
 {{ "" }}
-{{ include "neo4j.passwordWarning" . }}
+{{ template "neo4j.passwordWarning" . }}
