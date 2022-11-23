@@ -65,7 +65,7 @@ func TestAuthSecretsWrongKey(t *testing.T) {
 	helmValues := model.DefaultEnterpriseValues
 	helmValues.Neo4J.Edition = model.Neo4jEdition
 	helmValues.Neo4J.PasswordFromSecret = secretWrongKeyName
-	_, err = model.HelmInstallFromStruct(t, model.HelmChart, releaseName, helmValues)
+	_, err = model.HelmInstallFromStruct(t, model.HelmChart, releaseName.String(), string(releaseName.Namespace()), helmValues)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Secret secret-wrong-key must contain key NEO4J_DATA")
 	t.Cleanup(func() {
@@ -101,12 +101,42 @@ func TestAuthSecretsInvalidPassword(t *testing.T) {
 	helmValues := model.DefaultEnterpriseValues
 	helmValues.Neo4J.Edition = model.Neo4jEdition
 	helmValues.Neo4J.PasswordFromSecret = secretInvalidPasswordName
-	_, err = model.HelmInstallFromStruct(t, model.HelmChart, releaseName, helmValues)
+	_, err = model.HelmInstallFromStruct(t, model.HelmChart, releaseName.String(), string(releaseName.Namespace()), helmValues)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Password in secret invalid-password must start with the characters 'neo4j/'")
 	t.Cleanup(func() {
 		_ = runAll(t, "kubectl", [][]string{
 			{"delete", "namespace", string(releaseName.Namespace())},
+		}, false)
+	})
+}
+
+func TestAuthPasswordCannotBeDifferent(t *testing.T) {
+	t.Parallel()
+	releaseName1 := model.NewReleaseName("install1-" + TestRunIdentifier)
+	releaseName2 := model.NewReleaseName("install2-" + TestRunIdentifier)
+	releaseName2.Namespace()
+	_, err := createNamespace(t, releaseName1)
+	if err != nil {
+		return
+	}
+
+	helmValues := model.DefaultEnterpriseValues
+	helmValues.Neo4J.Edition = model.Neo4jEdition
+	helmValues.Neo4J.Password = "password1"
+	helmValues.Neo4J.MinimumClusterSize = 3
+	_, err = model.HelmInstallFromStruct(t, model.HelmChart, releaseName1.String(), string(releaseName1.Namespace()), helmValues)
+	assert.NoError(t, err)
+	helmValues.Neo4J.Password = "password2"
+	_, err = model.HelmInstallFromStruct(t, model.HelmChart, releaseName2.String(), string(releaseName1.Namespace()), helmValues)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "The desired password does not match the password stored in the Kubernetes Secret")
+	t.Cleanup(func() {
+		_ = runAll(t, "helm", [][]string{
+			{"uninstall", releaseName1.String(), "--namespace", string(releaseName1.Namespace())},
+		}, false)
+		_ = runAll(t, "kubectl", [][]string{
+			{"delete", "namespace", string(releaseName1.Namespace())},
 		}, false)
 	})
 }

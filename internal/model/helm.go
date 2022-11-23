@@ -217,14 +217,14 @@ func HelmTemplateFromStruct(t *testing.T, chart HelmChartBuilder, values HelmVal
 	return decodeK8s(stdErrOut)
 }
 
-func HelmInstallFromStruct(t *testing.T, chart Neo4jHelmChartBuilder, releaseName ReleaseName, values HelmValues) ([]byte, error) {
+func HelmInstallFromStruct(t *testing.T, chart Neo4jHelmChartBuilder, releaseName string, namespace string, values HelmValues) ([]byte, error) {
 	helmValues, _ := yaml.Marshal(values)
 	helmArgs := []string{
 		"install",
-		releaseName.String(),
+		releaseName,
 		chart.getPath(),
 		"--namespace",
-		string(releaseName.Namespace()),
+		namespace,
 		"--values",
 		"-",
 	}
