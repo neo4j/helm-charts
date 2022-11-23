@@ -405,18 +405,6 @@ func TestChmodInitContainers(t *testing.T) {
 	}))
 }
 
-// Tests the "base" helm command used for Integration Tests
-func TestBaseHelmTemplate(t *testing.T) {
-	t.Parallel()
-
-	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
-		_, err := model.RunHelmCommand(t, model.BaseHelmCommand("template", &model.DefaultHelmTemplateReleaseName, chart, edition, useNeo4jClusterName...))
-		if !assert.NoError(t, err) {
-			return
-		}
-	}))
-}
-
 type authSecretTest struct {
 	neo4jName      *string
 	setPassword    bool
