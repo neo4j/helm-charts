@@ -112,6 +112,10 @@ func TestAuthSecretsInvalidPassword(t *testing.T) {
 }
 
 func TestAuthPasswordCannotBeDifferent(t *testing.T) {
+	if model.Neo4jEdition != "enterprise" {
+		t.Skip()
+		return
+	}
 	t.Parallel()
 	releaseName1 := model.NewReleaseName("install1-" + TestRunIdentifier)
 	releaseName2 := model.NewReleaseName("install2-" + TestRunIdentifier)
