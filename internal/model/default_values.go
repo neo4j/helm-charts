@@ -25,6 +25,8 @@ var DefaultClusterSize = 3
 var DefaultNeo4jNameArg = []string{"--set", "neo4j.name=" + DefaultNeo4jName}
 var DefaultClusterSizeArg = []string{"--set", "neo4j.minimumClusterSize=" + strconv.Itoa(DefaultClusterSize)}
 var DefaultEnterpriseSizeArgs = []string{"--set", "neo4j.edition=enterprise", "--set", "neo4j.acceptLicenseAgreement=yes"}
+var HelmInstallArg = "install"
+var HelmTemplateArg = "template"
 
 func init() {
 	setWorkingDir()

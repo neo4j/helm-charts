@@ -216,3 +216,33 @@ func HelmTemplateFromStruct(t *testing.T, chart HelmChartBuilder, values HelmVal
 	}
 	return decodeK8s(stdErrOut)
 }
+
+func HelmInstallFromStruct(t *testing.T, chart Neo4jHelmChartBuilder, releaseName ReleaseName, values HelmValues) ([]byte, error) {
+	helmValues, _ := yaml.Marshal(values)
+	helmArgs := []string{
+		"install",
+		releaseName.String(),
+		chart.getPath(),
+		"--namespace",
+		string(releaseName.Namespace()),
+		"--values",
+		"-",
+	}
+	cmd := exec.Command("helm", helmArgs...)
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return nil, multierror.Append(errors.New("Error running helm template"), err)
+	}
+	go func() {
+		defer stdin.Close()
+		io.WriteString(stdin, string(helmValues))
+	}()
+
+	stdErrOut, err := cmd.CombinedOutput()
+	t.Logf("Running %s\n", cmd.Args)
+	t.Logf("With StdIn:\n%s\n", helmValues)
+	if err != nil {
+		return nil, multierror.Append(errors.New("Error running helm install"), err, fmt.Errorf(string(stdErrOut)))
+	}
+	return stdErrOut, nil
+}

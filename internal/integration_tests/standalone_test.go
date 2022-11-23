@@ -1,11 +1,14 @@
 package integration_tests
 
 import (
+	"context"
 	"fmt"
 	"github.com/neo4j/helm-charts/internal/integration_tests/gcloud"
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/neo4j/helm-charts/internal/resources"
 	"github.com/stretchr/testify/assert"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 import "testing"
 
@@ -34,6 +37,78 @@ func TestInstallStandaloneOnGCloudK8s(t *testing.T) {
 		return
 	}
 	runSubTests(t, subTests)
+}
+
+func TestAuthSecretsWrongKey(t *testing.T) {
+	t.Parallel()
+	releaseName := model.NewReleaseName("install-" + TestRunIdentifier)
+	_, err := createNamespace(t, releaseName)
+	if err != nil {
+		return
+	}
+	namespace := string(releaseName.Namespace())
+	secretWrongKeyName := "secret-wrong-key"
+	secretWrongKeyData := make(map[string][]byte)
+	secretWrongKeyData["NEO4J_PASSWORD"] = []byte("neo4j/foo123")
+	secretWrongKey := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretWrongKeyName,
+			Namespace: namespace,
+		},
+		Data: secretWrongKeyData,
+		Type: "Opaque",
+	}
+	_, err = Clientset.CoreV1().Secrets(namespace).Create(context.TODO(), secretWrongKey, metav1.CreateOptions{})
+	if err != nil {
+		return
+	}
+	helmValues := model.DefaultEnterpriseValues
+	helmValues.Neo4J.Edition = model.Neo4jEdition
+	helmValues.Neo4J.PasswordFromSecret = secretWrongKeyName
+	_, err = model.HelmInstallFromStruct(t, model.HelmChart, releaseName, helmValues)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Secret secret-wrong-key must contain key NEO4J_DATA")
+	t.Cleanup(func() {
+		_ = runAll(t, "kubectl", [][]string{
+			{"delete", "namespace", string(releaseName.Namespace())},
+		}, false)
+	})
+}
+
+func TestAuthSecretsInvalidPassword(t *testing.T) {
+	t.Parallel()
+	releaseName := model.NewReleaseName("install-" + TestRunIdentifier)
+	_, err := createNamespace(t, releaseName)
+	if err != nil {
+		return
+	}
+	namespace := string(releaseName.Namespace())
+	secretInvalidPasswordName := "invalid-password"
+	secretInvalidPasswordData := make(map[string][]byte)
+	secretInvalidPasswordData["NEO4J_AUTH"] = []byte("user/foo123")
+	secretWrongKey := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretInvalidPasswordName,
+			Namespace: namespace,
+		},
+		Data: secretInvalidPasswordData,
+		Type: "Opaque",
+	}
+	_, err = Clientset.CoreV1().Secrets(namespace).Create(context.TODO(), secretWrongKey, metav1.CreateOptions{})
+	if err != nil {
+		return
+	}
+	helmValues := model.DefaultEnterpriseValues
+	helmValues.Neo4J.Edition = model.Neo4jEdition
+	helmValues.Neo4J.PasswordFromSecret = secretInvalidPasswordName
+	_, err = model.HelmInstallFromStruct(t, model.HelmChart, releaseName, helmValues)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Password in secret invalid-password must start with the characters 'neo4j/'")
+	t.Cleanup(func() {
+		_ = runAll(t, "kubectl", [][]string{
+			{"delete", "namespace", string(releaseName.Namespace())},
+		}, false)
+	})
 }
 
 func standaloneCleanup(t *testing.T, releaseName model.ReleaseName) func() {
