@@ -19,6 +19,20 @@ import (
 	"testing"
 )
 
+type HelmClient struct {
+	chartName string
+	chartPath string
+}
+
+func NewHelmClient(chartName string) *HelmClient {
+	var _, sourceFile, _, _ = runtime.Caller(0)
+	var sourceDir = path.Dir(sourceFile)
+	return &HelmClient{
+		chartName: chartName,
+		chartPath: path.Join(path.Join(sourceDir, "../.."), chartName),
+	}
+}
+
 func CheckError(err error) {
 	if err != nil {
 		log.Panic(err)
@@ -217,12 +231,12 @@ func HelmTemplateFromStruct(t *testing.T, chart HelmChartBuilder, values HelmVal
 	return decodeK8s(stdErrOut)
 }
 
-func HelmInstallFromStruct(t *testing.T, chart Neo4jHelmChartBuilder, releaseName string, namespace string, values HelmValues) ([]byte, error) {
+func (c *HelmClient) Install(t *testing.T, releaseName string, namespace string, values HelmValues) (string, error) {
 	helmValues, _ := yaml.Marshal(values)
 	helmArgs := []string{
 		"install",
 		releaseName,
-		chart.getPath(),
+		c.chartPath,
 		"--namespace",
 		namespace,
 		"--values",
@@ -231,7 +245,7 @@ func HelmInstallFromStruct(t *testing.T, chart Neo4jHelmChartBuilder, releaseNam
 	cmd := exec.Command("helm", helmArgs...)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		return nil, multierror.Append(errors.New("Error running helm template"), err)
+		return "", multierror.Append(errors.New("Error running helm template"), err)
 	}
 	go func() {
 		defer stdin.Close()
@@ -242,7 +256,7 @@ func HelmInstallFromStruct(t *testing.T, chart Neo4jHelmChartBuilder, releaseNam
 	t.Logf("Running %s\n", cmd.Args)
 	t.Logf("With StdIn:\n%s\n", helmValues)
 	if err != nil {
-		return nil, multierror.Append(errors.New("Error running helm install"), err, fmt.Errorf(string(stdErrOut)))
+		return "", multierror.Append(errors.New("Error running helm install"), err, fmt.Errorf(string(stdErrOut)))
 	}
-	return stdErrOut, nil
+	return string(stdErrOut), nil
 }
