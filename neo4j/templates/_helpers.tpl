@@ -344,7 +344,7 @@ affinity:
             {{- printf "%s" (tpl .Values.neo4j.passwordFromSecret $) -}}
          {{- end -}}
     {{- else -}}
-        {{- printf "%s-auth" (include "neo4j.fullname" .) -}}
+        {{- include "neo4j.name" . | printf "%s-auth" -}}
     {{- end -}}
 {{- end -}}
 
