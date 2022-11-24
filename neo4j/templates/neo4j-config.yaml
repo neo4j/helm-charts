@@ -151,6 +151,9 @@ data:
   dbms.ssl.policy.{{ $name }}.enabled: "true"
   {{- end }}
   {{- end }}
+  server.memory.heap.max_size: "$(bash -c 'cat /config/memory.conf/memory.conf | grep server.memory.heap.max_size | cut -d = -f 2')"
+  server.memory.heap.initial_size: "$(bash -c 'cat /config/memory.conf/memory.conf  | grep server.memory.heap.initial_size | cut -d = -f 2')"
+  server.memory.pagecache.size: "$(bash -c 'cat /config/memory.conf/memory.conf | grep server.memory.pagecache.size | cut -d = -f 2')"
 ---
 {{- if not (empty $.Values.apoc_config) -}}
 # User-provided Neo4j Apoc config values

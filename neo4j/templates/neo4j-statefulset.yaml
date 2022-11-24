@@ -54,11 +54,21 @@ spec:
       {{- include "neo4j.tolerations" .Values.podSpec.tolerations | nindent 6 }}
       {{- include "neo4j.priorityClassName" . | nindent 6 }}
       terminationGracePeriodSeconds: {{ if $offlineMaintenanceEnabled  }}0{{ else }}{{ .Values.podSpec.terminationGracePeriodSeconds }}{{ end }}
+      initContainers:
+        - name: memory-recommendation
+          image: "{{ $neo4jImage }}"
+          command: [ 'bash', '-c', "bash -c 'NEO4J_CONF=/var/lib/neo4j/conf neo4j-admin server memory-recommendation --memory={{- $.Values.neo4j.resources.memory | trimSuffix "i" -}} > /config/memory.conf/memory.conf'" ]
+          envFrom:
+            - configMapRef:
+                name: "{{ include "neo4j.fullname" . }}-env"
+          volumeMounts:
+            - mountPath: "/config/memory.conf"
+              name: memory-config
+          securityContext: {{ omit .Values.securityContext "fsGroupChangePolicy" "fsGroup" | toYaml  | nindent 14 }}
       {{- $initContainers := .Values.podSpec.initContainers }}
       {{- $initChmodContainer := include "neo4j.initChmodContainer" . }}
       {{- if $initChmodContainer }}{{ $initContainers = fromYaml $initChmodContainer | prepend $initContainers }}{{ end }}
       {{- with $initContainers }}
-      initContainers:
         {{- range $i, $initContainer := . }}
         {{- if not $offlineMaintenanceEnabled | or $initContainer.enabledInOfflineMaintenanceMode }}
         - {{ omit $initContainer "enabledInOfflineMaintenanceMode" | toYaml | indent 10 | trimAll " " }}
@@ -131,6 +141,9 @@ spec:
               name: neo4j-server-logs
             - mountPath: "/config/user-logs.xml"
               name: neo4j-user-logs
+            - mountPath: "/config/memory.conf"
+              name: memory-config
+              readOnly: true
             {{- include "neo4j.additionalVolumeMounts" .Values.additionalVolumeMounts | nindent 12 }}
             {{- include "neo4j.apoc.volumeMount" .Values.apoc_config | indent 12 }}
             {{- include "neo4j.volumeMounts" .Values.volumes | indent 12 }}
@@ -185,6 +198,8 @@ spec:
                   name: "{{ include "neo4j.fullname" . }}-user-config"
               - configMap:
                   name: "{{ include "neo4j.fullname" . }}-k8s-config"
+        - name: memory-config
+          emptyDir: {}
         - name: neo4j-server-logs
           configMap:
             name: "{{ include "neo4j.fullname" . }}-server-logs-config"
