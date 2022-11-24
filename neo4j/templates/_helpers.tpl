@@ -86,7 +86,7 @@ Convert a neo4j.conf properties text into valid yaml
 If no password is set in `Values.neo4j.password` generates a new random password and modifies Values.neo4j so that the same password is available everywhere
 */}}
 {{- define "neo4j.password" -}}
-  {{- if not .Values.neo4j.password }}
+  {{- if and (not .Values.neo4j.passwordFromSecret) (not .Values.neo4j.password) }}
     {{- $password :=  randAlphaNum 14 }}
     {{- $secretName := include "neo4j.name" . | printf "%s-auth" }}
     {{- $secret := (lookup "v1" "Secret" .Release.Namespace $secretName) }}
@@ -96,7 +96,12 @@ If no password is set in `Values.neo4j.password` generates a new random password
     {{- end -}}
     {{- $ignored := set .Values.neo4j "password" $password }}
   {{- end -}}
+  {{- if and (.Values.neo4j.password) (not .Values.neo4j.passwordFromSecret)   -}}
   {{- .Values.neo4j.password }}
+{{- end -}}
+  {{- if .Values.neo4j.passwordFromSecret  -}}
+{{- printf "$(kubectl get secret %s -o go-template='{{.data.NEO4J_AUTH | base64decode }}' | cut -d '/' -f2)" .Values.neo4j.passwordFromSecret -}}
+{{- end -}}
 {{- end -}}
 
 {{- define "podSpec.checkLoadBalancerParam" }}
@@ -322,4 +327,30 @@ affinity:
 {{ toYaml .Values.podSpec.nodeAffinity | indent 6 }}
     {{- end }}
     {{- end }}
+{{- end -}}
+
+{{- define "neo4j.secretName" -}}
+    {{- if .Values.neo4j.passwordFromSecret -}}
+        {{- $secret := (lookup "v1" "Secret" .Release.Namespace .Values.neo4j.passwordFromSecret) }}
+        {{- $secretExists := $secret | all }}
+        {{- if not ( $secretExists ) -}}
+            {{ fail (printf "Secret %s configured in 'neo4j.passwordFromSecret' not found" .Values.neo4j.passwordFromSecret) }}
+        {{- else if not (hasKey $secret.data "NEO4J_AUTH") -}}
+            {{ fail (printf "Secret %s must contain key NEO4J_DATA" .Values.neo4j.passwordFromSecret) }}
+        {{/*The secret must start with characters 'neo4j/`*/}}
+        {{- else if not (index $secret.data "NEO4J_AUTH" | b64dec | regexFind "^neo4j\\/\\w*") -}}
+            {{ fail (printf "Password in secret %s must start with the characters 'neo4j/'" .Values.neo4j.passwordFromSecret) }}
+        {{- else -}}
+            {{- printf "%s" (tpl .Values.neo4j.passwordFromSecret $) -}}
+         {{- end -}}
+    {{- else -}}
+        {{- include "neo4j.name" . | printf "%s-auth" -}}
+    {{- end -}}
+{{- end -}}
+
+{{- define "neo4j.passwordWarning" -}}
+{{- if and (.Values.neo4j.password) (not .Values.neo4j.passwordFromSecret) -}}
+WARNING: Passwords set using 'neo4j.password' will be stored in plain text in the Helm release ConfigMap.
+Please consider using 'neo4j.passwordFromSecret' for improved security.
+{{- end -}}
 {{- end -}}

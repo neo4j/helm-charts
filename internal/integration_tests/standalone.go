@@ -160,6 +160,7 @@ func kCreateSecret(namespace model.Namespace) ([][]string, Closeable, error) {
 	generateCerts(tempDir)
 
 	return [][]string{
+		{"create", "secret", "-n", string(namespace), "generic", model.DefaultAuthSecretName, fmt.Sprintf("--from-literal=NEO4J_AUTH=neo4j/%s", model.DefaultPassword)},
 		{"create", "secret", "-n", string(namespace), "generic", "bolt-cert", fmt.Sprintf("--from-file=%s/public.crt", tempDir)},
 		{"create", "secret", "-n", string(namespace), "generic", "https-cert", fmt.Sprintf("--from-file=%s/public.crt", tempDir)},
 		{"create", "secret", "-n", string(namespace), "generic", "bolt-key", fmt.Sprintf("--from-file=%s/private.key", tempDir)},

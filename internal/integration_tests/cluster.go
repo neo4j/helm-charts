@@ -72,10 +72,6 @@ func clusterTests(clusterRelease model.ReleaseName) ([]SubTest, error) {
 			t.Parallel()
 			assert.NoError(t, checkPriorityClassName(t, clusterRelease), "priorityClassName should match")
 		}},
-		{name: "Check Cluster Password failure", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, checkClusterCorePasswordFailure(t), "Cluster core installation should not succeed with incorrect password")
-		}},
 		{name: "Check K8s", test: func(t *testing.T) {
 			assert.NoError(t, checkK8s(t, clusterRelease), "Neo4j Config check should succeed")
 		}},

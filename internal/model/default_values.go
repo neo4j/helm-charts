@@ -10,6 +10,7 @@ import (
 )
 
 var DefaultPassword = fmt.Sprintf("defaulthelmpassword%da", RandomIntBetween(100000, 999999999))
+var DefaultAuthSecretName = "neo4j-auth"
 
 var ImagePullSecretUsername,
 	ImagePullSecretPass,
@@ -20,6 +21,7 @@ var NodeSelectorArgs, ImagePullSecretArgs, CustomApocImageArgs, PriorityClassNam
 
 var NodeSelectorLabel = "testLabel=1"
 var DefaultNeo4jName = "test-cluster"
+var DefaultNeo4jChartName = "neo4j"
 var DefaultClusterSize = 3
 var DefaultNeo4jNameArg = []string{"--set", "neo4j.name=" + DefaultNeo4jName}
 var DefaultClusterSizeArg = []string{"--set", "neo4j.minimumClusterSize=" + strconv.Itoa(DefaultClusterSize)}

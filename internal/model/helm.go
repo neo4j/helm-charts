@@ -19,6 +19,20 @@ import (
 	"testing"
 )
 
+type HelmClient struct {
+	chartName string
+	chartPath string
+}
+
+func NewHelmClient(chartName string) *HelmClient {
+	var _, sourceFile, _, _ = runtime.Caller(0)
+	var sourceDir = path.Dir(sourceFile)
+	return &HelmClient{
+		chartName: chartName,
+		chartPath: path.Join(path.Join(sourceDir, "../.."), chartName),
+	}
+}
+
 func CheckError(err error) {
 	if err != nil {
 		log.Panic(err)
@@ -107,7 +121,7 @@ func BaseHelmCommand(helmCommand string, releaseName ReleaseName, chart Neo4jHel
 		"--set", "volumes.data.mode=volume",
 		"--set", "volumes.data.volume.persistentVolumeClaim.claimName="+fmt.Sprintf("%s-pvc", releaseName.String()),
 		//"--set", "volumes.data.volume.gcePersistentDisk.pdName="+string(*diskName),
-		"--set", "neo4j.password="+DefaultPassword,
+		"--set", "neo4j.passwordFromSecret="+DefaultAuthSecretName,
 		"--set", "neo4j.resources.requests.cpu="+cpuRequests,
 		"--set", "neo4j.resources.requests.memory="+memoryRequests,
 		"--set", "neo4j.resources.limits.cpu="+cpuLimits,
@@ -201,7 +215,7 @@ func HelmTemplateFromStruct(t *testing.T, chart HelmChartBuilder, values HelmVal
 	cmd := exec.Command("helm", args...)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		t.Fatal(err)
+		return nil, multierror.Append(errors.New("Error running helm template"), err)
 	}
 	go func() {
 		defer stdin.Close()
@@ -212,8 +226,37 @@ func HelmTemplateFromStruct(t *testing.T, chart HelmChartBuilder, values HelmVal
 	t.Logf("Running %s\n", cmd.Args)
 	t.Logf("With StdIn:\n%s\n", helmValues)
 	if err != nil {
-		t.Error(string(stdErrOut))
-		t.Fatal(err)
+		return nil, multierror.Append(errors.New("Error running helm template"), err, fmt.Errorf(string(stdErrOut)))
 	}
 	return decodeK8s(stdErrOut)
+}
+
+func (c *HelmClient) Install(t *testing.T, releaseName string, namespace string, values HelmValues) (string, error) {
+	helmValues, _ := yaml.Marshal(values)
+	helmArgs := []string{
+		"install",
+		releaseName,
+		c.chartPath,
+		"--namespace",
+		namespace,
+		"--values",
+		"-",
+	}
+	cmd := exec.Command("helm", helmArgs...)
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return "", multierror.Append(errors.New("Error running helm template"), err)
+	}
+	go func() {
+		defer stdin.Close()
+		io.WriteString(stdin, string(helmValues))
+	}()
+
+	stdErrOut, err := cmd.CombinedOutput()
+	t.Logf("Running %s\n", cmd.Args)
+	t.Logf("With StdIn:\n%s\n", helmValues)
+	if err != nil {
+		return "", multierror.Append(errors.New("Error running helm install"), err, fmt.Errorf(string(stdErrOut)))
+	}
+	return string(stdErrOut), nil
 }

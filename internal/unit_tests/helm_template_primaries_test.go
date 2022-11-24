@@ -405,18 +405,6 @@ func TestChmodInitContainers(t *testing.T) {
 	}))
 }
 
-// Tests the "base" helm command used for Integration Tests
-func TestBaseHelmTemplate(t *testing.T) {
-	t.Parallel()
-
-	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
-		_, err := model.RunHelmCommand(t, model.BaseHelmCommand("template", &model.DefaultHelmTemplateReleaseName, chart, edition, useNeo4jClusterName...))
-		if !assert.NoError(t, err) {
-			return
-		}
-	}))
-}
-
 type authSecretTest struct {
 	neo4jName      *string
 	setPassword    bool
@@ -463,7 +451,7 @@ func TestAuthSecrets(t *testing.T) {
 		{&neo4jDotName, true, &model.DefaultPassword, authSecretExpectation{authSecretCreated: true}},
 		{&neo4jDotName, true, nil, authSecretExpectation{authSecretCreated: true, randomPasswordAssigned: true}},
 		{&neo4jDotName, true, &emptyString, authSecretExpectation{authSecretCreated: true, randomPasswordAssigned: true}},
-		{&neo4jDotName, false, &model.DefaultPassword, authSecretExpectation{helmFailsWithError: errors.New("unsupported State: Cannot set neo4j.password when Neo4j authis disabled (dbms.security.auth_enabled=false). Either remove neo4j.password setting or enable Neo4j auth")}},
+		{&neo4jDotName, false, &model.DefaultPassword, authSecretExpectation{helmFailsWithError: errors.New("unsupported State: Cannot set neo4j.password or neo4j.passwordFromSecret when Neo4j authis disabled (dbms.security.auth_enabled=false). Either remove neo4j.password setting or enable Neo4j auth")}},
 	}
 
 	doTestCase := func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string, testCase authSecretTest) {
@@ -540,6 +528,21 @@ func TestAuthSecrets(t *testing.T) {
 			})
 		}
 	}))
+}
+
+func TestPasswordFromExistingSecret(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		helmValues := model.DefaultEnterpriseValues
+		helmValues.Neo4J.Edition = edition
+		helmValues.Neo4J.PasswordFromSecret = "test-secret"
+		_, err := model.HelmTemplateFromStruct(t, model.HelmChart, helmValues)
+		if assert.Contains(t, err.Error(), "Secret test-secret configured in 'neo4j.passwordFromSecret' not found") {
+			return
+		}
+	}))
+
 }
 
 func TestDefaultLabels(t *testing.T) {

@@ -19,7 +19,6 @@ NUM_NODES="${NUM_NODES:-6}"
 
 # For more info on release channels see https://cloud.google.com/kubernetes-engine/docs/concepts/release-channels
 RELEASE_CHANNEL="stable"
-
 # make a new Kubernetes cluster
 #
 gcloud container clusters create "${CLOUDSDK_CONTAINER_CLUSTER}" \

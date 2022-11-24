@@ -45,7 +45,6 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3), defaultHelmArgs}
 	cores := []clusterCore{core1, core2, core3}
 
-	//t.Cleanup(func() { cleanupTest(t, AsCloseable(closeables)) })
 	t.Cleanup(clusterTestCleanup(t, clusterReleaseName, core1, core2, core3))
 
 	t.Logf("Starting setup of '%s'", t.Name())
