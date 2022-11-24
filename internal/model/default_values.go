@@ -9,6 +9,7 @@ import (
 )
 
 var DefaultPassword = fmt.Sprintf("defaulthelmpassword%da", RandomIntBetween(100000, 999999999))
+var DefaultAuthSecretName = "neo4j-auth"
 
 var ImagePullSecretUsername,
 	ImagePullSecretPass,
@@ -18,6 +19,8 @@ var ImagePullSecretUsername,
 var NodeSelectorArgs, ImagePullSecretArgs, CustomApocImageArgs, PriorityClassNameArgs []string
 
 var NodeSelectorLabel = "testLabel=1"
+var Neo4jStandaloneChartName = "neo4j-standalone"
+var Neo4jClusterCoreChartName = "neo4j-cluster-core"
 
 func init() {
 	setWorkingDir()

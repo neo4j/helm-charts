@@ -113,3 +113,28 @@ func (r *clusterMemberReleaseName) DefaultConfigMapName() string {
 
 type Namespace string
 type PersistentDiskName string
+
+var DefaultEnterpriseValues = HelmValues{
+	Neo4J: Neo4J{
+		Name:                   "test",
+		AcceptLicenseAgreement: "yes",
+		Edition:                "enterprise",
+	},
+	Volumes: Volumes{
+		Data: Data{
+			Mode: "selector",
+		},
+	},
+}
+
+var DefaultCommunityValues = HelmValues{
+	Neo4J: Neo4J{
+		Name:    "test",
+		Edition: "community",
+	},
+	Volumes: Volumes{
+		Data: Data{
+			Mode: "selector",
+		},
+	},
+}

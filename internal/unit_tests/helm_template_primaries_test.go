@@ -365,18 +365,6 @@ func TestChmodInitContainers(t *testing.T) {
 	}))
 }
 
-// Tests the "base" helm command used for Integration Tests
-func TestBaseHelmTemplate(t *testing.T) {
-	t.Parallel()
-
-	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChart, edition string) {
-		_, err := model.RunHelmCommand(t, model.BaseHelmCommand("template", &model.DefaultHelmTemplateReleaseName, chart, edition))
-		if !assert.NoError(t, err) {
-			return
-		}
-	}))
-}
-
 type authSecretTest struct {
 	neo4jName      *string
 	setPassword    bool
@@ -428,8 +416,8 @@ func TestAuthSecrets(t *testing.T) {
 		{nil, true, nil, authSecretExpectation{authSecretCreated: true, randomPasswordAssigned: true}},
 		{&neo4jDotName, true, &emptyString, authSecretExpectation{authSecretCreated: true, randomPasswordAssigned: true}},
 		{nil, true, &emptyString, authSecretExpectation{authSecretCreated: true, randomPasswordAssigned: true}},
-		{&neo4jDotName, false, &model.DefaultPassword, authSecretExpectation{helmFailsWithError: errors.New("unsupported State: Cannot set neo4j.password when Neo4j authis disabled (dbms.security.auth_enabled=false). Either remove neo4j.password setting or enable Neo4j auth")}},
-		{nil, false, &model.DefaultPassword, authSecretExpectation{helmFailsWithError: errors.New("unsupported State: Cannot set neo4j.password when Neo4j authis disabled (dbms.security.auth_enabled=false). Either remove neo4j.password setting or enable Neo4j auth")}},
+		{&neo4jDotName, false, &model.DefaultPassword, authSecretExpectation{helmFailsWithError: errors.New("unsupported State: Cannot set neo4j.password or neo4j.passwordFromSecret when Neo4j authis disabled (dbms.security.auth_enabled=false). Either remove neo4j.password setting or enable Neo4j auth")}},
+		{nil, false, &model.DefaultPassword, authSecretExpectation{helmFailsWithError: errors.New("unsupported State: Cannot set neo4j.password or neo4j.passwordFromSecret when Neo4j authis disabled (dbms.security.auth_enabled=false). Either remove neo4j.password setting or enable Neo4j auth")}},
 	}
 
 	doTestCase := func(t *testing.T, chart model.Neo4jHelmChart, edition string, testCase authSecretTest) {

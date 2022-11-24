@@ -1,4 +1,3 @@
-
 {{- define "neo4j.namespaceParameter" -}}
 {{ if ne "default" .Release.Namespace }} --namespace "{{.Release.Namespace}}"{{ end }}
 {{- end -}}
@@ -85,5 +84,8 @@ Once rollout is complete you can log in to Neo4j at "neo4j://{{ .Release.Name }}
 Graphs are everywhere!
 {{ else }}
 Thank you for using {{ .Chart.Name }}.
+
 {{- end }}
 {{- end }}
+{{ "" }}
+{{ template "neo4j.passwordWarning" . }}
