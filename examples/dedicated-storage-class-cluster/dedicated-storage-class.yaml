@@ -1,5 +1,6 @@
 neo4j:
   name: dedicated-storage-class
+  passwordFromSecret: neo4j-auth
   minimumClusterSize: 3
   acceptLicenseAgreement: "yes"
   edition: enterprise
