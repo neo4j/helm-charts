@@ -131,7 +131,9 @@ If no password is set in `Values.neo4j.password` generates a new random password
     {{- end -}}
 
     {{- if lt (len $clusterList) 3 -}}
-        {{ fail "Cannot install Read Replica until a cluster of 3 or more cores is formed" }}
+        {{- if not .Values.neo4j.offlineMaintenanceModeEnabled  -}}
+          {{ fail "Cannot install Read Replica until a cluster of 3 or more cores is formed" }}
+        {{- end -}}
     {{- end -}}
 
 {{- end -}}
