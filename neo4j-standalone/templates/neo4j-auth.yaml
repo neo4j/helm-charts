@@ -1,7 +1,7 @@
 {{- $isReadReplica := index .Values.config "dbms.mode" | default "" | regexMatch "(?i)READ_REPLICA$" }}
 
 {{/* .Values.testing is being set to true in unit test cases for read replica*/}}
-{{- if and $isReadReplica (not .Values.testing | default false ) -}}
+{{- if and $isReadReplica (or (not .Values.testing | default false ) (not $.Values.neo4j.offlineMaintenanceModeEnabled) ) -}}
     {{- include "neo4j.checkIfClusterIsPresent" . -}}
 {{- end -}}
 
