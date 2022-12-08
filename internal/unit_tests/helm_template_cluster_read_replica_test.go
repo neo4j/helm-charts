@@ -2,6 +2,7 @@ package unit_tests
 
 import (
 	"github.com/neo4j/helm-charts/internal/model"
+	"github.com/neo4j/helm-charts/internal/resources"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -134,6 +135,19 @@ func TestReadReplicaPanicOnShutDownConfig(t *testing.T) {
 	defaultConfigMap := readReplicaManifest.OfTypeWithName(&v1.ConfigMap{}, readReplica.DefaultConfigMapName()).(*v1.ConfigMap)
 	assert.Contains(t, defaultConfigMap.Data, "dbms.panic.shutdown_on_panic")
 	assert.Contains(t, defaultConfigMap.Data["dbms.panic.shutdown_on_panic"], "true")
+}
+
+// TestReadReplicaWithMaintenanceModeEnabled checks for no error to be thrown when installing read replica with maintenancemode enabled
+func TestReadReplicaWithMaintenanceModeEnabled(t *testing.T) {
+	t.Parallel()
+
+	readReplica := model.NewReleaseName("foo")
+
+	_, err := model.HelmTemplateForRelease(t, readReplica, model.ClusterReadReplicaHelmChart, useDataModeAndAcceptLicense, resources.OfflineMaintenanceModeEnabled.HelmArgs()...)
+	if !assert.NoError(t, err) {
+		return
+	}
+
 }
 
 //TODO : This is to be enabled in 5.0
