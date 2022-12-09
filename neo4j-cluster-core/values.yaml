@@ -13,7 +13,8 @@ neo4j:
 
   # If password is not set or empty a random password will be generated during installation
   password: ""
-
+  # Existing secret to use for initial database password
+  passwordFromSecret: ""
   # Neo4j Clustering requires Enterprise Edition
   edition: "enterprise"
 
