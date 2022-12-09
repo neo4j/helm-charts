@@ -1,0 +1,11 @@
+neo4j:
+  name: tls-cert-manager
+volumes:
+  data:
+    mode: selector
+    selector:
+      storageClassName: "manual"
+      accessModes:
+        - ReadWriteOnce
+      requests:
+        storage: 10Gi
