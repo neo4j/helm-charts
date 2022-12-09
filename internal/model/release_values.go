@@ -20,11 +20,10 @@ type HelmValues struct {
 	ClusterDomain          string            `yaml:"clusterDomain,omitempty"`
 	Image                  Image             `yaml:"image,omitempty"`
 	Statefulset            Statefulset       `yaml:"statefulset,omitempty"`
-	Env                    Env               `yaml:"env,omitempty"`
+	Env                    map[string]string `yaml:"env,omitempty"`
 	PodSpec                v1.PodSpec        `yaml:"podSpec,omitempty"`
 	LogInitialPassword     bool              `yaml:"logInitialPassword,omitempty"`
 	Jvm                    Jvm               `yaml:"jvm,omitempty"`
-	Logs                   Logging           `yaml:"logs,omitempty"`
 }
 type Resources struct {
 	CPU    string `yaml:"cpu,omitempty"`
@@ -109,10 +108,6 @@ type Volumes struct {
 	Import   Import   `yaml:"import,omitempty"`
 	Licenses Licenses `yaml:"licenses,omitempty"`
 }
-type NodeSelector struct {
-}
-type Annotations struct {
-}
 type Default struct {
 	Annotations map[string]string `yaml:"annotations,omitempty"`
 }
@@ -137,15 +132,11 @@ type Ports struct {
 	Bolt   BoltPort   `yaml:"bolt,omitempty"`
 	Backup BackupPort `yaml:"backup,omitempty"`
 }
-type ServiceSelector struct {
-	HelmNeo4JComNeo4JLoadbalancer string `yaml:"helm.neo4j.com/neo4j.loadbalancer,omitempty"`
-}
 type Neo4JService struct {
 	Enabled      bool              `yaml:"enabled,omitempty"`
 	Annotations  map[string]string `yaml:"annotations,omitempty"`
 	Spec         Spec              `yaml:"spec,omitempty"`
 	Ports        Ports             `yaml:"ports,omitempty"`
-	Selector     ServiceSelector   `yaml:"selector,omitempty"`
 	MultiCluster bool              `yaml:"multiCluster,omitempty"`
 }
 type Admin struct {
@@ -158,10 +149,10 @@ type Internals struct {
 	Annotations map[string]string `yaml:"annotations,omitempty"`
 }
 type Services struct {
-	Default   Default   `yaml:"default,omitempty"`
-	Neo4J     Neo4J     `yaml:"neo4j,omitempty"`
-	Admin     Admin     `yaml:"admin,omitempty"`
-	Internals Internals `yaml:"internals,omitempty"`
+	Default   Default      `yaml:"default,omitempty"`
+	Neo4J     Neo4JService `yaml:"neo4j,omitempty"`
+	Admin     Admin        `yaml:"admin,omitempty"`
+	Internals Internals    `yaml:"internals,omitempty"`
 }
 
 type SecurityContext struct {
@@ -225,26 +216,7 @@ type Metadata struct {
 type Statefulset struct {
 	Metadata Metadata `yaml:"metadata,omitempty"`
 }
-type Env struct {
-}
-
-type PodSpec struct {
-	Annotations                   map[string]string `yaml:"annotations,omitempty"`
-	NodeAffinity                  v1.NodeAffinity   `yaml:"nodeAffinity,omitempty"`
-	PodAntiAffinity               bool              `yaml:"podAntiAffinity,omitempty"`
-	Tolerations                   []v1.Toleration   `yaml:"tolerations,omitempty"`
-	PriorityClassName             string            `yaml:"priorityClassName,omitempty"`
-	Loadbalancer                  string            `yaml:"loadbalancer,omitempty"`
-	ServiceAccountName            string            `yaml:"serviceAccountName,omitempty"`
-	TerminationGracePeriodSeconds int               `yaml:"terminationGracePeriodSeconds,omitempty"`
-	InitContainers                []v1.Container    `yaml:"initContainers,omitempty"`
-	Containers                    []v1.Container    `yaml:"containers,omitempty"`
-}
 type Jvm struct {
 	UseNeo4JDefaultJvmArguments bool     `yaml:"useNeo4jDefaultJvmArguments,omitempty"`
 	AdditionalJvmArguments      []string `yaml:"additionalJvmArguments,omitempty"`
-}
-type Logging struct {
-	ServerLogsXML string `yaml:"serverLogsXml,omitempty"`
-	UserLogsXML   string `yaml:"userLogsXml,omitempty"`
 }
