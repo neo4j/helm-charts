@@ -286,7 +286,17 @@ ssl:
       sources: [ ]
     revokedCerts:
       sources: [ ]
-
+  cluster:
+    privateKey:
+      secretName:
+      subPath:
+    publicCertificate:
+      secretName:
+      subPath:
+    trustedCerts:
+      sources: [ ]
+    revokedCerts:
+      sources: [ ]
 # Kubernetes cluster domain suffix
 clusterDomain: "cluster.local"
 

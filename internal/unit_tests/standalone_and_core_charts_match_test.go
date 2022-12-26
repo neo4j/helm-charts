@@ -33,6 +33,17 @@ var acceptableValuesDifferences = []string{
 	"enabled: false\n\n\n    selectCluster: false",
 	`dbms.mode: "CORE"`,
 	`causal_clustering.middleware.akka.allow_any_core_to_bootstrap: "true"`,
+	`cluster:
+    privateKey:
+      secretName:
+      subPath:
+    publicCertificate:
+      secretName:
+      subPath:
+    trustedCerts:
+      sources: [ ]
+    revokedCerts:
+      sources: [ ]`,
 }
 
 // The values files for Standalone and Core installations must be kept in sync.
