@@ -1,0 +1,91 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: "{{ .Release.Name }}-job"
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    app.kubernetes.io/name: "neo4j-backup"
+    app.kubernetes.io/component: backup
+spec:
+  schedule: {{.Values.neo4j.jobSchedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: {{ .Values.neo4j.backoffLimit }}
+      template:
+        metadata:
+          annotations:
+            {{- include "neo4j.annotations" $.Values.neo4j.podAnnotations | indent 12 }}
+          labels:
+            {{- include "neo4j.labels" $.Values.neo4j.podLabels | indent 12 }}
+        spec:
+          {{- if .Values.serviceAccountName }}
+          serviceAccountName: {{ .Values.serviceAccountName }}
+          {{- /* explicitly mount token because some service accounts disable automount-by-default and require explicit opt-in */}}
+          automountServiceAccountToken: true
+          {{- end }}
+          restartPolicy: Never
+          shareProcessNamespace: {{ .Values.shareProcessNamespace }}
+          containers:
+            - name: graph-backup
+              image: {{ .Values.neo4j.image }}:{{ .Values.neo4j.imageTag }}
+              imagePullPolicy: Always
+              resources:
+                requests:
+                  ephemeral-storage: "4Gi"
+                limits:
+                  ephemeral-storage: "5Gi"
+              env:
+                - name: NEO4J_ADDR
+                  value: {{ required "You must specify a NEO4J_ADDR env var with port, such as my-neo4j:6362" .Values.neo4j.backupAddress }}
+                - name: DATABASE
+                  value: {{ required "You must specify a DATABASE env var; comma-separated list of databases to backup, such as neo4j,system" .Values.backup.database }}
+                - name: CLOUD_PROVIDER
+                  value: {{ required "You must specify a CLOUD_PROVIDER env var" .Values.backup.cloudProvider }}
+                - name: BUCKET
+                  value: {{ required "You must specify a BUCKET address such as (gs|s3)://my-backups" .Values.backup.bucket }}
+                - name: HEAP_SIZE
+                  value: {{ .Values.backup.heapSize | default "2G" }}
+                - name: PAGE_CACHE
+                  value: {{ .Values.backup.pageCache | default "2G" }}
+                - name: INCLUDE_METADATA
+                  value: "{{ .Values.backup.includeMetadata | default "all" }}"
+                - name: PARALLEL_RECOVERY
+                  value: "{{ .Values.backup.parallelRecovery | default "false" }}"
+                - name: TYPE
+                  value: "{{ .Values.backup.type | default "AUTO" }}"
+                - name: REMOVE_EXISTING_FILES
+                  value: "{{ .Values.backup.removeExistingFiles | default "true" }}"
+                - name: REMOVE_BACKUP_FILES
+                  value: "{{ .Values.backup.removeBackupFiles | default "true" }}"
+              volumeMounts:
+                {{- if .Values.backup.secretName }}
+                - name: credentials
+                  mountPath: /credentials
+                  readOnly: true
+                {{- end }}
+                - name: "backup"
+                  mountPath: "/backups"
+                  {{- if .Values.tempVolumeMount }}{{- if .Values.tempVolumeMount.subPath }}
+                  subPath: "{{ .Values.tempVolumeMount.subPath }}"
+                  {{- end }}{{- end }}
+{{- if .Values.sidecarContainers }}
+{{ toYaml .Values.sidecarContainers | indent 12 }}
+{{- end }}
+          volumes:
+            {{- if .Values.backup.secretName }}
+            - name: credentials
+              secret:
+                secretName: "{{ .Values.backup.secretName }}"
+                items:
+                  - key: credentials
+                    path: credentials
+            {{- end }}
+            - name: "backup"
+{{- with .Values.tempVolume.emptyDir }}
+{{- toYaml . | nindent 14 }}
+{{- end }}
