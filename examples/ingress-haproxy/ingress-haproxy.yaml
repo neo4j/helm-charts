@@ -1,0 +1,13 @@
+neo4j:
+  name: ingress-haproxy
+  acceptLicenseAgreement: "yes"
+  edition: enterprise
+  minimumClusterSize: 3
+  passwordFromSecret: test-auth
+volumes:
+  data:
+    mode: defaultStorageClass
+services:
+  neo4j:
+    spec:
+      type: ClusterIP
