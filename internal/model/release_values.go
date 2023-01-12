@@ -33,6 +33,7 @@ type Neo4J struct {
 	Name                          string      `yaml:"name,omitempty"`
 	Password                      string      `yaml:"password,omitempty"`
 	PasswordFromSecret            string      `yaml:"passwordFromSecret,omitempty"`
+	PasswordFromSecretLookup      *bool       `yaml:"passwordFromSecretLookup,omitempty"`
 	Edition                       string      `yaml:"edition,omitempty"`
 	AcceptLicenseAgreement        string      `yaml:"acceptLicenseAgreement,omitempty"`
 	OfflineMaintenanceModeEnabled bool        `yaml:"offlineMaintenanceModeEnabled,omitempty"`
