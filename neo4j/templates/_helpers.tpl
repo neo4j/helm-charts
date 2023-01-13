@@ -341,9 +341,9 @@ affinity:
             {{/*The secret must start with characters 'neo4j/`*/}}
             {{- else if not (index $secret.data "NEO4J_AUTH" | b64dec | regexFind "^neo4j\\/\\w*") -}}
                 {{ fail (printf "Password in secret %s must start with the characters 'neo4j/'" .Values.neo4j.passwordFromSecret) }}
+            {{- end -}}
         {{- end -}}
-            {{- printf "%s" (tpl .Values.neo4j.passwordFromSecret $) -}}
-        {{- end -}}
+        {{- printf "%s" (tpl .Values.neo4j.passwordFromSecret $) -}}
     {{- else -}}
         {{- include "neo4j.name" . | printf "%s-auth" -}}
     {{- end -}}
