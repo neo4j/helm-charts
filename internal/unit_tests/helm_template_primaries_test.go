@@ -545,6 +545,33 @@ func TestPasswordFromExistingSecret(t *testing.T) {
 
 }
 
+func TestPasswordFromExistingSecretWithLookupDisabled(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		helmValues := model.DefaultEnterpriseValues
+		helmValues.Neo4J.Edition = edition
+		helmValues.Neo4J.PasswordFromSecret = "test-secret"
+		passwordLookup := false
+		helmValues.Neo4J.PasswordFromSecretLookup = &passwordLookup
+		manifest, err := model.HelmTemplateFromStruct(t, model.HelmChart, helmValues)
+		if !assert.NoError(t, err) {
+			return
+		}
+		statefulSet := manifest.OfTypeWithName(&appsv1.StatefulSet{}, model.DefaultHelmTemplateReleaseName.String())
+		if !assert.NotNil(t, statefulSet, fmt.Sprintf("no statefulset found with name %s", model.DefaultHelmTemplateReleaseName)) {
+			return
+		}
+		neo4jContainer := statefulSet.(*appsv1.StatefulSet).Spec.Template.Spec.Containers[0]
+		assert.Contains(t, neo4jContainer.EnvFrom, v1.EnvFromSource{
+			SecretRef: &v1.SecretEnvSource{
+				LocalObjectReference: v1.LocalObjectReference{Name: "test-secret"},
+			},
+		})
+	}))
+
+}
+
 func TestDefaultLabels(t *testing.T) {
 	t.Parallel()
 

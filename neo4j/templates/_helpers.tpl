@@ -331,18 +331,19 @@ affinity:
 
 {{- define "neo4j.secretName" -}}
     {{- if .Values.neo4j.passwordFromSecret -}}
-        {{- $secret := (lookup "v1" "Secret" .Release.Namespace .Values.neo4j.passwordFromSecret) }}
-        {{- $secretExists := $secret | all }}
-        {{- if not ( $secretExists ) -}}
-            {{ fail (printf "Secret %s configured in 'neo4j.passwordFromSecret' not found" .Values.neo4j.passwordFromSecret) }}
-        {{- else if not (hasKey $secret.data "NEO4J_AUTH") -}}
-            {{ fail (printf "Secret %s must contain key NEO4J_DATA" .Values.neo4j.passwordFromSecret) }}
-        {{/*The secret must start with characters 'neo4j/`*/}}
-        {{- else if not (index $secret.data "NEO4J_AUTH" | b64dec | regexFind "^neo4j\\/\\w*") -}}
-            {{ fail (printf "Password in secret %s must start with the characters 'neo4j/'" .Values.neo4j.passwordFromSecret) }}
-        {{- else -}}
-            {{- printf "%s" (tpl .Values.neo4j.passwordFromSecret $) -}}
-         {{- end -}}
+        {{- if .Values.neo4j.passwordFromSecretLookup -}}
+            {{- $secret := (lookup "v1" "Secret" .Release.Namespace .Values.neo4j.passwordFromSecret) }}
+            {{- $secretExists := $secret | all }}
+            {{- if not ( $secretExists ) -}}
+                {{ fail (printf "Secret %s configured in 'neo4j.passwordFromSecret' not found" .Values.neo4j.passwordFromSecret) }}
+            {{- else if not (hasKey $secret.data "NEO4J_AUTH") -}}
+                {{ fail (printf "Secret %s must contain key NEO4J_DATA" .Values.neo4j.passwordFromSecret) }}
+            {{/*The secret must start with characters 'neo4j/`*/}}
+            {{- else if not (index $secret.data "NEO4J_AUTH" | b64dec | regexFind "^neo4j\\/\\w*") -}}
+                {{ fail (printf "Password in secret %s must start with the characters 'neo4j/'" .Values.neo4j.passwordFromSecret) }}
+            {{- end -}}
+        {{- end -}}
+        {{- printf "%s" (tpl .Values.neo4j.passwordFromSecret $) -}}
     {{- else -}}
         {{- include "neo4j.name" . | printf "%s-auth" -}}
     {{- end -}}
