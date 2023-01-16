@@ -22,14 +22,16 @@ import (
 type HelmClient struct {
 	chartName string
 	chartPath string
+	extraArgs []string
 }
 
-func NewHelmClient(chartName string) *HelmClient {
+func NewHelmClient(chartName string, extraArgs ...string) *HelmClient {
 	var _, sourceFile, _, _ = runtime.Caller(0)
 	var sourceDir = path.Dir(sourceFile)
 	return &HelmClient{
 		chartName: chartName,
 		chartPath: path.Join(path.Join(sourceDir, "../.."), chartName),
+		extraArgs: extraArgs,
 	}
 }
 
@@ -203,6 +205,7 @@ func (c *HelmClient) Install(t *testing.T, releaseName string, namespace string,
 		"--values",
 		"-",
 	}
+	helmArgs = append(helmArgs, c.extraArgs...)
 	cmd := exec.Command("helm", helmArgs...)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
