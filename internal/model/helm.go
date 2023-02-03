@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	. "github.com/neo4j/helm-charts/internal/helpers"
 	"github.com/neo4j/helm-charts/internal/resources"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"io"
 	"io/ioutil"
 	"k8s.io/utils/env"
@@ -211,9 +211,12 @@ func HelmReleaseValues(t *testing.T) (HelmValues, error) {
 	return releaseValues, err
 }
 
-func HelmTemplateFromStruct(t *testing.T, chart HelmChartBuilder, values HelmValues) (*K8sResources, error) {
+func HelmTemplateFromStruct(t *testing.T, chart HelmChartBuilder, values HelmValues, extraArgs ...string) (*K8sResources, error) {
 	helmValues, _ := yaml.Marshal(values)
 	args := append(minHelmCommand("template", &DefaultHelmTemplateReleaseName, chart), "--values", "-")
+	if len(extraArgs) > 0 {
+		args = append(args, extraArgs...)
+	}
 	cmd := exec.Command("helm", args...)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {

@@ -9,7 +9,8 @@ type HelmValues struct {
 	Volumes                Volumes           `yaml:"volumes,omitempty"`
 	AdditionalVolumes      []interface{}     `yaml:"additionalVolumes,omitempty"`
 	AdditionalVolumeMounts []interface{}     `yaml:"additionalVolumeMounts,omitempty"`
-	NodeSelector           v1.NodeSelector   `yaml:"nodeSelector,omitempty"`
+	NodeSelector           map[string]string `yaml:"nodeSelector,omitempty"`
+	NodeSelectorLookup     bool              `default:"true" yaml:"nodeSelectorLookup"`
 	Services               Services          `yaml:"services,omitempty"`
 	Config                 map[string]string `yaml:"config,omitempty"`
 	SecurityContext        SecurityContext   `yaml:"securityContext,omitempty"`
@@ -110,8 +111,6 @@ type Volumes struct {
 	Metrics  Metrics  `yaml:"metrics,omitempty"`
 	Import   Import   `yaml:"import,omitempty"`
 	Licenses Licenses `yaml:"licenses,omitempty"`
-}
-type NodeSelector struct {
 }
 type Annotations struct {
 }

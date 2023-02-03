@@ -55,7 +55,7 @@ Convert a neo4j.conf properties text into valid yaml
 
 {{/* checkNodeSelectorLabels checks if there is any node in the cluster which has nodeSelector labels */}}
 {{- define "neo4j.checkNodeSelectorLabels" -}}
-    {{- if not (empty $.Values.nodeSelector) -}}
+    {{- if and (not (empty $.Values.nodeSelector)) $.Values.nodeSelectorLookup -}}
         {{- $validNodes := 0 -}}
         {{- $numberOfLabelsRequired := len $.Values.nodeSelector -}}
         {{- range $index, $node := (lookup "v1" "Node" .Release.Namespace "").items -}}
