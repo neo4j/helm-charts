@@ -9,7 +9,7 @@ func ResourcesCleanup(t *testing.T, releaseName model.ReleaseName) error {
 	return run(t, "helm", "uninstall", releaseName.String(), "--namespace", string(releaseName.Namespace()), "--wait", "--timeout=3m")
 }
 
-func ResourcesReinstall(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart) error {
+func ResourcesReinstall(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChartBuilder) error {
 
 	err := run(t, "helm", model.BaseHelmCommand("install", releaseName, chart, model.Neo4jEdition, "--wait", "--timeout", "300s")...)
 	if err != nil {

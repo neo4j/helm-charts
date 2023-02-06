@@ -8,7 +8,7 @@ import (
 )
 import "testing"
 
-func maintenanceTests(name model.ReleaseName, chart model.Neo4jHelmChart) []SubTest {
+func maintenanceTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) []SubTest {
 	return []SubTest{
 		{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, createNode(t, name), "Create Node should succeed") }},
 		{name: "Maintenance Mode", test: func(t *testing.T) { assert.NoError(t, checkMaintenanceMode(t, name, chart), "Check maintenance mode") }},
@@ -16,7 +16,7 @@ func maintenanceTests(name model.ReleaseName, chart model.Neo4jHelmChart) []SubT
 	}
 }
 
-func checkMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart) error {
+func checkMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChartBuilder) error {
 	err := checkNeo4jRunning(t, releaseName)
 	if err != nil {
 		return err
@@ -40,7 +40,7 @@ func checkMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart mod
 	return err
 }
 
-func exitMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart, extraArgs ...string) error {
+func exitMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChartBuilder, extraArgs ...string) error {
 	err := run(
 		t, "helm", model.BaseHelmCommand("upgrade", releaseName, chart, model.Neo4jEdition,
 			append(extraArgs, "--set", "neo4j.offlineMaintenanceModeEnabled=false", "--wait", "--timeout", "300s")...,
@@ -57,7 +57,7 @@ func exitMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart mode
 	return err
 }
 
-func enterMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChart) error {
+func enterMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChartBuilder) error {
 	err := run(t, "helm", model.BaseHelmCommand("upgrade", releaseName, chart, model.Neo4jEdition, "--set", "neo4j.offlineMaintenanceModeEnabled=true")...)
 
 	if !assert.NoError(t, err) {

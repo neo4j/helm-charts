@@ -149,10 +149,16 @@ volumes:
 
 #nodeSelector labels
 #please ensure the respective labels are present on one of the cluster nodes or else helm charts will throw an error
-nodeSelector:
+nodeSelector: {}
 #  label1: value1
 #  label2: value2
 
+#make it false if you want the nodeSelector lookup to be disabled
+#This is added to avoid helm install / helm template break when used with --dry-run for nodeSelector
+# Whenever --dry-run is used along with nodeSelector change this flag to false
+#Unfortunately, there is no way to know if --dry-run flag is set to .Release or any other parameter
+#To be review again when this open helm issue is merged https://github.com/helm/helm/pull/9426
+nodeSelectorLookup: true
 
 # Services for Neo4j
 services:
