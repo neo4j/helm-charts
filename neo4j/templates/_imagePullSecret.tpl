@@ -31,7 +31,7 @@ imagePullSecrets:
             {{/* check for empty registry,username,email,password,name fields only when secret name is NOT PROVIDED */}}
             {{- else -}}
 
-                {{- $message = dict "fieldName" "username" "value" $element.username | include "neo4j.imageCredentials.checkMissingorEmptyField" -}}
+                {{- $message := dict "fieldName" "username" "value" $element.username | include "neo4j.imageCredentials.checkMissingorEmptyField" -}}
                 {{- if not (empty $message) -}}
                     {{- $errorList = append $errorList $message -}}
                 {{- end -}}
