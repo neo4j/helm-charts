@@ -910,13 +910,13 @@ func TestEmptyImageCredentials(t *testing.T) {
 		if !assert.Error(t, err) {
 			return
 		}
-		if !assert.Contains(t, err.Error(), "Username field cannot be empty") {
+		if !assert.Contains(t, err.Error(), "username field cannot be empty") {
 			return
 		}
-		if !assert.Contains(t, err.Error(), "Password field cannot be empty") {
+		if !assert.Contains(t, err.Error(), "password field cannot be empty") {
 			return
 		}
-		if !assert.Contains(t, err.Error(), "Email field cannot be empty") {
+		if !assert.Contains(t, err.Error(), "email field cannot be empty") {
 			return
 		}
 		if !assert.Contains(t, err.Error(), "name field cannot be empty") {
