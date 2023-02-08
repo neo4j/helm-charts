@@ -65,7 +65,7 @@ imagePullSecrets:
         {{- else -}}
             {{- $nameList = $nameList | uniq -}}
             {{- if ne (len $nameList) (len .Values.image.imageCredentials) -}}
-                {{ fail (printf "Duplicate \"names\" or \"secretNames\" found in imageCredentials list. Please remove duplicates") }}
+                {{ fail (printf "Duplicate \"names\" found in imageCredentials list. Please remove duplicates") }}
             {{- end -}}
         {{- end -}}
 
