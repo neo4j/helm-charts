@@ -347,7 +347,7 @@ clusterDomain: "cluster.local"
 image:
   imagePullPolicy: IfNotPresent
   # set a customImage if you want to use your own docker image
-#  customImage: eu.gcr.io/neo4j-helm/neo4j:v5
+  #  customImage: eu.gcr.io/neo4j-helm/neo4j:v5
 
   #imagePullSecrets list
   #  imagePullSecrets:
@@ -356,6 +356,8 @@ image:
   #imageCredentials list for which secret of type docker-registry will be created automatically using the details provided
   # registry , username , password , email are compulsory field for an imageCredential , without any ,  helm chart will throw an error
   # imageCredential name should be part of the imagePullSecrets list or else the respective imageCredential will be ignored and no secret creation will be done
+  # In case of a secret already pre-existing you don't need to mention the imageCredential , just add the pre-existing secretName to the imagePullSecret list
+  # and that will be used as an imagePullSecret
 #  imageCredentials:
 #    - registry: ""
 #      username: ""
