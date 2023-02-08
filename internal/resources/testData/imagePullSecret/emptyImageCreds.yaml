@@ -20,3 +20,8 @@ image:
       password: "samplepass"
       email: "sample@gmail.com"
       name: ""
+    - registry: "https://index.docker.io/v1/"
+      username: ""
+      password: "samplepass"
+      email: ""
+      name: "sample5"
