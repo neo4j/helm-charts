@@ -331,7 +331,7 @@ affinity:
 
 {{- define "neo4j.secretName" -}}
     {{- if .Values.neo4j.passwordFromSecret -}}
-        {{- if and .Values.neo4j.passwordFromSecretLookup (not .Values.disableLookups) -}}
+        {{- if not .Values.disableLookups -}}
             {{- $secret := (lookup "v1" "Secret" .Release.Namespace .Values.neo4j.passwordFromSecret) }}
             {{- $secretExists := $secret | all }}
             {{- if not ( $secretExists ) -}}
@@ -348,6 +348,7 @@ affinity:
         {{- include "neo4j.name" . | printf "%s-auth" -}}
     {{- end -}}
 {{- end -}}
+
 
 {{- define "neo4j.passwordWarning" -}}
 {{- if and (.Values.neo4j.password) (not .Values.neo4j.passwordFromSecret) -}}

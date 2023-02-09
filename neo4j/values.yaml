@@ -18,9 +18,7 @@ neo4j:
 
   # Existing secret to use for initial database password
   passwordFromSecret: ""
-  # If true then install will fail if the secret set in passwordFromSecret is missing. Set to false when deploying with
-  # ArgoCD because lookup does not work correctly.
-  passwordFromSecretLookup: true
+
   # Neo4j Edition to use (community|enterprise)
   edition: "community"
 

@@ -548,12 +548,13 @@ func TestPasswordFromExistingSecret(t *testing.T) {
 func TestPasswordFromExistingSecretWithLookupDisabled(t *testing.T) {
 	t.Parallel()
 
+	helmValues := model.DefaultCommunityValues
 	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
-		helmValues := model.DefaultEnterpriseValues
-		helmValues.Neo4J.Edition = edition
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
 		helmValues.Neo4J.PasswordFromSecret = "test-secret"
-		passwordLookup := false
-		helmValues.Neo4J.PasswordFromSecretLookup = &passwordLookup
+		helmValues.DisableLookups = true
 		manifest, err := model.HelmTemplateFromStruct(t, model.HelmChart, helmValues)
 		if !assert.NoError(t, err) {
 			return

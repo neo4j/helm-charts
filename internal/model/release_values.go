@@ -35,7 +35,6 @@ type Neo4J struct {
 	Name                          string      `yaml:"name,omitempty"`
 	Password                      string      `yaml:"password,omitempty"`
 	PasswordFromSecret            string      `yaml:"passwordFromSecret,omitempty"`
-	PasswordFromSecretLookup      *bool       `yaml:"passwordFromSecretLookup,omitempty"`
 	Edition                       string      `yaml:"edition,omitempty"`
 	MinimumClusterSize            int         `yaml:"minimumClusterSize,omitempty"`
 	AcceptLicenseAgreement        string      `yaml:"acceptLicenseAgreement,omitempty"`
