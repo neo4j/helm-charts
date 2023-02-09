@@ -55,7 +55,7 @@ Convert a neo4j.conf properties text into valid yaml
 
 {{/* checkNodeSelectorLabels checks if there is any node in the cluster which has nodeSelector labels */}}
 {{- define "neo4j.checkNodeSelectorLabels" -}}
-    {{- if and (not (empty $.Values.nodeSelector)) $.Values.nodeSelectorLookup -}}
+    {{- if and (not (empty $.Values.nodeSelector)) (not $.Values.disableLookups) -}}
         {{- $validNodes := 0 -}}
         {{- $numberOfLabelsRequired := len $.Values.nodeSelector -}}
         {{- range $index, $node := (lookup "v1" "Node" .Release.Namespace "").items -}}
@@ -331,7 +331,7 @@ affinity:
 
 {{- define "neo4j.secretName" -}}
     {{- if .Values.neo4j.passwordFromSecret -}}
-        {{- if .Values.neo4j.passwordFromSecretLookup -}}
+        {{- if not .Values.disableLookups -}}
             {{- $secret := (lookup "v1" "Secret" .Release.Namespace .Values.neo4j.passwordFromSecret) }}
             {{- $secretExists := $secret | all }}
             {{- if not ( $secretExists ) -}}
@@ -348,6 +348,7 @@ affinity:
         {{- include "neo4j.name" . | printf "%s-auth" -}}
     {{- end -}}
 {{- end -}}
+
 
 {{- define "neo4j.passwordWarning" -}}
 {{- if and (.Values.neo4j.password) (not .Values.neo4j.passwordFromSecret) -}}

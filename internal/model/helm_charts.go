@@ -21,7 +21,7 @@ var HelmChart = newNeo4jHelmChart("neo4j", []string{"enterprise"})
 
 var ClusterReadReplicaHelmChart = newNeo4jHelmChart("neo4j", []string{"enterprise"})
 
-var PrimaryHelmCharts = []Neo4jHelmChartBuilder{Neo4jHelmChartCommunityAndEnterprise, HelmChart}
+var PrimaryHelmCharts = []Neo4jHelmChartBuilder{Neo4jHelmChartCommunityAndEnterprise}
 
 type helmChart struct {
 	path     string
