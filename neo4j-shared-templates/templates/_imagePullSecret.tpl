@@ -17,57 +17,49 @@ imagePullSecrets:
 {{- printf "{\"auths\":{\"%s\":{\"username\":\"%s\",\"password\":\"%s\",\"email\":\"%s\",\"auth\":\"%s\"}}}" .registry .username .password .email (printf "%s:%s" .username .password | b64enc) | b64enc }}
 {{- end }}
 
-{{/* checks and throws error if registry ,username , email and name imageCredentials fields are empty */}}
-{{- define "neo4j.imageCredentials.checkForEmptyFields" -}}
+{{/*checkForEmptyFieldsAndDuplicates checks whether the imageCredential fields are empty or have any duplicates or not */}}
+{{- define "neo4j.imageCredentials.checkForEmptyFieldsAndDuplicates" -}}
 
     {{- if .Values.image.imageCredentials -}}
         {{- $errorList := list -}}
+        {{- $nameList := list -}}
         {{- range $index, $element := .Values.image.imageCredentials }}
 
-            {{- if  empty ($element.registry | trim) -}}
-                {{- $errorList = append $errorList (printf "Registry field cannot be empty for imageCredential \"%s\"" $element.name) -}}
-            {{- end -}}
+            {{- if kindIs "invalid" $element -}}
+                {{- $errorList = append $errorList (printf "Empty ImageCredential. Please provide either secretname or (registry|username|email|password|name) field(s)") -}}
 
-            {{- if  empty ($element.username | trim) -}}
-                {{- $errorList = append $errorList (printf "Username field cannot be empty for imageCredential \"%s\"" $element.name) -}}
-            {{- end -}}
+            {{/* check for empty registry,username,email,password,name fields only when secret name is NOT PROVIDED */}}
+            {{- else -}}
 
-            {{- if  empty ($element.password | trim) -}}
-                {{- $errorList = append $errorList (printf "Password field cannot be empty for imageCredential \"%s\"" $element.name) -}}
-            {{- end -}}
+                {{- $usernameMessage := dict "fieldName" "username" "value" $element.username | include "neo4j.imageCredentials.checkMissingorEmptyField" -}}
+                {{- $emailMessage := dict "fieldName" "email" "value" $element.email | include "neo4j.imageCredentials.checkMissingorEmptyField" -}}
+                {{- $message := printf "%s,%s" $usernameMessage $emailMessage -}}
+                {{- if and (not (empty $usernameMessage)) (not (empty $emailMessage)) -}}
+                    {{- $errorList = append $errorList $message -}}
+                {{- end -}}
 
-            {{- if  empty ($element.email | trim) -}}
-                {{- $errorList = append $errorList (printf "Email field cannot be empty for imageCredential \"%s\"" $element.name) -}}
-            {{- end -}}
+                {{- $message = dict "fieldName" "password" "value" $element.password | include "neo4j.imageCredentials.checkMissingorEmptyField" -}}
+                {{- if not (empty $message) -}}
+                    {{- $errorList = append $errorList $message -}}
+                {{- end -}}
 
-            {{- if  empty ($element.name | trim) -}}
-                {{- $errorList = append $errorList "name field cannot be empty for an imageCredential" -}}
-            {{- end -}}
+                {{- $message = dict "fieldName" "name" "value" $element.name | include "neo4j.imageCredentials.checkMissingorEmptyField" -}}
+                {{- if not (empty $message) -}}
+                    {{- $errorList = append $errorList $message -}}
+                {{- else -}}
+                    {{- $nameList = append $nameList ($element.name | trim) -}}
+                {{- end -}}
 
+            {{- end -}}
         {{- end -}}
 
         {{- if not (empty $errorList) -}}
            {{ fail (printf "%s" ($errorList | join "\n")) }}
-        {{- end -}}
-
-    {{- end -}}
-{{- end -}}
-
-{{/* checkForDuplicates throws an error if there are duplicate 'names' found in imageCredential list */}}
-{{- define "neo4j.imageCredentials.checkForDuplicates" -}}
-
-    {{- if .Values.image.imageCredentials -}}
-
-        {{- $nameList := list -}}
-
-        {{- range $index, $element := .Values.image.imageCredentials }}
-            {{- $nameList = append $nameList $element.name -}}
-        {{- end -}}
-
-        {{- $nameList = $nameList | uniq -}}
-
-        {{- if ne (len $nameList) (len .Values.image.imageCredentials) -}}
-            {{ fail (printf "Duplicate \"names\" found in imageCredentials list. Please remove duplicates") }}
+        {{- else -}}
+            {{- $nameList = $nameList | uniq -}}
+            {{- if ne (len $nameList) (len .Values.image.imageCredentials) -}}
+                {{ fail (printf "Duplicate \"names\" found in imageCredentials list. Please remove duplicates") }}
+            {{- end -}}
         {{- end -}}
 
     {{- end -}}
@@ -81,5 +73,14 @@ imagePullSecrets:
         {{- if eq $element.name $imagePullSecretName -}}
             {{- $element | toYaml -}}
         {{- end -}}
+    {{- end -}}
+{{- end -}}
+
+{{/* checkMissingorEmptyField checks if the provided field is empty or missing */}}
+{{- define "neo4j.imageCredentials.checkMissingorEmptyField" -}}
+    {{- if kindIs "invalid" .value -}}
+        {{- printf "%s field is missing for imageCredential" .fieldName -}}
+    {{- else if empty (.value | trim) -}}
+        {{- printf "%s field cannot be empty for imageCredential" .fieldName -}}
     {{- end -}}
 {{- end -}}

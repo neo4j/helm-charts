@@ -207,6 +207,7 @@ func clusterTestCleanup(t *testing.T, clusterReleaseName model.ReleaseName, core
 			{"delete", "namespace", string(clusterReleaseName.Namespace()), "--ignore-not-found", "--force", "--grace-period=0"},
 			{"delete", "priorityClass", "high-priority", "--force", "--grace-period=0"},
 		}, false)
+		_ = removeLabelFromNodes(t)
 	}
 }
 
