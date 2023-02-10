@@ -5,9 +5,6 @@
 nameOverride: ""
 ## @param fullnameOverride String to fully override common.names.fullname
 fullnameOverride: ""
-# disableLookups will disable all the lookups done in the helm charts
-# You can enable this when executing helm commands with --dry-run command
-disableLookups: false
 
 neo4j:
   # Name of your cluster
@@ -18,7 +15,9 @@ neo4j:
 
   # Existing secret to use for initial database password
   passwordFromSecret: ""
-
+  # If true then install will fail if the secret set in passwordFromSecret is missing. Set to false when deploying with
+  # ArgoCD because lookup does not work correctly.
+  passwordFromSecretLookup: true
   # Neo4j Edition to use (community|enterprise)
   edition: "community"
 
@@ -157,6 +156,13 @@ additionalVolumeMounts: []
 nodeSelector: {}
 #  label1: "value1"
 #  label2: "value2"
+
+#make it false if you want the nodeSelector lookup to be disabled
+#This is added to avoid helm install / helm template break when used with --dry-run for nodeSelector
+# Whenever --dry-run is used along with nodeSelector change this flag to false
+#Unfortunately, there is no way to know if --dry-run flag is set to .Release or any other parameter
+#To be review again when this open helm issue is merged https://github.com/helm/helm/pull/9426
+nodeSelectorLookup: true
 
 # Services for Neo4j
 services:
@@ -344,15 +350,12 @@ image:
 #  customImage: eu.gcr.io/neo4j-helm/neo4j:v5
 
   #imagePullSecrets list
-#  imagePullSecrets:
-#    - "demo"
+  #  imagePullSecrets:
+  #    - "demo"
 
   #imageCredentials list for which secret of type docker-registry will be created automatically using the details provided
-  # password, name are compulsory fields for an imageCredential , without these fields helm chart will throw an error
-  # registry ,username and email are optional fields
+  # registry , username , password , email are compulsory field for an imageCredential , without any ,  helm chart will throw an error
   # imageCredential name should be part of the imagePullSecrets list or else the respective imageCredential will be ignored and no secret creation will be done
-  # In case of a secret already pre-existing you don't need to mention the imageCredential , just add the pre-existing secretName to the imagePullSecret list
-  # and that will be used as an imagePullSecret
 #  imageCredentials:
 #    - registry: ""
 #      username: ""

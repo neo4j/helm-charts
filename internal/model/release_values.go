@@ -10,7 +10,7 @@ type HelmValues struct {
 	AdditionalVolumes      []interface{}     `yaml:"additionalVolumes,omitempty"`
 	AdditionalVolumeMounts []interface{}     `yaml:"additionalVolumeMounts,omitempty"`
 	NodeSelector           map[string]string `yaml:"nodeSelector,omitempty"`
-	DisableLookups         bool              `default:"false" yaml:"disableLookups"`
+	NodeSelectorLookup     bool              `default:"true" yaml:"nodeSelectorLookup"`
 	Services               Services          `yaml:"services,omitempty"`
 	Config                 map[string]string `yaml:"config,omitempty"`
 	SecurityContext        SecurityContext   `yaml:"securityContext,omitempty"`
@@ -35,6 +35,7 @@ type Neo4J struct {
 	Name                          string      `yaml:"name,omitempty"`
 	Password                      string      `yaml:"password,omitempty"`
 	PasswordFromSecret            string      `yaml:"passwordFromSecret,omitempty"`
+	PasswordFromSecretLookup      *bool       `yaml:"passwordFromSecretLookup,omitempty"`
 	Edition                       string      `yaml:"edition,omitempty"`
 	MinimumClusterSize            int         `yaml:"minimumClusterSize,omitempty"`
 	AcceptLicenseAgreement        string      `yaml:"acceptLicenseAgreement,omitempty"`
@@ -216,9 +217,8 @@ type Ssl struct {
 	HTTPS HTTPS `yaml:"https,omitempty"`
 }
 type Image struct {
-	ImagePullPolicy  string   `yaml:"imagePullPolicy,omitempty"`
-	CustomImage      string   `yaml:"customImage,omitempty"`
-	ImagePullSecrets []string `yaml:"imagePullSecrets,omitempty"`
+	ImagePullPolicy string `yaml:"imagePullPolicy,omitempty"`
+	CustomImage     string `yaml:"customImage,omitempty"`
 }
 type Metadata struct {
 	Annotations map[string]string `yaml:"annotations,omitempty"`

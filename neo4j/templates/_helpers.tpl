@@ -55,7 +55,7 @@ Convert a neo4j.conf properties text into valid yaml
 
 {{/* checkNodeSelectorLabels checks if there is any node in the cluster which has nodeSelector labels */}}
 {{- define "neo4j.checkNodeSelectorLabels" -}}
-    {{- if and (not (empty $.Values.nodeSelector)) (not $.Values.disableLookups) -}}
+    {{- if and (not (empty $.Values.nodeSelector)) $.Values.nodeSelectorLookup -}}
         {{- $validNodes := 0 -}}
         {{- $numberOfLabelsRequired := len $.Values.nodeSelector -}}
         {{- range $index, $node := (lookup "v1" "Node" .Release.Namespace "").items -}}
@@ -89,11 +89,7 @@ If no password is set in `Values.neo4j.password` generates a new random password
   {{- if and (not .Values.neo4j.passwordFromSecret) (not .Values.neo4j.password) }}
     {{- $password :=  randAlphaNum 14 }}
     {{- $secretName := include "neo4j.name" . | printf "%s-auth" }}
-
-    {{- $secret := list }}
-    {{- if not .Values.disableLookups -}}
-        {{- $secret = (lookup "v1" "Secret" .Release.Namespace $secretName) }}
-    {{- end -}}
+    {{- $secret := (lookup "v1" "Secret" .Release.Namespace $secretName) }}
 
     {{- if $secret }}
       {{- $password = index $secret.data "NEO4J_AUTH" | b64dec | trimPrefix "neo4j/" -}}
@@ -296,15 +292,11 @@ memory value cannot be less than 2Gb or 2Gi
 {{- define "neo4j.priorityClassName" -}}
     {{- if not (empty $.Values.podSpec.priorityClassName) -}}
 
-        {{- $priorityClassName := $.Values.podSpec.priorityClassName -}}
-
-        {{- if not $.Values.disableLookups -}}
-            {{- $priorityClassName = (lookup "scheduling.k8s.io/v1" "PriorityClass" .Release.Namespace $.Values.podSpec.priorityClassName) -}}
-        {{- end -}}
-
-        {{- if empty $priorityClassName -}}
-            {{- fail (printf "PriorityClass %s is missing in the cluster" $.Values.podSpec.priorityClassName) -}}
-        {{- else -}}
+        {{- $priorityClassName := (lookup "scheduling.k8s.io/v1" "PriorityClass" "" $.Values.podSpec.priorityClassName) -}}
+{{/*        {{- fail (printf "PriorityClass %s is missing in the cluster" $priorityClassName) -}}*/}}
+            {{- if empty $priorityClassName -}}
+                {{- fail (printf "PriorityClass %s is missing in the cluster" $.Values.podSpec.priorityClassName) -}}
+            {{- else -}}
 priorityClassName: "{{ .Values.podSpec.priorityClassName }}"
             {{- end -}}
     {{- end -}}
@@ -339,7 +331,7 @@ affinity:
 
 {{- define "neo4j.secretName" -}}
     {{- if .Values.neo4j.passwordFromSecret -}}
-        {{- if not .Values.disableLookups -}}
+        {{- if .Values.neo4j.passwordFromSecretLookup -}}
             {{- $secret := (lookup "v1" "Secret" .Release.Namespace .Values.neo4j.passwordFromSecret) }}
             {{- $secretExists := $secret | all }}
             {{- if not ( $secretExists ) -}}
@@ -356,7 +348,6 @@ affinity:
         {{- include "neo4j.name" . | printf "%s-auth" -}}
     {{- end -}}
 {{- end -}}
-
 
 {{- define "neo4j.passwordWarning" -}}
 {{- if and (.Values.neo4j.password) (not .Values.neo4j.passwordFromSecret) -}}
