@@ -48,7 +48,7 @@ Convert a neo4j.conf properties text into valid yaml
 
 {{/* checkNodeSelectorLabels checks if there is any node in the cluster which has nodeSelector labels */}}
 {{- define "neo4j.checkNodeSelectorLabels" -}}
-    {{- if and (not (empty $.Values.nodeSelector)) $.Values.nodeSelectorLookup -}}
+    {{- if and (not (empty $.Values.nodeSelector)) (not $.Values.disableLookups) -}}
         {{- $validNodes := 0 -}}
         {{- $numberOfLabelsRequired := len $.Values.nodeSelector -}}
         {{- range $index, $node := (lookup "v1" "Node" .Release.Namespace "").items -}}
@@ -93,7 +93,11 @@ If no password is set in `Values.neo4j.password` generates a new random password
   {{- if and (not .Values.neo4j.passwordFromSecret) (not .Values.neo4j.password) }}
     {{- $password :=  randAlphaNum 14 }}
     {{- $secretName := include "neo4j.appName" . | printf "%s-auth" }}
-    {{- $secret := (lookup "v1" "Secret" .Release.Namespace $secretName) }}
+
+    {{- $secret := list }}
+    {{- if not .Values.disableLookups -}}
+    {{- $secret = (lookup "v1" "Secret" .Release.Namespace $secretName) }}
+    {{- end -}}
 
     {{- if $secret }}
       {{- $password = index $secret.data "NEO4J_AUTH" | b64dec | trimPrefix "neo4j/" -}}
@@ -110,35 +114,36 @@ If no password is set in `Values.neo4j.password` generates a new random password
 
 {{- define "neo4j.checkIfClusterIsPresent" -}}
 
-    {{- $name := .Values.neo4j.name -}}
-    {{- $clusterList := list -}}
-    {{- range $index,$pod := (lookup "v1" "Pod" .Release.Namespace "").items -}}
-        {{- if eq $name (index $pod.metadata.labels "helm.neo4j.com/neo4j.name" | toString) -}}
-            {{- if eq (index $pod.metadata.labels "helm.neo4j.com/dbms.mode" | toString) "CORE" -}}
+    {{- if not $.Values.disableLookups -}}
+        {{- $name := .Values.neo4j.name -}}
+        {{- $clusterList := list -}}
+        {{- range $index,$pod := (lookup "v1" "Pod" .Release.Namespace "").items -}}
+            {{- if eq $name (index $pod.metadata.labels "helm.neo4j.com/neo4j.name" | toString) -}}
+                {{- if eq (index $pod.metadata.labels "helm.neo4j.com/dbms.mode" | toString) "CORE" -}}
 
-                {{- $noOfContainers := len (index $pod.status.containerStatuses) -}}
-                {{- $noOfReadyContainers := 0 -}}
+                    {{- $noOfContainers := len (index $pod.status.containerStatuses) -}}
+                    {{- $noOfReadyContainers := 0 -}}
 
-                {{- range $index,$value := index $pod.status.containerStatuses -}}
-                    {{- if $value.ready }}
-                        {{- $noOfReadyContainers = add1 $noOfReadyContainers -}}
+                    {{- range $index,$value := index $pod.status.containerStatuses -}}
+                        {{- if $value.ready }}
+                            {{- $noOfReadyContainers = add1 $noOfReadyContainers -}}
+                        {{- end -}}
                     {{- end -}}
-                {{- end -}}
 
-                {{/* Number of Ready Containers should be equal to the number of containers in the pod */}}
-                {{/* Pod should be in running state */}}
-                {{- if and (eq $noOfReadyContainers $noOfContainers) (eq (index $pod.status.phase | toString) "Running") -}}
-                    {{- $clusterList = append $clusterList (index $pod.metadata.name) -}}
-                {{- end -}}
+                    {{/* Number of Ready Containers should be equal to the number of containers in the pod */}}
+                    {{/* Pod should be in running state */}}
+                    {{- if and (eq $noOfReadyContainers $noOfContainers) (eq (index $pod.status.phase | toString) "Running") -}}
+                        {{- $clusterList = append $clusterList (index $pod.metadata.name) -}}
+                    {{- end -}}
 
+                {{- end -}}
             {{- end -}}
         {{- end -}}
-    {{- end -}}
 
-    {{- if lt (len $clusterList) 3 -}}
-        {{ fail "Cannot install Read Replica until a cluster of 3 or more cores is formed" }}
+        {{- if lt (len $clusterList) 3 -}}
+            {{ fail "Cannot install Read Replica until a cluster of 3 or more cores is formed" }}
+        {{- end -}}
     {{- end -}}
-
 {{- end -}}
 
 {{- define "podSpec.checkLoadBalancerParam" }}
@@ -336,10 +341,16 @@ memory value cannot be less than 2Gb or 2Gi
 {{/* Checks if the provided priorityClassName already exists in the cluster or not*/}}
 {{- define "neo4j.priorityClassName" -}}
     {{- if not (empty $.Values.podSpec.priorityClassName) -}}
-        {{- $priorityClassName := (lookup "scheduling.k8s.io/v1" "PriorityClass" .Release.Namespace $.Values.podSpec.priorityClassName) -}}
-            {{- if empty $priorityClassName -}}
-                {{- fail (printf "PriorityClass %s is missing in the cluster" $.Values.podSpec.priorityClassName) -}}
-            {{- else -}}
+
+        {{- $priorityClassName := $.Values.podSpec.priorityClassName -}}
+
+        {{- if not $.Values.disableLookups -}}
+            {{- $priorityClassName = (lookup "scheduling.k8s.io/v1" "PriorityClass" .Release.Namespace $.Values.podSpec.priorityClassName) -}}
+        {{- end -}}
+
+        {{- if empty $priorityClassName -}}
+            {{- fail (printf "PriorityClass %s is missing in the cluster" $.Values.podSpec.priorityClassName) -}}
+        {{- else -}}
 priorityClassName: "{{ .Values.podSpec.priorityClassName }}"
             {{- end -}}
     {{- end -}}
@@ -374,7 +385,7 @@ affinity:
 
 {{- define "neo4j.secretName" -}}
     {{- if .Values.neo4j.passwordFromSecret -}}
-        {{- if .Values.neo4j.passwordFromSecretLookup -}}
+        {{- if not .Values.disableLookups -}}
             {{- $secret := (lookup "v1" "Secret" .Release.Namespace .Values.neo4j.passwordFromSecret) }}
             {{- $secretExists := $secret | all }}
             {{- if not ( $secretExists ) -}}
