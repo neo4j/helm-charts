@@ -725,6 +725,24 @@ func TestNeo4jPodPriorityClassName(t *testing.T) {
 	}))
 }
 
+// TestNeo4jPodPriorityClassNameWithLookupDisabled checks for Neo4j PriorityClassName with disableLookups flag set to true
+func TestNeo4jPodPriorityClassNameWithLookupDisabled(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultCommunityValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.DisableLookups = true
+		helmValues.PodSpec.PriorityClassName = "demo"
+		_, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		if !assert.NoError(t, err) {
+			return
+		}
+	}))
+}
+
 // TestNeo4jPodTolerations checks for tolerations in the statefulset
 func TestNeo4jPodTolerations(t *testing.T) {
 	t.Parallel()
