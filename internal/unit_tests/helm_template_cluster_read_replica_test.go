@@ -1,6 +1,7 @@
 package unit_tests
 
 import (
+	"fmt"
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/neo4j/helm-charts/internal/resources"
 	"github.com/stretchr/testify/assert"
@@ -135,6 +136,25 @@ func TestReadReplicaPanicOnShutDownConfig(t *testing.T) {
 	defaultConfigMap := readReplicaManifest.OfTypeWithName(&v1.ConfigMap{}, readReplica.DefaultConfigMapName()).(*v1.ConfigMap)
 	assert.Contains(t, defaultConfigMap.Data, "dbms.panic.shutdown_on_panic")
 	assert.Contains(t, defaultConfigMap.Data["dbms.panic.shutdown_on_panic"], "true")
+}
+
+// TestReadReplicaInstallationWithLookupDisabled performs helm template on read replica helm chart with disableLookups set to true and --dry-run flag enabled
+func TestReadReplicaInstallationWithLookupDisabled(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultEnterpriseValues
+	helmValues.DisableLookups = true
+
+	manifest, err := model.HelmTemplateFromStruct(t, model.ClusterReadReplicaHelmChart, helmValues, "--dry-run")
+	if !assert.NoError(t, err) {
+		return
+	}
+	statefulSet := manifest.OfTypeWithName(&appsv1.StatefulSet{}, model.DefaultHelmTemplateReleaseName.String())
+	if !assert.NotNil(t, statefulSet, fmt.Sprintf("no statefulset found with name %s", model.DefaultHelmTemplateReleaseName)) {
+		return
+	}
+	labels := statefulSet.(*appsv1.StatefulSet).ObjectMeta.Labels
+	assert.Equal(t, labels["helm.neo4j.com/dbms.mode"], "READ_REPLICA", "read replica not found")
 }
 
 // TestReadReplicaWithMaintenanceModeEnabled checks for no error to be thrown when installing read replica with maintenancemode enabled

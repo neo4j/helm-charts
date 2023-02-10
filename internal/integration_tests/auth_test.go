@@ -96,8 +96,8 @@ func TestAuthSecretsWithLookupDisabled(t *testing.T) {
 	helmValues := model.DefaultEnterpriseValues
 	helmValues.Neo4J.Edition = model.Neo4jEdition
 	helmValues.Neo4J.PasswordFromSecret = "missing-secret"
-	secretLookup := false
-	helmValues.Neo4J.PasswordFromSecretLookup = &secretLookup
+	helmValues.DisableLookups = true
+
 	_, err = helmClient.Install(t, releaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
 	t.Cleanup(func() {

@@ -5,6 +5,9 @@
 nameOverride: ""
 ## @param fullnameOverride String to fully override common.names.fullname
 fullnameOverride: ""
+# disableLookups will disable all the lookups done in the helm charts
+# You can enable this when executing helm commands with --dry-run command
+disableLookups: false
 
 neo4j:
   # A common name for all helm deployments that are part of the same Neo4j Cluster
@@ -15,9 +18,7 @@ neo4j:
   password: ""
   # Existing secret to use for initial database password
   passwordFromSecret: ""
-  # If true then install will fail if the secret set in passwordFromSecret is missing. Set to false when deploying with
-  # ArgoCD because lookup does not work correctly.
-  passwordFromSecretLookup: true
+
   # Neo4j Clustering requires Enterprise Edition
   edition: "enterprise"
 
@@ -152,13 +153,6 @@ volumes:
 nodeSelector: {}
 #  label1: value1
 #  label2: value2
-
-#make it false if you want the nodeSelector lookup to be disabled
-#This is added to avoid helm install / helm template break when used with --dry-run for nodeSelector
-# Whenever --dry-run is used along with nodeSelector change this flag to false
-#Unfortunately, there is no way to know if --dry-run flag is set to .Release or any other parameter
-#To be review again when this open helm issue is merged https://github.com/helm/helm/pull/9426
-nodeSelectorLookup: true
 
 # Services for Neo4j
 services:

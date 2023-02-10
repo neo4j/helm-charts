@@ -498,23 +498,15 @@ func TestAuthSecrets(t *testing.T) {
 func TestPasswordFromExistingSecretWithLookupDisabled(t *testing.T) {
 	t.Parallel()
 
+	helmValues := model.DefaultCommunityValues
 	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
-		helmValues := model.DefaultEnterpriseValues
-		helmValues.Neo4J.Edition = edition
-		helmValues.Neo4J.PasswordFromSecret = "test-secret"
-		passwordLookup := false
-		helmValues.Neo4J.PasswordFromSecretLookup = &passwordLookup
-
-		helmArgs := []string{
-			"--set", "neo4j.edition=" + edition,
-		}
 		if edition == "enterprise" {
-			helmArgs = append(helmArgs, "--set", "neo4j.acceptLicenseAgreement=yes")
+			helmValues = model.DefaultEnterpriseValues
 		}
-		helmArgs = append(helmArgs, "--set", "neo4j.passwordFromSecret=test-secret")
-		helmArgs = append(helmArgs, "--set", "neo4j.passwordFromSecretLookup=false")
+		helmValues.Neo4J.PasswordFromSecret = "test-secret"
+		helmValues.DisableLookups = true
 
-		manifest, err := model.HelmTemplate(t, chart, requiredDataMode, helmArgs...)
+		manifest, err := model.HelmTemplateFromStruct(t, chart, helmValues)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -642,6 +634,24 @@ func TestNeo4jPodPriorityClassName(t *testing.T) {
 			return
 		}
 
+	}))
+}
+
+// TestNeo4jPodPriorityClassNameWithLookupDisabled checks for Neo4j PriorityClassName with disableLookups flag set to true
+func TestNeo4jPodPriorityClassNameWithLookupDisabled(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultCommunityValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.DisableLookups = true
+		helmValues.PodSpec.PriorityClassName = "demo"
+		_, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		if !assert.NoError(t, err) {
+			return
+		}
 	}))
 }
 
@@ -909,43 +919,35 @@ func TestInvalidNodeSelectorLabels(t *testing.T) {
 	}))
 }
 
-// TestNodeSelectorLabelsWithLookupDisabled tests nodeSelectorLookup flag when set to false
-func TestNodeSelectorLabelsWithLookupDisabled(t *testing.T) {
+// TestNodeSelectorLabelsWithLookupDisabledWithDryRun tests disableLookups flag when set to false along with --dry-run flag and nodeSelector labels
+func TestNodeSelectorLabelsWithLookupDisabledWithDryRun(t *testing.T) {
 	t.Parallel()
 	helmValues := model.DefaultCommunityValues
-	helmValues.NodeSelectorLookup = false
-	helmValues.NodeSelector = map[string]string{
-		"label1": "value1",
-	}
-
 	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
 		if edition == "enterprise" {
 			helmValues = model.DefaultEnterpriseValues
-			helmValues.NodeSelectorLookup = false
-			helmValues.NodeSelector = map[string]string{
-				"label1": "value1",
-			}
 		}
-		_, err := model.HelmTemplateFromStruct(t, chart, helmValues)
+		helmValues.DisableLookups = true
+		helmValues.NodeSelector = map[string]string{
+			"label1": "value1",
+		}
+		_, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
 		if !assert.NoError(t, err) {
 			return
 		}
 	}))
 }
 
-// TestNodeSelectorLabelsWithLookupDisabledWithDryRun tests nodeSelectorLookup flag when set to false along with --dry-run flag
-func TestNodeSelectorLabelsWithLookupDisabledWithDryRun(t *testing.T) {
+// TestImagePullSecretWithLookupsDisabledWithDryRun tests disableLookups flag when set to true along with --dry-run flag and imagePullSecrets
+func TestImagePullSecretWithLookupsDisabledWithDryRun(t *testing.T) {
 	t.Parallel()
 	helmValues := model.DefaultCommunityValues
-	helmValues.NodeSelectorLookup = false
-	helmValues.NodeSelector = map[string]string{
-		"label1": "value1",
-	}
-
 	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
 		if edition == "enterprise" {
 			helmValues = model.DefaultEnterpriseValues
 		}
+		helmValues.DisableLookups = true
+		helmValues.Image.ImagePullSecrets = []string{"demo"}
 		_, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
 		if !assert.NoError(t, err) {
 			return
