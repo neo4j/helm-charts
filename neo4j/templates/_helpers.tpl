@@ -89,7 +89,11 @@ If no password is set in `Values.neo4j.password` generates a new random password
   {{- if and (not .Values.neo4j.passwordFromSecret) (not .Values.neo4j.password) }}
     {{- $password :=  randAlphaNum 14 }}
     {{- $secretName := include "neo4j.name" . | printf "%s-auth" }}
-    {{- $secret := (lookup "v1" "Secret" .Release.Namespace $secretName) }}
+
+    {{- $secret := list }}
+    {{- if not .Values.disableLookups -}}
+        {{- $secret = (lookup "v1" "Secret" .Release.Namespace $secretName) }}
+    {{- end -}}
 
     {{- if $secret }}
       {{- $password = index $secret.data "NEO4J_AUTH" | b64dec | trimPrefix "neo4j/" -}}
@@ -292,11 +296,15 @@ memory value cannot be less than 2Gb or 2Gi
 {{- define "neo4j.priorityClassName" -}}
     {{- if not (empty $.Values.podSpec.priorityClassName) -}}
 
-        {{- $priorityClassName := (lookup "scheduling.k8s.io/v1" "PriorityClass" "" $.Values.podSpec.priorityClassName) -}}
-{{/*        {{- fail (printf "PriorityClass %s is missing in the cluster" $priorityClassName) -}}*/}}
-            {{- if empty $priorityClassName -}}
-                {{- fail (printf "PriorityClass %s is missing in the cluster" $.Values.podSpec.priorityClassName) -}}
-            {{- else -}}
+        {{- $priorityClassName := $.Values.podSpec.priorityClassName -}}
+
+        {{- if not $.Values.disableLookups -}}
+            {{- $priorityClassName = (lookup "scheduling.k8s.io/v1" "PriorityClass" .Release.Namespace $.Values.podSpec.priorityClassName) -}}
+        {{- end -}}
+
+        {{- if empty $priorityClassName -}}
+            {{- fail (printf "PriorityClass %s is missing in the cluster" $.Values.podSpec.priorityClassName) -}}
+        {{- else -}}
 priorityClassName: "{{ .Values.podSpec.priorityClassName }}"
             {{- end -}}
     {{- end -}}
