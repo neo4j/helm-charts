@@ -2,8 +2,12 @@
 {{- $ignored := required "neo4j.name is required" .Values.neo4j.name }}
 {{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
 {{- $isLoadBalancerEnabled := index .Values.services.neo4j.enabled }}
-{{- $loadBalancer := (lookup "v1" "Service" .Release.Namespace (printf "%s-lb-neo4j" (include "neo4j.name" $))) }}
-{{- $loadBalancerExists := $loadBalancer | all }}
+{{- $loadBalancer := list -}}
+{{- $loadBalancerExists := false -}}
+{{- if not .Values.disableLookups -}}
+  {{- $loadBalancer = (lookup "v1" "Service" .Release.Namespace (printf "%s-lb-neo4j" (include "neo4j.name" $))) }}
+  {{- $loadBalancerExists = $loadBalancer | all }}
+{{- end -}}
 
 {{- if and $loadBalancerExists $isLoadBalancerEnabled -}}
   {{- $loadBalancerSelector :=  $loadBalancer.spec.selector -}}
