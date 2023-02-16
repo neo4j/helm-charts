@@ -5,9 +5,9 @@
 {{- $clusterEnabled = eq (include "neo4j.isClusterEnabled" .) "true" }}
 {{- $backupEnabled = index $.Values.config "dbms.backup.enabled" | default "true" | regexMatch "(?i)yes|true" }}
 {{- end }}
-{{- $jmxEnabled := index $.Values.config "metrics.jmx.enabled" | default "" | regexMatch "(?i)yes|true" }}
-{{- $graphiteEnabled := index $.Values.config "metrics.graphite.enabled" | default "" | regexMatch "(?i)yes|true" }}
-{{- $prometheusEnabled := index $.Values.config "metrics.prometheus.enabled" | default "" | regexMatch "(?i)yes|true" }}
+{{- $jmxEnabled := index $.Values.config "server.metrics.jmx.enabled" | default "" | regexMatch "(?i)yes|true" }}
+{{- $graphiteEnabled := index $.Values.config "server.metrics.graphite.enabled" | default "" | regexMatch "(?i)yes|true" }}
+{{- $prometheusEnabled := index $.Values.config "server.metrics.prometheus.enabled" | default "" | regexMatch "(?i)yes|true" }}
 
 # ClusterIP service for bolt / http connections
 apiVersion: v1
