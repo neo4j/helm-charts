@@ -955,6 +955,37 @@ func TestImagePullSecretWithLookupsDisabledWithDryRun(t *testing.T) {
 	}))
 }
 
+// TestContainerSecurityContext tests the presence of default containerSecurityContext in statefulSet
+func TestContainerSecurityContext(t *testing.T) {
+	t.Parallel()
+	helmValues := model.DefaultCommunityValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+
+		manifest, err := model.HelmTemplateFromStruct(t, chart, helmValues)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		statefulSet := manifest.OfTypeWithName(&appsv1.StatefulSet{}, model.DefaultHelmTemplateReleaseName.String())
+		if !assert.NotNil(t, statefulSet, "statefulset found to be empty") {
+			return
+		}
+		containerSecurityContext := statefulSet.(*appsv1.StatefulSet).Spec.Template.Spec.Containers[0].SecurityContext
+		if !assert.Equal(t, *containerSecurityContext.RunAsNonRoot, true, fmt.Sprintf("runAsNonRoot current value %s does not match with %s", strconv.FormatBool(*containerSecurityContext.RunAsNonRoot), "true")) {
+			return
+		}
+		if !assert.Equal(t, *containerSecurityContext.RunAsUser, int64(7474), fmt.Sprintf("runAsUser current value %d does not match with %s", *containerSecurityContext.RunAsUser, "7474")) {
+			return
+		}
+		if !assert.Equal(t, *containerSecurityContext.RunAsGroup, int64(7474), fmt.Sprintf("runAsGroup current value %d does not match with %s", *containerSecurityContext.RunAsGroup, "7474")) {
+			return
+		}
+	}))
+}
+
 // TestAdditionalVolumesAndMounts checks if the additionalVolumes and additionalVolumeMounts are present or not
 func TestAdditionalVolumesAndMounts(t *testing.T) {
 	t.Parallel()
