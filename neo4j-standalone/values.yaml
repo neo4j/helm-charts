@@ -237,13 +237,19 @@ config:
 #  apoc.trigger.enabled: "true"
 #  apoc.jdbc.apoctest.url: "jdbc:foo:bar"
 
-# securityContext defines privilege and access control settings for a Pod or Container. Making sure that we dont run Neo4j as root user.
+# securityContext defines privilege and access control settings for a Pod. Making sure that we dont run Neo4j as root user.
 securityContext:
   runAsNonRoot: true
   runAsUser: 7474
   runAsGroup: 7474
   fsGroup: 7474
   fsGroupChangePolicy: "Always"
+
+# containerSecurityContext defines privilege and access control settings for a Container. Making sure that we dont run Neo4j as root user.
+containerSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 7474
+  runAsGroup: 7474
 
 # Readiness probes are set to know when a container is ready to be used.
 # Because Neo4j uses Java these values are large to distinguish between long Garbage Collection pauses (which don't require a restart) and an actual failure.
