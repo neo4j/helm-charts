@@ -3,29 +3,30 @@ package model
 import v1 "k8s.io/api/core/v1"
 
 type HelmValues struct {
-	FullnameOverride       string            `yaml:"fullnameOverride,omitempty"`
-	NameOverride           string            `yaml:"nameOverride,omitempty"`
-	Neo4J                  Neo4J             `yaml:"neo4j,omitempty"`
-	Volumes                Volumes           `yaml:"volumes,omitempty"`
-	AdditionalVolumes      []interface{}     `yaml:"additionalVolumes,omitempty"`
-	AdditionalVolumeMounts []interface{}     `yaml:"additionalVolumeMounts,omitempty"`
-	NodeSelector           map[string]string `yaml:"nodeSelector,omitempty"`
-	DisableLookups         bool              `default:"false" yaml:"disableLookups"`
-	Services               Services          `yaml:"services,omitempty"`
-	Config                 map[string]string `yaml:"config,omitempty"`
-	SecurityContext        SecurityContext   `yaml:"securityContext,omitempty"`
-	ReadinessProbe         ReadinessProbe    `yaml:"readinessProbe,omitempty"`
-	LivenessProbe          LivenessProbe     `yaml:"livenessProbe,omitempty"`
-	StartupProbe           StartupProbe      `yaml:"startupProbe,omitempty"`
-	Ssl                    Ssl               `yaml:"ssl,omitempty"`
-	ClusterDomain          string            `yaml:"clusterDomain,omitempty"`
-	Image                  Image             `yaml:"image,omitempty"`
-	Statefulset            Statefulset       `yaml:"statefulset,omitempty"`
-	Env                    Env               `yaml:"env,omitempty"`
-	PodSpec                v1.PodSpec        `yaml:"podSpec,omitempty"`
-	LogInitialPassword     bool              `yaml:"logInitialPassword,omitempty"`
-	Jvm                    Jvm               `yaml:"jvm,omitempty"`
-	Logs                   Logging           `yaml:"logs,omitempty"`
+	FullnameOverride         string            `yaml:"fullnameOverride,omitempty"`
+	NameOverride             string            `yaml:"nameOverride,omitempty"`
+	Neo4J                    Neo4J             `yaml:"neo4j,omitempty"`
+	Volumes                  Volumes           `yaml:"volumes,omitempty"`
+	AdditionalVolumes        []interface{}     `yaml:"additionalVolumes,omitempty"`
+	AdditionalVolumeMounts   []interface{}     `yaml:"additionalVolumeMounts,omitempty"`
+	NodeSelector             map[string]string `yaml:"nodeSelector,omitempty"`
+	DisableLookups           bool              `default:"false" yaml:"disableLookups"`
+	Services                 Services          `yaml:"services,omitempty"`
+	Config                   map[string]string `yaml:"config,omitempty"`
+	SecurityContext          SecurityContext   `yaml:"securityContext,omitempty"`
+	ContainerSecurityContext SecurityContext   `yaml:"containerSecurityContext,omitempty"`
+	ReadinessProbe           ReadinessProbe    `yaml:"readinessProbe,omitempty"`
+	LivenessProbe            LivenessProbe     `yaml:"livenessProbe,omitempty"`
+	StartupProbe             StartupProbe      `yaml:"startupProbe,omitempty"`
+	Ssl                      Ssl               `yaml:"ssl,omitempty"`
+	ClusterDomain            string            `yaml:"clusterDomain,omitempty"`
+	Image                    Image             `yaml:"image,omitempty"`
+	Statefulset              Statefulset       `yaml:"statefulset,omitempty"`
+	Env                      Env               `yaml:"env,omitempty"`
+	PodSpec                  v1.PodSpec        `yaml:"podSpec,omitempty"`
+	LogInitialPassword       bool              `yaml:"logInitialPassword,omitempty"`
+	Jvm                      Jvm               `yaml:"jvm,omitempty"`
+	Logs                     Logging           `yaml:"logs,omitempty"`
 }
 type Resources struct {
 	CPU    string `yaml:"cpu,omitempty"`
