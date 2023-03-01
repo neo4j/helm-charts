@@ -8,8 +8,12 @@
   {{- else -}}
   {{- if not (.Values.neo4j.passwordFromSecret ) -}}
 {{- $secretName := include "neo4j.name" . | printf "%s-auth" }}
-{{- $secret := (lookup "v1" "Secret" .Release.Namespace $secretName) }}
-{{- $secretExists := $secret | all }}
+{{- $secretExists := false }}
+{{- $secret := list -}}
+{{- if not .Values.disableLookups -}}
+    {{- $secret = (lookup "v1" "Secret" .Release.Namespace $secretName) }}
+    {{- $secretExists = $secret | all }}
+{{- end -}}
 
 {{- $secretBelongsToSomeoneElse := false }}
 {{- if $secretExists }}

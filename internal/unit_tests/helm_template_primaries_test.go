@@ -545,6 +545,34 @@ func TestPasswordFromExistingSecret(t *testing.T) {
 
 }
 
+func TestPasswordFromExistingSecretWithLookupDisabled(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultCommunityValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.Neo4J.PasswordFromSecret = "test-secret"
+		helmValues.DisableLookups = true
+		manifest, err := model.HelmTemplateFromStruct(t, model.HelmChart, helmValues)
+		if !assert.NoError(t, err) {
+			return
+		}
+		statefulSet := manifest.OfTypeWithName(&appsv1.StatefulSet{}, model.DefaultHelmTemplateReleaseName.String())
+		if !assert.NotNil(t, statefulSet, fmt.Sprintf("no statefulset found with name %s", model.DefaultHelmTemplateReleaseName)) {
+			return
+		}
+		neo4jContainer := statefulSet.(*appsv1.StatefulSet).Spec.Template.Spec.Containers[0]
+		assert.Contains(t, neo4jContainer.EnvFrom, v1.EnvFromSource{
+			SecretRef: &v1.SecretEnvSource{
+				LocalObjectReference: v1.LocalObjectReference{Name: "test-secret"},
+			},
+		})
+	}))
+
+}
+
 func TestDefaultLabels(t *testing.T) {
 	t.Parallel()
 
@@ -694,6 +722,24 @@ func TestNeo4jPodPriorityClassName(t *testing.T) {
 			return
 		}
 
+	}))
+}
+
+// TestNeo4jPodPriorityClassNameWithLookupDisabled checks for Neo4j PriorityClassName with disableLookups flag set to true
+func TestNeo4jPodPriorityClassNameWithLookupDisabled(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultCommunityValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.DisableLookups = true
+		helmValues.PodSpec.PriorityClassName = "demo"
+		_, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		if !assert.NoError(t, err) {
+			return
+		}
 	}))
 }
 
@@ -883,16 +929,13 @@ func TestEmptyImageCredentials(t *testing.T) {
 		if !assert.Error(t, err) {
 			return
 		}
-		if !assert.Contains(t, err.Error(), "Username field cannot be empty") {
-			return
-		}
-		if !assert.Contains(t, err.Error(), "Password field cannot be empty") {
-			return
-		}
-		if !assert.Contains(t, err.Error(), "Email field cannot be empty") {
+		if !assert.Contains(t, err.Error(), "password field cannot be empty") {
 			return
 		}
 		if !assert.Contains(t, err.Error(), "name field cannot be empty") {
+			return
+		}
+		if !assert.Contains(t, err.Error(), "username field cannot be empty for imageCredential,email field cannot be empty for imageCredential") {
 			return
 		}
 	}))
@@ -1152,6 +1195,73 @@ func TestInvalidNodeSelectorLabels(t *testing.T) {
 			return
 		}
 	}))
+}
+
+// TestNodeSelectorLabelsWithLookupDisabledWithDryRun tests disableLookups flag when set to true along with --dry-run flag
+func TestNodeSelectorLabelsWithLookupsDisabledWithDryRun(t *testing.T) {
+	t.Parallel()
+	helmValues := model.DefaultCommunityValues
+	forEachSupportedEdition(t, model.Neo4jHelmChartCommunityAndEnterprise, func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.DisableLookups = true
+		helmValues.NodeSelector = map[string]string{
+			"label1": "value1",
+		}
+		_, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		if !assert.NoError(t, err) {
+			return
+		}
+	})
+}
+
+// TestNodeSelectorLabelsWithLookupDisabledWithDryRun tests disableLookups flag when set to true along with --dry-run flag
+func TestImagePullSecretWithLookupsDisabledWithDryRun(t *testing.T) {
+	t.Parallel()
+	helmValues := model.DefaultCommunityValues
+	forEachSupportedEdition(t, model.Neo4jHelmChartCommunityAndEnterprise, func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.DisableLookups = true
+		helmValues.Image.ImagePullSecrets = []string{"demo"}
+		_, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		if !assert.NoError(t, err) {
+			return
+		}
+	})
+}
+
+// TestContainerSecurityContext tests the presence of default containerSecurityContext in statefulSet
+func TestContainerSecurityContext(t *testing.T) {
+	t.Parallel()
+	helmValues := model.DefaultCommunityValues
+	forEachSupportedEdition(t, model.Neo4jHelmChartCommunityAndEnterprise, func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+
+		manifest, err := model.HelmTemplateFromStruct(t, chart, helmValues)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		statefulSet := manifest.OfTypeWithName(&appsv1.StatefulSet{}, model.DefaultHelmTemplateReleaseName.String())
+		if !assert.NotNil(t, statefulSet, "statefulset found to be empty") {
+			return
+		}
+		containerSecurityContext := statefulSet.(*appsv1.StatefulSet).Spec.Template.Spec.Containers[0].SecurityContext
+		if !assert.Equal(t, *containerSecurityContext.RunAsNonRoot, true, fmt.Sprintf("runAsNonRoot current value %s does not match with %s", strconv.FormatBool(*containerSecurityContext.RunAsNonRoot), "true")) {
+			return
+		}
+		if !assert.Equal(t, *containerSecurityContext.RunAsUser, int64(7474), fmt.Sprintf("runAsUser current value %d does not match with %s", *containerSecurityContext.RunAsUser, "7474")) {
+			return
+		}
+		if !assert.Equal(t, *containerSecurityContext.RunAsGroup, int64(7474), fmt.Sprintf("runAsGroup current value %d does not match with %s", *containerSecurityContext.RunAsGroup, "7474")) {
+			return
+		}
+	})
 }
 
 // TestAdditionalVolumesAndMounts checks if the additionalVolumes and additionalVolumeMounts are present or not

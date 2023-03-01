@@ -83,6 +83,29 @@ func TestAuthSecretsInvalidPassword(t *testing.T) {
 	})
 }
 
+func TestAuthSecretsWithLookupDisabled(t *testing.T) {
+	t.Parallel()
+	releaseName := model.NewReleaseName("auth-invalid-password-" + TestRunIdentifier)
+	_, err := createNamespace(t, releaseName)
+	if err != nil {
+		return
+	}
+	namespace := string(releaseName.Namespace())
+
+	helmClient := model.NewHelmClient(model.DefaultNeo4jChartName, "--dry-run")
+	helmValues := model.DefaultEnterpriseValues
+	helmValues.Neo4J.Edition = model.Neo4jEdition
+	helmValues.Neo4J.PasswordFromSecret = "missing-secret"
+	helmValues.DisableLookups = true
+	_, err = helmClient.Install(t, releaseName.String(), namespace, helmValues)
+	assert.NoError(t, err)
+	t.Cleanup(func() {
+		_ = runAll(t, "kubectl", [][]string{
+			{"delete", "namespace", string(releaseName.Namespace())},
+		}, false)
+	})
+}
+
 func TestAuthPasswordCannotBeDifferent(t *testing.T) {
 	if model.Neo4jEdition != "enterprise" {
 		t.Skip()
