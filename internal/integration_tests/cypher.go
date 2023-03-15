@@ -165,6 +165,22 @@ func checkNodeCount(t *testing.T, releaseName model.ReleaseName) error {
 	}
 }
 
+// checkGDSVersion runs the cypher query to get gds info
+func checkGDSVersion(t *testing.T, releaseName model.ReleaseName) error {
+	result, err := runQuery(t, releaseName, "CALL gds.debug.sysInfo() YIELD key,value WHERE key = 'gdsEdition' RETURN value", noParams, model.Neo4jEdition == "community")
+	if err != nil {
+		return err
+	}
+
+	value, found := result[0].Get("value")
+	if !found {
+		return fmt.Errorf("expected gdsEdition , found nothing !!")
+	}
+	edition := value.(string)
+	assert.Equal(t, edition, "Licensed", fmt.Sprintf("gdsEdition found %s is not matching with 'Licensed'", edition))
+	return nil
+}
+
 func runQuery(t *testing.T, releaseName model.ReleaseName, cypher string, params map[string]interface{}, connectToPod bool) ([]*neo4j.Record, error) {
 
 	boltPort, cleanupProxy, proxyErr := proxyBolt(t, releaseName, connectToPod)

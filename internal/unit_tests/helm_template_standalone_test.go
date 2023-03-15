@@ -18,7 +18,8 @@ func TestDefaultCommunityHelmTemplate(t *testing.T) {
 		},
 		Volumes: model.Volumes{
 			Data: model.Data{
-				Mode: "selector",
+				Mode:           "selector",
+				DisableSubPath: false,
 			},
 		},
 	}

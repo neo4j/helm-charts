@@ -1,0 +1,17 @@
+volumes:
+  licenses:
+    disableSubPathExpr: true
+    mode: volume
+    volume:
+      secret:
+        secretName: gds-license
+        items:
+          - key: gds.license
+            path: gds.license
+
+
+env:
+  NEO4J_PLUGINS: '["graph-data-science"]'
+config:
+  gds.enterprise.license_file: "/licenses/gds.license"
+  dbms.security.procedures.unrestricted: "gds.*,apoc.*"
