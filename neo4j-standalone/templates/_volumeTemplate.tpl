@@ -183,7 +183,9 @@ chmod -R g+rwx "/{{ $name }}"
 {{- range $name, $spec := . }}
 - mountPath: "/{{ $name }}"
   name: "{{ if eq $spec.mode "share" }}{{ $spec.share.name }}{{ if eq $name "data" }}{{ fail "data volume does not support mode: 'share'"}}{{ end }}{{ else }}{{ $name }}{{ end }}"
+  {{- if not $spec.disableSubPathExpr }}
   subPathExpr: "{{ if $spec.subPathExpr }}{{ $spec.subPathExpr }}{{ else }}{{ $name }}{{ if regexMatch "logs|metrics" $name }}/$(POD_NAME){{ end }}{{ end }}"
+  {{- end -}}
 {{- end -}}
 {{- end -}}
 

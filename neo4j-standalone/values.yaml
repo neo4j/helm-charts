@@ -47,6 +47,8 @@ neo4j:
 # Volumes for Neo4j
 volumes:
   data:
+    #Set it to true when you do not want to use the subPathExpr
+    disableSubPathExpr: false
     # REQUIRED: specify a volume mode to use for data
     # Valid values are share|selector|defaultStorageClass|volume|volumeClaimTemplate|dynamic
     # To get up-and-running quickly, for development or testing, use "defaultStorageClass" for a dynamically provisioned volume of the default storage class.
@@ -103,6 +105,8 @@ volumes:
   # n.b. backups will be written to /backups on the volume
   # any of the volume modes shown above for data can be used for backups
   backups:
+    #Set it to true when you do not want to use the subPathExpr
+    disableSubPathExpr: false
     mode: "share" # share an existing volume (e.g. the data volume)
     share:
       name: "data"
@@ -111,6 +115,8 @@ volumes:
   # n.b. logs will be written to /logs/$(POD_NAME) on the volume
   # any of the volume modes shown above for data can be used for logs
   logs:
+    #Set it to true when you do not want to use the subPathExpr
+    disableSubPathExpr: false
     mode: "share" # share an existing volume (e.g. the data volume)
     share:
       name: "data"
@@ -119,6 +125,8 @@ volumes:
   # n.b. metrics will be written to /metrics/$(POD_NAME) on the volume
   # any of the volume modes shown above for data can be used for metrics
   metrics:
+    #Set it to true when you do not want to use the subPathExpr
+    disableSubPathExpr: false
     mode: "share" # share an existing volume (e.g. the data volume)
     share:
       name: "data"
@@ -127,6 +135,8 @@ volumes:
   # n.b. import will be mounted to /import on the underlying volume
   # any of the volume modes shown above for data can be used for import
   import:
+    #Set it to true when you do not want to use the subPathExpr
+    disableSubPathExpr: false
     mode: "share" # share an existing volume (e.g. the data volume)
     share:
       name: "data"
@@ -135,6 +145,8 @@ volumes:
   # n.b. licenses will be mounted to /licenses on the underlying volume
   # any of the volume modes shown above for data can be used for licenses
   licenses:
+    #Set it to true when you do not want to use the subPathExpr
+    disableSubPathExpr: false
     mode: "share" # share an existing volume (e.g. the data volume)
     share:
       name: "data"

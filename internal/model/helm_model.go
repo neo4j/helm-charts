@@ -122,7 +122,8 @@ var DefaultEnterpriseValues = HelmValues{
 	},
 	Volumes: Volumes{
 		Data: Data{
-			Mode: "selector",
+			Mode:           "selector",
+			DisableSubPath: false,
 		},
 	},
 }
@@ -134,7 +135,8 @@ var DefaultCommunityValues = HelmValues{
 	},
 	Volumes: Volumes{
 		Data: Data{
-			Mode: "selector",
+			Mode:           "selector",
+			DisableSubPath: false,
 		},
 	},
 }

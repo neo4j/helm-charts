@@ -1,0 +1,19 @@
+volumes:
+  licenses:
+    disableSubPathExpr: true
+    mode: volume
+    volume:
+      secret:
+        secretName: bloom-license
+        items:
+          - key: bloom.license
+            path: bloom.license
+
+
+env:
+  NEO4JLABS_PLUGINS: '["bloom"]'
+config:
+  dbms.security.procedures.unrestricted: "gds.*,apoc.*,bloom.*"
+  dbms.unmanaged_extension_classes: "com.neo4j.bloom.server=/bloom,semantics.extension=/rdf"
+  dbms.security.http_auth_allowlist: "/,/browser.*,/bloom.*"
+  neo4j.bloom.license_file: "/licenses/bloom.license"
