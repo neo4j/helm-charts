@@ -165,6 +165,22 @@ func checkNodeCount(t *testing.T, releaseName model.ReleaseName) error {
 	}
 }
 
+// checkBloomVersion runs the cypher query to get bloom license info
+func checkBloomVersion(t *testing.T, releaseName model.ReleaseName) error {
+	result, err := runQuery(t, releaseName, "CALL bloom.checkLicenseCompliance() YIELD status;", noParams, model.Neo4jEdition == "community")
+	if err != nil {
+		return err
+	}
+
+	value, found := result[0].Get("status")
+	if !found {
+		return fmt.Errorf("expected bloom license status, found nothing !!")
+	}
+	status := value.(string)
+	assert.Equal(t, status, "valid", fmt.Sprintf("bloom license status found %s is not matching with 'valid'", status))
+	return nil
+}
+
 func runQuery(t *testing.T, releaseName model.ReleaseName, cypher string, params map[string]interface{}, connectToPod bool) ([]*neo4j.Record, error) {
 
 	boltPort, cleanupProxy, proxyErr := proxyBolt(t, releaseName, connectToPod)

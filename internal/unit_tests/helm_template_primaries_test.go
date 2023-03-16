@@ -1460,6 +1460,35 @@ func TestNeo4jResourcesAndLimits(t *testing.T) {
 	}))
 }
 
+// TestDisableSubPathExprFlag tests disableSubPathExpr flag when set to true along with --dry-run flag
+func TestDisableSubPathExprFlag(t *testing.T) {
+	t.Parallel()
+	helmValues := model.DefaultCommunityValues
+	forEachSupportedEdition(t, model.Neo4jHelmChartCommunityAndEnterprise, func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.Volumes.Licenses.DisableSubPath = true
+
+		manifests, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		assert.NoError(t, err, fmt.Sprintf("error while testing disableSubPathExpr \n%v", err))
+
+		neo4jStatefulSet := manifests.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
+		assert.NotNil(t, neo4jStatefulSet, "missing statefulSet object")
+
+		volumeMounts := neo4jStatefulSet.Spec.Template.Spec.Containers[0].VolumeMounts
+		assert.NotEqual(t, len(volumeMounts), 0, "no volume mounts present")
+
+		//ensure that /licenses mount does not have any subPathExpr set
+		for _, volumeMount := range volumeMounts {
+			if volumeMount.MountPath == "/licenses" {
+				assert.Equal(t, volumeMount.SubPathExpr, "", "subPathExpr is not empty")
+				break
+			}
+		}
+	})
+}
+
 // checkMemoryResources runs helm template on all charts of all editions with invalid memory values
 func checkMemoryResources(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string, memorySlice []string, containsErrMsg string) {
 
