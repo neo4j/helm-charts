@@ -46,9 +46,9 @@ func init() {
 	if ImagePullSecretCustomImageName == "" {
 		log.Panic("Please set NEO4J_DOCKER_IMG env variable !!")
 	}
-	_, present := os.LookupEnv("GDS_LICENSE")
+	_, present := os.LookupEnv("BLOOM_LICENSE")
 	if !present {
-		log.Panic("Please set GDS_LICENSE env variable !!")
+		log.Panic("Please set BLOOM_LICENSE env variable !!")
 	}
 	ImagePullSecretArgs = []string{
 		"--set", fmt.Sprintf("image.customImage=%s", ImagePullSecretCustomImageName),

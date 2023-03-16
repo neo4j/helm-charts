@@ -165,19 +165,19 @@ func checkNodeCount(t *testing.T, releaseName model.ReleaseName) error {
 	}
 }
 
-// checkGDSVersion runs the cypher query to get gds info
-func checkGDSVersion(t *testing.T, releaseName model.ReleaseName) error {
-	result, err := runQuery(t, releaseName, "CALL gds.debug.sysInfo() YIELD key,value WHERE key = 'gdsEdition' RETURN value", noParams, model.Neo4jEdition == "community")
+// checkBloomVersion runs the cypher query to get bloom license info
+func checkBloomVersion(t *testing.T, releaseName model.ReleaseName) error {
+	result, err := runQuery(t, releaseName, "CALL bloom.checkLicenseCompliance() YIELD status;", noParams, model.Neo4jEdition == "community")
 	if err != nil {
 		return err
 	}
 
-	value, found := result[0].Get("value")
+	value, found := result[0].Get("status")
 	if !found {
-		return fmt.Errorf("expected gdsEdition , found nothing !!")
+		return fmt.Errorf("expected bloom license status, found nothing !!")
 	}
-	edition := value.(string)
-	assert.Equal(t, edition, "Licensed", fmt.Sprintf("gdsEdition found %s is not matching with 'Licensed'", edition))
+	status := value.(string)
+	assert.Equal(t, status, "valid", fmt.Sprintf("bloom license status found %s is not matching with 'valid'", status))
 	return nil
 }
 
