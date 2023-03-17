@@ -78,29 +78,35 @@ type Data struct {
 	Dynamic             Dynamic             `yaml:"dynamic,omitempty"`
 	Volume              Volume              `yaml:"volume,omitempty"`
 	VolumeClaimTemplate VolumeClaimTemplate `yaml:"volumeClaimTemplate,omitempty"`
+	DisableSubPath      bool                `yaml:"disableSubPathExpr,omitempty"`
 }
 type Share struct {
 	Name string `yaml:"name,omitempty"`
 }
 type Backups struct {
-	Mode  string `yaml:"mode,omitempty"`
-	Share Share  `yaml:"share,omitempty"`
+	Mode           string `yaml:"mode,omitempty"`
+	Share          Share  `yaml:"share,omitempty"`
+	DisableSubPath bool   `yaml:"disableSubPathExpr,omitempty"`
 }
 type Logs struct {
-	Mode  string `yaml:"mode,omitempty"`
-	Share Share  `yaml:"share,omitempty"`
+	Mode           string `yaml:"mode,omitempty"`
+	Share          Share  `yaml:"share,omitempty"`
+	DisableSubPath bool   `yaml:"disableSubPathExpr,omitempty"`
 }
 type Metrics struct {
-	Mode  string `yaml:"mode,omitempty"`
-	Share Share  `yaml:"share,omitempty"`
+	Mode           string `yaml:"mode,omitempty"`
+	Share          Share  `yaml:"share,omitempty"`
+	DisableSubPath bool   `yaml:"disableSubPathExpr,omitempty"`
 }
 type Import struct {
-	Mode  string `yaml:"mode,omitempty"`
-	Share Share  `yaml:"share,omitempty"`
+	Mode           string `yaml:"mode,omitempty"`
+	Share          Share  `yaml:"share,omitempty"`
+	DisableSubPath bool   `yaml:"disableSubPathExpr,omitempty"`
 }
 type Licenses struct {
-	Mode  string `yaml:"mode,omitempty"`
-	Share Share  `yaml:"share,omitempty"`
+	Mode           string `yaml:"mode,omitempty"`
+	Share          Share  `yaml:"share,omitempty"`
+	DisableSubPath bool   `yaml:"disableSubPathExpr,omitempty"`
 }
 type Volumes struct {
 	Data     Data     `yaml:"data,omitempty"`
