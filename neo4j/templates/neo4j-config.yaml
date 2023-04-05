@@ -37,6 +37,14 @@ data:
   {{- include "neo4j.configYaml" . | nindent 2 }}
   {{- end }}
 
+
+  {{- if (.Values.ldapPasswordFromSecret | trim) }}
+  {{- $ldapPassword := include "neo4j.ldap.ldapPasswordFromSecret" . -}}
+    {{- if gt (len $ldapPassword) 0 }}
+  dbms.security.ldap.authorization.system_password: "{{ $ldapPassword }}"
+    {{- end }}
+  {{- end }}
+
   {{- /* then explicit config - throw an error if it contains jvm additional */}}
 
   {{- with .Values.config }}

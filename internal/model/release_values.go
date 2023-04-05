@@ -27,6 +27,7 @@ type HelmValues struct {
 	LogInitialPassword       bool              `yaml:"logInitialPassword,omitempty"`
 	Jvm                      Jvm               `yaml:"jvm,omitempty"`
 	Logs                     Logging           `yaml:"logs,omitempty"`
+	LdapPasswordFromSecret   string            `yaml:"ldapPasswordFromSecret,omitempty"`
 }
 type Resources struct {
 	CPU    string `yaml:"cpu,omitempty"`

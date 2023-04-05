@@ -166,6 +166,7 @@ func kCreateSecret(namespace model.Namespace) ([][]string, Closeable, error) {
 		{"create", "secret", "-n", string(namespace), "generic", "bolt-key", fmt.Sprintf("--from-file=%s/private.key", tempDir)},
 		{"create", "secret", "-n", string(namespace), "generic", "https-key", fmt.Sprintf("--from-file=%s/private.key", tempDir)},
 		{"create", "secret", "-n", string(namespace), "generic", "bloom-license", fmt.Sprintf("--from-literal=bloom.license=%s", os.Getenv("BLOOM_LICENSE"))},
+		{"create", "secret", "-n", string(namespace), "generic", "ldapsecret", "--from-literal=LDAP_PASS=demo123"},
 	}, func() error { return os.RemoveAll(tempDir) }, err
 }
 

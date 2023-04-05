@@ -1328,6 +1328,26 @@ func TestAdditionalVolumesAndMounts(t *testing.T) {
 	}))
 }
 
+// TestNeo4jConfigWithEmptyLdapPasswordFromSecret checks that the user-config configmap does not contains ldapPassword config when empty ldapPasswordFromSecret is used
+func TestNeo4jConfigWithEmptyLdapPasswordFromSecret(t *testing.T) {
+	t.Parallel()
+	helmValues := model.DefaultCommunityValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.LdapPasswordFromSecret = "  "
+		manifests, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		if !assert.NoError(t, err) {
+			return
+		}
+		configMap := manifests.OfTypeWithName(&v1.ConfigMap{}, fmt.Sprintf("%s-user-config", model.DefaultHelmTemplateReleaseName.String()))
+		data := configMap.(*v1.ConfigMap).Data
+		assert.NotContains(t, data, "dbms.security.ldap.authorization.system_password", "Ldap Password Config should not be present")
+		fmt.Println(configMap)
+	}))
+}
+
 func TestErrorIsThrownForInvalidMemoryResources(t *testing.T) {
 
 	t.Parallel()

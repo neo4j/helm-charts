@@ -159,6 +159,10 @@ additionalVolumeMounts: []
 #  - mountPath: "/config/neo4j1.conf"
 #    name: neo4j1-conf
 
+# ldapPasswordFromSecret defines the secret which holds the password for ldap system account
+# The password defined in the secret gets set to the dbms.security.ldap.authorization.system_password Neo4j config.
+# The secret MUST HAVE A KEY called LDAP_PASS
+ldapPasswordFromSecret: ""
 
 #nodeSelector labels
 #please ensure the respective labels are present on one of the cluster nodes or else helm charts will throw an error

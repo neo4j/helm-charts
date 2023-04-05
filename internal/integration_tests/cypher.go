@@ -165,6 +165,23 @@ func checkNodeCount(t *testing.T, releaseName model.ReleaseName) error {
 	}
 }
 
+// checkLdapPassword runs a cypher query to get ldapPassword and checks if the ldapPassword is set or not
+func checkLdapPassword(t *testing.T, releaseName model.ReleaseName) error {
+	result, err := runQuery(t, releaseName, "CALL dbms.listConfig('dbms.security.ldap.authorization.system_password') YIELD value", noParams, model.Neo4jEdition == "community")
+	if err != nil {
+		return err
+	}
+
+	value, found := result[0].Get("value")
+	if !found {
+		return fmt.Errorf("expected at least one result")
+	}
+
+	ldapPass := value.(string)
+	assert.NotEqual(t, ldapPass, "No Value", "LdapPassword not set !!")
+	return nil
+}
+
 // checkBloomVersion runs the cypher query to get bloom license info
 func checkBloomVersion(t *testing.T, releaseName model.ReleaseName) error {
 	result, err := runQuery(t, releaseName, "CALL bloom.checkLicenseCompliance() YIELD status;", noParams, model.Neo4jEdition == "community")
