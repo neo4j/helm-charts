@@ -161,7 +161,7 @@ additionalVolumeMounts: []
 
 # ldapPasswordFromSecret defines the secret which holds the password for ldap system account
 # The password defined in the secret gets set to the dbms.security.ldap.authorization.system_password Neo4j config.
-# The secret MUST HAVE A KEY called LDAP_PASS
+# Secret key name must be LDAP_PASS
 ldapPasswordFromSecret: ""
 
 #nodeSelector labels
