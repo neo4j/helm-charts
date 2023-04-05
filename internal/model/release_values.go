@@ -28,6 +28,7 @@ type HelmValues struct {
 	Jvm                      Jvm               `yaml:"jvm,omitempty"`
 	Logs                     Logging           `yaml:"logs,omitempty"`
 	LdapPasswordFromSecret   string            `yaml:"ldapPasswordFromSecret,omitempty"`
+	LdapPasswordMountPath    string            `yaml:"ldapPasswordMountPath,omitempty"`
 }
 type Resources struct {
 	CPU    string `yaml:"cpu,omitempty"`

@@ -37,7 +37,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	defaultHelmArgs = append(defaultHelmArgs, model.DefaultNeo4jNameArg...)
 	headlessService := clusterHeadLessService{model.NewHeadlessServiceReleaseName(clusterReleaseName), defaultHelmArgs}
 	defaultHelmArgs = append(defaultHelmArgs, model.DefaultClusterSizeArg...)
-	defaultHelmArgs = append(defaultHelmArgs, model.LdapPasswordFromSecret...)
+	defaultHelmArgs = append(defaultHelmArgs, model.LdapArgs...)
 	core1HelmArgs := append(defaultHelmArgs, model.ImagePullSecretArgs...)
 	core1HelmArgs = append(core1HelmArgs, model.NodeSelectorArgs...)
 	core2HelmArgs := append(defaultHelmArgs, model.PriorityClassNameArgs...)

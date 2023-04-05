@@ -38,11 +38,10 @@ data:
   {{- end }}
 
 
-  {{- if (.Values.ldapPasswordFromSecret | trim) }}
-  {{- $ldapPassword := include "neo4j.ldap.ldapPasswordFromSecret" . -}}
-    {{- if gt (len $ldapPassword) 0 }}
-  dbms.security.ldap.authorization.system_password: "{{ $ldapPassword }}"
-    {{- end }}
+
+  {{- $exists := include "neo4j.ldapPasswordFromSecretExistsOrNot" . }}
+  {{- if eq $exists "true" }}
+  dbms.security.ldap.authorization.system_password: "$(bash -c 'cat {{ .Values.ldapPasswordMountPath }}/LDAP_PASS')"
   {{- end }}
 
   {{- /* then explicit config - throw an error if it contains jvm additional */}}

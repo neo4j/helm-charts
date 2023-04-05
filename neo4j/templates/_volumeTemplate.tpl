@@ -152,14 +152,14 @@ chmod -R g+rwx "/{{ $name }}"
     {{- end }}
 {{- end -}}
 {{- define "neo4j.apoc.volume" -}}
-    {{- if not (empty $.Values.apoc_config) -}}
+    {{- if not (empty $.Values.apoc_config) }}
 - name: apoc-conf
   projected:
     defaultMode: 0440
     sources:
       - configMap:
           name: "{{ .Release.Name }}-apoc-config"
-     {{- end -}}
+     {{- end }}
 {{- end -}}
 
 {{- define "neo4j.additionalVolumes" -}}

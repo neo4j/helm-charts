@@ -169,6 +169,7 @@ func TestAuthLdapSecretsWrongKey(t *testing.T) {
 	helmValues := model.DefaultEnterpriseValues
 	helmValues.Neo4J.Edition = model.Neo4jEdition
 	helmValues.LdapPasswordFromSecret = secretWrongKeyName
+	helmValues.LdapPasswordMountPath = "/config/ldaPassword"
 	_, err = helmClient.Install(t, releaseName.String(), namespace, helmValues)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Secret secret-wrong-key must contain key LDAP_PASS")
@@ -193,9 +194,10 @@ func TestAuthLdapInvalidSecret(t *testing.T) {
 	helmValues := model.DefaultEnterpriseValues
 	helmValues.Neo4J.Edition = model.Neo4jEdition
 	helmValues.LdapPasswordFromSecret = "invalidSecret"
+	helmValues.LdapPasswordMountPath = "/config/ldapPassword"
 	_, err = helmClient.Install(t, releaseName.String(), namespace, helmValues)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "Secret invalidSecret configured in 'neo4j.ldapPasswordFromSecret' not found")
+	assert.Contains(t, err.Error(), "Secret invalidSecret configured in 'ldapPasswordFromSecret' not found")
 	t.Cleanup(func() {
 		_ = runAll(t, "kubectl", [][]string{
 			{"delete", "namespace", string(releaseName.Namespace())},
