@@ -37,10 +37,13 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	headlessService := clusterHeadLessService{model.NewHeadlessServiceReleaseName(clusterReleaseName), nil}
 	readReplica1 := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName, 1), model.ImagePullSecretArgs}
 	readReplica2 := clusterReadReplica{model.NewReadReplicaReleaseName(clusterReleaseName, 2), nil}
-
-	core1 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 1), append(model.ImagePullSecretArgs, model.NodeSelectorArgs...)}
-	core2 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 2), model.PriorityClassNameArgs}
-	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3), nil}
+	defaultHelmArgs := model.LdapArgs
+	core1HelmArgs := append(defaultHelmArgs, model.ImagePullSecretArgs...)
+	core1HelmArgs = append(core1HelmArgs, model.NodeSelectorArgs...)
+	core2HelmArgs := append(defaultHelmArgs, model.PriorityClassNameArgs...)
+	core1 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 1), core1HelmArgs}
+	core2 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 2), core2HelmArgs}
+	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3), defaultHelmArgs}
 	cores := []clusterCore{core1, core2, core3}
 	readReplicas := []clusterReadReplica{readReplica1, readReplica2}
 

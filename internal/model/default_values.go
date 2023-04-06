@@ -21,6 +21,7 @@ var NodeSelectorArgs, ImagePullSecretArgs, CustomApocImageArgs, PriorityClassNam
 var NodeSelectorLabel = "testLabel=1"
 var Neo4jStandaloneChartName = "neo4j-standalone"
 var Neo4jClusterCoreChartName = "neo4j-cluster-core"
+var LdapArgs = []string{"--set", "ldapPasswordFromSecret=ldapsecret", "--set", "ldapPasswordMountPath=/config/ldapPassword/"}
 
 func init() {
 	setWorkingDir()

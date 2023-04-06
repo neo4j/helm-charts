@@ -140,3 +140,67 @@ func TestAuthPasswordCannotBeDifferent(t *testing.T) {
 		}, false)
 	})
 }
+
+// TestAuthLdapSecretsWrongKey tests helm installation failure when a valid secret with invalid key is used for ldapPasswordFromSecret
+func TestAuthLdapSecretsWrongKey(t *testing.T) {
+	t.Parallel()
+	releaseName := model.NewReleaseName("ldap-auth-wrong-key-" + TestRunIdentifier)
+	_, err := createNamespace(t, releaseName)
+	if err != nil {
+		return
+	}
+	namespace := string(releaseName.Namespace())
+	secretWrongKeyName := "secret-wrong-key"
+	secretWrongKeyData := make(map[string][]byte, 1)
+	secretWrongKeyData["NEO4J_PASSWORD"] = []byte("demo1234")
+	secretWrongKey := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretWrongKeyName,
+			Namespace: namespace,
+		},
+		Data: secretWrongKeyData,
+		Type: "Opaque",
+	}
+	_, err = Clientset.CoreV1().Secrets(namespace).Create(context.TODO(), secretWrongKey, metav1.CreateOptions{})
+	if err != nil {
+		return
+	}
+	helmClient := model.NewHelmClient(model.Neo4jStandaloneChartName)
+	helmValues := model.DefaultEnterpriseValues
+	helmValues.Neo4J.Edition = model.Neo4jEdition
+	helmValues.LdapPasswordFromSecret = secretWrongKeyName
+	helmValues.LdapPasswordMountPath = "/config/ldaPassword"
+	_, err = helmClient.Install(t, releaseName.String(), namespace, helmValues)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Secret secret-wrong-key must contain key LDAP_PASS")
+	t.Cleanup(func() {
+		_ = runAll(t, "kubectl", [][]string{
+			{"delete", "namespace", string(releaseName.Namespace())},
+		}, false)
+	})
+}
+
+// TestAuthLdapInvalidSecret tests helm installation failure when an invalid secret name is used for ldapPasswordFromSecret
+func TestAuthLdapInvalidSecret(t *testing.T) {
+	t.Parallel()
+	releaseName := model.NewReleaseName("ldap-auth-wrong-key-" + TestRunIdentifier)
+	_, err := createNamespace(t, releaseName)
+	if err != nil {
+		return
+	}
+	namespace := string(releaseName.Namespace())
+
+	helmClient := model.NewHelmClient(model.Neo4jStandaloneChartName)
+	helmValues := model.DefaultEnterpriseValues
+	helmValues.Neo4J.Edition = model.Neo4jEdition
+	helmValues.LdapPasswordFromSecret = "invalidSecret"
+	helmValues.LdapPasswordMountPath = "/config/ldapPassword"
+	_, err = helmClient.Install(t, releaseName.String(), namespace, helmValues)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Secret invalidSecret configured in 'ldapPasswordFromSecret' not found")
+	t.Cleanup(func() {
+		_ = runAll(t, "kubectl", [][]string{
+			{"delete", "namespace", string(releaseName.Namespace())},
+		}, false)
+	})
+}

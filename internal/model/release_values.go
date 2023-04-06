@@ -26,6 +26,8 @@ type HelmValues struct {
 	PodSpec                  v1.PodSpec        `yaml:"podSpec,omitempty"`
 	LogInitialPassword       bool              `yaml:"logInitialPassword,omitempty"`
 	Jvm                      Jvm               `yaml:"jvm,omitempty"`
+	LdapPasswordFromSecret   string            `yaml:"ldapPasswordFromSecret,omitempty"`
+	LdapPasswordMountPath    string            `yaml:"ldapPasswordMountPath,omitempty"`
 }
 type Resources struct {
 	CPU    string `yaml:"cpu,omitempty"`
