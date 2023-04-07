@@ -167,7 +167,7 @@ func TestAuthLdapSecretsWrongKey(t *testing.T) {
 	}
 	helmClient := model.NewHelmClient(model.DefaultNeo4jChartName)
 	helmValues := model.DefaultEnterpriseValues
-	helmValues.Neo4J.Edition = model.Neo4jEdition
+	helmValues.Neo4J.Edition = "enterprise"
 	helmValues.LdapPasswordFromSecret = secretWrongKeyName
 	helmValues.LdapPasswordMountPath = "/config/ldaPassword"
 	_, err = helmClient.Install(t, releaseName.String(), namespace, helmValues)
@@ -192,7 +192,7 @@ func TestAuthLdapInvalidSecret(t *testing.T) {
 
 	helmClient := model.NewHelmClient(model.DefaultNeo4jChartName)
 	helmValues := model.DefaultEnterpriseValues
-	helmValues.Neo4J.Edition = model.Neo4jEdition
+	helmValues.Neo4J.Edition = "enterprise"
 	helmValues.LdapPasswordFromSecret = "invalidSecret"
 	helmValues.LdapPasswordMountPath = "/config/ldapPassword"
 	_, err = helmClient.Install(t, releaseName.String(), namespace, helmValues)
