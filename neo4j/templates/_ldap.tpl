@@ -17,14 +17,18 @@
 
 {{/* checks if ldapPasswordMountPath is set or not when ldapPasswordFromSecret is defined */}}
 {{- define "neo4j.ldapPasswordMountPath" -}}
-    {{- if (.Values.ldapPasswordFromSecret | trim) -}}
-            {{- if not (.Values.ldapPasswordMountPath | trim) -}}
-                {{ fail (printf "Please define 'ldapPasswordMountPath'") }}
-            {{- end -}}
-    {{- else -}}
-            {{- if (.Values.ldapPasswordMountPath | trim) -}}
-                {{ fail (printf "Please define 'ldapPasswordFromSecret'") }}
-            {{- end -}}
+    {{- if or (.Values.ldapPasswordMountPath | trim) (.Values.ldapPasswordFromSecret | trim) -}}
+        {{- if not (eq .Values.neo4j.edition "enterprise") -}}
+            {{ fail (printf "ldapPasswordFromSecret and ldapPasswordMountPath are Enterprise Edition feature only. Please set edition to enterprise via --set neo4j.edition=\"enterprise\"") }}
+        {{- end -}}
+    {{- end -}}
+
+    {{- if and (.Values.ldapPasswordFromSecret | trim) (not (.Values.ldapPasswordMountPath | trim)) -}}
+        {{ fail (printf "Please define 'ldapPasswordMountPath'") }}
+    {{- end -}}
+
+    {{- if and (.Values.ldapPasswordMountPath | trim) (not (.Values.ldapPasswordFromSecret | trim)) -}}
+        {{ fail (printf "Please define 'ldapPasswordFromSecret'") }}
     {{- end -}}
 {{- end -}}
 
