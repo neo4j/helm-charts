@@ -83,6 +83,9 @@ func clusterTests(loadBalancerName model.ReleaseName) ([]SubTest, error) {
 		{name: "Check K8s", test: func(t *testing.T) {
 			assert.NoError(t, checkK8s(t, loadBalancerName), "Neo4j Config check should succeed")
 		}},
+		{name: "Check Ldap Password", test: func(t *testing.T) {
+			assert.NoError(t, checkLdapPassword(t, loadBalancerName), "LdapPassword should be set")
+		}},
 		{name: "Create Node", test: func(t *testing.T) {
 			assert.NoError(t, createNode(t, loadBalancerName), "Create Node should succeed")
 		}},
