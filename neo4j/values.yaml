@@ -159,6 +159,13 @@ additionalVolumeMounts: []
 #  - mountPath: "/config/neo4j1.conf"
 #    name: neo4j1-conf
 
+# ldapPasswordFromSecret defines the secret which holds the password for ldap system account
+# Secret key name must be LDAP_PASS
+# This secret is accessible by Neo4j at the path defined in ldapPasswordMountPath
+ldapPasswordFromSecret: ""
+
+# The above secret gets mounted to the path mentioned here
+ldapPasswordMountPath: ""
 
 #nodeSelector labels
 #please ensure the respective labels are present on one of the cluster nodes or else helm charts will throw an error
@@ -348,6 +355,7 @@ ssl:
       sources: [ ]
     revokedCerts:
       sources: [ ]
+
 # Kubernetes cluster domain suffix
 clusterDomain: "cluster.local"
 

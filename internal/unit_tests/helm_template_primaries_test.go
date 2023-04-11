@@ -1328,6 +1328,112 @@ func TestAdditionalVolumesAndMounts(t *testing.T) {
 	}))
 }
 
+// TestNeo4jConfigWithEmptyLdapPasswordFromSecretAndMountPath checks that the user-config configmap does not contains ldapPassword config when empty ldapPasswordFromSecret and ldapPasswordMountPath are used
+func TestNeo4jConfigWithEmptyLdapPasswordFromSecretAndMountPath(t *testing.T) {
+	t.Parallel()
+	helmValues := model.DefaultCommunityValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.LdapPasswordFromSecret = "  "
+		helmValues.LdapPasswordMountPath = "  "
+		manifests, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		if !assert.NoError(t, err) {
+			return
+		}
+		configMap := manifests.OfTypeWithName(&v1.ConfigMap{}, fmt.Sprintf("%s-user-config", model.DefaultHelmTemplateReleaseName.String()))
+		data := configMap.(*v1.ConfigMap).Data
+		assert.NotContains(t, data, "dbms.security.ldap.authorization.system_password", "Ldap Password Config should not be present")
+	}))
+}
+
+// TestNeo4jConfigWithEmptyLdapPasswordFromSecret checks for error when empty ldapPasswordFromSecret is provided along with a mount path
+func TestNeo4jConfigWithEmptyLdapPasswordFromSecret(t *testing.T) {
+	t.Parallel()
+	var helmValues model.HelmValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		helmValues = model.DefaultCommunityValues
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.LdapPasswordFromSecret = "  "
+		helmValues.LdapPasswordMountPath = "/config/ldapPassword"
+		_, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		if edition == "enterprise" {
+			assert.Error(t, err, "error should be seen when passing empty ldapPasswordFromSecret along with valid mount path")
+			assert.Contains(t, err.Error(), "Please define 'ldapPasswordFromSecret'")
+		} else {
+			assert.Error(t, err, "error should be seen when using ldapPasswordMount with community edition")
+			assert.Contains(t, err.Error(), "ldapPasswordFromSecret and ldapPasswordMountPath are Enterprise Edition feature only")
+		}
+	}))
+}
+
+// TestNeo4jConfigWithEmptyLdapPasswordMountPath checks for error when empty ldapPasswordMountPath is provided along with a valid ldapPasswordFromSecret
+func TestNeo4jConfigWithEmptyLdapPasswordMountPath(t *testing.T) {
+	t.Parallel()
+	var helmValues model.HelmValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		helmValues = model.DefaultCommunityValues
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.LdapPasswordFromSecret = "ldapsecret"
+		helmValues.LdapPasswordMountPath = "  "
+		_, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		if edition == "enterprise" {
+			assert.Error(t, err, "error should be seen when passing empty ldapPasswordMountPath along with valid ldap secret")
+			assert.Contains(t, err.Error(), "Please define 'ldapPasswordMountPath'")
+		} else {
+			assert.Error(t, err, "error should be seen when using ldapPasswordFromSecret with community edition")
+			assert.Contains(t, err.Error(), "ldapPasswordFromSecret and ldapPasswordMountPath are Enterprise Edition feature only")
+		}
+	}))
+}
+
+// TestLdapVolumeAndVolumeMountsExistsOrNot checks for ldap volume and volume-mount when ldapPasswordFromSecret and ldapPasswordMountPath are provided
+func TestLdapVolumeAndVolumeMountsExistsOrNot(t *testing.T) {
+	t.Parallel()
+	var helmValues model.HelmValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		helmValues = model.DefaultCommunityValues
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.LdapPasswordFromSecret = "ldapsecret"
+		helmValues.LdapPasswordMountPath = "/config/ldapPassword"
+		helmValues.DisableLookups = true
+		manifests, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		if edition == "enterprise" {
+			assert.NoError(t, err, "no error should be seen while checking for ldap volume and volumeMount")
+			statefulSet := manifests.OfTypeWithName(&appsv1.StatefulSet{}, model.DefaultHelmTemplateReleaseName.String())
+			if !assert.NotNil(t, statefulSet, fmt.Sprintf("no statefulset found with name %s", model.DefaultHelmTemplateReleaseName)) {
+				return
+			}
+
+			volumes := statefulSet.(*appsv1.StatefulSet).Spec.Template.Spec.Volumes
+			assert.NotEqual(t, len(volumes), 0, "no volumes found")
+			var names []string
+			for _, volume := range volumes {
+				names = append(names, volume.Name)
+			}
+			assert.Contains(t, names, "neo4j-ldap-password", "missing neo4j-ldap-password volume")
+
+			volumeMounts := statefulSet.(*appsv1.StatefulSet).Spec.Template.Spec.Containers[0].VolumeMounts
+			assert.NotEqual(t, len(volumeMounts), 0, "no volume mounts found")
+			names = []string{}
+			for _, volumeMount := range volumeMounts {
+				names = append(names, volumeMount.Name)
+			}
+			assert.Contains(t, names, "neo4j-ldap-password", "missing neo4j-ldap-password volume mount")
+		} else {
+			assert.Error(t, err, "error should be seen when using ldapPasswordFromSecret with community edition")
+			assert.Contains(t, err.Error(), "ldapPasswordFromSecret and ldapPasswordMountPath are Enterprise Edition feature only")
+		}
+	}))
+}
+
 func TestErrorIsThrownForInvalidMemoryResources(t *testing.T) {
 
 	t.Parallel()

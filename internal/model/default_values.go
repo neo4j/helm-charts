@@ -24,6 +24,7 @@ var DefaultNeo4jName = "test-cluster"
 var DefaultNeo4jChartName = "neo4j"
 var DefaultClusterSize = 3
 var DefaultNeo4jNameArg = []string{"--set", "neo4j.name=" + DefaultNeo4jName}
+var LdapArgs = []string{"--set", "ldapPasswordFromSecret=ldapsecret", "--set", "ldapPasswordMountPath=/config/ldapPassword/"}
 var DefaultClusterSizeArg = []string{"--set", "neo4j.minimumClusterSize=" + strconv.Itoa(DefaultClusterSize)}
 var DefaultEnterpriseSizeArgs = []string{"--set", "neo4j.edition=enterprise", "--set", "neo4j.acceptLicenseAgreement=yes"}
 
