@@ -1,10 +1,11 @@
 package integration_tests
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/neo4j/helm-charts/internal/model"
-	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/stretchr/testify/assert"
 	"strings"
 	"sync/atomic"
@@ -205,14 +206,14 @@ func runQuery(t *testing.T, releaseName model.ReleaseName, cypher string, params
 	if proxyErr != nil {
 		return nil, proxyErr
 	}
-
-	driver, err := neo4j.NewDriver(fmt.Sprintf("%s:%d", dbUri, boltPort), authToUse, func(config *neo4j.Config) {
+	ctx := context.Background()
+	driver, err := neo4j.NewDriverWithContext(fmt.Sprintf("%s:%d", dbUri, boltPort), authToUse, func(config *neo4j.Config) {
 	})
 	// Handle driver lifetime based on your application lifetime requirements  driver's lifetime is usually
 	// bound by the application lifetime, which usually implies one driver instance per application
-	defer driver.Close()
+	defer driver.Close(ctx)
 
-	if err := awaitConnectivity(t, err, driver); err != nil {
+	if err := awaitConnectivity(t, err, driver, ctx); err != nil {
 		return nil, err
 	}
 
@@ -221,24 +222,24 @@ func runQuery(t *testing.T, releaseName model.ReleaseName, cypher string, params
 	// For multidatabase support, set sessionConfig.DatabaseName to requested database
 	// Session config will default to write mode, if only reads are to be used configure session for
 	// read mode.
-	session := driver.NewSession(neo4j.SessionConfig{DatabaseName: dbName})
-	defer session.Close()
+	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: dbName})
+	defer session.Close(ctx)
 
-	result, err := session.Run(cypher, params)
+	result, err := session.Run(ctx, cypher, params)
 	if err != nil {
 		return nil, err
 	}
 
-	return result.Collect()
+	return result.Collect(ctx)
 }
 
-func awaitConnectivity(t *testing.T, err error, driver neo4j.Driver) error {
+func awaitConnectivity(t *testing.T, err error, driver neo4j.DriverWithContext, ctx context.Context) error {
 	// This polls verify connectivity until it succeeds or it times out. We should be able to remove this when we have readiness probes (maybe)
 	start := time.Now()
 	timeoutAfter := time.Minute * 3
 	for {
 		t.Log("Checking connectivity for ", dbUri)
-		err = driver.VerifyConnectivity()
+		err = driver.VerifyConnectivity(ctx)
 		if err == nil {
 			t.Log("Connectivity check passed for ", dbUri)
 			return nil
