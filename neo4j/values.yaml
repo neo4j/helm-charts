@@ -466,10 +466,10 @@ jvm:
   useNeo4jDefaultJvmArguments: true
   # additionalJvmArguments is a list of strings. Each jvm argument should be a separate element:
   additionalJvmArguments: []
-  # - "-XX:+HeapDumpOnOutOfMemoryError"
-  # - "-XX:HeapDumpPath=/logs/neo4j.hprof"
-  # - "-XX:MaxMetaspaceSize=180m"
-  # - "-XX:ReservedCodeCacheSize=40m"
+#   - "-XX:+HeapDumpOnOutOfMemoryError"
+#   - "-XX:HeapDumpPath=/logs/neo4j.hprof"
+#   - "-XX:MaxMetaspaceSize=180m"
+#   - "-XX:ReservedCodeCacheSize=40m"
 
 logging:
   serverLogsXml: |-
