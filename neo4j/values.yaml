@@ -202,7 +202,7 @@ services:
         # port: 80
       https:
         enabled: true #Set this to false to remove HTTPS from this service (this does not affect whether https is enabled for the neo4j process)
-        # uncomment to publish http on port 443 (neo4j default is 7474)
+        # uncomment to publish http on port 443 (neo4j default is 7473)
         # port: 443
       bolt:
         enabled: true #Set this to false to remove BOLT from this service (this does not affect whether https is enabled for the neo4j process)
