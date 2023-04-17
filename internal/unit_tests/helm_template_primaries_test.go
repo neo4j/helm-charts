@@ -279,9 +279,6 @@ func TestAdditionalEnvVars(t *testing.T) {
 			assert.Equal(t, envConfigMap.Data["FOO"], "one")
 			assert.Equal(t, envConfigMap.Data["GRAPHS"], "are everywhere")
 			serviceCount := 3
-			if edition == "community" {
-				serviceCount = 2
-			}
 			checkNeo4jManifest(t, manifest, serviceCount)
 		}))
 }
@@ -329,14 +326,13 @@ func TestChmodInitContainer(t *testing.T) {
 	t.Parallel()
 
 	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
-		serviceCount := 2
+		serviceCount := 3
 		helmTemplateArgs := []string{}
 		desiredFeatures := [][]string{
 			useNeo4jClusterName,
 		}
 		if edition == "enterprise" {
 			desiredFeatures = append(desiredFeatures, useEnterpriseAndAcceptLicense)
-			serviceCount = 3
 		}
 		for _, a := range desiredFeatures {
 			helmTemplateArgs = append(helmTemplateArgs, a...)
@@ -369,14 +365,13 @@ func TestChmodInitContainers(t *testing.T) {
 	t.Parallel()
 
 	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
-		serviceCount := 2
+		serviceCount := 3
 		helmTemplateArgs := []string{}
 		desiredFeatures := [][]string{
 			useNeo4jClusterName,
 		}
 		if edition == "enterprise" {
 			desiredFeatures = append(desiredFeatures, useEnterpriseAndAcceptLicense)
-			serviceCount = 3
 		}
 		for _, a := range desiredFeatures {
 			helmTemplateArgs = append(helmTemplateArgs, a...)
@@ -515,9 +510,6 @@ func TestAuthSecrets(t *testing.T) {
 		}
 
 		serviceCount := 3
-		if edition == "community" {
-			serviceCount = 2
-		}
 		checkNeo4jManifest(t, manifest, serviceCount)
 	}
 
