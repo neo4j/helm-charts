@@ -1,6 +1,5 @@
 {{- $clusterEnabled := eq (include "neo4j.isClusterEnabled" .) "true" }}
 {{- $ignored := required "neo4j.name is required" .Values.neo4j.name }}
-{{/*{{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}*/}}
 {{- $isLoadBalancerEnabled := index .Values.services.neo4j.enabled }}
 {{- $loadBalancer := list -}}
 {{- $loadBalancerExists := false -}}
