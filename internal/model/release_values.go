@@ -128,29 +128,24 @@ type Default struct {
 type Spec struct {
 	Type string `yaml:"type,omitempty"`
 }
-type HTTPPort struct {
-	Enabled bool `yaml:"enabled,omitempty"`
+type Port struct {
+	Enabled    bool   `yaml:"enabled,omitempty"`
+	Port       int    `yaml:"port"`
+	TargetPort int    `yaml:"targetPort"`
+	Name       string `yaml:"name"`
 }
-type HTTPSPort struct {
-	Enabled bool `yaml:"enabled,omitempty"`
-}
-type BoltPort struct {
-	Enabled bool `yaml:"enabled,omitempty"`
-}
-type BackupPort struct {
-	Enabled bool `yaml:"enabled,omitempty"`
-}
+
 type Ports struct {
-	HTTP   HTTPPort   `yaml:"http,omitempty"`
-	HTTPS  HTTPSPort  `yaml:"https,omitempty"`
-	Bolt   BoltPort   `yaml:"bolt,omitempty"`
-	Backup BackupPort `yaml:"backup,omitempty"`
+	HTTP   Port `yaml:"http,omitempty"`
+	HTTPS  Port `yaml:"https,omitempty"`
+	Bolt   Port `yaml:"bolt,omitempty"`
+	Backup Port `yaml:"backup,omitempty"`
 }
 type ServiceSelector struct {
 	HelmNeo4JComNeo4JLoadbalancer string `yaml:"helm.neo4j.com/neo4j.loadbalancer,omitempty"`
 }
-type Neo4JService struct {
-	Enabled      bool              `yaml:"enabled,omitempty"`
+type Neo4jService struct {
+	Enabled      bool              `yaml:"enabled,omitempty" default:"true"`
 	Annotations  map[string]string `yaml:"annotations,omitempty"`
 	Spec         Spec              `yaml:"spec,omitempty"`
 	Ports        Ports             `yaml:"ports,omitempty"`
@@ -167,11 +162,45 @@ type Internals struct {
 	Annotations map[string]string `yaml:"annotations,omitempty"`
 }
 type Services struct {
-	Default   Default   `yaml:"default,omitempty"`
-	Neo4J     Neo4J     `yaml:"neo4j,omitempty"`
-	Admin     Admin     `yaml:"admin,omitempty"`
-	Internals Internals `yaml:"internals,omitempty"`
+	Default   Default      `yaml:"default,omitempty"`
+	Neo4j     Neo4jService `yaml:"neo4j,omitempty"`
+	Admin     Admin        `yaml:"admin,omitempty"`
+	Internals Internals    `yaml:"internals,omitempty"`
 }
+
+//
+//type Neo4jService struct {
+//	Enabled     bool              `yaml:"enabled"`
+//	Annotations map[string]string `yaml:"annotations"`
+//	Spec        struct {
+//		Type string `yaml:"type"`
+//	} `yaml:"spec"`
+//	Ports struct {
+//		Http   Neo4jServicePort `yaml:"http"`
+//		Https  Neo4jServicePort `yaml:"https"`
+//		Bolt   Neo4jServicePort `yaml:"bolt"`
+//		Backup Neo4jServicePort `yaml:"backup"`
+//	} `yaml:"ports"`
+//	Selector     map[string]string `yaml:"selector"`
+//	MultiCluster bool              `yaml:"multiCluster"`
+//	Cleanup      struct {
+//		Enabled bool `yaml:"enabled"`
+//		Image   struct {
+//			Registry        string `yaml:"registry"`
+//			Repository      string `yaml:"repository"`
+//			Tag             string `yaml:"tag"`
+//			Digest          string `yaml:"digest"`
+//			ImagePullPolicy string `yaml:"imagePullPolicy"`
+//		} `yaml:"image"`
+//	} `yaml:"cleanup"`
+//}
+//
+//type Neo4jServicePort struct {
+//	Enabled    bool   `yaml:"enabled"`
+//	Port       int    `yaml:"port"`
+//	TargetPort int    `yaml:"targetPort"`
+//	Name       string `yaml:"name"`
+//}
 
 type SecurityContext struct {
 	RunAsNonRoot        bool   `yaml:"runAsNonRoot,omitempty"`

@@ -1426,6 +1426,60 @@ func TestLdapVolumeAndVolumeMountsExistsOrNot(t *testing.T) {
 	}))
 }
 
+// TestNeo4jServicePortVariables set neo4j loadbalancer service port,targetPort,name and checks if they are getting reflected or not
+func TestNeo4jServicePortVariables(t *testing.T) {
+	t.Parallel()
+	var helmValues model.HelmValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		helmValues = model.DefaultCommunityValues
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.Services.Neo4j.Ports.HTTP.Enabled = true
+		helmValues.Services.Neo4j.Ports.HTTP.Port = 7474
+		helmValues.Services.Neo4j.Ports.HTTP.TargetPort = 8000
+		helmValues.Services.Neo4j.Ports.HTTP.Name = "http-port"
+
+		helmValues.Services.Neo4j.Ports.HTTPS.Enabled = true
+		helmValues.Services.Neo4j.Ports.HTTPS.Port = 7473
+		helmValues.Services.Neo4j.Ports.HTTPS.TargetPort = 8001
+		helmValues.Services.Neo4j.Ports.HTTPS.Name = "https-port"
+
+		helmValues.Services.Neo4j.Ports.Bolt.Enabled = true
+		helmValues.Services.Neo4j.Ports.Bolt.Port = 7687
+		helmValues.Services.Neo4j.Ports.Bolt.TargetPort = 8002
+		helmValues.Services.Neo4j.Ports.Bolt.Name = "bolt-port"
+
+		helmValues.DisableLookups = true
+		manifests, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		assert.NoError(t, err, "no error should be seen while checking for neo4j lb service ports configuration")
+		lbServiceName := fmt.Sprintf("%s-lb-neo4j", helmValues.Neo4J.Name)
+		lbService := manifests.OfTypeWithName(&v1.Service{}, lbServiceName)
+		if !assert.NotNil(t, lbService, fmt.Sprintf("no loadbalancer service found with name %s", lbServiceName)) {
+			return
+		}
+
+		ports := lbService.(*v1.Service).Spec.Ports
+		assert.Len(t, ports, 3, "there should be only 3 ports in the lbservice")
+		for _, port := range ports {
+			switch port.Name {
+			case "http-port":
+				assert.Equal(t, int(port.Port), 7474, "http port should be 7474")
+				assert.Equal(t, int(port.TargetPort.IntVal), 8000, "http target port should be 8000")
+				continue
+			case "https-port":
+				assert.Equal(t, int(port.Port), 7473, "https port should be 7473")
+				assert.Equal(t, int(port.TargetPort.IntVal), 8001, "https target port should be 8001")
+				continue
+			case "bolt-port":
+				assert.Equal(t, int(port.Port), 7687, "bolt port should be 7687")
+				assert.Equal(t, int(port.TargetPort.IntVal), 8002, "bolt target port should be 8002")
+				continue
+			}
+		}
+	}))
+}
+
 func TestErrorIsThrownForInvalidMemoryResources(t *testing.T) {
 
 	t.Parallel()
