@@ -1,6 +1,5 @@
 {{- $clusterEnabled := eq (include "neo4j.isClusterEnabled" .) "true" }}
 {{- $ignored := required "neo4j.name is required" .Values.neo4j.name }}
-{{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
 {{- $isLoadBalancerEnabled := index .Values.services.neo4j.enabled }}
 {{- $loadBalancer := list -}}
 {{- $loadBalancerExists := false -}}
@@ -22,7 +21,7 @@
   {{- end -}}
 {{- end -}}
 
-{{- if and (not $loadBalancerExists) ($isEnterprise) ($isLoadBalancerEnabled) -}}
+{{- if and (not $loadBalancerExists) ($isLoadBalancerEnabled) -}}
 {{- $defaultSpec := include "neo4j.services.neo4j.defaultSpec" . | fromYaml }}
 {{- $spec := get $defaultSpec .Values.services.neo4j.spec.type | merge .Values.services.neo4j.spec  }}
 # Service for applications that need access to neo4j
@@ -36,8 +35,10 @@ metadata:
     app: "{{ template "neo4j.name" . }}"
     helm.neo4j.com/service: "neo4j"
     {{- include "neo4j.labels" .Values.neo4j | indent 4 }}
+  {{- if $clusterEnabled }}
   annotations:
     helm.sh/resource-policy: keep
+  {{- end }}
   {{- range $key, $value := .Values.services.neo4j.annotations }}
     {{ $key }}: {{ $value | quote }}
   {{- end }}
