@@ -35,7 +35,7 @@ metadata:
     app: "{{ template "neo4j.name" . }}"
     helm.neo4j.com/service: "neo4j"
     {{- include "neo4j.labels" .Values.neo4j | indent 4 }}
-  {{- if and $clusterEnabled (eq $.Values.neo4j.edition "enterprise") }}
+  {{- if $clusterEnabled }}
   annotations:
     helm.sh/resource-policy: keep
   {{- end }}
