@@ -200,18 +200,26 @@ services:
         enabled: true #Set this to false to remove HTTP from this service (this does not affect whether http is enabled for the neo4j process)
         # uncomment to publish http on port 80 (neo4j default is 7474)
         # port: 80
+        # targetPort: 7474
+        # name: http
       https:
         enabled: true #Set this to false to remove HTTPS from this service (this does not affect whether https is enabled for the neo4j process)
         # uncomment to publish http on port 443 (neo4j default is 7473)
         # port: 443
+        # targetPort: 7473
+        # name: https
       bolt:
         enabled: true #Set this to false to remove BOLT from this service (this does not affect whether https is enabled for the neo4j process)
         # Uncomment to explicitly specify the port to publish Neo4j Bolt (7687 is the default)
         # port: 7687
+        # targetPort: 7687
+        # name: tcp-bolt
       backup:
         enabled: false #Set this to true to expose backup port externally (n.b. this could have security implications. Backup is not authenticated by default)
         # Uncomment to explicitly specify the port to publish Neo4j Backup (6362 is the default)
         # port: 6362
+        # targetPort: 6362
+        # name: tcp-backup
 
     selector:
       "helm.neo4j.com/neo4j.loadbalancer": "include"
