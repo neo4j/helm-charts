@@ -168,40 +168,6 @@ type Services struct {
 	Internals Internals    `yaml:"internals,omitempty"`
 }
 
-//
-//type Neo4jService struct {
-//	Enabled     bool              `yaml:"enabled"`
-//	Annotations map[string]string `yaml:"annotations"`
-//	Spec        struct {
-//		Type string `yaml:"type"`
-//	} `yaml:"spec"`
-//	Ports struct {
-//		Http   Neo4jServicePort `yaml:"http"`
-//		Https  Neo4jServicePort `yaml:"https"`
-//		Bolt   Neo4jServicePort `yaml:"bolt"`
-//		Backup Neo4jServicePort `yaml:"backup"`
-//	} `yaml:"ports"`
-//	Selector     map[string]string `yaml:"selector"`
-//	MultiCluster bool              `yaml:"multiCluster"`
-//	Cleanup      struct {
-//		Enabled bool `yaml:"enabled"`
-//		Image   struct {
-//			Registry        string `yaml:"registry"`
-//			Repository      string `yaml:"repository"`
-//			Tag             string `yaml:"tag"`
-//			Digest          string `yaml:"digest"`
-//			ImagePullPolicy string `yaml:"imagePullPolicy"`
-//		} `yaml:"image"`
-//	} `yaml:"cleanup"`
-//}
-//
-//type Neo4jServicePort struct {
-//	Enabled    bool   `yaml:"enabled"`
-//	Port       int    `yaml:"port"`
-//	TargetPort int    `yaml:"targetPort"`
-//	Name       string `yaml:"name"`
-//}
-
 type SecurityContext struct {
 	RunAsNonRoot        bool   `yaml:"runAsNonRoot,omitempty"`
 	RunAsUser           int    `yaml:"runAsUser,omitempty"`
