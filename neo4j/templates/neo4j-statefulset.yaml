@@ -134,6 +134,7 @@ spec:
             {{- include "neo4j.additionalVolumeMounts" .Values.additionalVolumeMounts | nindent 12 }}
             {{- include "neo4j.apoc.volumeMount" .Values.apoc_config | indent 12 }}
             {{- include "neo4j.ldapVolumeMount" . | indent 12 }}
+            {{- include "neo4j.apocCredentials.volumeMount" . | indent 12 }}
             {{- include "neo4j.volumeMounts" .Values.volumes | indent 12 }}
             {{- include "neo4j.ssl.volumeMountsFromSecrets" .Values.ssl | indent 12 }}
             {{- if $offlineMaintenanceEnabled  }}
@@ -195,6 +196,7 @@ spec:
         {{- include "neo4j.additionalVolumes" .Values.additionalVolumes | nindent 8 }}
         {{- include "neo4j.apoc.volume" . | nindent 8 }}
         {{- include "neo4j.ldapVolume" . | nindent 8 }}
+        {{- include "neo4j.apocCredentials.volume" . | nindent 8 }}
         {{- with include "neo4j.ssl.volumesFromSecrets" .Values.ssl }}{{ nindent 8 .}}{{ end -}}
         {{- with include "neo4j.volumes" . }}{{ nindent 8 . }}{{ end -}}
   {{- $volumeClaimTemplates := include "neo4j.volumeClaimTemplates" . -}}

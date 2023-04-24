@@ -1,6 +1,7 @@
 {{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
 {{- $isLoadBalancerEnabled := index .Values.services.neo4j.enabled }}
-{{- if and ($isEnterprise) ($isLoadBalancerEnabled) (.Values.services.neo4j.cleanup.enabled) -}}
+{{- $clusterEnabled := eq (include "neo4j.isClusterEnabled" .) "true" }}
+{{- if and ($isEnterprise) ($clusterEnabled) ($isLoadBalancerEnabled) (.Values.services.neo4j.cleanup.enabled) -}}
 apiVersion: batch/v1
 kind: Job
 metadata:

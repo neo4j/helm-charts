@@ -3,7 +3,7 @@
 {{- $isLoadBalancerEnabled := index .Values.services.neo4j.enabled }}
 {{- $loadBalancer := list -}}
 {{- $loadBalancerExists := false -}}
-{{- if not .Values.disableLookups -}}
+{{- if and (not .Values.disableLookups) $clusterEnabled -}}
   {{- $loadBalancer = (lookup "v1" "Service" .Release.Namespace (printf "%s-lb-neo4j" (include "neo4j.name" $))) }}
   {{- $loadBalancerExists = $loadBalancer | all }}
 {{- end -}}

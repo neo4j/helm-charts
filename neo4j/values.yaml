@@ -24,7 +24,7 @@ neo4j:
 
   # Minimum number of machines initially required to form a clustered database. The StatefulSet will not reach the ready state
   # until at least this many members have discovered each other. The default is 1 (standalone)
-  #minimumClusterSize: 1
+#  minimumClusterSize: 1
 
   # set edition: "enterprise" to use Neo4j Enterprise Edition
   #
@@ -151,6 +151,12 @@ volumes:
     share:
       name: "data"
 
+  plugins:
+    disableSubPathExpr: false
+    mode: "share" # share an existing volume (e.g. the data volume)
+    share:
+      name: "data"
+
 #add additional volumes and their respective mounts
 additionalVolumes: []
 #  - name: neo4j1-conf
@@ -261,8 +267,12 @@ services:
 
 # Neo4j Configuration (yaml format)
 config:
+  server.directories.plugins: "/plugins"
+  dbms.security.procedures.unrestricted: "apoc.*"
   server.config.strict_validation.enabled: "false"
-#  dbms.cluster.minimum_initial_system_primaries_count: "3"
+  dbms.security.procedures.whitelist: "apoc.coll.*,apoc.load.*"
+  dbms.security.procedures.allowlist: "gds.*,apoc.*"
+  #dbms.cluster.minimum_initial_system_primaries_count: "3"
   # The amount of memory to use for mapping the store files.
   # The default page cache memory assumes the machine is dedicated to running
   # Neo4j, and is heuristically set to 50% of RAM minus the Java heap size.
@@ -277,9 +287,32 @@ config:
   #dbms.memory.heap.initial_size: "317m"
   #dbms.memory.heap.max_size: "317m"
 
-#apoc_config:
-#  apoc.trigger.enabled: "true"
-#  apoc.jdbc.apoctest.url: "jdbc:foo:bar"
+apoc_config:
+  apoc.trigger.enabled: "true"
+  apoc.import.file.enabled: "true"
+  apoc.jdbc.apoctest.url: "jdbc:foo:bar"
+
+apoc_credentials:
+   jdbc:
+    keyName: "jdbc"
+    secretName: "jdbcsecret"
+    secretMountPath: "/secret/jdbcCred"
+
+   couchbase:
+    keyName: "couchbase"
+    secretName: "couchbasesecret"
+    secretMountPath: "/secret/couchbaseCred"
+
+   mongodb:
+    keyName: "mongodb"
+    secretName: "mongosecret"
+    secretMountPath: "/secret/mongodbCred"
+
+   elasticsearch:
+    keyName: "es"
+    secretName: "essecret"
+    secretMountPath: "/secret/esCred"
+
 
 # securityContext defines privilege and access control settings for a Pod. Making sure that we dont run Neo4j as root user.
 securityContext:
