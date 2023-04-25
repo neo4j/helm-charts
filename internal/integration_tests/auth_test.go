@@ -38,7 +38,7 @@ func TestAuthSecretsWrongKey(t *testing.T) {
 	helmValues.Neo4J.PasswordFromSecret = secretWrongKeyName
 	_, err = helmClient.Install(t, releaseName.String(), namespace, helmValues)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "Secret secret-wrong-key must contain key NEO4J_DATA")
+	assert.Contains(t, err.Error(), "Secret secret-wrong-key must contain key NEO4J_AUTH")
 	t.Cleanup(func() {
 		_ = runAll(t, "kubectl", [][]string{
 			{"delete", "namespace", string(releaseName.Namespace())},
