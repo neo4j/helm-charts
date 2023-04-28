@@ -27,6 +27,8 @@ type HelmValues struct {
 	LogInitialPassword       bool              `yaml:"logInitialPassword,omitempty"`
 	Jvm                      Jvm               `yaml:"jvm,omitempty"`
 	Logs                     Logging           `yaml:"logs,omitempty"`
+	LdapPasswordFromSecret   string            `yaml:"ldapPasswordFromSecret,omitempty"`
+	LdapPasswordMountPath    string            `yaml:"ldapPasswordMountPath,omitempty"`
 }
 type Resources struct {
 	CPU    string `yaml:"cpu,omitempty"`
@@ -80,29 +82,35 @@ type Data struct {
 	Dynamic             Dynamic             `yaml:"dynamic,omitempty"`
 	Volume              Volume              `yaml:"volume,omitempty"`
 	VolumeClaimTemplate VolumeClaimTemplate `yaml:"volumeClaimTemplate,omitempty"`
+	DisableSubPath      bool                `yaml:"disableSubPathExpr,omitempty"`
 }
 type Share struct {
 	Name string `yaml:"name,omitempty"`
 }
 type Backups struct {
-	Mode  string `yaml:"mode,omitempty"`
-	Share Share  `yaml:"share,omitempty"`
+	Mode           string `yaml:"mode,omitempty"`
+	Share          Share  `yaml:"share,omitempty"`
+	DisableSubPath bool   `yaml:"disableSubPathExpr,omitempty"`
 }
 type Logs struct {
-	Mode  string `yaml:"mode,omitempty"`
-	Share Share  `yaml:"share,omitempty"`
+	Mode           string `yaml:"mode,omitempty"`
+	Share          Share  `yaml:"share,omitempty"`
+	DisableSubPath bool   `yaml:"disableSubPathExpr,omitempty"`
 }
 type Metrics struct {
-	Mode  string `yaml:"mode,omitempty"`
-	Share Share  `yaml:"share,omitempty"`
+	Mode           string `yaml:"mode,omitempty"`
+	Share          Share  `yaml:"share,omitempty"`
+	DisableSubPath bool   `yaml:"disableSubPathExpr,omitempty"`
 }
 type Import struct {
-	Mode  string `yaml:"mode,omitempty"`
-	Share Share  `yaml:"share,omitempty"`
+	Mode           string `yaml:"mode,omitempty"`
+	Share          Share  `yaml:"share,omitempty"`
+	DisableSubPath bool   `yaml:"disableSubPathExpr,omitempty"`
 }
 type Licenses struct {
-	Mode  string `yaml:"mode,omitempty"`
-	Share Share  `yaml:"share,omitempty"`
+	Mode           string `yaml:"mode,omitempty"`
+	Share          Share  `yaml:"share,omitempty"`
+	DisableSubPath bool   `yaml:"disableSubPathExpr,omitempty"`
 }
 type Volumes struct {
 	Data     Data     `yaml:"data,omitempty"`
@@ -120,29 +128,24 @@ type Default struct {
 type Spec struct {
 	Type string `yaml:"type,omitempty"`
 }
-type HTTPPort struct {
-	Enabled bool `yaml:"enabled,omitempty"`
+type Port struct {
+	Enabled    bool   `yaml:"enabled,omitempty"`
+	Port       int    `yaml:"port"`
+	TargetPort int    `yaml:"targetPort"`
+	Name       string `yaml:"name"`
 }
-type HTTPSPort struct {
-	Enabled bool `yaml:"enabled,omitempty"`
-}
-type BoltPort struct {
-	Enabled bool `yaml:"enabled,omitempty"`
-}
-type BackupPort struct {
-	Enabled bool `yaml:"enabled,omitempty"`
-}
+
 type Ports struct {
-	HTTP   HTTPPort   `yaml:"http,omitempty"`
-	HTTPS  HTTPSPort  `yaml:"https,omitempty"`
-	Bolt   BoltPort   `yaml:"bolt,omitempty"`
-	Backup BackupPort `yaml:"backup,omitempty"`
+	HTTP   Port `yaml:"http,omitempty"`
+	HTTPS  Port `yaml:"https,omitempty"`
+	Bolt   Port `yaml:"bolt,omitempty"`
+	Backup Port `yaml:"backup,omitempty"`
 }
 type ServiceSelector struct {
 	HelmNeo4JComNeo4JLoadbalancer string `yaml:"helm.neo4j.com/neo4j.loadbalancer,omitempty"`
 }
-type Neo4JService struct {
-	Enabled      bool              `yaml:"enabled,omitempty"`
+type Neo4jService struct {
+	Enabled      bool              `yaml:"enabled,omitempty" default:"true"`
 	Annotations  map[string]string `yaml:"annotations,omitempty"`
 	Spec         Spec              `yaml:"spec,omitempty"`
 	Ports        Ports             `yaml:"ports,omitempty"`
@@ -159,10 +162,10 @@ type Internals struct {
 	Annotations map[string]string `yaml:"annotations,omitempty"`
 }
 type Services struct {
-	Default   Default   `yaml:"default,omitempty"`
-	Neo4J     Neo4J     `yaml:"neo4j,omitempty"`
-	Admin     Admin     `yaml:"admin,omitempty"`
-	Internals Internals `yaml:"internals,omitempty"`
+	Default   Default      `yaml:"default,omitempty"`
+	Neo4j     Neo4jService `yaml:"neo4j,omitempty"`
+	Admin     Admin        `yaml:"admin,omitempty"`
+	Internals Internals    `yaml:"internals,omitempty"`
 }
 
 type SecurityContext struct {

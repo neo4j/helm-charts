@@ -18,7 +18,8 @@ func TestDefaultCommunityHelmTemplate(t *testing.T) {
 		},
 		Volumes: model.Volumes{
 			Data: model.Data{
-				Mode: "selector",
+				Mode:           "selector",
+				DisableSubPath: false,
 			},
 		},
 	}
@@ -26,7 +27,7 @@ func TestDefaultCommunityHelmTemplate(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	checkNeo4jManifest(t, manifest, 2)
+	checkNeo4jManifest(t, manifest, 3)
 
 	neo4jStatefulSet := manifest.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
 	neo4jStatefulSet.GetName()
@@ -52,7 +53,7 @@ func TestExplicitCommunityHelmTemplate(t *testing.T) {
 		return
 	}
 
-	checkNeo4jManifest(t, manifest, 2)
+	checkNeo4jManifest(t, manifest, 3)
 
 	neo4jStatefulSet := manifest.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
 	neo4jStatefulSet.GetName()

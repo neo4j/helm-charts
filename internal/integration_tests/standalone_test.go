@@ -19,6 +19,7 @@ func TestInstallStandaloneOnGCloudK8s(t *testing.T) {
 	defaultHelmArgs := []string{}
 	defaultHelmArgs = append(defaultHelmArgs, model.DefaultNeo4jNameArg...)
 	defaultHelmArgs = append(defaultHelmArgs, resources.TestAntiAffinityRule.HelmArgs()...)
+	defaultHelmArgs = append(defaultHelmArgs, resources.GdsStandaloneTest.HelmArgs()...)
 	_, err := installNeo4j(t, releaseName, chart, defaultHelmArgs...)
 	t.Cleanup(standaloneCleanup(t, releaseName))
 

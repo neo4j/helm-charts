@@ -25,7 +25,7 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 Convert a neo4j.conf properties text into valid yaml
 */}}
 {{- define "neo4j.configYaml" -}}
-  {{- regexReplaceAll "(?m)^([^=]*?)=" ( regexReplaceAllLiteral "\\s*(#|dbms\\.jvm\\.additional).*" . "" )  "${1}: " | trim | replace ": true\n" ": 'true'\n" | replace ": true" ": 'true'\n" | replace ": false\n" ": 'false'\n" | replace ": false" ": 'false'\n"  | replace ": yes\n" ": 'yes'\n" | replace ": yes" ": 'yes'\n" | replace ": no" ": 'no'\n" | replace ": no\n" ": 'no'\n" }}
+  {{- regexReplaceAll "(?m)^([^=]*?)=" ( regexReplaceAllLiteral "\\s*(#|server\\.jvm\\.additional).*" . "" )  "${1}: " | trim | replace ": true\n" ": 'true'\n" | replace ": true" ": 'true'\n" | replace ": false\n" ": 'false'\n" | replace ": false" ": 'false'\n"  | replace ": yes\n" ": 'yes'\n" | replace ": yes" ": 'yes'\n" | replace ": no" ": 'no'\n" | replace ": no\n" ": 'no'\n" }}
 {{- end -}}
 
 {{- define "neo4j.configJvmAdditionalYaml" -}}
@@ -345,7 +345,7 @@ affinity:
             {{- if not ( $secretExists ) -}}
                 {{ fail (printf "Secret %s configured in 'neo4j.passwordFromSecret' not found" .Values.neo4j.passwordFromSecret) }}
             {{- else if not (hasKey $secret.data "NEO4J_AUTH") -}}
-                {{ fail (printf "Secret %s must contain key NEO4J_DATA" .Values.neo4j.passwordFromSecret) }}
+                {{ fail (printf "Secret %s must contain key NEO4J_AUTH" .Values.neo4j.passwordFromSecret) }}
             {{/*The secret must start with characters 'neo4j/`*/}}
             {{- else if not (index $secret.data "NEO4J_AUTH" | b64dec | regexFind "^neo4j\\/\\w*") -}}
                 {{ fail (printf "Password in secret %s must start with the characters 'neo4j/'" .Values.neo4j.passwordFromSecret) }}

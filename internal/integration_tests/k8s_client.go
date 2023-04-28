@@ -104,12 +104,7 @@ func CheckServiceAnnotations(t *testing.T, releaseName model.ReleaseName, chart 
 	if err != nil {
 		return err
 	}
-	var expectedServiceCount int
-	if model.Neo4jEdition == "community" {
-		expectedServiceCount = 2
-	} else {
-		expectedServiceCount = 3
-	}
+	expectedServiceCount := 3
 
 	assert.Equal(t, expectedServiceCount, len(services.Items))
 

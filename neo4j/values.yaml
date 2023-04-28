@@ -51,6 +51,9 @@ neo4j:
 # Volumes for Neo4j
 volumes:
   data:
+    #Set it to true when you do not want to use the subPathExpr
+    disableSubPathExpr: false
+
     # REQUIRED: specify a volume mode to use for data
     # Valid values are share|selector|defaultStorageClass|volume|volumeClaimTemplate|dynamic
     # To get up-and-running quickly, for development or testing, use "defaultStorageClass" for a dynamically provisioned volume of the default storage class.
@@ -107,6 +110,7 @@ volumes:
   # n.b. backups will be written to /backups on the volume
   # any of the volume modes shown above for data can be used for backups
   backups:
+    disableSubPathExpr: false
     mode: "share" # share an existing volume (e.g. the data volume)
     share:
       name: "data"
@@ -115,6 +119,7 @@ volumes:
   # n.b. logs will be written to /logs/$(POD_NAME) on the volume
   # any of the volume modes shown above for data can be used for logs
   logs:
+    disableSubPathExpr: false
     mode: "share" # share an existing volume (e.g. the data volume)
     share:
       name: "data"
@@ -123,6 +128,7 @@ volumes:
   # n.b. metrics will be written to /metrics/$(POD_NAME) on the volume
   # any of the volume modes shown above for data can be used for metrics
   metrics:
+    disableSubPathExpr: false
     mode: "share" # share an existing volume (e.g. the data volume)
     share:
       name: "data"
@@ -131,6 +137,7 @@ volumes:
   # n.b. import will be mounted to /import on the underlying volume
   # any of the volume modes shown above for data can be used for import
   import:
+    disableSubPathExpr: false
     mode: "share" # share an existing volume (e.g. the data volume)
     share:
       name: "data"
@@ -139,6 +146,7 @@ volumes:
   # n.b. licenses will be mounted to /licenses on the underlying volume
   # any of the volume modes shown above for data can be used for licenses
   licenses:
+    disableSubPathExpr: false
     mode: "share" # share an existing volume (e.g. the data volume)
     share:
       name: "data"
@@ -151,6 +159,13 @@ additionalVolumeMounts: []
 #  - mountPath: "/config/neo4j1.conf"
 #    name: neo4j1-conf
 
+# ldapPasswordFromSecret defines the secret which holds the password for ldap system account
+# Secret key name must be LDAP_PASS
+# This secret is accessible by Neo4j at the path defined in ldapPasswordMountPath
+ldapPasswordFromSecret: ""
+
+# The above secret gets mounted to the path mentioned here
+ldapPasswordMountPath: ""
 
 #nodeSelector labels
 #please ensure the respective labels are present on one of the cluster nodes or else helm charts will throw an error
@@ -185,18 +200,26 @@ services:
         enabled: true #Set this to false to remove HTTP from this service (this does not affect whether http is enabled for the neo4j process)
         # uncomment to publish http on port 80 (neo4j default is 7474)
         # port: 80
+        # targetPort: 7474
+        # name: http
       https:
         enabled: true #Set this to false to remove HTTPS from this service (this does not affect whether https is enabled for the neo4j process)
-        # uncomment to publish http on port 443 (neo4j default is 7474)
+        # uncomment to publish http on port 443 (neo4j default is 7473)
         # port: 443
+        # targetPort: 7473
+        # name: https
       bolt:
         enabled: true #Set this to false to remove BOLT from this service (this does not affect whether https is enabled for the neo4j process)
         # Uncomment to explicitly specify the port to publish Neo4j Bolt (7687 is the default)
         # port: 7687
+        # targetPort: 7687
+        # name: tcp-bolt
       backup:
         enabled: false #Set this to true to expose backup port externally (n.b. this could have security implications. Backup is not authenticated by default)
         # Uncomment to explicitly specify the port to publish Neo4j Backup (6362 is the default)
         # port: 6362
+        # targetPort: 6362
+        # name: tcp-backup
 
     selector:
       "helm.neo4j.com/neo4j.loadbalancer": "include"
@@ -340,6 +363,7 @@ ssl:
       sources: [ ]
     revokedCerts:
       sources: [ ]
+
 # Kubernetes cluster domain suffix
 clusterDomain: "cluster.local"
 
@@ -450,10 +474,10 @@ jvm:
   useNeo4jDefaultJvmArguments: true
   # additionalJvmArguments is a list of strings. Each jvm argument should be a separate element:
   additionalJvmArguments: []
-  # - "-XX:+HeapDumpOnOutOfMemoryError"
-  # - "-XX:HeapDumpPath=/logs/neo4j.hprof"
-  # - "-XX:MaxMetaspaceSize=180m"
-  # - "-XX:ReservedCodeCacheSize=40m"
+#   - "-XX:+HeapDumpOnOutOfMemoryError"
+#   - "-XX:HeapDumpPath=/logs/neo4j.hprof"
+#   - "-XX:MaxMetaspaceSize=180m"
+#   - "-XX:ReservedCodeCacheSize=40m"
 
 logging:
   serverLogsXml: |-

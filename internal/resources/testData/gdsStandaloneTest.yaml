@@ -1,26 +1,20 @@
-neo4j:
-  name: licenses
-  acceptLicenseAgreement: "yes"
-  edition: enterprise
 volumes:
-  data:
-    mode: defaultStorageClass
   licenses:
-    mode: volume
     disableSubPathExpr: true
+    mode: volume
     volume:
       secret:
-        secretName: gds-bloom-license
+        secretName: bloom-license
         items:
-          - key: gds.license
-            path: gds.license
           - key: bloom.license
             path: bloom.license
+
+
 env:
-  NEO4J_PLUGINS: '["graph-data-science", "bloom"]'
+  NEO4J_PLUGINS: '["bloom"]'
 config:
-  gds.enterprise.license_file: "/licenses/gds.license"
   dbms.security.procedures.unrestricted: "gds.*,apoc.*,bloom.*"
   server.unmanaged_extension_classes: "com.neo4j.bloom.server=/bloom,semantics.extension=/rdf"
   dbms.security.http_auth_allowlist: "/,/browser.*,/bloom.*"
   dbms.bloom.license_file: "/licenses/bloom.license"
+
