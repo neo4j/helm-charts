@@ -1,36 +1,87 @@
+## @param nameOverride String to partially override common.names.fullname
+nameOverride: ""
+## @param fullnameOverride String to fully override common.names.fullname
+fullnameOverride: ""
+# disableLookups will disable all the lookups done in the helm charts
+# You can enable this when executing helm commands with --dry-run command
+disableLookups: false
+
 neo4j:
-  image: harshitsinghvi22/helm-charts
+  image: neo4jbuildservice/helm-charts
   imageTag: backup
-  podLabels:
-    app: "demo"
-    acac: "dcdddc"
-  podAnnotations:
-    ssdvvs: "svvvsvs"
-    vfsvswef: "vcfvgb"
-  backupAddress: holder-neo4j.default.svc.cluster.local:6362
-  jobSchedule: "*/1 * * * *"
-  backoffLimit: 6
+  podLabels: {}
+#    app: "demo"
+#    acac: "dcdddc"
+  podAnnotations: {}
+#    ssdvvs: "svvvsvs"
+#    vfsvswef: "vcfvgb"
+  jobSchedule: ""
+  successfulJobsHistoryLimit:
+  failedJobsHistoryLimit:
+  backoffLimit:
+  #add labels if required
+  labels: {}
 
 backup:
-  # In case of azure the bucket is used as the container where the backup is stored
+  # Ensure the bucket is already existing in the respective cloud provider
+  # In case of azure the bucket is the container name in the storage account
   # bucket: azure-storage-container
-  bucket: gs://test-neo4j
-  database: neo4j,system
+  bucketName: ""
+  #address of the neo4j instance which is to be backed up ex: standalone-admin.default.svc.cluster.local:6362
+  address: ""
+  #name of the database to backup ex: neo4j
+  database: neo4j
   # cloudProvider can be either gcp, aws, or azure
-  cloudProvider: gcp
-  # set secretName to NULL if using workload-identity in gcp
-  secretName:
-  #Below are all neo4j-admin backup flags / options
-  pageCache: 2G
-  heapSize: 2G
-  fallbackToFull: "true"
-  removeExistingFiles: "true"
-  removeBackupFiles: "true"
-  includeMetadata: "all"
-  type: "AUTO"
-  parallelRecovery: "false"
+  cloudProvider: aws
 
+  # name of the kubernetes secret containing the respective cloud provider credentials
+  # Ensure you have read,write access to the mentioned bucket
+  # For AWS :
+  # add the below in a file and create a secret via
+  # 'kubectl create secret generic awscred --from-file=credentials=/demo/awscredentials'
 
+  #  [ default ]
+  #  region = us-east-1
+  #  aws_access_key_id = XXXXX
+  #  aws_secret_access_key = XXXX
+
+  # For AZURE :
+  # add the storage account name and key in below format in a file create a secret via
+  # 'kubectl create secret generic azurecred --from-file=credentials=/demo/azurecredentials'
+
+  #  AZURE_STORAGE_ACCOUNT_NAME=XXXX
+  #  AZURE_STORAGE_ACCOUNT_KEY=XXXX
+
+  # For GCP :
+  # create the secret via the gcp service account json key file.
+  # ex: 'kubectl create secret generic gcpcred --from-file=credentials=/demo/gcpcreds.json'
+  secretName: ""
+  # provide the keyname used in the above secret
+  secretKeyName: ""
+
+  #Below are all neo4j-admin database backup flags / options
+  #To know more about the flags read here : https://neo4j.com/docs/operations-manual/current/backup-restore/online-backup/
+  pageCache: ""
+  fallbackToFull: true
+  removeExistingFiles: true
+  removeBackupFiles: true
+  includeMetadata: ""
+  type: ""
+  keepFailed: false
+  parallelRecovery: false
+  verbose: true
+
+#Below are all neo4j-admin database check flags / options
+#To know more about the flags read here : https://neo4j.com/docs/operations-manual/current/tools/neo4j-admin/consistency-checker/
+consistencyCheck:
+  enable: false
+  checkIndexes: true
+  checkGraph: true
+  checkCounts: true
+  checkPropertyOwners: true
+  maxOffHeapMemory: ""
+  threads: ""
+  verbose: true
 
 # Set to name of an existing Service Account to use if desired
 serviceAccountName: ""
@@ -39,37 +90,13 @@ serviceAccountName: ""
 # The chart defaults to an emptyDir, use this to overwrite default behavior
 tempVolume:
   emptyDir: {}
+#  persistentVolumeClaim:
+#    claimName: backup-pvc
 
-tempVolumeMount:
-# Subdirectory of temporary volume to mount. useful if volume is not empty
-# subPath: backups/
-
-# When running in mesh
-shareProcessNamespace: false # Needs to be true for the below example configuration to work
-sidecarContainers: []
-  # This implementation was inspired by this comment: https://github.com/linkerd/linkerd2/issues/1869#issuecomment-595456178
-  # And found in this post which describes the problem: https://suraj.io/post/how-to-gracefully-kill-kubernetes-jobs-with-a-sidecar/
-  # This sidecar monitors the backup process that runs the main job and kills the consul-proxy once backup is finished.
-  # Note that it's necessary to set `shareProcessNamespace: true` in `spec.template.spec` for this to work.
-  # - name: consul-terminator
-  #   image: ubuntu:19.04
-  #   command:
-  #    - sh
-  #    - "-c"
-  #     - |
-  #       /bin/bash <<'EOSCRIPT'
-  #       set -e
-  #       # Check for the java process and sleep 5 seconds until the java process exits.
-  #       while true; do pgrep backup.sh || break; echo "backup still running. wait 5" && sleep 5; done
-  #       # After the backup process exits,
-  #       echo "backup finished. Kill consul if running"
-  #       kill $(pgrep envoy) || echo "Envoy not running"
-  #       kill $(pgrep consul-k8s) || echo "Lifecycle not running"
-  #       EOSCRIPT
-  #   resources:
-  #     limits:
-  #       cpu: 10m
-  #       memory: 20M
-  #     requests:
-  #       cpu: 10m
-#       memory: 20M
+# securityContext defines privilege and access control settings for a Pod. Making sure that we don't run Neo4j as root user.
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 7474
+  runAsGroup: 7474
+  fsGroup: 7474
+  fsGroupChangePolicy: "Always"

@@ -1,21 +1,20 @@
+{{- template "neo4j.backup.checkIfSecretExistsOrNot" . -}}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: "{{ .Release.Name }}-job"
+  name: "{{ include "neo4j.fullname" . }}"
   labels:
     app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
-    app.kubernetes.io/instance: {{ .Release.Name | quote }}
-    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
-    app.kubernetes.io/name: "neo4j-backup"
-    app.kubernetes.io/component: backup
+    app.kubernetes.io/instance: {{ include "neo4j.fullname" . | quote }}
+    {{- include "neo4j.labels" $.Values.neo4j.labels | indent 4 }}
 spec:
-  schedule: {{.Values.neo4j.jobSchedule | quote }}
+  schedule: {{.Values.neo4j.jobSchedule | default "* * * * *" | quote }}
   concurrencyPolicy: Forbid
-  successfulJobsHistoryLimit: 3
-  failedJobsHistoryLimit: 1
+  successfulJobsHistoryLimit: {{. Values.neo4j.successfulJobsHistoryLimit | default 3 }}
+  failedJobsHistoryLimit: {{ .Values.neo4j.failedJobsHistoryLimit | default 1 }}
   jobTemplate:
     spec:
-      backoffLimit: {{ .Values.neo4j.backoffLimit }}
+      backoffLimit: {{ .Values.neo4j.backoffLimit | default 6 }}
       template:
         metadata:
           annotations:
@@ -29,7 +28,7 @@ spec:
           automountServiceAccountToken: true
           {{- end }}
           restartPolicy: Never
-          shareProcessNamespace: {{ .Values.shareProcessNamespace }}
+          securityContext: {{ .Values.securityContext | toYaml  | nindent 12 }}
           containers:
             - name: graph-backup
               image: {{ .Values.neo4j.image }}:{{ .Values.neo4j.imageTag }}
@@ -40,28 +39,44 @@ spec:
                 limits:
                   ephemeral-storage: "5Gi"
               env:
-                - name: NEO4J_ADDR
-                  value: {{ required "You must specify a NEO4J_ADDR env var with port, such as my-neo4j:6362" .Values.neo4j.backupAddress }}
+                - name: ADDRESS
+                  value: {{ required "You must specify a NEO4J_ADDR env var with port, such as my-neo4j:6362" .Values.backup.address  | trim }}
                 - name: DATABASE
-                  value: {{ required "You must specify a DATABASE env var; comma-separated list of databases to backup, such as neo4j,system" .Values.backup.database }}
+                  value: {{ required "You must specify a DATABASE env var; comma-separated list of databases to backup, such as neo4j,system" .Values.backup.database | trim }}
                 - name: CLOUD_PROVIDER
-                  value: {{ required "You must specify a CLOUD_PROVIDER env var" .Values.backup.cloudProvider }}
-                - name: BUCKET
-                  value: {{ required "You must specify a BUCKET address such as (gs|s3)://my-backups" .Values.backup.bucket }}
-                - name: HEAP_SIZE
-                  value: {{ .Values.backup.heapSize | default "2G" }}
+                  value: {{ required "You must specify a CLOUD_PROVIDER env var" .Values.backup.cloudProvider  | trim }}
+                - name: BUCKET_NAME
+                  value: {{ required "You must specify a BUCKET NAME" .Values.backup.bucketName | trim }}
                 - name: PAGE_CACHE
-                  value: {{ .Values.backup.pageCache | default "2G" }}
+                  value: {{ .Values.backup.pageCache | default "2G" | trim }}
                 - name: INCLUDE_METADATA
-                  value: "{{ .Values.backup.includeMetadata | default "all" }}"
+                  value: "{{ .Values.backup.includeMetadata | default "all" | trim }}"
                 - name: PARALLEL_RECOVERY
-                  value: "{{ .Values.backup.parallelRecovery | default "false" }}"
+                  value: "{{ .Values.backup.parallelRecovery | default false }}"
                 - name: TYPE
-                  value: "{{ .Values.backup.type | default "AUTO" }}"
-                - name: REMOVE_EXISTING_FILES
-                  value: "{{ .Values.backup.removeExistingFiles | default "true" }}"
-                - name: REMOVE_BACKUP_FILES
-                  value: "{{ .Values.backup.removeBackupFiles | default "true" }}"
+                  value: "{{ .Values.backup.type | default "AUTO" | trim }}"
+                - name: KEEP_FAILED
+                  value: "{{ .Values.backup.keepFailed | default false }}"
+                - name: CREDENTIAL_PATH
+                  value: "{{ printf "/credentials/%s" .Values.backup.secretKeyName  }}"
+                - name: VERBOSE
+                  value: "{{ .Values.backup.verbose | default true }}"
+                - name: CONSISTENCY_CHECK_ENABLE
+                  value: "{{ .Values.consistencyCheck.enable | default false }}"
+                - name: CONSISTENCY_CHECK_INDEXES
+                  value: "{{ .Values.consistencyCheck.checkIndexes | default true }}"
+                - name: CONSISTENCY_CHECK_GRAPH
+                  value: "{{ .Values.consistencyCheck.checkGraph | default true }}"
+                - name: CONSISTENCY_CHECK_COUNTS
+                  value: "{{ .Values.consistencyCheck.checkCounts | default true }}"
+                - name: CONSISTENCY_CHECK_PROPERTYOWNERS
+                  value: "{{ .Values.consistencyCheck.checkPropertyOwners | default true }}"
+                - name: CONSISTENCY_CHECK_MAXOFFHEAPMEMORY
+                  value: "{{ .Values.consistencyCheck.maxOffHeapMemory | default "" | trim }}"
+                - name: CONSISTENCY_CHECK_THREADS
+                  value: "{{ .Values.consistencyCheck.threads | default "" | trim }}"
+                - name: CONSISTENCY_CHECK_VERBOSE
+                  value: "{{ .Values.consistencyCheck.verbose | default true }}"
               volumeMounts:
                 {{- if .Values.backup.secretName }}
                 - name: credentials
@@ -70,22 +85,16 @@ spec:
                 {{- end }}
                 - name: "backup"
                   mountPath: "/backups"
-                  {{- if .Values.tempVolumeMount }}{{- if .Values.tempVolumeMount.subPath }}
-                  subPath: "{{ .Values.tempVolumeMount.subPath }}"
-                  {{- end }}{{- end }}
-{{- if .Values.sidecarContainers }}
-{{ toYaml .Values.sidecarContainers | indent 12 }}
-{{- end }}
           volumes:
             {{- if .Values.backup.secretName }}
             - name: credentials
               secret:
                 secretName: "{{ .Values.backup.secretName }}"
                 items:
-                  - key: credentials
-                    path: credentials
+                  - key: "{{ .Values.backup.secretKeyName }}"
+                    path: "{{ .Values.backup.secretKeyName }}"
             {{- end }}
             - name: "backup"
-{{- with .Values.tempVolume.emptyDir }}
+{{- with .Values.tempVolume }}
 {{- toYaml . | nindent 14 }}
 {{- end }}

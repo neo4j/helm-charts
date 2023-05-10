@@ -15,6 +15,7 @@
 *.bak
 *.tmp
 *.orig
+*.go
 *~
 # Various IDEs
 .project
@@ -23,3 +24,5 @@
 *.tmproj
 Dockerfile
 .vscode/
+*.backup_linux
+backup_linux
