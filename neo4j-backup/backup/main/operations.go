@@ -7,7 +7,6 @@ import (
 	neo4jAdmin "github.com/neo4j/helm-charts/neo4j-backup/backup/neo4j-admin"
 	"log"
 	"os"
-	"time"
 )
 
 func awsOperations() {
@@ -97,18 +96,8 @@ func startupOperations() {
 	handleError(err)
 	log.Printf("printing current directory %s", dir)
 
-	var counter = 5
-	for {
-		err = neo4jAdmin.CheckDatabaseConnectivity(os.Getenv("ADDRESS"))
-		if counter == 1 || err == nil {
-			break
-		}
-		time.Sleep(30 * time.Second)
-		counter--
-	}
-	log.Printf("Counter = %v , Err = %v", counter, err)
+	err = neo4jAdmin.CheckDatabaseConnectivity(os.Getenv("ADDRESS"))
 	handleError(err)
-
 }
 
 func handleError(err error) {
