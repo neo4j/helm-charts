@@ -66,8 +66,8 @@ backup:
   fallbackToFull: true
   removeExistingFiles: true
   removeBackupFiles: true
-  includeMetadata: ""
-  type: ""
+  includeMetadata: "all"
+  type: "AUTO"
   keepFailed: false
   parallelRecovery: false
   verbose: true

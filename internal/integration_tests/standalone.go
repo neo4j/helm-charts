@@ -564,6 +564,7 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 		SecretName:    "awscred",
 		SecretKeyName: "credentials",
 		Verbose:       true,
+		Type:          "FULL",
 	}
 	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
@@ -614,6 +615,7 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 		SecretName:    "azurecred",
 		SecretKeyName: "credentials",
 		Verbose:       true,
+		Type:          "FULL",
 	}
 	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
@@ -664,6 +666,7 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 		SecretName:    "gcpcred",
 		SecretKeyName: "credentials",
 		Verbose:       true,
+		Type:          "FULL",
 	}
 	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
