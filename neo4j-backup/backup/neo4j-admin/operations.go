@@ -22,8 +22,8 @@ func CheckDatabaseConnectivity(hostPort string) error {
 }
 
 // PerformBackup performs the backup operation and returns the generated backup file name
-func PerformBackup() (string, error) {
-	flags := getBackupCommandFlags()
+func PerformBackup(address string) (string, error) {
+	flags := getBackupCommandFlags(address)
 	log.Printf("Printing backup flags %v", flags)
 	output, err := exec.Command("neo4j-admin", flags...).CombinedOutput()
 	if err != nil {

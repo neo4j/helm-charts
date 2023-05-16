@@ -16,7 +16,7 @@ func TestBackupInstallationWithNoValues(t *testing.T) {
 	helmValues.DisableLookups = true
 
 	_, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
-	assert.Contains(t, err.Error(), "Missing secretName")
+	assert.Contains(t, err.Error(), "Empty fields. Please set databaseAdminServiceName")
 }
 
 // TestBackupValues checks backup helm chart with sample values
@@ -28,7 +28,7 @@ func TestBackupValues(t *testing.T) {
 	helmValues.Backup.SecretName = "demo"
 	helmValues.Backup.CloudProvider = "aws"
 	helmValues.Backup.BucketName = "demo2"
-	helmValues.Backup.Address = "demo:123"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
 	helmValues.Backup.Database = "neo4j1"
 
 	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
@@ -43,8 +43,8 @@ func TestBackupValues(t *testing.T) {
 
 	for _, envVar := range container.Env {
 		switch envVar.Name {
-		case "ADDRESS":
-			assert.Equal(t, envVar.Value, helmValues.Backup.Address, fmt.Sprintf("backup address %s not matching with %s", helmValues.Backup.Address, envVar.Value))
+		case "DATABASE_SERVICE_NAME":
+			assert.Equal(t, envVar.Value, helmValues.Backup.DatabaseAdminServiceName, fmt.Sprintf("database address service name %s not matching with %s", helmValues.Backup.DatabaseAdminServiceName, envVar.Value))
 		case "CLOUD_PROVIDER":
 			assert.Equal(t, envVar.Value, helmValues.Backup.CloudProvider, fmt.Sprintf("cloud provider %s not matching with %s", helmValues.Backup.CloudProvider, envVar.Value))
 		case "DATABASE":
@@ -66,7 +66,7 @@ func TestBackupPodLabelsAndAnnotations(t *testing.T) {
 	helmValues.Backup.SecretName = "demo"
 	helmValues.Backup.CloudProvider = "aws"
 	helmValues.Backup.BucketName = "demo2"
-	helmValues.Backup.Address = "demo:123"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
 	helmValues.Backup.Database = "neo4j1"
 	helmValues.Neo4J.Labels = map[string]string{
 		"demo1": "key1",
@@ -98,7 +98,7 @@ func TestBackupNameOverride(t *testing.T) {
 	helmValues.Backup.SecretName = "demo"
 	helmValues.Backup.CloudProvider = "aws"
 	helmValues.Backup.BucketName = "demo2"
-	helmValues.Backup.Address = "demo:123"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
 	helmValues.Backup.Database = "neo4j1"
 	helmValues.NameOverride = "testbackup"
 
@@ -119,7 +119,7 @@ func TestBackupNameFullOverride(t *testing.T) {
 	helmValues.Backup.SecretName = "demo"
 	helmValues.Backup.CloudProvider = "aws"
 	helmValues.Backup.BucketName = "demo2"
-	helmValues.Backup.Address = "demo:123"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
 	helmValues.Backup.Database = "neo4j1"
 	helmValues.FullnameOverride = "testbackup"
 
@@ -139,7 +139,7 @@ func TestBackupEmptySecretKeyName(t *testing.T) {
 	helmValues.Backup.SecretName = "demo"
 	helmValues.Backup.CloudProvider = "aws"
 	helmValues.Backup.BucketName = "demo2"
-	helmValues.Backup.Address = "demo:123"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
 	helmValues.Backup.Database = "neo4j1"
 
 	_, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
@@ -156,10 +156,28 @@ func TestBackupInvalidSecretName(t *testing.T) {
 	helmValues.Backup.SecretKeyName = "demo1"
 	helmValues.Backup.CloudProvider = "aws"
 	helmValues.Backup.BucketName = "demo2"
-	helmValues.Backup.Address = "demo:123"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
 	helmValues.Backup.Database = "neo4j1"
 
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
 	_, err := helmClient.Install(t, "demo", "demo-ns", helmValues)
 	assert.Contains(t, err.Error(), fmt.Sprintf("Secret %s configured in 'backup.secretname' not found", helmValues.Backup.SecretName))
+}
+
+// TestBackupEmptyServiceNameAndIPFields checks backup helm chart installation with empty service name and ip fields
+func TestBackupEmptyServiceNameAndIPFields(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.Backup.SecretName = "demo"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "demo2"
+	helmValues.Backup.DatabaseAdminServiceName = ""
+	helmValues.Backup.DatabaseAdminServiceIP = ""
+	helmValues.Backup.Database = "neo4j1"
+	helmValues.FullnameOverride = "testbackup"
+
+	_, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.Contains(t, err.Error(), "Empty fields", "error message should contain empty fields")
 }

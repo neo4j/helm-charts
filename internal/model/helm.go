@@ -214,8 +214,10 @@ func HelmReleaseValues(t *testing.T) (HelmValues, error) {
 func HelmTemplateFromStruct(t *testing.T, chart HelmChartBuilder, values interface{}, extraArgs ...string) (*K8sResources, error) {
 
 	var helmValues []byte
+	var err error
 	if chart.Name() == "neo4j-backup" {
-		helmValues, _ = yaml.Marshal(values.(Neo4jBackupValues))
+		helmValues, err = yaml.Marshal(values.(Neo4jBackupValues))
+		log.Printf("%v", err)
 	} else {
 		helmValues, _ = yaml.Marshal(values.(HelmValues))
 	}

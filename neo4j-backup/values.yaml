@@ -28,10 +28,27 @@ backup:
   # In case of azure the bucket is the container name in the storage account
   # bucket: azure-storage-container
   bucketName: ""
-  #address of the neo4j instance from which backup is to be done ex: standalone-admin.default.svc.cluster.local:6362 or <admin-service-cluster-ip>:6362
-  address: ""
+
+  #address details of the neo4j instance from which backup is to be done
+
+  #ex: standalone-admin.default.svc.cluster.local:6362
+  # admin service name -  standalone-admin
+  # namespace - default
+  # cluster domain - cluster.local
+  # port - 6362
+
+  #ex: 10.3.3.2:6362
+  # admin service ip - 10.3.3.2
+  # port - 6362
+
+  databaseAdminServiceName: ""
+  databaseAdminServiceIP: ""
+  databaseNamespace: ""
+  databaseBackupPort: ""
+  databaseClusterDomain: ""
+
   #name of the database to backup ex: neo4j
-  database: "*"
+  database: ""
   # cloudProvider can be either gcp, aws, or azure
   cloudProvider: ""
 

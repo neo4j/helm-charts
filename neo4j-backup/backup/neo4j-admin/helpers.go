@@ -8,9 +8,9 @@ import (
 )
 
 // getBackupCommandFlags returns a slice of string containing all the flags to be passed with the neo4j-admin backup command
-func getBackupCommandFlags() []string {
+func getBackupCommandFlags(address string) []string {
 	flags := []string{"database", "backup"}
-	flags = append(flags, fmt.Sprintf("--from=%s", os.Getenv("ADDRESS")))
+	flags = append(flags, fmt.Sprintf("--from=%s", address))
 	flags = append(flags, fmt.Sprintf("--include-metadata=%s", os.Getenv("INCLUDE_METADATA")))
 	flags = append(flags, fmt.Sprintf("--keep-failed=%s", os.Getenv("KEEP_FAILED")))
 	flags = append(flags, fmt.Sprintf("--parallel-recovery=%s", os.Getenv("PARALLEL_RECOVERY")))

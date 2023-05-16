@@ -223,7 +223,7 @@ func TestBackupInvalidSecretKeyName(t *testing.T) {
 	helmValues.Backup.SecretKeyName = "demo1"
 	helmValues.Backup.CloudProvider = "aws"
 	helmValues.Backup.BucketName = "demo2"
-	helmValues.Backup.Address = "demo:123"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
 	helmValues.Backup.Database = "neo4j1"
 
 	secretWrongKey := &v1.Secret{

@@ -560,19 +560,20 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
 	helmValues := model.DefaultNeo4jBackupValues
 	helmValues.Backup = model.Backup{
-		BucketName:    bucketName,
-		Address:       fmt.Sprintf("%s-admin.%s.svc.cluster.local:6362", standaloneReleaseName.String(), standaloneReleaseName.Namespace()),
-		Database:      "neo4j",
-		CloudProvider: "aws",
-		SecretName:    "awscred",
-		SecretKeyName: "credentials",
-		Verbose:       true,
-		Type:          "FULL",
+		BucketName:               bucketName,
+		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", standaloneReleaseName.String()),
+		DatabaseNamespace:        string(standaloneReleaseName.Namespace()),
+		Database:                 "neo4j",
+		CloudProvider:            "aws",
+		SecretName:               "awscred",
+		SecretKeyName:            "credentials",
+		Verbose:                  true,
+		Type:                     "FULL",
 	}
 	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
 
-	time.Sleep(1 * time.Minute)
+	time.Sleep(2 * time.Minute)
 	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
 	assert.NoError(t, err, "cannot retrieve aws backup cronjob")
 	assert.Equal(t, cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule, fmt.Sprintf("aws cronjob schedule %s not matching with the schedule defined in values.yaml %s", cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule))
@@ -614,19 +615,20 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
 	helmValues := model.DefaultNeo4jBackupValues
 	helmValues.Backup = model.Backup{
-		BucketName:    bucketName,
-		Address:       fmt.Sprintf("%s-admin.%s.svc.cluster.local:6362", standaloneReleaseName.String(), standaloneReleaseName.Namespace()),
-		Database:      "neo4j",
-		CloudProvider: "azure",
-		SecretName:    "azurecred",
-		SecretKeyName: "credentials",
-		Verbose:       true,
-		Type:          "FULL",
+		BucketName:               bucketName,
+		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", standaloneReleaseName.String()),
+		DatabaseNamespace:        string(standaloneReleaseName.Namespace()),
+		Database:                 "neo4j",
+		CloudProvider:            "azure",
+		SecretName:               "azurecred",
+		SecretKeyName:            "credentials",
+		Verbose:                  true,
+		Type:                     "FULL",
 	}
 	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
 
-	time.Sleep(1 * time.Minute)
+	time.Sleep(2 * time.Minute)
 	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
 	assert.NoError(t, err, "cannot retrieve azure backup cronjob")
 	assert.Equal(t, cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule, fmt.Sprintf("azure cronjob schedule %s not matching with the schedule defined in values.yaml %s", cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule))
@@ -668,19 +670,20 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
 	helmValues := model.DefaultNeo4jBackupValues
 	helmValues.Backup = model.Backup{
-		BucketName:    bucketName,
-		Address:       fmt.Sprintf("%s-admin.%s.svc.cluster.local:6362", standaloneReleaseName.String(), standaloneReleaseName.Namespace()),
-		Database:      "neo4j",
-		CloudProvider: "gcp",
-		SecretName:    "gcpcred",
-		SecretKeyName: "credentials",
-		Verbose:       true,
-		Type:          "FULL",
+		BucketName:               bucketName,
+		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", standaloneReleaseName.String()),
+		DatabaseNamespace:        string(standaloneReleaseName.Namespace()),
+		Database:                 "neo4j",
+		CloudProvider:            "gcp",
+		SecretName:               "gcpcred",
+		SecretKeyName:            "credentials",
+		Verbose:                  true,
+		Type:                     "FULL",
 	}
 	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
 
-	time.Sleep(1 * time.Minute)
+	time.Sleep(2 * time.Minute)
 	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
 	assert.NoError(t, err, "cannot retrieve gcp backup cronjob")
 	assert.Equal(t, cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule, fmt.Sprintf("gcp cronjob schedule %s not matching with the schedule defined in values.yaml %s", cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule))

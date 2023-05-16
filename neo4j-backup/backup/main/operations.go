@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/neo4j/helm-charts/neo4j-backup/backup/aws"
 	"github.com/neo4j/helm-charts/neo4j-backup/backup/azure"
 	gcp "github.com/neo4j/helm-charts/neo4j-backup/backup/gcp"
@@ -73,7 +74,12 @@ func azureOperations() {
 }
 
 func backupOperations() (string, string, error) {
-	fileName, err := neo4jAdmin.PerformBackup()
+
+	address, err := generateAddress()
+	if err != nil {
+		return "", "", err
+	}
+	fileName, err := neo4jAdmin.PerformBackup(address)
 	if err != nil {
 		return "", "", err
 	}
@@ -96,8 +102,26 @@ func startupOperations() {
 	handleError(err)
 	log.Printf("printing current directory %s", dir)
 
-	err = neo4jAdmin.CheckDatabaseConnectivity(os.Getenv("ADDRESS"))
+	address, err := generateAddress()
 	handleError(err)
+
+	err = neo4jAdmin.CheckDatabaseConnectivity(address)
+	handleError(err)
+}
+
+// generateAddress returns the backup address in the format <hostip:port> or <standalone-admin.default.svc.cluster.local:port>
+func generateAddress() (string, error) {
+	if ip := os.Getenv("DATABASE_SERVICE_IP"); len(ip) > 0 {
+		address := fmt.Sprintf("%s:%s", ip, os.Getenv("DATABASE_BACKUP_PORT"))
+		log.Printf("Address := %s", address)
+		return address, nil
+	}
+	if serviceName := os.Getenv("DATABASE_SERVICE_NAME"); len(serviceName) > 0 {
+		address := fmt.Sprintf("%s.%s.svc.%s:%s", serviceName, os.Getenv("DATABASE_NAMESPACE"), os.Getenv("DATABASE_CLUSTER_DOMAIN"), os.Getenv("DATABASE_BACKUP_PORT"))
+		log.Printf("Address := %s", address)
+		return address, nil
+	}
+	return "", fmt.Errorf("cannot generate address. Invalid DATABASE_SERVICE_IP = %s or DATABASE_SERVICE_NAME = %s", os.Getenv("DATABASE_SERVICE_IP"), os.Getenv("DATABASE_SERVICE_NAME"))
 }
 
 func handleError(err error) {

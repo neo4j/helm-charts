@@ -26,3 +26,19 @@
         {{- end -}}
 
 {{- end -}}
+
+{{- define "neo4j.backup.checkDatabaseIPAndServiceName" -}}
+
+    {{- if and (kindIs "invalid" .Values.backup.databaseAdminServiceName) (kindIs "invalid" .Values.backup.databaseAdminServiceIP) -}}
+        {{- fail (printf "Missing fields. Please set databaseAdminServiceName via --set backup.databaseAdminServiceName or databaseAdminServiceIP via --set backup.databaseAdminServiceIP")}}
+    {{- end -}}
+
+    {{- if and (empty (.Values.backup.databaseAdminServiceName | trim)) (empty (.Values.backup.databaseAdminServiceIP | trim)) -}}
+        {{- fail (printf "Empty fields. Please set databaseAdminServiceName via --set backup.databaseAdminServiceName or databaseAdminServiceIP via --set backup.databaseAdminServiceIP")}}
+    {{- end -}}
+
+        {{- if and (.Values.backup.databaseAdminServiceName | trim) (.Values.backup.databaseAdminServiceIP | trim) -}}
+        {{- fail (printf "Please set databaseAdminServiceName via --set backup.databaseAdminServiceName or databaseAdminServiceIP via --set backup.databaseAdminServiceIP. Cannot use both")}}
+    {{- end -}}
+
+{{- end -}}
