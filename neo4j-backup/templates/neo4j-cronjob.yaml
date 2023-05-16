@@ -48,7 +48,9 @@ spec:
                 - name: BUCKET_NAME
                   value: {{ required "You must specify a BUCKET NAME" .Values.backup.bucketName | trim }}
                 - name: PAGE_CACHE
-                  value: {{ .Values.backup.pageCache | default "2G" | trim }}
+                  value: {{ .Values.backup.pageCache | trim }}
+                - name: HEAP_SIZE
+                  value: {{ .Values.backup.heapSize | trim }}
                 - name: INCLUDE_METADATA
                   value: "{{ .Values.backup.includeMetadata | default "all" | trim }}"
                 - name: PARALLEL_RECOVERY

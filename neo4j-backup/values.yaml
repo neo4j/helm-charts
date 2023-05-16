@@ -28,7 +28,7 @@ backup:
   # In case of azure the bucket is the container name in the storage account
   # bucket: azure-storage-container
   bucketName: ""
-  #address of the neo4j instance from which backup is to be done ex: standalone-admin.default.svc.cluster.local:6362
+  #address of the neo4j instance from which backup is to be done ex: standalone-admin.default.svc.cluster.local:6362 or <admin-service-cluster-ip>:6362
   address: ""
   #name of the database to backup ex: neo4j
   database: ""
@@ -71,6 +71,7 @@ backup:
   keepFailed: false
   parallelRecovery: false
   verbose: true
+  heapSize: ""
 
 #Below are all neo4j-admin database check flags / options
 #To know more about the flags read here : https://neo4j.com/docs/operations-manual/current/tools/neo4j-admin/consistency-checker/

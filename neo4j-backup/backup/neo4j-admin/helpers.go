@@ -13,10 +13,12 @@ func getBackupCommandFlags() []string {
 	flags = append(flags, fmt.Sprintf("--from=%s", os.Getenv("ADDRESS")))
 	flags = append(flags, fmt.Sprintf("--include-metadata=%s", os.Getenv("INCLUDE_METADATA")))
 	flags = append(flags, fmt.Sprintf("--keep-failed=%s", os.Getenv("KEEP_FAILED")))
-	flags = append(flags, fmt.Sprintf("--pagecache=%s", os.Getenv("PAGE_CACHE")))
 	flags = append(flags, fmt.Sprintf("--parallel-recovery=%s", os.Getenv("PARALLEL_RECOVERY")))
 	flags = append(flags, fmt.Sprintf("--type=%s", os.Getenv("TYPE")))
 	flags = append(flags, fmt.Sprintf("--to-path=%s", "/backups"))
+	if len(strings.TrimSpace(os.Getenv("PAGE_CACHE"))) > 0 {
+		flags = append(flags, fmt.Sprintf("--pagecache=%s", os.Getenv("PAGE_CACHE")))
+	}
 	//flags = append(flags, "--expand-commands")
 	if os.Getenv("VERBOSE") == "true" {
 		flags = append(flags, "--verbose")
