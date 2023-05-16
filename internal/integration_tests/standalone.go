@@ -543,7 +543,6 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 }
 
 func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.ReleaseName) error {
-	t.Parallel()
 	backupReleaseName := model.NewReleaseName("standalone-backup-aws-" + TestRunIdentifier)
 	namespace := string(standaloneReleaseName.Namespace())
 
@@ -594,7 +593,6 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 }
 
 func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.ReleaseName) error {
-	t.Parallel()
 	backupReleaseName := model.NewReleaseName("standalone-backup-azure-" + TestRunIdentifier)
 	namespace := string(standaloneReleaseName.Namespace())
 
@@ -645,7 +643,6 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 }
 
 func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.ReleaseName) error {
-	t.Parallel()
 	backupReleaseName := model.NewReleaseName("standalone-backup-gcp-" + TestRunIdentifier)
 	namespace := string(standaloneReleaseName.Namespace())
 
