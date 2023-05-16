@@ -42,7 +42,7 @@ spec:
                 - name: ADDRESS
                   value: {{ required "You must specify a ADDRESS variable in values.yaml in the format <host>:<port> . Set it via --set backup.address" .Values.backup.address  | trim }}
                 - name: DATABASE
-                  value: {{ required "You must specify a DATABASE variable in values.yaml. . Set it via --set backup.database" .Values.backup.database | trim }}
+                  value: {{ .Values.backup.database | default "*" | trim }}
                 - name: CLOUD_PROVIDER
                   value: {{ required "You must specify a CLOUD_PROVIDER" .Values.backup.cloudProvider | trim }}
                 - name: BUCKET_NAME

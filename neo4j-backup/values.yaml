@@ -31,7 +31,7 @@ backup:
   #address of the neo4j instance from which backup is to be done ex: standalone-admin.default.svc.cluster.local:6362 or <admin-service-cluster-ip>:6362
   address: ""
   #name of the database to backup ex: neo4j
-  database: ""
+  database: "*"
   # cloudProvider can be either gcp, aws, or azure
   cloudProvider: ""
 

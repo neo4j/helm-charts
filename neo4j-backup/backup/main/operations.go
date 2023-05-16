@@ -103,10 +103,10 @@ func startupOperations() {
 		if counter == 1 || err == nil {
 			break
 		}
-		log.Printf("Sleeping for 30 seconds, Counter = %v", counter)
 		time.Sleep(30 * time.Second)
 		counter--
 	}
+	log.Printf("Counter = %v , Err = %v", counter, err)
 	handleError(err)
 
 }
