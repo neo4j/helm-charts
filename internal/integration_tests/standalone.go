@@ -179,6 +179,15 @@ func createAzureCredFile(dirName string) (string, error) {
 	return filePath, nil
 }
 
+func createGCPCredFile(dirName string) (string, error) {
+	filePath := fmt.Sprintf("%s/gcpcredentials", dirName)
+	err := os.WriteFile(filePath, []byte(os.Getenv("GCP_SERVICE_ACCOUNT_CRED")), 0666)
+	if err != nil {
+		return "", err
+	}
+	return filePath, nil
+}
+
 func kCreateSecret(namespace model.Namespace) ([][]string, Closeable, error) {
 	tempDir, err := os.MkdirTemp("", string(namespace))
 	closeable := func() error { return os.RemoveAll(tempDir) }
@@ -194,6 +203,10 @@ func kCreateSecret(namespace model.Namespace) ([][]string, Closeable, error) {
 	if err != nil {
 		return nil, closeable, err
 	}
+	gcpCredFileName, err := createGCPCredFile(tempDir)
+	if err != nil {
+		return nil, closeable, err
+	}
 	return [][]string{
 		{"create", "secret", "-n", string(namespace), "generic", model.DefaultAuthSecretName, fmt.Sprintf("--from-literal=NEO4J_AUTH=neo4j/%s", model.DefaultPassword)},
 		{"create", "secret", "-n", string(namespace), "generic", "bolt-cert", fmt.Sprintf("--from-file=%s/public.crt", tempDir)},
@@ -204,7 +217,7 @@ func kCreateSecret(namespace model.Namespace) ([][]string, Closeable, error) {
 		{"create", "secret", "-n", string(namespace), "generic", "ldapsecret", "--from-literal=LDAP_PASS=demo123"},
 		{"create", "secret", "-n", string(namespace), "generic", "awscred", fmt.Sprintf("--from-file=credentials=%s", awsCredFileName)},
 		{"create", "secret", "-n", string(namespace), "generic", "azurecred", fmt.Sprintf("--from-file=credentials=%s", azureCredFileName)},
-		{"create", "secret", "-n", string(namespace), "generic", "gcpcred", fmt.Sprintf("--from-literal=credentials=%s", os.Getenv("GCP_SERVICE_ACCOUNT_CRED"))},
+		{"create", "secret", "-n", string(namespace), "generic", "gcpcred", fmt.Sprintf("--from-file=credentials=%s", gcpCredFileName)},
 	}, closeable, err
 }
 
