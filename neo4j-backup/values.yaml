@@ -15,6 +15,7 @@ neo4j:
   podAnnotations: {}
 #    ssdvvs: "svvvsvs"
 #    vfsvswef: "vcfvgb"
+  # define the backup job schedule . default is * * * * *
   jobSchedule: ""
   successfulJobsHistoryLimit:
   failedJobsHistoryLimit:
