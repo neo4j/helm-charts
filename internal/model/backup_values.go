@@ -32,6 +32,7 @@ type Backup struct {
 	SecretName          string `yaml:"secretName,omitempty"`
 	SecretKeyName       string `yaml:"secretKeyName,omitempty"`
 	PageCache           string `yaml:"pageCache,omitempty"`
+	HeapSize            string `yaml:"heapSize,omitempty"`
 	FallbackToFull      bool   `yaml:"fallbackToFull" default:"true"`
 	RemoveExistingFiles bool   `yaml:"removeExistingFiles" default:"true"`
 	RemoveBackupFiles   bool   `yaml:"removeBackupFiles" default:"true"`
