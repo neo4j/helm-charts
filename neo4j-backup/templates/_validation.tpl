@@ -13,7 +13,7 @@
             {{- end -}}
         {{- end -}}
     {{- else -}}
-        {{- fail (printf "Please provide secretname containing credentials for %s provider" .Values.backup.cloudProvider)  -}}
+        {{- fail (printf "Missing secretName. Set it via --set backup.secretName")  -}}
     {{- end -}}
 {{- end -}}
 

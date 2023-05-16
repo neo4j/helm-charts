@@ -8,13 +8,13 @@ metadata:
     app.kubernetes.io/instance: {{ include "neo4j.fullname" . | quote }}
     {{- include "neo4j.labels" $.Values.neo4j.labels | indent 4 }}
 spec:
-  schedule: {{.Values.neo4j.jobSchedule | default "* * * * *" | quote }}
+  schedule: {{ $.Values.neo4j.jobSchedule | default "* * * * *" | quote }}
   concurrencyPolicy: Forbid
-  successfulJobsHistoryLimit: {{. Values.neo4j.successfulJobsHistoryLimit | default 3 }}
-  failedJobsHistoryLimit: {{ .Values.neo4j.failedJobsHistoryLimit | default 1 }}
+  successfulJobsHistoryLimit: {{ $.Values.neo4j.successfulJobsHistoryLimit | default 3 }}
+  failedJobsHistoryLimit: {{ $.Values.neo4j.failedJobsHistoryLimit | default 1 }}
   jobTemplate:
     spec:
-      backoffLimit: {{ .Values.neo4j.backoffLimit | default 6 }}
+      backoffLimit: {{ $.Values.neo4j.backoffLimit | default 6 }}
       template:
         metadata:
           annotations:
@@ -35,16 +35,16 @@ spec:
               imagePullPolicy: Always
               resources:
                 requests:
-                  ephemeral-storage: "4Gi"
+                  ephemeral-storage: {{ .Values.resources.requests.ephemeralStorage | default "4Gi" }}
                 limits:
-                  ephemeral-storage: "5Gi"
+                  ephemeral-storage: {{ .Values.resources.limits.ephemeralStorage | default "5Gi" }}
               env:
                 - name: ADDRESS
-                  value: {{ required "You must specify a NEO4J_ADDR env var with port, such as my-neo4j:6362" .Values.backup.address  | trim }}
+                  value: {{ required "You must specify a ADDRESS variable in values.yaml in the format <host>:<port> . Set it via --set backup.address" .Values.backup.address  | trim }}
                 - name: DATABASE
-                  value: {{ required "You must specify a DATABASE env var; comma-separated list of databases to backup, such as neo4j,system" .Values.backup.database | trim }}
+                  value: {{ required "You must specify a DATABASE variable in values.yaml. . Set it via --set backup.database" .Values.backup.database | trim }}
                 - name: CLOUD_PROVIDER
-                  value: {{ required "You must specify a CLOUD_PROVIDER env var" .Values.backup.cloudProvider  | trim }}
+                  value: {{ required "You must specify a CLOUD_PROVIDER" .Values.backup.cloudProvider | trim }}
                 - name: BUCKET_NAME
                   value: {{ required "You must specify a BUCKET NAME" .Values.backup.bucketName | trim }}
                 - name: PAGE_CACHE
@@ -64,13 +64,13 @@ spec:
                 - name: CONSISTENCY_CHECK_ENABLE
                   value: "{{ .Values.consistencyCheck.enable | default false }}"
                 - name: CONSISTENCY_CHECK_INDEXES
-                  value: "{{ .Values.consistencyCheck.checkIndexes | default true }}"
+                  value: "{{ .Values.consistencyCheck.checkIndexes | default false }}"
                 - name: CONSISTENCY_CHECK_GRAPH
-                  value: "{{ .Values.consistencyCheck.checkGraph | default true }}"
+                  value: "{{ .Values.consistencyCheck.checkGraph | default false }}"
                 - name: CONSISTENCY_CHECK_COUNTS
-                  value: "{{ .Values.consistencyCheck.checkCounts | default true }}"
+                  value: "{{ .Values.consistencyCheck.checkCounts | default false }}"
                 - name: CONSISTENCY_CHECK_PROPERTYOWNERS
-                  value: "{{ .Values.consistencyCheck.checkPropertyOwners | default true }}"
+                  value: "{{ .Values.consistencyCheck.checkPropertyOwners | default false }}"
                 - name: CONSISTENCY_CHECK_MAXOFFHEAPMEMORY
                   value: "{{ .Values.consistencyCheck.maxOffHeapMemory | default "" | trim }}"
                 - name: CONSISTENCY_CHECK_THREADS
@@ -78,22 +78,18 @@ spec:
                 - name: CONSISTENCY_CHECK_VERBOSE
                   value: "{{ .Values.consistencyCheck.verbose | default true }}"
               volumeMounts:
-                {{- if .Values.backup.secretName }}
                 - name: credentials
                   mountPath: /credentials
                   readOnly: true
-                {{- end }}
                 - name: "backup"
                   mountPath: "/backups"
           volumes:
-            {{- if .Values.backup.secretName }}
             - name: credentials
               secret:
                 secretName: "{{ .Values.backup.secretName }}"
                 items:
                   - key: "{{ .Values.backup.secretKeyName }}"
                     path: "{{ .Values.backup.secretKeyName }}"
-            {{- end }}
             - name: "backup"
 {{- with .Values.tempVolume }}
 {{- toYaml . | nindent 14 }}

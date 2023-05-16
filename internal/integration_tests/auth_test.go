@@ -2,6 +2,7 @@ package integration_tests
 
 import (
 	"context"
+	"fmt"
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
@@ -203,4 +204,43 @@ func TestAuthLdapInvalidSecret(t *testing.T) {
 			{"delete", "namespace", string(releaseName.Namespace())},
 		}, false)
 	})
+}
+
+// TestBackupInvalidSecretKeyName checks backup helm chart installation with a secret that exists but with a different key name
+func TestBackupInvalidSecretKeyName(t *testing.T) {
+	t.Parallel()
+
+	releaseName := model.NewReleaseName("ldap-auth-wrong-key-" + TestRunIdentifier)
+	_, err := createNamespace(t, releaseName)
+	if err != nil {
+		return
+	}
+	namespace := string(releaseName.Namespace())
+
+	secretName := "secret-wrong-key"
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.Backup.SecretName = secretName
+	helmValues.Backup.SecretKeyName = "demo1"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "demo2"
+	helmValues.Backup.Address = "demo:123"
+	helmValues.Backup.Database = "neo4j1"
+
+	secretWrongKey := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"demo": []byte("demo"),
+		},
+		Type: "Opaque",
+	}
+
+	_, err = Clientset.CoreV1().Secrets(namespace).Create(context.TODO(), secretWrongKey, metav1.CreateOptions{})
+	assert.NoError(t, err, "error seen while creating secret")
+
+	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
+	_, err = helmClient.Install(t, releaseName.String(), namespace, helmValues)
+	assert.Contains(t, err.Error(), fmt.Sprintf("Secret %s must contain key %s", helmValues.Backup.SecretName, helmValues.Backup.SecretKeyName))
 }

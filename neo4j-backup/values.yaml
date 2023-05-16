@@ -27,12 +27,12 @@ backup:
   # In case of azure the bucket is the container name in the storage account
   # bucket: azure-storage-container
   bucketName: ""
-  #address of the neo4j instance which is to be backed up ex: standalone-admin.default.svc.cluster.local:6362
+  #address of the neo4j instance from which backup is to be done ex: standalone-admin.default.svc.cluster.local:6362
   address: ""
   #name of the database to backup ex: neo4j
-  database: neo4j
+  database: ""
   # cloudProvider can be either gcp, aws, or azure
-  cloudProvider: aws
+  cloudProvider: ""
 
   # name of the kubernetes secret containing the respective cloud provider credentials
   # Ensure you have read,write access to the mentioned bucket
@@ -100,3 +100,9 @@ securityContext:
   runAsGroup: 7474
   fsGroup: 7474
   fsGroupChangePolicy: "Always"
+
+resources:
+  requests:
+    ephemeralStorage: "4Gi"
+  limits:
+    ephemeralStorage: "5Gi"
