@@ -2,7 +2,7 @@
 
 neo4j:
   # name of your neo4j deployment
-  name: "backup"
+  name: ""
 
 # Neo4j data volume (a Google Cloud Compute Persistent disk)
 data:
@@ -34,15 +34,15 @@ data:
   reclaimPolicy: Retain
 
 
-## Neo4j ops volume (a Google Cloud Filestore File Share)
-## not suitable for Neo4j database storage but useful for storing metrics / logs / backups and other operational files.
-#ops:
-#  # name of the Filestore file share to use (do NOT include a leading /)
-#  fileShare: ""
-#  # IP address of Filestore instance
-#  ipAddress: ""
-#  # size of disk used by K8s when scheduling and binding, this has to be passed explicitly to K8s, it's not capable of figuring this out for itself.
-#  capacity:
-#    storage: ""
-#
-#  storageClassName: ""
+# Neo4j ops volume (a Google Cloud Filestore File Share)
+# not suitable for Neo4j database storage but useful for storing metrics / logs / backups and other operational files.
+ops:
+  # name of the Filestore file share to use (do NOT include a leading /)
+  fileShare: ""
+  # IP address of Filestore instance
+  ipAddress: ""
+  # size of disk used by K8s when scheduling and binding, this has to be passed explicitly to K8s, it's not capable of figuring this out for itself.
+  capacity:
+    storage: ""
+
+  storageClassName: ""
