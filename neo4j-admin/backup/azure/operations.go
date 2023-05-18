@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
+	"github.com/neo4j/helm-charts/neo4j-backup/backup/common"
 	"golang.org/x/net/context"
 	"log"
 	"os"
@@ -48,7 +49,20 @@ func (a *azureClient) UploadFile(fileName string, location string, containerName
 		return fmt.Errorf("error while creating azblob client \n err = %v", err)
 	}
 
-	_, err = client.UploadFile(context.TODO(), containerName, fileName, file, nil)
+	yes, err := common.IsFileBigger(filePath)
+	if err != nil {
+		return err
+	}
+
+	var uploadFileOptions azblob.UploadFileOptions
+	if yes {
+		uploadFileOptions = azblob.UploadFileOptions{
+			Concurrency: uint16(3),
+		}
+	}
+
+	log.Printf("Starting upload of file %s", filePath)
+	_, err = client.UploadFile(context.TODO(), containerName, fileName, file, &uploadFileOptions)
 	if err != nil {
 		return fmt.Errorf("Couldn't upload file %v to %v Here's why: %v\n", filePath, containerName, err)
 	}

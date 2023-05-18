@@ -34,6 +34,7 @@ func (g *gcpClient) UploadFile(fileName string, location string, bucketName stri
 	}
 	defer file.Close()
 
+	log.Printf("Starting upload of file %s", filePath)
 	// create a new object handle
 	object := g.storageClient.Bucket(bucketName).Object(fileName)
 

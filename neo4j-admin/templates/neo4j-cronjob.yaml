@@ -102,6 +102,10 @@ spec:
                   - key: "{{ .Values.backup.secretKeyName }}"
                     path: "{{ .Values.backup.secretKeyName }}"
             - name: "backup"
-{{- with .Values.tempVolume }}
-{{- toYaml . | nindent 14 }}
+{{- if $.Values.tempVolume }}
+  {{- toYaml $.Values.tempVolume | nindent 14 }}
+{{- else }}
+  {{- printf "emptyDir: {}" | nindent 14 }}
 {{- end }}
+
+

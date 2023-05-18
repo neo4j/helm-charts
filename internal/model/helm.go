@@ -215,7 +215,7 @@ func HelmTemplateFromStruct(t *testing.T, chart HelmChartBuilder, values interfa
 
 	var helmValues []byte
 	var err error
-	if chart.Name() == "neo4j-backup" {
+	if chart.Name() == "neo4j-admin" {
 		helmValues, err = yaml.Marshal(values.(Neo4jBackupValues))
 		log.Printf("%v", err)
 	} else {
@@ -247,7 +247,7 @@ func HelmTemplateFromStruct(t *testing.T, chart HelmChartBuilder, values interfa
 
 func (c *HelmClient) Install(t *testing.T, releaseName string, namespace string, values interface{}) (string, error) {
 	var helmValues []byte
-	if c.chartName == "neo4j-backup" {
+	if c.chartName == "neo4j-admin" {
 		helmValues, _ = yaml.Marshal(values.(Neo4jBackupValues))
 	} else {
 		helmValues, _ = yaml.Marshal(values.(HelmValues))

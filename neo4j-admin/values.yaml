@@ -105,10 +105,10 @@ consistencyCheck:
 # Set to name of an existing Service Account to use if desired
 serviceAccountName: ""
 
-# Volume to use as temporary storage for files before they are uploaded to cloud. For large databases local storage may not have sufficient space. In that case set an ephemeral or persistent volume with sufficient space here
+# Volume to use as temporary storage for files before they are uploaded to cloud. For large databases local storage may not have sufficient space.
+# In that case set an ephemeral or persistent volume with sufficient space here
 # The chart defaults to an emptyDir, use this to overwrite default behavior
-tempVolume:
-  emptyDir: {}
+#tempVolume:
 #  persistentVolumeClaim:
 #    claimName: backup-pvc
 
@@ -120,8 +120,11 @@ securityContext:
   fsGroup: 7474
   fsGroupChangePolicy: "Always"
 
+# default ephemeral storage of backup container
 resources:
   requests:
     ephemeralStorage: "4Gi"
   limits:
     ephemeralStorage: "5Gi"
+
+

@@ -19,7 +19,7 @@ var Neo4jHelmChartCommunityAndEnterprise = newNeo4jHelmChart("neo4j", []string{"
 
 var HelmChart = newNeo4jHelmChart("neo4j", []string{"enterprise"})
 
-var BackupHelmChart = newHelmChart("neo4j-backup")
+var BackupHelmChart = newHelmChart("neo4j-admin")
 
 var ClusterReadReplicaHelmChart = newNeo4jHelmChart("neo4j", []string{"enterprise"})
 
