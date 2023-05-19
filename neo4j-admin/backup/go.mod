@@ -1,4 +1,4 @@
-module github.com/neo4j/helm-charts/neo4j-backup/backup
+module github.com/neo4j/helm-charts/neo4j-admin/backup
 
 go 1.19
 

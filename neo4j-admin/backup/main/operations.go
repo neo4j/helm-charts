@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/neo4j/helm-charts/neo4j-backup/backup/aws"
-	"github.com/neo4j/helm-charts/neo4j-backup/backup/azure"
-	gcp "github.com/neo4j/helm-charts/neo4j-backup/backup/gcp"
-	neo4jAdmin "github.com/neo4j/helm-charts/neo4j-backup/backup/neo4j-admin"
+	"github.com/neo4j/helm-charts/neo4j-admin/backup/aws"
+	"github.com/neo4j/helm-charts/neo4j-admin/backup/azure"
+	gcp "github.com/neo4j/helm-charts/neo4j-admin/backup/gcp"
+	neo4jAdmin "github.com/neo4j/helm-charts/neo4j-admin/backup/neo4j-admin"
 	"log"
 	"os"
 )
@@ -29,6 +29,8 @@ func awsOperations() {
 		err = awsClient.UploadFile(consistencyCheckReport, "/backups", bucketName)
 		handleError(err)
 	}
+	err = deleteBackupFiles(backupFileName, consistencyCheckReport)
+	handleError(err)
 }
 
 func gcpOperations() {
@@ -50,6 +52,8 @@ func gcpOperations() {
 		err = gcpClient.UploadFile(consistencyCheckReport, "/backups", bucketName)
 		handleError(err)
 	}
+	err = deleteBackupFiles(backupFileName, consistencyCheckReport)
+	handleError(err)
 }
 
 func azureOperations() {
@@ -71,6 +75,8 @@ func azureOperations() {
 		err = azureClient.UploadFile(consistencyCheckReport, "/backups", containerName)
 		handleError(err)
 	}
+	err = deleteBackupFiles(backupFileName, consistencyCheckReport)
+	handleError(err)
 }
 
 func backupOperations() (string, string, error) {
@@ -128,4 +134,20 @@ func handleError(err error) {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
+}
+
+func deleteBackupFiles(backupFileName, consistencyCheckReportName string) error {
+	log.Printf("Deleting file /backups/%s", backupFileName)
+	err := os.Remove(fmt.Sprintf("/backups/%s", backupFileName))
+	if err != nil {
+		return err
+	}
+	if len(consistencyCheckReportName) != 0 {
+		log.Printf("Deleting file /backups/%s", consistencyCheckReportName)
+		err := os.Remove(fmt.Sprintf("/backups/%s", consistencyCheckReportName))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

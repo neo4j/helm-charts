@@ -7,6 +7,7 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
     app.kubernetes.io/instance: {{ include "neo4j.fullname" . | quote }}
+    app.kubernetes.io/component: backup
     {{- include "neo4j.labels" $.Values.neo4j.labels | indent 4 }}
 spec:
   schedule: {{ $.Values.neo4j.jobSchedule | default "* * * * *" | quote }}
