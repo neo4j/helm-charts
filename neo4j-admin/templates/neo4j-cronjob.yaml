@@ -16,7 +16,7 @@ spec:
   failedJobsHistoryLimit: {{ $.Values.neo4j.failedJobsHistoryLimit | default 1 }}
   jobTemplate:
     spec:
-      backoffLimit: {{ $.Values.neo4j.backoffLimit | default 6 }}
+      backoffLimit: {{ $.Values.neo4j.backoffLimit | default 3 }}
       template:
         metadata:
           annotations:

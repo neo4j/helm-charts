@@ -7,8 +7,8 @@ fullnameOverride: ""
 disableLookups: false
 
 neo4j:
-  image: neo4jbuildservice/helm-charts
-  imageTag: backup
+  image: "neo4j/helm-charts-backup"
+  imageTag: "5.8.0"
   podLabels: {}
 #    app: "demo"
 #    acac: "dcdddc"
@@ -17,8 +17,11 @@ neo4j:
 #    vfsvswef: "vcfvgb"
   # define the backup job schedule . default is * * * * *
   jobSchedule: ""
+  # default is 3
   successfulJobsHistoryLimit:
+  # default is 1
   failedJobsHistoryLimit:
+  # default is 1
   backoffLimit:
   #add labels if required
   labels: {}
@@ -29,7 +32,7 @@ backup:
   # bucket: azure-storage-container
   bucketName: ""
 
-  #address details of the neo4j instance from which backup is to be done
+  #address details of the neo4j instance from which backup is to be done (serviceName or ip either one is required)
 
   #ex: standalone-admin.default.svc.cluster.local:6362
   # admin service name -  standalone-admin
@@ -43,11 +46,14 @@ backup:
 
   databaseAdminServiceName: ""
   databaseAdminServiceIP: ""
+  #default name is 'default'
   databaseNamespace: ""
+  #default port is 6362
   databaseBackupPort: ""
+  #default value is cluster.local
   databaseClusterDomain: ""
 
-  #name of the database to backup ex: neo4j
+  #name of the database to backup ex: neo4j (command separated databases names WILL NOT WORK)
   database: ""
   # cloudProvider can be either gcp, aws, or azure
   cloudProvider: ""
