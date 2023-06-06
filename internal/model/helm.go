@@ -211,8 +211,17 @@ func HelmReleaseValues(t *testing.T) (HelmValues, error) {
 	return releaseValues, err
 }
 
-func HelmTemplateFromStruct(t *testing.T, chart HelmChartBuilder, values HelmValues, extraArgs ...string) (*K8sResources, error) {
-	helmValues, _ := yaml.Marshal(values)
+func HelmTemplateFromStruct(t *testing.T, chart HelmChartBuilder, values interface{}, extraArgs ...string) (*K8sResources, error) {
+
+	var helmValues []byte
+	var err error
+	if chart.Name() == "neo4j-admin" {
+		helmValues, err = yaml.Marshal(values.(Neo4jBackupValues))
+		log.Printf("%v", err)
+	} else {
+		helmValues, _ = yaml.Marshal(values.(HelmValues))
+	}
+
 	args := append(minHelmCommand("template", &DefaultHelmTemplateReleaseName, chart), "--values", "-")
 	if len(extraArgs) > 0 {
 		args = append(args, extraArgs...)
@@ -236,8 +245,13 @@ func HelmTemplateFromStruct(t *testing.T, chart HelmChartBuilder, values HelmVal
 	return decodeK8s(stdErrOut)
 }
 
-func (c *HelmClient) Install(t *testing.T, releaseName string, namespace string, values HelmValues) (string, error) {
-	helmValues, _ := yaml.Marshal(values)
+func (c *HelmClient) Install(t *testing.T, releaseName string, namespace string, values interface{}) (string, error) {
+	var helmValues []byte
+	if c.chartName == "neo4j-admin" {
+		helmValues, _ = yaml.Marshal(values.(Neo4jBackupValues))
+	} else {
+		helmValues, _ = yaml.Marshal(values.(HelmValues))
+	}
 	helmArgs := []string{
 		"install",
 		releaseName,

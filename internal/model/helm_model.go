@@ -144,6 +144,35 @@ var DefaultEnterpriseValues = HelmValues{
 	},
 }
 
+var DefaultNeo4jBackupValues = Neo4jBackupValues{
+	ConsistencyCheck: ConsistencyCheck{
+		Enable:              true,
+		CheckIndexes:        true,
+		CheckGraph:          true,
+		CheckCounts:         true,
+		CheckPropertyOwners: true,
+		Verbose:             true,
+	},
+	Neo4J: Neo4jBackupNeo4j{
+		Image:                      "neo4jbuildservice/helm-charts",
+		ImageTag:                   "backup",
+		JobSchedule:                "* * * * *",
+		SuccessfulJobsHistoryLimit: 3,
+		FailedJobsHistoryLimit:     1,
+		BackoffLimit:               6,
+	},
+	TempVolume: map[string]interface{}{
+		"emptyDir": nil,
+	},
+	SecurityContext: SecurityContext{
+		RunAsNonRoot:        true,
+		RunAsUser:           7474,
+		RunAsGroup:          7474,
+		FsGroup:             7474,
+		FsGroupChangePolicy: "Always",
+	},
+}
+
 var DefaultCommunityValues = HelmValues{
 	Neo4J: Neo4J{
 		Name:    "test",

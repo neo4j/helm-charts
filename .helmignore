@@ -1,3 +1,5 @@
+.neo4j-admin/backup/
+neo4j-admin/Dockerfile
 .git 
 tools
 k8s-poc
