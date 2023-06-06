@@ -53,7 +53,7 @@ backup:
   #default value is cluster.local
   databaseClusterDomain: ""
 
-  #name of the database to backup ex: neo4j (command separated databases names WILL NOT WORK)
+  #name of the database to backup ex: neo4j (comma separated databases names WILL NOT WORK)
   database: ""
   # cloudProvider can be either gcp, aws, or azure
   cloudProvider: ""
