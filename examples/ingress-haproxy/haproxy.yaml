@@ -26,7 +26,9 @@ data:
   haproxy.cfg: |
     global
         log stdout format raw local0
+        lua-prepend-path /usr/local/etc/haproxy/?.lua
         lua-load /usr/local/etc/haproxy/discovery.lua
+    
     defaults
         log	global
         timeout	connect	5000
@@ -60,32 +62,41 @@ data:
     
 
   discovery.lua: |
+    local http = require('http')
+    local json = require('json')
+    
     local function neo4j_discovery(applet)
-        local function ends_with(str, ending)
-            return ending == "" or str:sub(-#ending) == ending
-        end
-        -- what's the client trying to access???
-        local reqhost = applet.headers["host"][0]
-        if not reqhost then
+        local req = http.request.parse(applet)
+
+        local req_host = req:get_header("host")
+        if not req_host then
             core.Alert("request doesn't have host header!?")
             return
         end
-        -- because the js driver will provide a default port if we don't!
-        if not ends_with(reqhost, ":8080") then
-            reqhost = reqhost .. ":80"
+        for k, v in req:get_headers() do
+            core.Debug(k .. ": " .. v)
         end
-        core.Info(string.format("translating discovery request with reqhost: %s", reqhost))
+        local req_host_port = ""
+        -- because the js driver will provide a default port if we don't!
+        if req:get_header("x-scheme") == "http" and req:get_header("x-forwarded-port") == "80" then
+            req_host_and_port = req_host .. ":80"
+        elseif req:get_header("x-scheme") == "https" and req:get_header("x-forwarded-port") == "443" then
+            req_host_and_port = req_host .. ":443"
+        elseif req_host:find(":", 1, true) ~= nil then
+            req_host_and_port = req_host
+        end
+        core.Info(string.format("translating discovery request with req_host_and_port : %s", req_host_and_port))
         
         -- look for a particular backend named "neo4j-http"
-        local httpbe = core.backends["neo4j-http"]
-        if not httpbe then
+        local http_backend = core.backends["neo4j-http"]
+        if not http_backend then
             core.Alert("cannot find backend named 'neo4j-http'")
             return
         end
         
         -- get the first server in our backend
         local server = nil
-        for k, v in pairs(httpbe.servers) do
+        for k, v in pairs(http_backend.servers) do
             server = v
             break
         end
@@ -94,77 +105,46 @@ data:
             core.Alert(string.format("can't get a host value for server %s", server))
             return
         end
-        
-        core.Info(string.format("using backend server %s", host))
-        local hdrs = {
-            [1] = string.format('host: %s', host),
-            [2] = 'accept: application/json',
-            [3] = 'connection: close'
+        local res, err = http.get { url = string.format("http://%s", host),
+                                    headers = { host = host,
+                                                ["accept"] = { "application/json" },
+                                                ["connection"] = { "close" } }
         }
-        
-        local req = {
-            [1] = string.format('GET / HTTP/1.1'),
-            [2] = table.concat(hdrs, '\r\n'),
-            [3] = '\r\n'
-        }
-        
-        req = table.concat(req, '\r\n')
-        
-        local socket = core.tcp()
-        socket:settimeout(5)
-        
-        if socket:connect(host) then
-            if socket:send(req) then
-                -- pull off headers
-                while true do
-                    local line, _ = socket:receive('*l')
-                    if not line then
-                        break
-                    end
-                    if line == '' then
-                        break
-                    end
-                end
-                
-                -- process body line by line
-                local content = ""
-                while true do
-                    local line, _ = socket:receive('*l')
-                    if not line then
-                        break
-                    end
-                    if line == '' then
-                        break
-                    end
-                    
-                    local start = string.find(line, "//")
-                    if start ~= nil then
-                        local finish = string.find(line, '[/"]', start + 2)
-                        content = content .. string.sub(line, 1, start + 1) .. reqhost .. string.sub(line, finish) .. "\n"
-                    else
-                        content = content .. line .. "\n"
-                    end
-                end
-                if content then
-                    applet:set_status(200)
-                    applet:add_header('content-length', string.len(content))
-                    applet:add_header('content-type', 'application/json')
-                    applet:start_response()
-                    applet:send(content)
-                end
-            else
-                core.Alert('Could not connect to Neo4j')
+        if res then
+            for k, v in res:get_headers() do
+                core.Debug(k .. ": " .. v)
             end
-            
-            socket:close()
         else
-            core.Alert('Could not connecto to Neo4j')
+            core.Debug(err)
         end
-
+        local response_body = json.decode(res.content)
+        local proxy_response = {}
+        local ip_address_match, _ = string.gmatch(host, '([^:]+)', 2)
+        local ip = ip_address_match()
+        local port = ip_address_match()
+        print(ip)
+        print(port)
+        local req_port = req:get_header("x-forwarded-port")
+        for index, value in pairs(response_body) do
+            if not (index == "auth_config") then
+                proxy_response[index] = string.gsub(value, ip, req_host)
+                proxy_response[index] = string.gsub(proxy_response[index], "7474", req_port)
+                proxy_response[index] = string.gsub(proxy_response[index], "7687", req_port)
+                core.Info(proxy_response[index])
+                core.Info(req_host)
+                core.Info(req_port)
+            end
+        end
+        http.response.create {
+            status_code = 200,
+            content = json.encode(proxy_response),
+            headers = { host = host,
+                        ["accept"] = { "application/json" } } }:send(applet)
+    
+    
     end
 
     core.register_service('neo4j_discovery', 'http', neo4j_discovery)
-
 ---
 # Source: haproxy/templates/service.yaml
 apiVersion: v1
@@ -190,7 +170,7 @@ spec:
       targetPort: http
     - name: https
       protocol: TCP
-      port: 443
+      port: 8443
       targetPort: https
     - name: stat
       protocol: TCP
@@ -229,9 +209,12 @@ spec:
         - name: haproxy-config
           configMap:
             name: neo4j-haproxy
+        - name: haproxy-lua-lib
+          configMap:
+            name: haproxy-lua-lib
       containers:
         - name: haproxy
-          image: "haproxytech/haproxy-alpine:2.6.6"
+          image: "haproxytech/haproxy-ubuntu:2.9"
           imagePullPolicy: IfNotPresent
           args:
             - -f
@@ -246,7 +229,7 @@ spec:
               containerPort: 8080
               protocol: TCP
             - name: https
-              containerPort: 443
+              containerPort: 8443
               protocol: TCP
             - name: stat
               containerPort: 1024
@@ -262,3 +245,9 @@ spec:
             - name: haproxy-config
               mountPath: /usr/local/etc/haproxy/discovery.lua
               subPath: discovery.lua
+            - name: haproxy-lua-lib
+              mountPath: /usr/local/etc/haproxy/http.lua
+              subPath: http.lua
+            - name: haproxy-lua-lib
+              mountPath: /usr/local/etc/haproxy/json.lua
+              subPath: json.lua
