@@ -77,6 +77,7 @@ data:
             core.Debug(k .. ": " .. v)
         end
         local req_host_port = ""
+        local req_port = req:get_header("x-forwarded-port")
         -- because the js driver will provide a default port if we don't!
         if req:get_header("x-scheme") == "http" and req:get_header("x-forwarded-port") == "80" then
             req_host_and_port = req_host .. ":80"
@@ -84,6 +85,10 @@ data:
             req_host_and_port = req_host .. ":443"
         elseif req_host:find(":", 1, true) ~= nil then
             req_host_and_port = req_host
+            local host_match, _ = string.gmatch(req_host, '([^:]+)', 2)
+            req_host = host_match()
+            req_port = host_match()
+        
         end
         core.Info(string.format("translating discovery request with req_host_and_port : %s", req_host_and_port))
         
@@ -122,17 +127,12 @@ data:
         local ip_address_match, _ = string.gmatch(host, '([^:]+)', 2)
         local ip = ip_address_match()
         local port = ip_address_match()
-        print(ip)
-        print(port)
-        local req_port = req:get_header("x-forwarded-port")
+        
         for index, value in pairs(response_body) do
             if not (index == "auth_config") then
                 proxy_response[index] = string.gsub(value, ip, req_host)
                 proxy_response[index] = string.gsub(proxy_response[index], "7474", req_port)
                 proxy_response[index] = string.gsub(proxy_response[index], "7687", req_port)
-                core.Info(proxy_response[index])
-                core.Info(req_host)
-                core.Info(req_port)
             end
         end
         http.response.create {
