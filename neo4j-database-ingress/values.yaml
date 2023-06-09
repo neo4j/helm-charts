@@ -19,8 +19,9 @@ fullnameOverride: ""
 
 ## Details to access the Neo4j service
 neo4j:
-  #serviceName will usually be the value of `neo4j.name` used in the Neo4j helm chart,
+  # serviceName will usually be the value of `neo4j.name` used in the Neo4j helm chart,
   # suffixed with -lb-neo4j. So if `neo4j.name` is equal to "my-cluster" serviceName will be "my-cluster-lb-neo4j"
+  # Alternatively, you can manually create a service for the Neo4j Database cluster
   serviceName:
   boltPort: 7687
   httpPort: 7474
@@ -247,12 +248,12 @@ config: |
       mode http
       option httpchk
       option forwardfor
-      server neo4j-browser "${NEO4J_HTTP}" check maxconn 128
+      server neo4j-browser "${NEO4J_HTTP}" check port 7474 inter 5s rise 2  maxconn 128
   
   backend neo4j-bolt
       mode tcp
       option tcp-check
-      server neo4j-bolt "${NEO4J_BOLT}" check maxconn 2048
+      server neo4j-bolt "${NEO4J_BOLT}" check port 7687 inter 5s rise 2 fall 3 maxconn 2048
   backend neo4j-discovery
       mode http
       http-request use-service lua.neo4j_discovery
