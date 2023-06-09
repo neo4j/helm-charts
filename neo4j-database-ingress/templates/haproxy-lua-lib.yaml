@@ -1,0 +1,19 @@
+# Source: haproxy/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "haproxy.fullname" . }}-lua-lib
+  namespace: {{ template "haproxy.namespace" . }}
+  labels:
+    helm.sh/chart: haproxy-1.17.3
+    app.kubernetes.io/name: haproxy
+    app.kubernetes.io/instance: neo4j-haproxy
+    app.kubernetes.io/version: "2.6.6"
+    app.kubernetes.io/managed-by: Helm
+data:
+  discovery.lua: |
+{{ .Files.Get "lua/discovery.lua" | nindent 4 }}
+  json.lua: |
+{{ .Files.Get "lua/vendor/json.lua" | nindent 4 }}
+  http.lua: |
+{{ .Files.Get "lua/vendor/http.lua" | nindent 4 }}

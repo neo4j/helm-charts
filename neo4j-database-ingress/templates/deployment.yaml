@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */}}
 
-{{- if eq .Values.kind "Deployment" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -28,9 +27,7 @@ metadata:
   {{- end }}
 spec:
   minReadySeconds: {{ .Values.minReadySeconds }}
-  {{- if and (not .Values.autoscaling.enabled) (not .Values.keda.enabled) }}
   replicas: {{ .Values.replicaCount }}
-  {{- end }}
   selector:
     matchLabels:
       {{- include "haproxy.selectorLabels" . | nindent 6 }}
@@ -83,6 +80,9 @@ spec:
         - name: haproxy-config
           configMap:
             name: {{ include "haproxy.fullname" . }}
+        - name: haproxy-lua-lib
+          configMap:
+            name: {{ include "haproxy.fullname" . }}-lua-lib
         {{- if .Values.includes }}
         - name: includes
           projected:
@@ -135,8 +135,12 @@ spec:
           startupProbe:
             {{- toYaml . | trim | nindent 12 }}
           {{- end }}
-          {{- with .Values.extraEnvs }}
           env:
+            - name: NEO4J_HTTP
+              value: "{{- $.Values.neo4j.serviceName}}:{{- $.Values.neo4j.httpPort}}/browser"
+            - name: NEO4J_BOLT
+              value: "{{- $.Values.neo4j.serviceName}}:{{- $.Values.neo4j.boltPort}}"
+          {{- with .Values.extraEnvs }}
             {{- toYaml . | trim | nindent 12 }}
           {{- end }}
           resources:
@@ -164,6 +168,15 @@ spec:
             - name: {{ $mountedSecret.volumeName }}
               mountPath: {{ $mountedSecret.mountPath }}
             {{- end }}
+            - name: haproxy-lua-lib
+              mountPath: /usr/local/etc/haproxy/discovery.lua
+              subPath: discovery.lua
+            - name: haproxy-lua-lib
+              mountPath: /usr/local/etc/haproxy/http.lua
+              subPath: http.lua
+            - name: haproxy-lua-lib
+              mountPath: /usr/local/etc/haproxy/json.lua
+              subPath: json.lua
       {{- with.Values.initContainers }}
       initContainers:
         {{- toYaml . | nindent 8 }}
@@ -180,4 +193,3 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-{{- end }}

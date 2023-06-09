@@ -1,0 +1,12 @@
+ingress:
+  enabled: true
+  className: "nginx"
+  hosts:
+    - host: MYIP.sslip.io
+      paths:
+        - path: /
+          pathType: Prefix
+neo4j:
+  serviceName: ingress-haproxy-lb-neo4j
+service:
+  type: LoadBalancer

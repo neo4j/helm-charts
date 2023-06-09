@@ -50,18 +50,18 @@ spec:
   ports:
   {{- with .Values.containerPorts }}
   {{- range $key, $port := . }}
-    - name: {{ $key }}
-      protocol: TCP
-      port: {{ $port }}
-      targetPort: {{ $key }}
+  - name: {{ $key }}
+    protocol: TCP
+    port: {{ $port }}
+    targetPort: {{ $key }}
   {{- end }}
   {{- end }}
   {{- with .Values.service.additionalPorts }}
   {{- range $key, $port := . }}
-    - name: {{ $key }}
-      protocol: TCP
-      port: {{ $port }}
-      targetPort: {{ $key }}
+  - name: {{ $key }}
+    protocol: TCP
+    port: {{ $port }}
+    targetPort: {{ $key }}
   {{- end }}
   {{- end }}
   {{- end }}
