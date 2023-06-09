@@ -6,6 +6,10 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
+  tls:
+    - secretName: ingress-tls
+      hosts:
+       - MYIP.sslip.io
 neo4j:
   serviceName: ingress-haproxy-lb-neo4j
 service:

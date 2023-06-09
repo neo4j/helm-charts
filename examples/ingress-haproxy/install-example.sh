@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #readonly PROJECT_ROOT="$(dirname "$(dirname "$(dirname "$0")")")"
-readonly PROJECT_ROOT="$(dirname "$(dirname "$(dirname "$0")")")"
+readonly PROJECT_ROOT="$(builtin cd ../../; pwd)"
+readonly SOURCE_DIR="${PROJECT_ROOT}/examples/ingress-haproxy"
 
 readonly RELEASE_NAME=ingress-haproxy
 
@@ -18,11 +19,10 @@ helm_install() {
         external_ip=$(kubectl get svc ingress-nginx-controller -n ingress-nginx --template="{{range .status.loadBalancer.ingress}}{{.ip}}{{end}}")
         [ -z "$external_ip" ] && sleep 5
     done
-    sed "s/MYIP/$external_ip/" examples/ingress-haproxy/haproxy-values.yaml | helm upgrade -i dbingress neo4j-database-ingress -f -
     kubectl create secret generic test-auth --from-literal=NEO4J_AUTH=neo4j/password123
-    for i in {1..3}; do
-        helm upgrade --install "${RELEASE_NAME}-${i}" neo4j/neo4j -f examples/ingress-haproxy/ingress-haproxy.yaml
-    done
+    sed "s/MYIP/$external_ip/g" "${SOURCE_DIR}"/neo4j-db-ingress-subchart/values.yaml | \
+      helm upgrade -i dbingress "${SOURCE_DIR}"/neo4j-db-ingress-subchart -f -
+
 }
 
 helm_install
