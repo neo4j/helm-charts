@@ -17,7 +17,7 @@ volumes:
           - key: bloom.license
             path: bloom.license
 env:
-  NEO4J_PLUGINS: '["graph-data-science", "bloom", "apoc"]'
+  NEO4J_PLUGINS: '["graph-data-science", "bloom"]'
 config:
   gds.enterprise.license_file: "/licenses/gds.license"
   dbms.security.procedures.unrestricted: "gds.*,apoc.*,bloom.*"

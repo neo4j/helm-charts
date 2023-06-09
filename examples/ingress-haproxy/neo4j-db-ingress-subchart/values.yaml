@@ -1,0 +1,63 @@
+neo4j-database-ingress:
+  fullnameOverride: "dbingress"
+  ingress:
+    enabled: true
+    className: "nginx"
+    hosts:
+      - host: MYIP.sslip.io
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: ingress-tls
+        hosts:
+          - MYIP.sslip.io
+  neo4j:
+    serviceName: db-server1
+  service:
+    type: LoadBalancer
+db-server1:
+  disableLookups: true
+  fullnameOverride:  "db-server1"
+  neo4j:
+    name: ingress-haproxy
+    acceptLicenseAgreement: "yes"
+    edition: enterprise
+    minimumClusterSize: 3
+    passwordFromSecret: test-auth
+  volumes:
+    data:
+      mode: defaultStorageClass
+  services:
+    neo4j:
+      enabled: false
+db-server2:
+  disableLookups: true
+  fullnameOverride: "db-server2"
+  neo4j:
+    name: ingress-haproxy
+    acceptLicenseAgreement: "yes"
+    edition: enterprise
+    minimumClusterSize: 3
+    passwordFromSecret: test-auth
+  volumes:
+    data:
+      mode: defaultStorageClass
+  services:
+    neo4j:
+      enabled: false
+db-server3:
+  disableLookups: true
+  fullnameOverride: "db-server3"
+  neo4j:
+    name: ingress-haproxy
+    acceptLicenseAgreement: "yes"
+    edition: enterprise
+    minimumClusterSize: 3
+    passwordFromSecret: test-auth
+  volumes:
+    data:
+      mode: defaultStorageClass
+  services:
+    neo4j:
+      enabled: false
