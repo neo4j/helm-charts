@@ -8,7 +8,7 @@ set -o pipefail -o errtrace -o errexit -o nounset
 shopt -s inherit_errexit
 [[ -n "${TRACE:-}" ]] && set -o xtrace
 
-NEO4J_DOCKER_IMG="${NEO4J_DOCKER_IMG:?NEO4J_DOCKER_IMG is required}"
+NEO4J_DOCKER_IMG="${NEO4J_DOCKER_IMG_ENTERPRISE:?NEO4J_DOCKER_IMG_ENTERPRISE is required}"
 
 ls -lst
 cd neo4j-admin
