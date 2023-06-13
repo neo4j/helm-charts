@@ -27,7 +27,7 @@ function push_to_gcr {
     echo "##teamcity[setParameter name='env.NEO4J_DOCKER_IMG_${EDITION}' value='${NEO4J_DOCKER_IMG}']"
     docker rmi "${NEO4J_DOCKER_IMG}" "${DOCKER_IMG}"
 
-    
+
     if [ "${EDITION}" == "ENTERPRISE" ]; then
         ls -lst
         cd neo4j-admin

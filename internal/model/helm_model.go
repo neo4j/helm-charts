@@ -2,6 +2,8 @@ package model
 
 import (
 	"fmt"
+	"os"
+	"strings"
 )
 
 type ReleaseName interface {
@@ -154,7 +156,8 @@ var DefaultNeo4jBackupValues = Neo4jBackupValues{
 		Verbose:             true,
 	},
 	Neo4J: Neo4jBackupNeo4j{
-		Image:                      "neo4j/helm-charts-backup",
+		Image:                      strings.Split(os.Getenv("NEO4J_DOCKER_BACKUP_IMG"), ":")[0],
+		ImageTag:                   strings.Split(os.Getenv("NEO4J_DOCKER_BACKUP_IMG"), ":")[1],
 		JobSchedule:                "* * * * *",
 		SuccessfulJobsHistoryLimit: 3,
 		FailedJobsHistoryLimit:     1,
