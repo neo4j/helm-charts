@@ -29,9 +29,7 @@ function push_to_gcr {
 
 
     if [ "${EDITION}" == "ENTERPRISE" ]; then
-        ls -lst
         cd neo4j-admin
-
         NEO4J_DOCKER_BACKUP_IMG="eu.gcr.io/${CLOUDSDK_CORE_PROJECT}/neo4j-helm-chart:backup"
         echo "NEO4J_DOCKER_IMG = ${NEO4J_DOCKER_IMG} , NEO4J_DOCKER_BACKUP_IMG = ${NEO4J_DOCKER_BACKUP_IMG}"
 
