@@ -17,6 +17,7 @@ S3_UPLOAD_TO_SUB_FOLDER="${S3_SUB_FOLDER:-neo4j}"
 helm package ./neo4j
 helm package ./neo4j-headless-service
 helm package ./neo4j-persistent-volume
+helm package ./neo4j-admin
 # helm package ./neo4j-docker-desktop-pv
 
 # Copy packages

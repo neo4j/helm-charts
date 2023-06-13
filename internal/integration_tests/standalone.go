@@ -583,6 +583,8 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 		Verbose:                  true,
 		Type:                     "FULL",
 	}
+	helmValues.Neo4J.Image = strings.Split(os.Getenv("NEO4J_DOCKER_BACKUP_IMG"), ":")[0]
+	helmValues.Neo4J.ImageTag = strings.Split(os.Getenv("NEO4J_DOCKER_BACKUP_IMG"), ":")[1]
 	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
 
@@ -638,6 +640,8 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 		Verbose:                  true,
 		Type:                     "FULL",
 	}
+	helmValues.Neo4J.Image = strings.Split(os.Getenv("NEO4J_DOCKER_BACKUP_IMG"), ":")[0]
+	helmValues.Neo4J.ImageTag = strings.Split(os.Getenv("NEO4J_DOCKER_BACKUP_IMG"), ":")[1]
 	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
 
@@ -693,6 +697,8 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 		Verbose:                  true,
 		Type:                     "FULL",
 	}
+	helmValues.Neo4J.Image = strings.Split(os.Getenv("NEO4J_DOCKER_BACKUP_IMG"), ":")[0]
+	helmValues.Neo4J.ImageTag = strings.Split(os.Getenv("NEO4J_DOCKER_BACKUP_IMG"), ":")[1]
 	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
 

@@ -154,8 +154,7 @@ var DefaultNeo4jBackupValues = Neo4jBackupValues{
 		Verbose:             true,
 	},
 	Neo4J: Neo4jBackupNeo4j{
-		Image:                      "neo4jbuildservice/helm-charts",
-		ImageTag:                   "backup",
+		Image:                      "neo4j/helm-charts-backup",
 		JobSchedule:                "* * * * *",
 		SuccessfulJobsHistoryLimit: 3,
 		FailedJobsHistoryLimit:     1,

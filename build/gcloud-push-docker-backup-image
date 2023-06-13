@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+# This pushes a local docker image to google container registry
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+NEO4J_DOCKER_IMG="${NEO4J_DOCKER_IMG:?NEO4J_DOCKER_IMG is required}"
+
+ls -lst
+cd neo4j-admin
+
+NEO4J_DOCKER_BACKUP_IMG="eu.gcr.io/${CLOUDSDK_CORE_PROJECT}/neo4j-helm-chart:backup"
+echo "NEO4J_DOCKER_IMG = ${NEO4J_DOCKER_IMG} , NEO4J_DOCKER_BACKUP_IMG = ${NEO4J_DOCKER_BACKUP_IMG}"
+
+docker build -t "${NEO4J_DOCKER_BACKUP_IMG}" --build-arg="IMAGE=${NEO4J_DOCKER_IMG}" --no-cache -f Dockerfile .
+docker push "${NEO4J_DOCKER_BACKUP_IMG}"
+echo "##teamcity[setParameter name='env.NEO4J_DOCKER_BACKUP_IMG' value='${NEO4J_DOCKER_BACKUP_IMG}']"
+docker rmi "${NEO4J_DOCKER_BACKUP_IMG}"
+cd ..
+
+

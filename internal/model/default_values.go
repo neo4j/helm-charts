@@ -49,7 +49,13 @@ func init() {
 	if ImagePullSecretCustomImageName == "" {
 		log.Panic("Please set NEO4J_DOCKER_IMG env variable !!")
 	}
-	_, present := os.LookupEnv("BLOOM_LICENSE")
+
+	_, present := os.LookupEnv("NEO4J_DOCKER_BACKUP_IMG")
+	if !present {
+		log.Panic("Please set NEO4J_DOCKER_BACKUP_IMG env variable !!")
+	}
+
+	_, present = os.LookupEnv("BLOOM_LICENSE")
 	if !present {
 		log.Panic("Please set BLOOM_LICENSE env variable !!")
 	}
