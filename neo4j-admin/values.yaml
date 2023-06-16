@@ -3,6 +3,7 @@ nameOverride: ""
 ## @param fullnameOverride String to fully override common.names.fullname
 fullnameOverride: ""
 # disableLookups will disable all the lookups done in the helm charts
+# This should be set to true when using ArgoCD since ArgoCD uses helm template and the helm lookups will fail
 # You can enable this when executing helm commands with --dry-run command
 disableLookups: false
 
