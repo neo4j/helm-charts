@@ -26,6 +26,19 @@ function push_to_gcr {
     docker push "${NEO4J_DOCKER_IMG}"
     echo "##teamcity[setParameter name='env.NEO4J_DOCKER_IMG_${EDITION}' value='${NEO4J_DOCKER_IMG}']"
     docker rmi "${NEO4J_DOCKER_IMG}" "${DOCKER_IMG}"
+
+    if [ "${EDITION}" == "ENTERPRISE" ]; then
+        cd neo4j-admin
+        NEO4J_DOCKER_BACKUP_IMG="eu.gcr.io/${CLOUDSDK_CORE_PROJECT}/neo4j-helm-chart:backup"
+        echo "NEO4J_DOCKER_IMG = ${NEO4J_DOCKER_IMG} , NEO4J_DOCKER_BACKUP_IMG = ${NEO4J_DOCKER_BACKUP_IMG}"
+
+        docker build -t "${NEO4J_DOCKER_BACKUP_IMG}" --build-arg="IMAGE=${NEO4J_DOCKER_IMG}" --no-cache -f Dockerfile .
+        docker push "${NEO4J_DOCKER_BACKUP_IMG}"
+        echo "##teamcity[setParameter name='env.NEO4J_DOCKER_BACKUP_IMG' value='${NEO4J_DOCKER_BACKUP_IMG}']"
+        docker rmi "${NEO4J_DOCKER_BACKUP_IMG}"
+        cd ..
+    fi
+
 }
 push_to_gcr "$(ls | grep "neo4j-enterprise-")" "ENTERPRISE"
 push_to_gcr "$(ls | grep "neo4j-community-")" "COMMUNITY"
