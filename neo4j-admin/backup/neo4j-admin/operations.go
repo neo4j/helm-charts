@@ -34,7 +34,7 @@ func PerformBackup(address string) ([]string, error) {
 	log.Printf("Backup Completed !!")
 	dbNames := []string{os.Getenv("DATABASE")}
 	// if the database contains a "*" parse the output to get the list of databases whose backup is taken
-	if strings.Contains(os.Getenv("DATABASE"), "*") {
+	if strings.Contains(os.Getenv("DATABASE"), "*") || strings.Contains(os.Getenv("DATABASE"), "?") {
 		dbNames, err = retrieveBackedUpDBNames(string(output))
 		if err != nil {
 			return nil, err
