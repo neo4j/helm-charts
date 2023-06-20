@@ -17,6 +17,8 @@ var HeadlessServiceHelmChart = newHelmChart("neo4j-cluster-headless-service")
 
 var StandaloneHelmChart = newNeo4jHelmChart("neo4j-standalone", []string{"community", "enterprise"})
 
+var BackupHelmChart = newHelmChart("neo4j-admin")
+
 var ClusterCoreHelmChart = newNeo4jHelmChart("neo4j-cluster-core", []string{"enterprise"})
 
 var ClusterReadReplicaHelmChart = newNeo4jHelmChart("neo4j-cluster-read-replica", []string{"enterprise"})

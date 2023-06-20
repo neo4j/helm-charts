@@ -24,12 +24,12 @@ RELEASE_CHANNEL="stable"
 #
 gcloud container clusters create "${CLOUDSDK_CONTAINER_CLUSTER}" \
      --release-channel=${RELEASE_CHANNEL} \
-     --cluster-version 1.22 \
+     --cluster-version 1.24 \
      --zone="${CLOUDSDK_COMPUTE_ZONE}" \
      --num-nodes "${NUM_NODES}" \
      --workload-pool="${CLOUDSDK_CORE_PROJECT}.svc.id.goog" \
      --preemptible --machine-type "${NODE_MACHINE}" --image-type "COS_CONTAINERD" \
-     --disk-type "pd-ssd" --disk-size "10" \
+     --disk-type "pd-ssd" --disk-size "40" \
      --max-pods-per-node=30 --enable-ip-alias \
      --enable-shielded-nodes --metadata disable-legacy-endpoints=true --no-enable-basic-auth --no-issue-client-certificate \
      --enable-stackdriver-kubernetes

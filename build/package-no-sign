@@ -19,6 +19,7 @@ helm package ./neo4j-cluster-core
 helm package ./neo4j-cluster-loadbalancer
 helm package ./neo4j-cluster-read-replica
 helm package ./neo4j-cluster-headless-service
+helm package ./neo4j-admin
 # helm package ./neo4j-docker-desktop-pv
 # helm package ./neo4j-gcloud-pv
 

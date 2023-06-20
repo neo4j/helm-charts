@@ -10,6 +10,8 @@ import (
 
 var DefaultPassword = fmt.Sprintf("defaulthelmpassword%da", RandomIntBetween(100000, 999999999))
 var DefaultAuthSecretName = "neo4j-auth"
+var DefaultNeo4jBackupChartName = "neo4j-admin"
+var BucketName = "helm-backup-test"
 
 var ImagePullSecretUsername,
 	ImagePullSecretPass,
@@ -42,9 +44,40 @@ func init() {
 	if ImagePullSecretCustomImageName == "" {
 		log.Panic("Please set NEO4J_DOCKER_IMG env variable !!")
 	}
-	_, present := os.LookupEnv("BLOOM_LICENSE")
+
+	_, present := os.LookupEnv("NEO4J_DOCKER_BACKUP_IMG")
+	if !present {
+		log.Panic("Please set NEO4J_DOCKER_BACKUP_IMG env variable !!")
+	}
+
+	_, present = os.LookupEnv("BLOOM_LICENSE")
 	if !present {
 		log.Panic("Please set BLOOM_LICENSE env variable !!")
+	}
+
+	_, present = os.LookupEnv("AWS_ACCESS_KEY_ID")
+	if !present {
+		log.Panic("Please set AWS_ACCESS_KEY_ID env variable !!")
+	}
+
+	_, present = os.LookupEnv("AWS_SECRET_ACCESS_KEY")
+	if !present {
+		log.Panic("Please set AWS_SECRET_ACCESS_KEY env variable !!")
+	}
+
+	_, present = os.LookupEnv("AZURE_STORAGE_ACCOUNT_NAME")
+	if !present {
+		log.Panic("Please set AZURE_STORAGE_ACCOUNT_NAME env variable !!")
+	}
+
+	_, present = os.LookupEnv("AZURE_STORAGE_ACCOUNT_KEY")
+	if !present {
+		log.Panic("Please set AZURE_STORAGE_ACCOUNT_KEY env variable !!")
+	}
+
+	_, present = os.LookupEnv("GCP_SERVICE_ACCOUNT_CRED")
+	if !present {
+		log.Panic("Please set GCP_SERVICE_ACCOUNT_CRED env variable !!. This environment variable holds the json credentials of GCP service account")
 	}
 	ImagePullSecretArgs = []string{
 		"--set", fmt.Sprintf("image.customImage=%s", ImagePullSecretCustomImageName),

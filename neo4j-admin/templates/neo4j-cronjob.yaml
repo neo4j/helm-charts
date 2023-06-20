@@ -1,0 +1,104 @@
+{{- template "neo4j.backup.checkDatabaseIPAndServiceName" . -}}
+{{- template "neo4j.backup.checkIfSecretExistsOrNot" . -}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: "{{ include "neo4j.fullname" . }}"
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+    app.kubernetes.io/instance: {{ include "neo4j.fullname" . | quote }}
+    app.kubernetes.io/component: backup
+    {{- include "neo4j.labels" $.Values.neo4j.labels | indent 4 }}
+spec:
+  schedule: {{ $.Values.neo4j.jobSchedule | default "* * * * *" | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: {{ $.Values.neo4j.successfulJobsHistoryLimit | default 3 }}
+  failedJobsHistoryLimit: {{ $.Values.neo4j.failedJobsHistoryLimit | default 1 }}
+  jobTemplate:
+    spec:
+      backoffLimit: {{ $.Values.neo4j.backoffLimit | default 3 }}
+      template:
+        metadata:
+          annotations:
+            {{- include "neo4j.annotations" $.Values.neo4j.podAnnotations | indent 12 }}
+          labels:
+            {{- include "neo4j.labels" $.Values.neo4j.podLabels | indent 12 }}
+        spec:
+          {{- if .Values.serviceAccountName }}
+          serviceAccountName: {{ .Values.serviceAccountName }}
+          {{- /* explicitly mount token because some service accounts disable automount-by-default and require explicit opt-in */}}
+          automountServiceAccountToken: true
+          {{- end }}
+          restartPolicy: Never
+          securityContext: {{ .Values.securityContext | toYaml  | nindent 12 }}
+          containers:
+            - name: graph-backup
+              image: {{ .Values.neo4j.image }}:{{ .Values.neo4j.imageTag }}
+              imagePullPolicy: Always
+              resources:
+                requests:
+                  ephemeral-storage: {{ .Values.resources.requests.ephemeralStorage | default "4Gi" }}
+                limits:
+                  ephemeral-storage: {{ .Values.resources.limits.ephemeralStorage | default "5Gi" }}
+              env:
+                - name: DATABASE_SERVICE_NAME
+                  value: {{ .Values.backup.databaseAdminServiceName  | trim }}
+                - name: DATABASE_SERVICE_IP
+                  value: {{ .Values.backup.databaseAdminServiceIP  | trim }}
+                - name: DATABASE_NAMESPACE
+                  value: {{ .Values.backup.databaseNamespace | default "default"  | trim }}
+                - name: DATABASE_BACKUP_PORT
+                  value: {{ .Values.backup.databaseBackupPort | default "6362" | trim | quote }}
+                - name: DATABASE_CLUSTER_DOMAIN
+                  value: {{ .Values.backup.databaseClusterDomain | default "cluster.local"  | trim }}
+                - name: DATABASE
+                  value: {{ .Values.backup.database | default "*" | trim | quote }}
+                - name: CLOUD_PROVIDER
+                  value: {{ required "You must specify a CLOUD_PROVIDER" .Values.backup.cloudProvider | trim }}
+                - name: BUCKET_NAME
+                  value: {{ required "You must specify a BUCKET NAME" .Values.backup.bucketName | trim }}
+                - name: PAGE_CACHE
+                  value: {{ .Values.backup.pageCache | trim }}
+                - name: HEAP_SIZE
+                  value: {{ .Values.backup.heapSize | trim }}
+                - name: INCLUDE_METADATA
+                  value: "{{ .Values.backup.includeMetadata | default "all" | trim }}"
+                - name: PARALLEL_RECOVERY
+                  value: "{{ .Values.backup.parallelRecovery | default false }}"
+                - name: FALLBACK_TO_FULL
+                  value: "{{ .Values.backup.fallbackToFull | default true }}"
+                - name: PREPARE_RESTORE
+                  value: "{{ .Values.backup.prepareRestore | default true }}"
+                - name: CREDENTIAL_PATH
+                  value: "{{ printf "/credentials/%s" .Values.backup.secretKeyName  }}"
+                - name: VERBOSE
+                  value: "{{ .Values.backup.verbose | default true }}"
+                - name: CONSISTENCY_CHECK_ENABLE
+                  value: "{{ .Values.backup.checkConsistency | default true }}"
+                - name: CONSISTENCY_CHECK_INDEXES
+                  value: "{{ .Values.backup.checkIndexes | default true }}"
+                - name: CONSISTENCY_CHECK_INDEX_STRUCTURE
+                  value: "{{ .Values.backup.checkIndexStructure | default true }}"
+                - name: CONSISTENCY_CHECK_GRAPH
+                  value: "{{ .Values.backup.checkGraph | default true }}"
+              volumeMounts:
+                - name: credentials
+                  mountPath: /credentials
+                  readOnly: true
+                - name: "backup"
+                  mountPath: "/backups"
+          volumes:
+            - name: credentials
+              secret:
+                secretName: "{{ .Values.backup.secretName }}"
+                items:
+                  - key: "{{ .Values.backup.secretKeyName }}"
+                    path: "{{ .Values.backup.secretKeyName }}"
+            - name: "backup"
+{{- if $.Values.tempVolume }}
+  {{- toYaml $.Values.tempVolume | nindent 14 }}
+{{- else }}
+  {{- printf "emptyDir: {}" | nindent 14 }}
+{{- end }}
+
+
