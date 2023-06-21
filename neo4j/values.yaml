@@ -52,7 +52,7 @@ neo4j:
 # Volumes for Neo4j
 volumes:
   data:
-    #Set it to true when you do not want to use the subPathExpr
+    # Set it to true when you do not want to use the subPathExpr
     disableSubPathExpr: false
 
     # REQUIRED: specify a volume mode to use for data
@@ -152,7 +152,7 @@ volumes:
     share:
       name: "data"
 
-#add additional volumes and their respective mounts
+# add additional volumes and their respective mounts
 additionalVolumes: []
 #  - name: neo4j1-conf
 #    emptyDir: {}
@@ -168,8 +168,8 @@ ldapPasswordFromSecret: ""
 # The above secret gets mounted to the path mentioned here
 ldapPasswordMountPath: ""
 
-#nodeSelector labels
-#please ensure the respective labels are present on one of the cluster nodes or else helm charts will throw an error
+# nodeSelector labels
+# please ensure the respective labels are present on one of the cluster nodes or else helm charts will throw an error
 nodeSelector: {}
 #  label1: "value1"
 #  label2: "value2"
@@ -198,25 +198,25 @@ services:
     # ports to include in neo4j service
     ports:
       http:
-        enabled: true #Set this to false to remove HTTP from this service (this does not affect whether http is enabled for the neo4j process)
+        enabled: true # Set this to false to remove HTTP from this service (this does not affect whether http is enabled for the neo4j process)
         # uncomment to publish http on port 80 (neo4j default is 7474)
         # port: 80
         # targetPort: 7474
         # name: http
       https:
-        enabled: true #Set this to false to remove HTTPS from this service (this does not affect whether https is enabled for the neo4j process)
+        enabled: true # Set this to false to remove HTTPS from this service (this does not affect whether https is enabled for the neo4j process)
         # uncomment to publish http on port 443 (neo4j default is 7473)
         # port: 443
         # targetPort: 7473
         # name: https
       bolt:
-        enabled: true #Set this to false to remove BOLT from this service (this does not affect whether https is enabled for the neo4j process)
+        enabled: true # Set this to false to remove BOLT from this service (this does not affect whether https is enabled for the neo4j process)
         # Uncomment to explicitly specify the port to publish Neo4j Bolt (7687 is the default)
         # port: 7687
         # targetPort: 7687
         # name: tcp-bolt
       backup:
-        enabled: false #Set this to true to expose backup port externally (n.b. this could have security implications. Backup is not authenticated by default)
+        enabled: false # Set this to true to expose backup port externally (n.b. this could have security implications. Backup is not authenticated by default)
         # Uncomment to explicitly specify the port to publish Neo4j Backup (6362 is the default)
         # port: 6362
         # targetPort: 6362
@@ -231,7 +231,7 @@ services:
       # To only route to Neo4j Read Replicas uncomment the setting and change the value to "READ_REPLICA"
       # "helm.neo4j.com/clustering": "false"
 
-    #this flag allows you to open internal neo4j ports necessary in multi zone /region neo4j cluster scenario
+    # This flag allows you to open internal neo4j ports necessary in multi zone /region neo4j cluster scenario
     multiCluster: false
 
     # The neo4j LoadBalancer service is shared between all servers in the cluster. Because of this, the `helm.sh/resource-policy: keep`
@@ -271,22 +271,22 @@ services:
 # Neo4j Configuration (yaml format)
 config:
   server.config.strict_validation.enabled: "false"
-#  dbms.cluster.minimum_initial_system_primaries_count: "3"
+  #dbms.cluster.minimum_initial_system_primaries_count: "3"
   # The amount of memory to use for mapping the store files.
   # The default page cache memory assumes the machine is dedicated to running
   # Neo4j, and is heuristically set to 50% of RAM minus the Java heap size.
-  #dbms.memory.pagecache.size: "74m"
+  # server.memory.pagecache.size: "74m"
 
   #The number of Cypher query execution plans that are cached.
-  #dbms.query_cache_size: "10"
+  # server.db.query_cache_size: "10"
 
   # Java Heap Size: by default the Java heap size is dynamically calculated based
   # on available system resources. Uncomment these lines to set specific initial
   # and maximum heap size.
-  #dbms.memory.heap.initial_size: "317m"
-  #dbms.memory.heap.max_size: "317m"
+  # server.memory.heap.initial_size: "317m"
+  # server.memory.heap.max_size: "317m"
 
-#apoc_config:
+# apoc_config:
 #  apoc.trigger.enabled: "true"
 #  apoc.jdbc.apoctest.url: "jdbc:foo:bar"
 
