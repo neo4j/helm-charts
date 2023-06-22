@@ -1,8 +1,8 @@
 apiVersion: v2
 name: neo4j-shared-templates
 home: https://www.neo4j.com
-version: 4.4.20
-appVersion: 4.4.20
+version: 4.4.21
+appVersion: 4.4.21
 description: Neo4j is the world's leading graph database
 keywords:
   - graph
