@@ -255,6 +255,29 @@ entries:
     - https://github.com/neo4j/helm-charts/releases/download/5.8.0/neo4j-admin-5.8.0.tgz
     version: 5.8.0
   - apiVersion: v1
+    appVersion: 4.4.21
+    created: "2023-06-22T08:18:14.626780867Z"
+    description: Neo4j is the world's leading graph database
+    digest: b9356e2f320412369c8b0b643e2a6bce12ba774c936e6890bb7b387489e92bb3
+    home: https://www.neo4j.com
+    icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
+    keywords:
+    - graph
+    - database
+    - cypher
+    maintainers:
+    - email: bledi.feshti@neotechnology.com
+      name: bfeshti
+    - email: harshit.singhvi@neotechnology.com
+      name: harshitsinghvi22
+    name: neo4j-admin
+    sources:
+    - https://github.com/neo4j/neo4j
+    - https://github.com/neo4j/docker-neo4j
+    urls:
+    - https://github.com/neo4j/helm-charts/releases/download/4.4.21/neo4j-admin-4.4.21.tgz
+    version: 4.4.21
+  - apiVersion: v1
     appVersion: 4.4.20
     created: "2023-06-20T16:14:24.043606244Z"
     description: Neo4j is the world's leading graph database
@@ -278,6 +301,33 @@ entries:
     - https://github.com/neo4j/helm-charts/releases/download/4.4.20/neo4j-admin-4.4.20.tgz
     version: 4.4.20
   neo4j-cluster-core:
+  - apiVersion: v2
+    appVersion: 4.4.21
+    created: "2023-06-22T08:18:14.630009034Z"
+    dependencies:
+    - name: neo4j-shared-templates
+      repository: file://../neo4j-shared-templates
+      version: 4.4.21
+    description: Neo4j is the world's leading graph database
+    digest: c0e09a1f52b72d25a0c9ed72283307a0dbe41c1e4accead1c1bd6fb460e24dd3
+    home: https://www.neo4j.com
+    icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
+    keywords:
+    - graph
+    - database
+    - cypher
+    maintainers:
+    - email: bledi.feshti@neotechnology.com
+      name: bfeshti
+    - email: harshit.singhvi@neotechnology.com
+      name: harshitsinghvi22
+    name: neo4j-cluster-core
+    sources:
+    - https://github.com/neo4j/neo4j
+    - https://github.com/neo4j/docker-neo4j
+    urls:
+    - https://github.com/neo4j/helm-charts/releases/download/4.4.21/neo4j-cluster-core-4.4.21.tgz
+    version: 4.4.21
   - apiVersion: v2
     appVersion: 4.4.20
     created: "2023-06-20T16:14:24.049997412Z"
@@ -586,6 +636,33 @@ entries:
   neo4j-cluster-headless-service:
   - apiVersion: v2
     appVersion: '-'
+    created: "2023-06-22T08:18:14.631297494Z"
+    dependencies:
+    - name: neo4j-shared-templates
+      repository: file://../neo4j-shared-templates
+      version: 4.4.21
+    description: Neo4j is the world's leading graph database
+    digest: bbae988617b0c55340a0dec70f59762edbd10f2280c3337a93396ab03843a2ef
+    home: https://www.neo4j.com
+    icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
+    keywords:
+    - graph
+    - database
+    - cypher
+    maintainers:
+    - email: bledi.feshti@neotechnology.com
+      name: bfeshti
+    - email: harshit.singhvi@neotechnology.com
+      name: harshitsinghvi22
+    name: neo4j-cluster-headless-service
+    sources:
+    - https://github.com/neo4j/neo4j
+    - https://github.com/neo4j/docker-neo4j
+    urls:
+    - https://github.com/neo4j/helm-charts/releases/download/4.4.21/neo4j-cluster-headless-service-4.4.21.tgz
+    version: 4.4.21
+  - apiVersion: v2
+    appVersion: '-'
     created: "2023-06-20T16:14:24.051170088Z"
     dependencies:
     - name: neo4j-shared-templates
@@ -892,6 +969,33 @@ entries:
   neo4j-cluster-loadbalancer:
   - apiVersion: v2
     appVersion: '-'
+    created: "2023-06-22T08:18:14.632249132Z"
+    dependencies:
+    - name: neo4j-shared-templates
+      repository: file://../neo4j-shared-templates
+      version: 4.4.21
+    description: Neo4j is the world's leading graph database
+    digest: ab0a4e94a81b2871f35dcbde0b3946a4698a3dd7d6acabb4e268ded55d795874
+    home: https://www.neo4j.com
+    icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
+    keywords:
+    - graph
+    - database
+    - cypher
+    maintainers:
+    - email: bledi.feshti@neotechnology.com
+      name: bfeshti
+    - email: harshit.singhvi@neotechnology.com
+      name: harshitsinghvi22
+    name: neo4j-cluster-loadbalancer
+    sources:
+    - https://github.com/neo4j/neo4j
+    - https://github.com/neo4j/docker-neo4j
+    urls:
+    - https://github.com/neo4j/helm-charts/releases/download/4.4.21/neo4j-cluster-loadbalancer-4.4.21.tgz
+    version: 4.4.21
+  - apiVersion: v2
+    appVersion: '-'
     created: "2023-06-20T16:14:24.052148112Z"
     dependencies:
     - name: neo4j-shared-templates
@@ -1196,6 +1300,33 @@ entries:
     - https://github.com/neo4j/helm-charts/releases/download/4.4.0/neo4j-cluster-loadbalancer-4.4.0.tgz
     version: 4.4.0
   neo4j-cluster-read-replica:
+  - apiVersion: v2
+    appVersion: 4.4.21
+    created: "2023-06-22T08:18:14.635734331Z"
+    dependencies:
+    - name: neo4j-shared-templates
+      repository: file://../neo4j-shared-templates
+      version: 4.4.21
+    description: Neo4j is the world's leading graph database
+    digest: f43791d45bd023f2dc38320b50894e2db316b16ad03af931c0f8d518ed4180ab
+    home: https://www.neo4j.com
+    icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
+    keywords:
+    - graph
+    - database
+    - cypher
+    maintainers:
+    - email: bledi.feshti@neotechnology.com
+      name: bfeshti
+    - email: harshit.singhvi@neotechnology.com
+      name: harshitsinghvi22
+    name: neo4j-cluster-read-replica
+    sources:
+    - https://github.com/neo4j/neo4j
+    - https://github.com/neo4j/docker-neo4j
+    urls:
+    - https://github.com/neo4j/helm-charts/releases/download/4.4.21/neo4j-cluster-read-replica-4.4.21.tgz
+    version: 4.4.21
   - apiVersion: v2
     appVersion: 4.4.20
     created: "2023-06-20T16:14:24.055436237Z"
@@ -1917,6 +2048,33 @@ entries:
     version: 5.1.0
   neo4j-standalone:
   - apiVersion: v2
+    appVersion: 4.4.21
+    created: "2023-06-22T08:18:14.642207733Z"
+    dependencies:
+    - name: neo4j-shared-templates
+      repository: file://../neo4j-shared-templates
+      version: 4.4.21
+    description: Neo4j is the world's leading graph database
+    digest: 6499397cff36a5eee8cacd40e6298b8481a462afd1e641e2e5ccd1345e2a77c3
+    home: https://www.neo4j.com
+    icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
+    keywords:
+    - graph
+    - database
+    - cypher
+    maintainers:
+    - email: bledi.feshti@neotechnology.com
+      name: bfeshti
+    - email: harshit.singhvi@neotechnology.com
+      name: harshitsinghvi22
+    name: neo4j-standalone
+    sources:
+    - https://github.com/neo4j/neo4j
+    - https://github.com/neo4j/docker-neo4j
+    urls:
+    - https://github.com/neo4j/helm-charts/releases/download/4.4.21/neo4j-standalone-4.4.21.tgz
+    version: 4.4.21
+  - apiVersion: v2
     appVersion: 4.4.20
     created: "2023-06-20T16:14:24.058607211Z"
     dependencies:
@@ -2298,4 +2456,4 @@ entries:
     urls:
     - https://github.com/neo4j/helm-charts/releases/download/4.3.2/neo4j-standalone-4.3.2.tgz
     version: 4.3.2
-generated: "2023-06-20T16:14:24.042225815Z"
+generated: "2023-06-22T08:18:14.625547367Z"
