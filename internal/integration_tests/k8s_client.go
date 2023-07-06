@@ -133,9 +133,7 @@ func CheckServiceAnnotations(t *testing.T, releaseName model.ReleaseName, chart 
 	assert.Equal(t, expectedServiceCount, len(services.Items))
 
 	for _, service := range services.Items {
-		//if service.Name != fmt.Sprintf("%s-lb-neo4j", model.DefaultNeo4jName) {
 		assert.Equal(t, "bar", getOurAnnotations(service)["foo"])
-		//}
 	}
 	return err
 }

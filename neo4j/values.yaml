@@ -187,7 +187,7 @@ services:
     enabled: true
 
     # Annotations for the K8s Service object
-    annotations: { }
+    annotations: {}
 
     spec:
       # Type of service.
