@@ -188,6 +188,7 @@ services:
 
     # Annotations for the K8s Service object
     annotations: {}
+
     spec:
       # Type of service.
       type: LoadBalancer
