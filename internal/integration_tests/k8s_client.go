@@ -117,6 +117,7 @@ func CheckServiceAnnotations(t *testing.T, releaseName model.ReleaseName, chart 
 	err = runAll(t, "helm", [][]string{
 		model.BaseHelmCommand("upgrade", releaseName, chart, model.Neo4jEdition,
 			"--set", "services.admin.annotations.foo=bar",
+			"--set", "services.neo4j.annotations.foo=bar",
 			"--set", "services.default.annotations.foo=bar", "--set", "neo4j.name="+model.DefaultNeo4jName),
 	}, true)
 	if err != nil {
@@ -132,9 +133,9 @@ func CheckServiceAnnotations(t *testing.T, releaseName model.ReleaseName, chart 
 	assert.Equal(t, expectedServiceCount, len(services.Items))
 
 	for _, service := range services.Items {
-		if service.Name != fmt.Sprintf("%s-lb-neo4j", model.DefaultNeo4jName) {
-			assert.Equal(t, "bar", getOurAnnotations(service)["foo"])
-		}
+		//if service.Name != fmt.Sprintf("%s-lb-neo4j", model.DefaultNeo4jName) {
+		assert.Equal(t, "bar", getOurAnnotations(service)["foo"])
+		//}
 	}
 	return err
 }
