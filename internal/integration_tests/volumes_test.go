@@ -15,6 +15,7 @@ func TestVolumesInGCloudK8s(t *testing.T) {
 	t.Logf("Starting setup of '%s'", t.Name())
 	defaultHelmArgs := []string{}
 	defaultHelmArgs = append(defaultHelmArgs, model.DefaultNeo4jNameArg...)
+	defaultHelmArgs = append(defaultHelmArgs, []string{"--set", "volumes.data.labels.key1=value1"}...)
 	defaultHelmArgs = append(defaultHelmArgs, resources.TestAntiAffinityRule.HelmArgs()...)
 	_, err := installNeo4j(t, releaseName, chart, defaultHelmArgs...)
 	t.Cleanup(standaloneCleanup(t, releaseName))

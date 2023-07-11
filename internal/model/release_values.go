@@ -83,34 +83,40 @@ type Data struct {
 	Volume              Volume              `yaml:"volume,omitempty"`
 	VolumeClaimTemplate VolumeClaimTemplate `yaml:"volumeClaimTemplate,omitempty"`
 	DisableSubPath      bool                `yaml:"disableSubPathExpr,omitempty"`
+	Labels              map[string]string   `yaml:"labels,omitempty"`
 }
 type Share struct {
 	Name string `yaml:"name,omitempty"`
 }
 type Backups struct {
-	Mode           string `yaml:"mode,omitempty"`
-	Share          Share  `yaml:"share,omitempty"`
-	DisableSubPath bool   `yaml:"disableSubPathExpr,omitempty"`
+	Mode           string            `yaml:"mode,omitempty"`
+	Share          Share             `yaml:"share,omitempty"`
+	DisableSubPath bool              `yaml:"disableSubPathExpr,omitempty"`
+	Labels         map[string]string `yaml:"labels,omitempty"`
 }
 type Logs struct {
-	Mode           string `yaml:"mode,omitempty"`
-	Share          Share  `yaml:"share,omitempty"`
-	DisableSubPath bool   `yaml:"disableSubPathExpr,omitempty"`
+	Mode           string            `yaml:"mode,omitempty"`
+	Share          Share             `yaml:"share,omitempty"`
+	DisableSubPath bool              `yaml:"disableSubPathExpr,omitempty"`
+	Labels         map[string]string `yaml:"labels,omitempty"`
 }
 type Metrics struct {
-	Mode           string `yaml:"mode,omitempty"`
-	Share          Share  `yaml:"share,omitempty"`
-	DisableSubPath bool   `yaml:"disableSubPathExpr,omitempty"`
+	Mode           string            `yaml:"mode,omitempty"`
+	Share          Share             `yaml:"share,omitempty"`
+	DisableSubPath bool              `yaml:"disableSubPathExpr,omitempty"`
+	Labels         map[string]string `yaml:"labels,omitempty"`
 }
 type Import struct {
-	Mode           string `yaml:"mode,omitempty"`
-	Share          Share  `yaml:"share,omitempty"`
-	DisableSubPath bool   `yaml:"disableSubPathExpr,omitempty"`
+	Mode           string            `yaml:"mode,omitempty"`
+	Share          Share             `yaml:"share,omitempty"`
+	DisableSubPath bool              `yaml:"disableSubPathExpr,omitempty"`
+	Labels         map[string]string `yaml:"labels,omitempty"`
 }
 type Licenses struct {
-	Mode           string `yaml:"mode,omitempty"`
-	Share          Share  `yaml:"share,omitempty"`
-	DisableSubPath bool   `yaml:"disableSubPathExpr,omitempty"`
+	Mode           string            `yaml:"mode,omitempty"`
+	Share          Share             `yaml:"share,omitempty"`
+	DisableSubPath bool              `yaml:"disableSubPathExpr,omitempty"`
+	Labels         map[string]string `yaml:"labels,omitempty"`
 }
 type Volumes struct {
 	Data     Data     `yaml:"data,omitempty"`
