@@ -45,7 +45,7 @@ neo4j:
 volumes:
   data:
     #labels for data pvc on creation (Valid only when mode set to selector | defaultStorageClass | dynamic | volumeClaimTemplate)
-    labels: {}
+    labels: { }
     #Set it to true when you do not want to use the subPathExpr
     disableSubPathExpr: false
 
