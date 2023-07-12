@@ -1035,6 +1035,32 @@ func TestAdditionalVolumesAndMounts(t *testing.T) {
 	}))
 }
 
+// TestVolumeClaimLabels checks if provided labels are getting attached to the pvc metadata or not
+func TestVolumeClaimLabels(t *testing.T) {
+	t.Parallel()
+	var helmValues model.HelmValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		helmValues = model.DefaultCommunityValues
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		labels := make(map[string]string, 2)
+		labels["key1"] = "value1"
+		labels["key2"] = "value2"
+		helmValues.Volumes.Data.Labels = labels
+		manifests, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		assert.NoError(t, err, "no error should be seen while checking for labels on volume claims")
+		statefulSet := manifests.OfTypeWithName(&appsv1.StatefulSet{}, model.DefaultHelmTemplateReleaseName.String())
+		if !assert.NotNil(t, statefulSet, fmt.Sprintf("no statefulset found with name %s", model.DefaultHelmTemplateReleaseName)) {
+			return
+		}
+
+		volumeClaims := statefulSet.(*appsv1.StatefulSet).Spec.VolumeClaimTemplates
+		assert.Equal(t, len(volumeClaims), 1, fmt.Sprintf("only one volume claim should be present ,found %d", len(volumeClaims)))
+		assert.Equal(t, volumeClaims[0].ObjectMeta.Labels, labels, "labels are not matching")
+	}))
+}
+
 // TestNeo4jConfigWithEmptyLdapPasswordFromSecretAndMountPath checks that the user-config configmap does not contains ldapPassword config when empty ldapPasswordFromSecret and ldapPasswordMountPath are used
 func TestNeo4jConfigWithEmptyLdapPasswordFromSecretAndMountPath(t *testing.T) {
 	t.Parallel()
