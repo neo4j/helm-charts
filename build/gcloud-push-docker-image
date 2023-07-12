@@ -43,7 +43,7 @@ function push_to_gcr {
     fi
 }
 
-if [ "${DISTRIBUTION}" == "redhat"]; then
+if [ "${DISTRIBUTION}" == "redhat" ]; then
   push_to_gcr "$(ls | grep -E "neo4j-enterprise-(.*)ubi8-docker-loadable.tar")" "ENTERPRISE"
   push_to_gcr "$(ls | grep -E "neo4j-community-(.*)ubi8-docker-loadable.tar")" "COMMUNITY"
 else
