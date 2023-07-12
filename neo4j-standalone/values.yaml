@@ -47,6 +47,8 @@ neo4j:
 # Volumes for Neo4j
 volumes:
   data:
+    #labels for data pvc on creation (Valid only when mode set to selector | defaultStorageClass | dynamic | volumeClaimTemplate)
+    labels: {}
     #Set it to true when you do not want to use the subPathExpr
     disableSubPathExpr: false
     # REQUIRED: specify a volume mode to use for data
@@ -105,6 +107,8 @@ volumes:
   # n.b. backups will be written to /backups on the volume
   # any of the volume modes shown above for data can be used for backups
   backups:
+    #labels for backups pvc on creation (Valid only when mode set to selector | defaultStorageClass | dynamic | volumeClaimTemplate)
+    labels: {}
     #Set it to true when you do not want to use the subPathExpr
     disableSubPathExpr: false
     mode: "share" # share an existing volume (e.g. the data volume)
@@ -115,6 +119,8 @@ volumes:
   # n.b. logs will be written to /logs/$(POD_NAME) on the volume
   # any of the volume modes shown above for data can be used for logs
   logs:
+    #labels for logs pvc on creation (Valid only when mode set to selector | defaultStorageClass | dynamic | volumeClaimTemplate)
+    labels: {}
     #Set it to true when you do not want to use the subPathExpr
     disableSubPathExpr: false
     mode: "share" # share an existing volume (e.g. the data volume)
@@ -125,6 +131,8 @@ volumes:
   # n.b. metrics will be written to /metrics/$(POD_NAME) on the volume
   # any of the volume modes shown above for data can be used for metrics
   metrics:
+    #labels for metrics pvc on creation (Valid only when mode set to selector | defaultStorageClass | dynamic | volumeClaimTemplate)
+    labels: {}
     #Set it to true when you do not want to use the subPathExpr
     disableSubPathExpr: false
     mode: "share" # share an existing volume (e.g. the data volume)
@@ -135,6 +143,8 @@ volumes:
   # n.b. import will be mounted to /import on the underlying volume
   # any of the volume modes shown above for data can be used for import
   import:
+    #labels for import pvc on creation (Valid only when mode set to selector | defaultStorageClass | dynamic | volumeClaimTemplate)
+    labels: {}
     #Set it to true when you do not want to use the subPathExpr
     disableSubPathExpr: false
     mode: "share" # share an existing volume (e.g. the data volume)
@@ -145,6 +155,8 @@ volumes:
   # n.b. licenses will be mounted to /licenses on the underlying volume
   # any of the volume modes shown above for data can be used for licenses
   licenses:
+    #labels for licenses pvc on creation (Valid only when mode set to selector | defaultStorageClass | dynamic | volumeClaimTemplate)
+    labels: {}
     #Set it to true when you do not want to use the subPathExpr
     disableSubPathExpr: false
     mode: "share" # share an existing volume (e.g. the data volume)
