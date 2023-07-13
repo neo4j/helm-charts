@@ -14,7 +14,8 @@ func CheckDatabaseConnectivity(hostPort string) error {
 	if err != nil {
 		return fmt.Errorf("connectivity cannot be established \n output = %s \n err = %v", string(output), err)
 	}
-	if !strings.Contains(string(output), "succeeded") {
+	outputString := strings.ToLower(string(output))
+	if !strings.Contains(outputString, "succeeded") && !strings.Contains(outputString, "connected") {
 		return fmt.Errorf("connectivity cannot be established. Missing 'succeeded' in output \n output = %s", string(output))
 	}
 	log.Printf("Connectivity established with Database %s!!", hostPort)
