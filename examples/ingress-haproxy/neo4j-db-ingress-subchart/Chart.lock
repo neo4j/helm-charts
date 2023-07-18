@@ -2,8 +2,14 @@ dependencies:
 - name: neo4j
   repository: https://helm.neo4j.com/neo4j
   version: 5.7.0
+- name: neo4j
+  repository: https://helm.neo4j.com/neo4j
+  version: 5.7.0
+- name: neo4j
+  repository: https://helm.neo4j.com/neo4j
+  version: 5.7.0
 - name: neo4j-database-ingress
   repository: ""
   version: 5.7.0
-digest: sha256:53d1aef42221722812db5f90c228bc1cb69e3cd20db1505257196622fcf5a8d4
-generated: "2023-06-09T13:38:11.832498+01:00"
+digest: sha256:0af888f06475ae98c8ce1c20ecf23d8d73ad28413d17e580937831047c722e5b
+generated: "2023-07-18T16:37:14.37017+01:00"

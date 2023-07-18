@@ -1,21 +1,29 @@
 neo4j-database-ingress:
-  fullnameOverride: "dbingress"
-  ingress:
-    enabled: true
-    className: "nginx"
-    hosts:
-      - host: MYIP.sslip.io
-        paths:
-          - path: /
-            pathType: Prefix
-    tls:
-      - secretName: ingress-tls
-        hosts:
-          - MYIP.sslip.io
-  neo4j:
-    serviceName: db-server1
-  service:
-    type: LoadBalancer
+  haproxy:
+    fullnameOverride: "dbingress"
+    ingress:
+      enabled: true
+      className: "nginx"
+      hosts:
+        - host: MYIP.sslip.io
+          paths:
+            - path: /
+              pathType: Prefix
+      tls:
+        - secretName: ingress-tls
+          hosts:
+            - MYIP.sslip.io
+    neo4j:
+      serviceName: db-server1
+    service:
+      type: LoadBalancer
+
+    extraEnvs:
+      - name: NEO4J_HTTP
+        value: db-server1:7474
+      - name: NEO4J_BOLT
+        value: db-server1:7687
+
 db-server1:
   disableLookups: true
   fullnameOverride:  "db-server1"

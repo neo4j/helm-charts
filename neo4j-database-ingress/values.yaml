@@ -65,12 +65,31 @@ haproxy:
         mode tcp
         option tcp-check
         server neo4j-bolt "${NEO4J_BOLT}" check port 7687 inter 5s rise 2 fall 3 maxconn 2048
+    
     backend neo4j-discovery
         mode http
         http-request use-service lua.neo4j_discovery
+
+  extraVolumeMounts:
+    - name: haproxy-lua-lib
+      mountPath: /usr/local/etc/haproxy/discovery.lua
+      subPath: discovery.lua
+    - name: haproxy-lua-lib
+      mountPath: /usr/local/etc/haproxy/http.lua
+      subPath: http.lua
+    - name: haproxy-lua-lib
+      mountPath: /usr/local/etc/haproxy/json.lua
+      subPath: json.lua
+
+  ## Additional volumes to the controller pod
+  extraVolumes:
+    - name: haproxy-lua-lib
+      configMap:
+        name: dbingress-lua-lib
+
   ## Container listener port configuration
   ## ref: https://kubernetes.io/docs/concepts/services-networking/connect-applications-service/
-  containerPorts:   # has to match hostPorts when useHostNetwork is true
+  containerPorts: # has to match hostPorts when useHostNetwork is true
     http: 8080
     stat: 1024
   ## Configure Ingress
@@ -85,12 +104,12 @@ haproxy:
 
     ## Ingress labels
     ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
-    labels: {}
+    labels: { }
 
     ## Ingress annotations
     ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-    annotations: {}
-      # kubernetes.io/ingress.class: nginx
+    annotations: { }
+    # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
 
     ## Ingress hosts
@@ -99,11 +118,11 @@ haproxy:
       - host: haproxy.domain.com
         paths:
           - path: /
-            pathType: ImplementationSpecific
+            pathType: Prefix
 
     ## Ingress TLS
     ## ref: https://kubernetes.io/docs/concepts/services-networking/ingress/#tls
-    tls: []
+    tls: [ ]
       # - secretName: chart-example-tls
-      #   hosts:
+    #   hosts:
     #     - haproxy.domain.com
