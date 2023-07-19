@@ -32,7 +32,7 @@ function push_to_gcr {
     if [ "${EDITION}" == "ENTERPRISE" ]; then
         cd neo4j-admin
         NEO4J_DOCKER_BACKUP_IMG="eu.gcr.io/${CLOUDSDK_CORE_PROJECT}/neo4j-helm-chart:backup"
-        echo "NEO4J_DOCKER_IMG = ${NEO4J_DOCKER_IMG} , NEO4J_DOCKER_BACKUP_IMG = ${NEO4J_DOCKER_BACKUP_IMG}" DISTRIBUTION = ${DISTRIBUTION}"
+        echo "NEO4J_DOCKER_IMG = ${NEO4J_DOCKER_IMG} , NEO4J_DOCKER_BACKUP_IMG = ${NEO4J_DOCKER_BACKUP_IMG} DISTRIBUTION = ${DISTRIBUTION}"
 
         docker build -t "${NEO4J_DOCKER_BACKUP_IMG}" --build-arg="IMAGE=${NEO4J_DOCKER_IMG}" --build-arg="DISTRIBUTION=${DISTRIBUTION}" --no-cache -f Dockerfile .
         docker push "${NEO4J_DOCKER_BACKUP_IMG}"
