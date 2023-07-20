@@ -8,6 +8,8 @@ set -o pipefail -o errtrace -o errexit -o nounset
 shopt -s inherit_errexit
 [[ -n "${TRACE:-}" ]] && set -o xtrace
 
+DISTRIBUTION="${1:?Missing argument. Usage: gcloud-push-docker-image <distribution name (debian | redhat)>}"
+
 function push_to_gcr {
     TARBALL="$1"
     EDITION="$2"
@@ -30,9 +32,9 @@ function push_to_gcr {
     if [ "${EDITION}" == "ENTERPRISE" ]; then
         cd neo4j-admin
         NEO4J_DOCKER_BACKUP_IMG="eu.gcr.io/${CLOUDSDK_CORE_PROJECT}/neo4j-helm-chart:backup"
-        echo "NEO4J_DOCKER_IMG = ${NEO4J_DOCKER_IMG} , NEO4J_DOCKER_BACKUP_IMG = ${NEO4J_DOCKER_BACKUP_IMG}"
+        echo "NEO4J_DOCKER_IMG = ${NEO4J_DOCKER_IMG} , NEO4J_DOCKER_BACKUP_IMG = ${NEO4J_DOCKER_BACKUP_IMG} DISTRIBUTION = ${DISTRIBUTION}"
 
-        docker build -t "${NEO4J_DOCKER_BACKUP_IMG}" --build-arg="IMAGE=${NEO4J_DOCKER_IMG}" --no-cache -f Dockerfile .
+        docker build -t "${NEO4J_DOCKER_BACKUP_IMG}" --build-arg="IMAGE=${NEO4J_DOCKER_IMG}" --build-arg="DISTRIBUTION=${DISTRIBUTION}" --no-cache -f Dockerfile .
         docker push "${NEO4J_DOCKER_BACKUP_IMG}"
         echo "##teamcity[setParameter name='env.NEO4J_DOCKER_BACKUP_IMG' value='${NEO4J_DOCKER_BACKUP_IMG}']"
         docker rmi "${NEO4J_DOCKER_BACKUP_IMG}"
@@ -40,5 +42,11 @@ function push_to_gcr {
     fi
 
 }
-push_to_gcr "$(ls | grep "neo4j-enterprise-")" "ENTERPRISE"
-push_to_gcr "$(ls | grep "neo4j-community-")" "COMMUNITY"
+
+if [ "${DISTRIBUTION}" == "redhat" ]; then
+  push_to_gcr "$(ls | grep -E "neo4j-enterprise-(.*)ubi8-docker-loadable.tar")" "ENTERPRISE"
+  push_to_gcr "$(ls | grep -E "neo4j-community-(.*)ubi8-docker-loadable.tar")" "COMMUNITY"
+else
+  push_to_gcr "$(ls | grep -E "neo4j-enterprise-(.*)-docker-loadable.tar" | grep -v "ubi8")" "ENTERPRISE"
+  push_to_gcr "$(ls | grep -E "neo4j-community-(.*)-docker-loadable.tar" | grep -v "ubi8")" "COMMUNITY"
+fi
