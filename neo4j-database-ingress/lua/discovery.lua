@@ -1,5 +1,6 @@
 local http = require('http')
 local json = require('json')
+local inspect = require('inspect')
 
 local function neo4j_discovery(applet)
     local req = http.request.parse(applet)
@@ -14,6 +15,7 @@ local function neo4j_discovery(applet)
     end
     local req_host_port = ""
     local req_port = req:get_header("x-forwarded-port")
+    core.Debug("original reqhost: "..req_host)
     -- because the js driver will provide a default port if we don't!
     if req_host:find(":", 1, true) ~= nil then
         req_host_and_port = req_host
@@ -27,7 +29,7 @@ local function neo4j_discovery(applet)
     end
     core.Info(string.format("translating discovery request with req_host_and_port : %s", req_host_and_port))
 
-    -- look for a particular backend named "neo4j-http"
+    -- Use http_backend from HAProxy config to resolve IP as DNS is unavailable to Lua script
     local http_backend = core.backends["neo4j-http"]
     if not http_backend then
         core.Alert("cannot find backend named 'neo4j-http'")
@@ -58,28 +60,35 @@ local function neo4j_discovery(applet)
         core.Debug(err)
     end
     local response_body = json.decode(res.content)
-    local proxy_response = {}
-    local ip_address_match, _ = string.gmatch(host, '([^:]+)', 2)
-    local ip = ip_address_match()
-    local port = ip_address_match()
-
-    for index, value in pairs(response_body) do
-        if not (index == "auth_config") then
-            proxy_response[index] = string.gsub(value, ip, req_host)
-            proxy_response[index] = string.gsub(proxy_response[index], "7474", req_port)
-            proxy_response[index] = string.gsub(proxy_response[index], "7687", req_port)
-            if req:get_header("x-forwarded-port") == "443" then
-                proxy_response[index] = string.gsub(proxy_response[index], "http", "https")
-                proxy_response[index] = string.gsub(proxy_response[index], "bolt", "bolt+s")
-                proxy_response[index] = string.gsub(proxy_response[index], "neo4j", "neo4j+s")
-            end
-            core.Debug(value)
-            core.Debug(proxy_response[index])
-        end
+    core.Info("Transforming Neo4j discovery response:")
+    core.Info(inspect(response_body))
+    local neo4j_scheme = "neo4j://"
+    local bolt_scheme = "bolt://"
+    local http_scheme = "http://"
+    if req:get_header("x-forwarded-port") == "443" then
+        neo4j_scheme = "neo4j+s://"
+        bolt_scheme = "bolt+s://"
+        http_scheme = "https://"
     end
+    for index, value in pairs(response_body) do
+        if(index == "bolt_routing") then
+            response_body[index] = neo4j_scheme..req_host_and_port
+        elseif(index == "dbms/cluster") then
+            response_body[index] = http_scheme..req_host_and_port.."/dbms/cluster"
+        elseif(index == "transaction") then
+            response_body[index] = http_scheme..req_host_and_port.."/db/{databaseName}/tx"
+        elseif(index == "db/cluster") then
+            response_body[index] = http_scheme..req_host_and_port.."/db/{databaseName}/cluster"
+        elseif(index == "bolt_direct") then
+            response_body[index] = bolt_scheme..req_host_and_port
+        end
+
+    end
+    core.Info("Transformed Neo4j discovery response:")
+    core.Info(inspect(response_body))
     http.response.create {
         status_code = 200,
-        content = json.encode(proxy_response)}:send(applet)
+        content = json.encode(response_body)}:send(applet)
 
 end
 core.register_service('neo4j_discovery', 'http', neo4j_discovery)

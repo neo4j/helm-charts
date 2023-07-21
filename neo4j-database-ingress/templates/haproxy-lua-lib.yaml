@@ -17,3 +17,5 @@ data:
 {{ .Files.Get "lua/vendor/json.lua" | nindent 4 }}
   http.lua: |
 {{ .Files.Get "lua/vendor/http.lua" | nindent 4 }}
+  inspect.lua: |
+{{ .Files.Get "lua/vendor/inspect.lua" | nindent 4 }}

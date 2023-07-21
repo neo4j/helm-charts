@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "haproxy.fullname" . }}-neo4j
+  namespace: {{ template "haproxy.namespace" . }}
+  labels:
+    {{- include "haproxy.labels" . | nindent 4 }}
+  annotations:
+{{- range $key, $value := .Values.service.annotations }}
+    {{ $key }}: {{ $value | quote }}
+{{- end }}
+spec:
+  type: {{ .Values.neo4j.service.type }}
+  selector:
+    app: {{ include "neo4j.serviceName" . }}
+  {{- if .Values.neo4j.service.externalTrafficPolicy }}
+  externalTrafficPolicy: {{ .Values.neo4j.service.externalTrafficPolicy }}
+  {{- end }}
+  {{- with .Values.neo4j.service.clusterIP }}
+  clusterIP: {{ . | quote}}
+  {{- end }}
+  {{- with .Values.neo4j.service.loadBalancerIP }}
+  loadBalancerIP: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.neo4j.service.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+  {{- with .Values.neo4j.service.externalIPs }}
+  externalIPs:
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+  ports:
+  - protocol: TCP
+    port: {{ .Values.neo4j.service.httpPort }}
+    targetPort: {{ .Values.neo4j.service.httpPort }}
+    name: "http"
+  - protocol: TCP
+    port: {{ .Values.neo4j.service.boltPort }}
+    targetPort: {{ .Values.neo4j.service.boltPort }}
+    name: "tcp-bolt"
+  {{- if .Values.neo4j.service.additionalPorts }}
+  {{- with .Values.neo4j.service.additionalPorts }}
+  {{- range $key, $port := . }}
+
+  - name: {{ $key }}
+    protocol: TCP
+    port: {{ $port }}
+    targetPort: {{ $key }}
+  {{- end }}
+  {{- end }}
+  {{- end }}

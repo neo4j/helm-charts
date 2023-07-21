@@ -1,34 +1,31 @@
+neo4jName: &neo4jName "ingress-haproxy"
 neo4j-database-ingress:
-  haproxy:
-    fullnameOverride: "dbingress"
-    ingress:
-      enabled: true
-      className: "nginx"
-      hosts:
-        - host: MYIP.sslip.io
-          paths:
-            - path: /
-              pathType: Prefix
-      tls:
-        - secretName: ingress-tls
-          hosts:
-            - MYIP.sslip.io
-    neo4j:
-      serviceName: db-server1
+  fullnameOverride: "dbingress"
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    hosts:
+      - host: MYIP.sslip.io
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: ingress-tls
+        hosts:
+          - MYIP.sslip.io
+  neo4j:
     service:
-      type: LoadBalancer
-
-    extraEnvs:
-      - name: NEO4J_HTTP
-        value: db-server1:7474
-      - name: NEO4J_BOLT
-        value: db-server1:7687
+      name: db-server1
+  service:
+    type: LoadBalancer
 
 db-server1:
   disableLookups: true
   fullnameOverride:  "db-server1"
   neo4j:
-    name: ingress-haproxy
+    name: *neo4jName
     acceptLicenseAgreement: "yes"
     edition: enterprise
     minimumClusterSize: 3
@@ -43,7 +40,7 @@ db-server2:
   disableLookups: true
   fullnameOverride: "db-server2"
   neo4j:
-    name: ingress-haproxy
+    name: *neo4jName
     acceptLicenseAgreement: "yes"
     edition: enterprise
     minimumClusterSize: 3
@@ -58,7 +55,7 @@ db-server3:
   disableLookups: true
   fullnameOverride: "db-server3"
   neo4j:
-    name: ingress-haproxy
+    name: *neo4jName
     acceptLicenseAgreement: "yes"
     edition: enterprise
     minimumClusterSize: 3

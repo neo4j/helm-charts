@@ -21,8 +21,3 @@ maintainers:
     email: harshit.singhvi@neotechnology.com
   - name: ojhughes
     email: oliver.hughes@neotechnology.com
-dependencies:
-  - name: haproxy
-    alias: haproxy
-    version: 1.19.0
-    repository: https://haproxytech.github.io/helm-charts

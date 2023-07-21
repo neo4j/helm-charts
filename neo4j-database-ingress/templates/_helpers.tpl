@@ -99,4 +99,12 @@ Encode an imagePullSecret string.
 {{- printf "{\"auths\": {\"%s\": {\"auth\": \"%s\"}}}" .Values.imageCredentials.registry (printf "%s:%s" .Values.imageCredentials.username .Values.imageCredentials.password | b64enc) | b64enc }}
 {{- end }}
 
+{{- define "neo4j.serviceName" -}}
+  {{- if eq (len (trim $.Values.neo4j.service.name)) 0 -}}
+    {{- fail (printf "neo4j.service.name is required") -}}
+  {{- else -}}
+    {{ .Values.neo4j.service.name }}
+  {{- end -}}
+{{- end -}}
+
 {{/* vim: set filetype=mustache: */}}
