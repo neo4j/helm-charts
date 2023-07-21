@@ -22,7 +22,7 @@ neo4j:
   successfulJobsHistoryLimit:
   # default is 1
   failedJobsHistoryLimit:
-  # default is 1
+  # default is 3
   backoffLimit:
   #add labels if required
   labels: {}
