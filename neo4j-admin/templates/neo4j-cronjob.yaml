@@ -77,6 +77,8 @@ spec:
                   value: "{{ .Values.consistencyCheck.enable | default false }}"
                 - name: CONSISTENCY_CHECK_INDEXES
                   value: "{{ .Values.consistencyCheck.checkIndexes | default false }}"
+                - name: CONSISTENCY_CHECK_DATABASE
+                  value: {{ .Values.consistencyCheck.database | default .Values.backup.database | trim }}
                 - name: CONSISTENCY_CHECK_GRAPH
                   value: "{{ .Values.consistencyCheck.checkGraph | default false }}"
                 - name: CONSISTENCY_CHECK_COUNTS

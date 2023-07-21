@@ -22,14 +22,14 @@ func CheckDatabaseConnectivity(hostPort string) error {
 }
 
 // PerformBackup performs the backup operation and returns the generated backup file name
-func PerformBackup(address string) (string, error) {
-	flags := getBackupCommandFlags(address)
+func PerformBackup(address string, database string) (string, error) {
+	flags := getBackupCommandFlags(address, database)
 	log.Printf("Printing backup flags %v", flags)
 	output, err := exec.Command("neo4j-admin", flags...).CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("Backup Failed !! output = %s \n err = %v", string(output), err)
+		return "", fmt.Errorf("Backup Failed for database %s !! output = %s \n err = %v", database, string(output), err)
 	}
-	log.Printf("Backup Completed !!")
+	log.Printf("Backup Completed for database %s !!", database)
 	fileName, err := retrieveBackupFileName(string(output))
 	if err != nil {
 		return "", err
@@ -38,12 +38,12 @@ func PerformBackup(address string) (string, error) {
 }
 
 // PerformConsistencyCheck performs the consistency check on the backup taken and returns the generated report tar name
-func PerformConsistencyCheck(backupFileName string) (string, error) {
-	flags := getConsistencyCheckCommandFlags(backupFileName)
+func PerformConsistencyCheck(backupFileName string, database string) (string, error) {
+	flags := getConsistencyCheckCommandFlags(backupFileName, database)
 	log.Printf("Printing consistency check flags %v", flags)
 	output, err := exec.Command("neo4j-admin", flags...).CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("Consistency Check Failed !! \n output = %s \n err = %v", string(output), err)
+		return "", fmt.Errorf("Consistency Check Failed for database %s!! \n output = %s \n err = %v", database, string(output), err)
 	}
 	log.Printf("Consistency Check Completed. Report Name %s !!", string(output))
 
@@ -52,9 +52,9 @@ func PerformConsistencyCheck(backupFileName string) (string, error) {
 	log.Printf("tarfileName %s directoryName %s", tarFileName, directoryName)
 	output, err = exec.Command("tar", "-czvf", tarFileName, directoryName, "--absolute-names").CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("Unable to create a tar archive of consistency check report !! \n output = %s \n err = %v", string(output), err)
+		return "", fmt.Errorf("Unable to create a tar archive of consistency check report for database %s !! \n output = %s \n err = %v", database, string(output), err)
 	}
-	log.Printf("Consistency Check Report tar archive created at %s !!", tarFileName)
+	log.Printf("Consistency Check Report tar archive created for database %s at %s !!", database, tarFileName)
 
 	return fmt.Sprintf("%s.report.tar.gz", backupFileName), nil
 }
