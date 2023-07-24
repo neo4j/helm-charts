@@ -12,6 +12,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.33.1
 	golang.org/x/net v0.8.0
 	google.golang.org/api v0.114.0
+	k8s.io/utils v0.0.0-20230711102312-30195339c3c7
 )
 
 require (

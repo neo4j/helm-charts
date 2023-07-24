@@ -49,6 +49,7 @@ type Backup struct {
 
 type ConsistencyCheck struct {
 	Enable              bool   `yaml:"enable" default:"false"`
+	Database            string `yaml:"database,omitempty"`
 	CheckIndexes        bool   `yaml:"checkIndexes" default:"true"`
 	CheckGraph          bool   `yaml:"checkGraph" default:"true"`
 	CheckCounts         bool   `yaml:"checkCounts" default:"true"`

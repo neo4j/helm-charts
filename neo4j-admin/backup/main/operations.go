@@ -6,8 +6,10 @@ import (
 	"github.com/neo4j/helm-charts/neo4j-admin/backup/azure"
 	gcp "github.com/neo4j/helm-charts/neo4j-admin/backup/gcp"
 	neo4jAdmin "github.com/neo4j/helm-charts/neo4j-admin/backup/neo4j-admin"
+	"k8s.io/utils/strings/slices"
 	"log"
 	"os"
+	"strings"
 )
 
 func awsOperations() {
@@ -18,18 +20,18 @@ func awsOperations() {
 	err = awsClient.CheckBucketAccess(bucketName)
 	handleError(err)
 
-	backupFileName, consistencyCheckReport, err := backupOperations()
+	backupFileNames, consistencyCheckReports, err := backupOperations()
 	handleError(err)
 
-	err = awsClient.UploadFile(backupFileName, "/backups", bucketName)
+	err = awsClient.UploadFile(backupFileNames, bucketName)
 	handleError(err)
 
 	enableConsistencyCheck := os.Getenv("CONSISTENCY_CHECK_ENABLE")
 	if enableConsistencyCheck == "true" {
-		err = awsClient.UploadFile(consistencyCheckReport, "/backups", bucketName)
+		err = awsClient.UploadFile(consistencyCheckReports, bucketName)
 		handleError(err)
 	}
-	err = deleteBackupFiles(backupFileName, consistencyCheckReport)
+	err = deleteBackupFiles(backupFileNames, consistencyCheckReports)
 	handleError(err)
 }
 
@@ -41,18 +43,18 @@ func gcpOperations() {
 	err = gcpClient.CheckBucketAccess(bucketName)
 	handleError(err)
 
-	backupFileName, consistencyCheckReport, err := backupOperations()
+	backupFileNames, consistencyCheckReports, err := backupOperations()
 	handleError(err)
 
-	err = gcpClient.UploadFile(backupFileName, "/backups", bucketName)
+	err = gcpClient.UploadFile(backupFileNames, bucketName)
 	handleError(err)
 
 	enableConsistencyCheck := os.Getenv("CONSISTENCY_CHECK_ENABLE")
 	if enableConsistencyCheck == "true" {
-		err = gcpClient.UploadFile(consistencyCheckReport, "/backups", bucketName)
+		err = gcpClient.UploadFile(consistencyCheckReports, bucketName)
 		handleError(err)
 	}
-	err = deleteBackupFiles(backupFileName, consistencyCheckReport)
+	err = deleteBackupFiles(backupFileNames, consistencyCheckReports)
 	handleError(err)
 }
 
@@ -64,42 +66,50 @@ func azureOperations() {
 	err = azureClient.CheckContainerAccess(containerName)
 	handleError(err)
 
-	backupFileName, consistencyCheckReport, err := backupOperations()
+	backupFileNames, consistencyCheckReports, err := backupOperations()
 	handleError(err)
 
-	err = azureClient.UploadFile(backupFileName, "/backups", containerName)
+	err = azureClient.UploadFile(backupFileNames, containerName)
 	handleError(err)
 
 	enableConsistencyCheck := os.Getenv("CONSISTENCY_CHECK_ENABLE")
 	if enableConsistencyCheck == "true" {
-		err = azureClient.UploadFile(consistencyCheckReport, "/backups", containerName)
+		err = azureClient.UploadFile(consistencyCheckReports, containerName)
 		handleError(err)
 	}
-	err = deleteBackupFiles(backupFileName, consistencyCheckReport)
+	err = deleteBackupFiles(backupFileNames, consistencyCheckReports)
 	handleError(err)
 }
 
-func backupOperations() (string, string, error) {
+func backupOperations() ([]string, []string, error) {
 
 	address, err := generateAddress()
 	if err != nil {
-		return "", "", err
+		return nil, nil, err
 	}
-	fileName, err := neo4jAdmin.PerformBackup(address)
-	if err != nil {
-		return "", "", err
-	}
-	log.Printf("Backup File Name is %s", fileName)
-
-	enableConsistencyCheck := os.Getenv("CONSISTENCY_CHECK_ENABLE")
-	var reportArchiveName string
-	if enableConsistencyCheck == "true" {
-		reportArchiveName, err = neo4jAdmin.PerformConsistencyCheck(fileName)
+	databases := strings.Split(os.Getenv("DATABASE"), ",")
+	consistencyCheckDBs := strings.Split(os.Getenv("CONSISTENCY_CHECK_DATABASE"), ",")
+	var fileNames, consistencyCheckReports []string
+	for _, database := range databases {
+		fileName, err := neo4jAdmin.PerformBackup(address, database)
 		if err != nil {
-			return "", "", err
+			return nil, nil, err
+		}
+		log.Printf("Backup File Name is %s", fileName)
+		fileNames = append(fileNames, fileName)
+
+		if slices.Contains(consistencyCheckDBs, database) {
+			if os.Getenv("CONSISTENCY_CHECK_ENABLE") == "true" {
+				reportArchiveName, err := neo4jAdmin.PerformConsistencyCheck(fileName, database)
+				if err != nil {
+					return nil, nil, err
+				}
+				consistencyCheckReports = append(consistencyCheckReports, reportArchiveName)
+			}
 		}
 	}
-	return fileName, reportArchiveName, nil
+
+	return fileNames, consistencyCheckReports, nil
 }
 
 // startupOperations includes the following
@@ -136,13 +146,15 @@ func handleError(err error) {
 	}
 }
 
-func deleteBackupFiles(backupFileName, consistencyCheckReportName string) error {
-	log.Printf("Deleting file /backups/%s", backupFileName)
-	err := os.Remove(fmt.Sprintf("/backups/%s", backupFileName))
-	if err != nil {
-		return err
+func deleteBackupFiles(backupFileNames, consistencyCheckReports []string) error {
+	for _, backupFileName := range backupFileNames {
+		log.Printf("Deleting file /backups/%s", backupFileName)
+		err := os.Remove(fmt.Sprintf("/backups/%s", backupFileName))
+		if err != nil {
+			return err
+		}
 	}
-	if len(consistencyCheckReportName) != 0 {
+	for _, consistencyCheckReportName := range consistencyCheckReports {
 		log.Printf("Deleting file /backups/%s", consistencyCheckReportName)
 		err := os.Remove(fmt.Sprintf("/backups/%s", consistencyCheckReportName))
 		if err != nil {

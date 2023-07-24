@@ -34,25 +34,28 @@ func (a *azureClient) CheckContainerAccess(containerName string) error {
 }
 
 // UploadFile uploads the file present at the provided location to the azure container
-func (a *azureClient) UploadFile(fileName string, location string, containerName string) error {
+func (a *azureClient) UploadFile(fileNames []string, containerName string) error {
+	location := "/backups"
+	for _, fileName := range fileNames {
 
-	filePath := fmt.Sprintf("%s/%s", location, fileName)
-	file, err := os.Open(filePath)
-	if err != nil {
-		return fmt.Errorf("Couldn't open file %v to upload. Here's why: %v\n", filePath, err)
-	}
-	defer file.Close()
+		filePath := fmt.Sprintf("%s/%s", location, fileName)
+		file, err := os.Open(filePath)
+		if err != nil {
+			return fmt.Errorf("Couldn't open file %v to upload. Here's why: %v\n", filePath, err)
+		}
 
-	client, err := azblob.NewClientWithSharedKeyCredential(a.serviceURL, a.credential, nil)
-	if err != nil {
-		return fmt.Errorf("error while creating azblob client \n err = %v", err)
-	}
+		client, err := azblob.NewClientWithSharedKeyCredential(a.serviceURL, a.credential, nil)
+		if err != nil {
+			return fmt.Errorf("error while creating azblob client \n err = %v", err)
+		}
 
-	log.Printf("Starting upload of file %s", filePath)
-	_, err = client.UploadFile(context.TODO(), containerName, fileName, file, nil)
-	if err != nil {
-		return fmt.Errorf("Couldn't upload file %v to %v Here's why: %v\n", filePath, containerName, err)
+		log.Printf("Starting upload of file %s", filePath)
+		_, err = client.UploadFile(context.TODO(), containerName, fileName, file, nil)
+		if err != nil {
+			return fmt.Errorf("Couldn't upload file %v to %v Here's why: %v\n", filePath, containerName, err)
+		}
+		log.Printf("File %s uploaded to azure container %s !!", fileName, containerName)
+		file.Close()
 	}
-	log.Printf("File %s uploaded to azure container %s !!", fileName, containerName)
 	return nil
 }

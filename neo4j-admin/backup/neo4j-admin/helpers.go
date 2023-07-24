@@ -8,7 +8,7 @@ import (
 )
 
 // getBackupCommandFlags returns a slice of string containing all the flags to be passed with the neo4j-admin backup command
-func getBackupCommandFlags(address string) []string {
+func getBackupCommandFlags(address string, database string) []string {
 	flags := []string{"database", "backup"}
 	flags = append(flags, fmt.Sprintf("--from=%s", address))
 	flags = append(flags, fmt.Sprintf("--include-metadata=%s", os.Getenv("INCLUDE_METADATA")))
@@ -23,7 +23,7 @@ func getBackupCommandFlags(address string) []string {
 	if os.Getenv("VERBOSE") == "true" {
 		flags = append(flags, "--verbose")
 	}
-	flags = append(flags, os.Getenv("DATABASE"))
+	flags = append(flags, database)
 
 	return flags
 }
@@ -38,7 +38,7 @@ func getBackupCommandFlags(address string) []string {
 //	maxOffHeapMemory: ""
 //	threads: ""
 //	verbose: true
-func getConsistencyCheckCommandFlags(backupFileName string) []string {
+func getConsistencyCheckCommandFlags(backupFileName string, database string) []string {
 	flags := []string{"database", "check"}
 
 	flags = append(flags, fmt.Sprintf("--check-indexes=%s", os.Getenv("CONSISTENCY_CHECK_INDEXES")))
@@ -57,7 +57,7 @@ func getConsistencyCheckCommandFlags(backupFileName string) []string {
 		flags = append(flags, "--verbose")
 	}
 	//flags = append(flags, "--expand-commands")
-	flags = append(flags, os.Getenv("DATABASE"))
+	flags = append(flags, database)
 
 	return flags
 }

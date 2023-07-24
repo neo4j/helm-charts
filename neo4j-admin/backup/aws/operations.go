@@ -29,39 +29,40 @@ func (a *awsClient) CheckBucketAccess(bucketName string) error {
 }
 
 // UploadFile uploads the file present at the provided location to the s3 bucket
-func (a *awsClient) UploadFile(fileName string, location string, bucketName string) error {
+func (a *awsClient) UploadFile(fileNames []string, bucketName string) error {
 
-	filePath := fmt.Sprintf("%s/%s", location, fileName)
-	yes, err := common.IsFileBigger(filePath)
-	if err != nil {
-		return err
+	location := "/backups"
+	for _, fileName := range fileNames {
+
+		filePath := fmt.Sprintf("%s/%s", location, fileName)
+		yes, err := common.IsFileBigger(filePath)
+		if err != nil {
+			return err
+		}
+		//use UploadLargeObject if file size is more than 4GB
+		if yes {
+			return a.UploadLargeObject(fileName, location, bucketName)
+		}
+
+		file, err := os.Open(filePath)
+		if err != nil {
+			return fmt.Errorf("Couldn't open file %v to upload. Here's why: %v\n", filePath, err)
+		}
+
+		s3Client := s3.NewFromConfig(*a.cfg)
+
+		log.Printf("Starting upload of file %s", filePath)
+		_, err = s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
+			Bucket: aws.String(bucketName),
+			Key:    aws.String(fileName),
+			Body:   file,
+		})
+		if err != nil {
+			return fmt.Errorf("Couldn't upload file %v to %v:%v. Here's why: %v\n", filePath, bucketName, fileName, err)
+		}
+		file.Close()
+		log.Printf("File %s uploaded to s3 bucket %s !!", fileName, bucketName)
 	}
-
-	//use UploadLargeObject if file size is more than 4GB
-	if yes {
-		return a.UploadLargeObject(fileName, location, bucketName)
-	}
-
-	file, err := os.Open(filePath)
-	if err != nil {
-		return fmt.Errorf("Couldn't open file %v to upload. Here's why: %v\n", filePath, err)
-	}
-
-	defer file.Close()
-
-	s3Client := s3.NewFromConfig(*a.cfg)
-
-	log.Printf("Starting upload of file %s", filePath)
-	_, err = s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
-		Bucket: aws.String(bucketName),
-		Key:    aws.String(fileName),
-		Body:   file,
-	})
-	if err != nil {
-		return fmt.Errorf("Couldn't upload file %v to %v:%v. Here's why: %v\n", filePath, bucketName, fileName, err)
-	}
-	log.Printf("File %s uploaded to s3 bucket %s !!", fileName, bucketName)
-
 	return nil
 }
 

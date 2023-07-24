@@ -22,7 +22,7 @@ neo4j:
   successfulJobsHistoryLimit:
   # default is 1
   failedJobsHistoryLimit:
-  # default is 1
+  # default is 3
   backoffLimit:
   #add labels if required
   labels: {}
@@ -54,7 +54,8 @@ backup:
   #default value is cluster.local
   databaseClusterDomain: ""
 
-  #name of the database to backup ex: neo4j (command separated databases names WILL NOT WORK)
+  #name of the database to backup ex: neo4j or neo4j,system (You can provide command separated database names)
+  # In case of comma separated databases failure of any single database will lead to failure of complete operation
   database: ""
   # cloudProvider can be either gcp, aws, or azure
   cloudProvider: ""
@@ -105,6 +106,10 @@ consistencyCheck:
   checkGraph: true
   checkCounts: true
   checkPropertyOwners: true
+  #The database name for which consistency check needs to be done.
+  #Defaults to the backup.database values if left empty
+  #The database name here should match with one of the database names present in backup.database. If not , the consistency check will be ignored
+  database: ""
   maxOffHeapMemory: ""
   threads: ""
   verbose: true
