@@ -89,6 +89,7 @@ func backupOperations() ([]string, []string, error) {
 	}
 	databases := strings.Split(os.Getenv("DATABASE"), ",")
 	consistencyCheckDBs := strings.Split(os.Getenv("CONSISTENCY_CHECK_DATABASE"), ",")
+	consistencyCheckEnabled := os.Getenv("CONSISTENCY_CHECK_ENABLE")
 	var fileNames, consistencyCheckReports []string
 	for _, database := range databases {
 		fileName, err := neo4jAdmin.PerformBackup(address, database)
@@ -98,14 +99,12 @@ func backupOperations() ([]string, []string, error) {
 		log.Printf("Backup File Name is %s", fileName)
 		fileNames = append(fileNames, fileName)
 
-		if slices.Contains(consistencyCheckDBs, database) {
-			if os.Getenv("CONSISTENCY_CHECK_ENABLE") == "true" {
-				reportArchiveName, err := neo4jAdmin.PerformConsistencyCheck(fileName, database)
-				if err != nil {
-					return nil, nil, err
-				}
-				consistencyCheckReports = append(consistencyCheckReports, reportArchiveName)
+		if slices.Contains(consistencyCheckDBs, database) && consistencyCheckEnabled == "true" {
+			reportArchiveName, err := neo4jAdmin.PerformConsistencyCheck(fileName, database)
+			if err != nil {
+				return nil, nil, err
 			}
+			consistencyCheckReports = append(consistencyCheckReports, reportArchiveName)
 		}
 	}
 
