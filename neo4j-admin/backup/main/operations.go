@@ -8,6 +8,7 @@ import (
 	neo4jAdmin "github.com/neo4j/helm-charts/neo4j-admin/backup/neo4j-admin"
 	"log"
 	"os"
+	"strings"
 )
 
 func awsOperations() {
@@ -76,12 +77,16 @@ func backupOperations() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	fileNames, err := neo4jAdmin.PerformBackup(address)
-	if err != nil {
-		return nil, err
+	databases := strings.Split(os.Getenv("DATABASE"), ",")
+	var fileNames []string
+	for _, database := range databases {
+		files, err := neo4jAdmin.PerformBackup(address, database)
+		if err != nil {
+			return nil, err
+		}
+		fileNames = append(fileNames, files...)
+		log.Printf("Backup File Names are %v", files)
 	}
-	log.Printf("Backup File Names are %v", fileNames)
-
 	return fileNames, nil
 }
 

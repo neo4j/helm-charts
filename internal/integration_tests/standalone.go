@@ -27,6 +27,7 @@ import (
 	"math/big"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -574,17 +575,15 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 	bucketName := model.BucketName
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
 	helmValues := model.DefaultNeo4jBackupValues
-	helmValues.Backup = model.Backup{
-		BucketName:               bucketName,
-		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", standaloneReleaseName.String()),
-		DatabaseNamespace:        string(standaloneReleaseName.Namespace()),
-		Database:                 "neo4j",
-		CloudProvider:            "aws",
-		SecretName:               "awscred",
-		SecretKeyName:            "credentials",
-		Verbose:                  true,
-		Type:                     "FULL",
-	}
+	helmValues.Backup.BucketName = bucketName
+	helmValues.Backup.DatabaseAdminServiceName = fmt.Sprintf("%s-admin", standaloneReleaseName.String())
+	helmValues.Backup.DatabaseNamespace = string(standaloneReleaseName.Namespace())
+	helmValues.Backup.Database = "neo4j,system"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.SecretName = "awscred"
+	helmValues.Backup.SecretKeyName = "credentials"
+	helmValues.Backup.Verbose = true
+	helmValues.Backup.Type = "FULL"
 	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
 
@@ -603,7 +602,10 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
 			assert.NoError(t, err, "error while getting aws backup pod logs")
 			assert.NotNil(t, out, "aws backup logs cannot be retrieved")
-			assert.Contains(t, string(out), fmt.Sprintf(".backup.tar.gz uploaded to s3 bucket %s", bucketName))
+			assert.Contains(t, string(out), "Backup Completed for database system !!")
+			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
+			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.tar.gz uploaded to s3 bucket"), string(out))
+			assert.Regexp(t, regexp.MustCompile("system(.*)backup.tar.gz uploaded to s3 bucket"), string(out))
 			break
 		}
 	}
@@ -628,17 +630,15 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 	bucketName := model.BucketName
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
 	helmValues := model.DefaultNeo4jBackupValues
-	helmValues.Backup = model.Backup{
-		BucketName:               bucketName,
-		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", standaloneReleaseName.String()),
-		DatabaseNamespace:        string(standaloneReleaseName.Namespace()),
-		Database:                 "neo4j",
-		CloudProvider:            "azure",
-		SecretName:               "azurecred",
-		SecretKeyName:            "credentials",
-		Verbose:                  true,
-		Type:                     "FULL",
-	}
+	helmValues.Backup.BucketName = bucketName
+	helmValues.Backup.DatabaseAdminServiceName = fmt.Sprintf("%s-admin", standaloneReleaseName.String())
+	helmValues.Backup.DatabaseNamespace = string(standaloneReleaseName.Namespace())
+	helmValues.Backup.Database = "system"
+	helmValues.Backup.CloudProvider = "azure"
+	helmValues.Backup.SecretName = "azurecred"
+	helmValues.Backup.SecretKeyName = "credentials"
+	helmValues.Backup.Verbose = true
+	helmValues.Backup.Type = "FULL"
 	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
 
@@ -657,7 +657,8 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
 			assert.NoError(t, err, "error while getting azure backup pod logs")
 			assert.NotNil(t, out, "azure backup logs cannot be retrieved")
-			assert.Contains(t, string(out), fmt.Sprintf(".backup.tar.gz uploaded to azure container %s", bucketName))
+			assert.Contains(t, string(out), "Backup Completed for database system !!")
+			assert.Regexp(t, regexp.MustCompile("system(.*)backup.tar.gz uploaded to azure container"), string(out))
 			break
 		}
 	}
@@ -682,17 +683,15 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 	bucketName := model.BucketName
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
 	helmValues := model.DefaultNeo4jBackupValues
-	helmValues.Backup = model.Backup{
-		BucketName:               bucketName,
-		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", standaloneReleaseName.String()),
-		DatabaseNamespace:        string(standaloneReleaseName.Namespace()),
-		Database:                 "neo4j",
-		CloudProvider:            "gcp",
-		SecretName:               "gcpcred",
-		SecretKeyName:            "credentials",
-		Verbose:                  true,
-		Type:                     "FULL",
-	}
+	helmValues.Backup.BucketName = bucketName
+	helmValues.Backup.DatabaseAdminServiceName = fmt.Sprintf("%s-admin", standaloneReleaseName.String())
+	helmValues.Backup.DatabaseNamespace = string(standaloneReleaseName.Namespace())
+	helmValues.Backup.Database = "neo4j"
+	helmValues.Backup.CloudProvider = "gcp"
+	helmValues.Backup.SecretName = "gcpcred"
+	helmValues.Backup.SecretKeyName = "credentials"
+	helmValues.Backup.Verbose = true
+	helmValues.Backup.Type = "FULL"
 	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
 
@@ -711,7 +710,8 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
 			assert.NoError(t, err, "error while getting gcp backup pod logs")
 			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
-			assert.Contains(t, string(out), fmt.Sprintf(".backup.tar.gz uploaded to GCS bucket %s", bucketName))
+			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
+			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.tar.gz uploaded to GCS bucket"), string(out))
 			break
 		}
 	}

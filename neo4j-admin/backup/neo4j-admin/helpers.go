@@ -20,7 +20,7 @@ import (
 // parallelRecovery: false
 // pageCache: ""
 // verbose: true
-func getBackupCommandFlags(address string) []string {
+func getBackupCommandFlags(address string, database string) []string {
 	flags := []string{"backup"}
 	flags = append(flags, fmt.Sprintf("--from=%s", address))
 	flags = append(flags, fmt.Sprintf("--fallback-to-full=%s", os.Getenv("FALLBACK_TO_FULL")))
@@ -33,7 +33,7 @@ func getBackupCommandFlags(address string) []string {
 	flags = append(flags, fmt.Sprintf("--parallel-recovery=%s", os.Getenv("PARALLEL_RECOVERY")))
 	flags = append(flags, fmt.Sprintf("--backup-dir=%s", "/backups"))
 	flags = append(flags, fmt.Sprintf("--report-dir=%s", "/backups"))
-	flags = append(flags, fmt.Sprintf("--database=%s", os.Getenv("DATABASE")))
+	flags = append(flags, fmt.Sprintf("--database=%s", database))
 	if len(strings.TrimSpace(os.Getenv("PAGE_CACHE"))) > 0 {
 		flags = append(flags, fmt.Sprintf("--pagecache=%s", os.Getenv("PAGE_CACHE")))
 	}
