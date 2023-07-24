@@ -55,6 +55,7 @@ backup:
   databaseClusterDomain: ""
 
   #name of the database to backup ex: neo4j or neo4j,system (You can provide command separated database names)
+  # In case of comma separated databases failure of any single database will lead to failure of complete operation
   database: ""
   # cloudProvider can be either gcp, aws, or azure
   cloudProvider: ""
