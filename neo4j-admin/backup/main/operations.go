@@ -90,6 +90,7 @@ func backupOperations() ([]string, []string, error) {
 	databases := strings.Split(os.Getenv("DATABASE"), ",")
 	consistencyCheckDBs := strings.Split(os.Getenv("CONSISTENCY_CHECK_DATABASE"), ",")
 	consistencyCheckEnabled := os.Getenv("CONSISTENCY_CHECK_ENABLE")
+
 	var fileNames, consistencyCheckReports []string
 	for _, database := range databases {
 		fileName, err := neo4jAdmin.PerformBackup(address, database)
