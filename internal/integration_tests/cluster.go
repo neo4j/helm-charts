@@ -47,8 +47,7 @@ func removeLabelFromNodes(t *testing.T) error {
 	}
 
 	for _, node := range nodesList.Items {
-		labelName := "testLabel-"
-		err = run(t, "kubectl", "label", "nodes", node.ObjectMeta.Name, labelName)
+		err = run(t, "kubectl", "label", "nodes", node.ObjectMeta.Name, "testLabel-")
 		if err != nil {
 			errors = multierror.Append(errors, err)
 			t.Logf("Node Label removal failed for %s: %v", node.ObjectMeta.Name, err)
