@@ -10,6 +10,7 @@ type Neo4jBackupValues struct {
 	ServiceAccountName string                 `yaml:"serviceAccountName"`
 	TempVolume         map[string]interface{} `yaml:"tempVolume"`
 	SecurityContext    SecurityContext        `yaml:"securityContext"`
+	NodeSelector       map[string]string      `yaml:"nodeSelector,omitempty"`
 }
 
 type Neo4jBackupNeo4j struct {
