@@ -3,7 +3,6 @@ package neo4j_admin
 import (
 	"fmt"
 	"log"
-	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -25,17 +24,18 @@ func CheckDatabaseConnectivity(hostPort string) error {
 }
 
 // PerformBackup performs the backup operation and returns the generated backup file name
-func PerformBackup(address string) ([]string, error) {
-	flags := getBackupCommandFlags(address)
+func PerformBackup(address string, database string) ([]string, error) {
+	flags := getBackupCommandFlags(address, database)
 	log.Printf("Printing backup flags %v", flags)
 	output, err := exec.Command("neo4j-admin", flags...).CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("Backup Failed !! output = %s \n err = %v", string(output), err)
+		return nil, fmt.Errorf("Backup Failed for database %s !! output = %s \n err = %v", database, string(output), err)
 	}
-	log.Printf("Backup Completed !!")
-	dbNames := []string{os.Getenv("DATABASE")}
-	// if the database contains a "*" parse the output to get the list of databases whose backup is taken
-	if strings.Contains(os.Getenv("DATABASE"), "*") || strings.Contains(os.Getenv("DATABASE"), "?") {
+	log.Printf("Backup Completed for database %s !!", database)
+
+	dbNames := []string{database}
+	// if the database contains a "*" or "?" parse the output to get the list of databases whose backup is taken
+	if strings.Contains(database, "*") || strings.Contains(database, "?") {
 		dbNames, err = retrieveBackedUpDBNames(string(output))
 		if err != nil {
 			return nil, err
@@ -59,10 +59,10 @@ func createTarsForGeneratedBackup(dbNames []string) ([]string, error) {
 		output, err := exec.Command("tar", "-czvf", tarFilePath, fmt.Sprintf("/backups/%s", dbName), "--absolute-names").CombinedOutput()
 		if err != nil {
 			log.Printf("tarFilePath %s dbName %s", tarFilePath, dbName)
-			return nil, fmt.Errorf("Unable to create a tar archive of backup generated !! \n output = %s \n err = %v", string(output), err)
+			return nil, fmt.Errorf("Unable to create a tar archive of backup generated for database %s !! \n output = %s \n err = %v", dbName, string(output), err)
 		}
 		fileNames = append(fileNames, tarFileName)
-		log.Printf("Backup tar archive created at %s !!", tarFilePath)
+		log.Printf("Backup tar archive created at %s for database %s !!", tarFilePath, dbName)
 	}
 	return fileNames, nil
 }
