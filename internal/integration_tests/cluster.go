@@ -61,7 +61,10 @@ func removeLabelFromNodes(t *testing.T) error {
 func clusterTests(clusterRelease model.ReleaseName) ([]SubTest, error) {
 
 	subTests := []SubTest{
-
+		{name: "Install Backup Helm Chart For AWS", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, InstallNeo4jBackupAWSHelmChartWithNodeSelector(t, clusterRelease), "Backup to AWS should succeed")
+		}},
 		{name: "Check Cluster Core Logs Format", test: func(t *testing.T) {
 			t.Parallel()
 			assert.NoError(t, CheckLogsFormat(t, clusterRelease), "Cluster core logs format should be in JSON")
@@ -88,9 +91,6 @@ func clusterTests(clusterRelease model.ReleaseName) ([]SubTest, error) {
 		}},
 		{name: "Database Creation Tests", test: func(t *testing.T) {
 			assert.NoError(t, databaseCreationTests(t, clusterRelease, "customers"), "Creates \"customer\" database and checks for its existence")
-		}},
-		{name: "Install Backup Helm Chart For AWS", test: func(t *testing.T) {
-			assert.NoError(t, InstallNeo4jBackupAWSHelmChartWithNodeSelector(t, clusterRelease), "Backup to AWS should succeed")
 		}},
 	}
 	return subTests, nil
