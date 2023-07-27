@@ -1217,10 +1217,14 @@ func TestImagePullSecretWithLookupsDisabledWithDryRun(t *testing.T) {
 			helmValues = model.DefaultEnterpriseValues
 		}
 		helmValues.DisableLookups = true
-		helmValues.Image.ImagePullSecrets = []string{"demo"}
-		_, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
-		if !assert.NoError(t, err) {
-			return
+		imagePullSecretName := "demo"
+		helmValues.Image.ImagePullSecrets = []string{imagePullSecretName}
+		manifests, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		assert.NoError(t, err, "error seen while testing helm chart with imagePullSecrets with Disabled Lookups")
+		secrets := manifests.OfType(&v1.Secret{})
+		for _, secret := range secrets {
+			secretName := secret.(*v1.Secret).Name
+			assert.NotEqual(t, secretName, imagePullSecretName, fmt.Sprintf("Found a secret %s matching with imagePullSecret %s", secretName, imagePullSecretName))
 		}
 	})
 }
