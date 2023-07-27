@@ -1,5 +1,6 @@
 {{- template "neo4j.backup.checkDatabaseIPAndServiceName" . -}}
 {{- template "neo4j.backup.checkIfSecretExistsOrNot" . -}}
+{{- template "neo4j.checkNodeSelectorLabels" . -}}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -31,6 +32,7 @@ spec:
           {{- end }}
           restartPolicy: Never
           securityContext: {{ .Values.securityContext | toYaml  | nindent 12 }}
+          {{- include "neo4j.nodeSelector" . }}
           containers:
             - name: graph-backup
               image: {{ .Values.neo4j.image }}:{{ .Values.neo4j.imageTag }}

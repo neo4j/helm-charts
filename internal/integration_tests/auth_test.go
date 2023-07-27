@@ -244,3 +244,46 @@ func TestBackupInvalidSecretKeyName(t *testing.T) {
 	_, err = helmClient.Install(t, releaseName.String(), namespace, helmValues)
 	assert.Contains(t, err.Error(), fmt.Sprintf("Secret %s must contain key %s", helmValues.Backup.SecretName, helmValues.Backup.SecretKeyName))
 }
+
+// TestBackupNodeSelectorLabels checks for failure when missing nodeSelector labels are provided
+func TestBackupNodeSelectorLabels(t *testing.T) {
+	t.Parallel()
+
+	nodeSelectorLabels := map[string]string{
+		"label1": "value1",
+		"label2": "value2",
+	}
+	secretName := "secret-demo"
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.NodeSelector = nodeSelectorLabels
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+	helmValues.Backup.SecretName = secretName
+	helmValues.Backup.SecretKeyName = "demo"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "demo2"
+	helmValues.Backup.Database = "neo4j1"
+
+	releaseName := model.NewReleaseName("backup-nodeselector" + TestRunIdentifier)
+	_, err := createNamespace(t, releaseName)
+	if err != nil {
+		return
+	}
+	namespace := string(releaseName.Namespace())
+
+	secretKey := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"demo": []byte("demo"),
+		},
+		Type: "Opaque",
+	}
+
+	_, err = Clientset.CoreV1().Secrets(namespace).Create(context.TODO(), secretKey, metav1.CreateOptions{})
+	assert.NoError(t, err, "error seen while creating secret")
+	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
+	_, err = helmClient.Install(t, releaseName.String(), namespace, helmValues)
+	assert.Contains(t, err.Error(), "No node exists in the cluster which has all the below labels")
+}

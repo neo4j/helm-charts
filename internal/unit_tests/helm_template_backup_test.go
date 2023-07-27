@@ -181,3 +181,28 @@ func TestBackupEmptyServiceNameAndIPFields(t *testing.T) {
 	_, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
 	assert.Contains(t, err.Error(), "Empty fields", "error message should contain empty fields")
 }
+
+// TestBackupNodeSelectorLabels checks nodeSelector labels with disableLookups set to true
+func TestBackupNodeSelectorLabelsWithDisableLookups(t *testing.T) {
+	t.Parallel()
+
+	nodeSelectorLabels := map[string]string{
+		"label1": "value1",
+		"label2": "value2",
+	}
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.NodeSelector = nodeSelectorLabels
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+	helmValues.Backup.SecretName = "demo"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "demo2"
+	helmValues.Backup.Database = "neo4j1"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while performing helm template on backup helm chart with disableLookups enabled and nodeselector labels ")
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
+	cronjob := cronjobs[0].(*batchv1.CronJob)
+	assert.Equal(t, cronjob.Spec.JobTemplate.Spec.Template.Spec.NodeSelector, nodeSelectorLabels, "nodeSelector Labels not matching")
+}

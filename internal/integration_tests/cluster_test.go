@@ -46,7 +46,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3), defaultHelmArgs}
 	cores := []clusterCore{core1, core2, core3}
 
-	t.Cleanup(clusterTestCleanup(t, clusterReleaseName, core1, core2, core3))
+	t.Cleanup(clusterTestCleanup(t, clusterReleaseName, core1, core2, core3, true))
 
 	t.Logf("Starting setup of '%s'", t.Name())
 
@@ -120,7 +120,7 @@ func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
 	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3), defaultHelmArgs}
 	cores := []clusterCore{core1, core2, core3}
 
-	t.Cleanup(clusterTestCleanup(t, clusterReleaseName, core1, core2, core3))
+	t.Cleanup(clusterTestCleanup(t, clusterReleaseName, core1, core2, core3, false))
 
 	t.Logf("Starting setup of '%s'", t.Name())
 
@@ -162,7 +162,7 @@ func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
 	t.Logf("Succeeded running all apoc config tests in '%s'", t.Name())
 }
 
-func clusterTestCleanup(t *testing.T, clusterReleaseName model.ReleaseName, core1 clusterCore, core2 clusterCore, core3 clusterCore) func() {
+func clusterTestCleanup(t *testing.T, clusterReleaseName model.ReleaseName, core1 clusterCore, core2 clusterCore, core3 clusterCore, removeLabels bool) func() {
 	return func() {
 		_ = runAll(t, "helm", [][]string{
 			{"uninstall", core1.name.String(), core2.name.String(), core3.name.String(), "--wait", "--timeout", "3m", "--namespace", string(clusterReleaseName.Namespace())},
@@ -185,6 +185,8 @@ func clusterTestCleanup(t *testing.T, clusterReleaseName model.ReleaseName, core
 			{"delete", "namespace", string(clusterReleaseName.Namespace()), "--ignore-not-found", "--force", "--grace-period=0"},
 			{"delete", "priorityClass", "high-priority", "--force", "--grace-period=0"},
 		}, false)
-		_ = removeLabelFromNodes(t)
+		if removeLabels {
+			_ = removeLabelFromNodes(t)
+		}
 	}
 }
