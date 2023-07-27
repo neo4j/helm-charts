@@ -125,4 +125,8 @@ resources:
   limits:
     ephemeralStorage: "5Gi"
 
-
+# nodeSelector labels
+# please ensure the respective labels are present on one of nodes or else helm charts will throw an error
+nodeSelector: {}
+#  label1: "true"
+#  label2: "value1"
