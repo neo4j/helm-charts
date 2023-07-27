@@ -12,8 +12,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"os/exec"
+	"regexp"
 	"strings"
 	"testing"
+	"time"
 )
 
 // labelNodes labels all the node with testLabel=<number>
@@ -58,7 +60,7 @@ func removeLabelFromNodes(t *testing.T) error {
 }
 
 // clusterTests contains all the tests related to cluster
-func clusterTests(loadBalancerName model.ReleaseName) ([]SubTest, error) {
+func clusterTests(loadBalancerName model.ReleaseName, core1 model.ReleaseName) ([]SubTest, error) {
 	expectedConfiguration, err := (&model.Neo4jConfiguration{}).PopulateFromFile(Neo4jConfFile)
 	if err != nil {
 		return nil, err
@@ -67,11 +69,10 @@ func clusterTests(loadBalancerName model.ReleaseName) ([]SubTest, error) {
 
 	subTests := []SubTest{
 
-		//TODO: This is to be enabled in 5.0
-		//{name: "Check Cluster Core Logs Format", test: func(t *testing.T) {
-		//	t.Parallel()
-		//	assert.NoError(t, CheckLogsFormat(t, core), "Cluster core logs format should be in JSON")
-		//}},
+		{name: "Install Backup Helm Chart For AWS", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, InstallNeo4jBackupAWSHelmChartWithNodeSelector(t, core1), "Backup to AWS should succeed")
+		}},
 		{name: "ImagePullSecret tests", test: func(t *testing.T) {
 			t.Parallel()
 			assert.NoError(t, imagePullSecretTests(t, loadBalancerName), "Perform ImagePullSecret Tests")
@@ -97,6 +98,72 @@ func clusterTests(loadBalancerName model.ReleaseName) ([]SubTest, error) {
 		}},
 	}
 	return subTests, nil
+}
+
+// InstallNeo4jBackupAWSHelmChartWithNodeSelector installs backup cronjob using the given nodeselector labels
+func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName model.ReleaseName) error {
+	if model.Neo4jEdition == "community" {
+		t.Skip()
+		return nil
+	}
+	backupReleaseName := model.NewReleaseName("standalone-backup-aws-" + TestRunIdentifier)
+	namespace := string(releaseName.Namespace())
+
+	t.Cleanup(func() {
+		_ = runAll(t, "helm", [][]string{
+			{"uninstall", backupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
+		}, false)
+	})
+
+	bucketName := model.BucketName
+	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.Backup = model.Backup{
+		BucketName:               bucketName,
+		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", releaseName.String()),
+		DatabaseNamespace:        string(releaseName.Namespace()),
+		Database:                 "neo4j,system",
+		CloudProvider:            "aws",
+		SecretName:               "awscred",
+		SecretKeyName:            "credentials",
+		Verbose:                  true,
+		Type:                     "FULL",
+	}
+	helmValues.NodeSelector = map[string]string{
+		"testLabel": "5",
+	}
+
+	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
+	assert.NoError(t, err)
+
+	time.Sleep(2 * time.Minute)
+	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
+	assert.NoError(t, err, "cannot retrieve aws backup cronjob")
+	assert.Equal(t, cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule, fmt.Sprintf("aws cronjob schedule %s not matching with the schedule defined in values.yaml %s", cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule))
+
+	nodeSelectorNode, err := getNodeWithLabel("testLabel=5")
+	assert.NoError(t, err)
+
+	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
+	assert.NoError(t, err, "error while retrieving pod list during aws backup operation")
+
+	var found bool
+	for _, pod := range pods.Items {
+		if strings.Contains(pod.Name, "standalone-backup-aws") {
+			found = true
+			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
+			assert.NoError(t, err, "error while getting aws backup pod logs")
+			assert.NotNil(t, out, "aws backup logs cannot be retrieved")
+			assert.Contains(t, string(out), "Backup Completed for database system !!")
+			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
+			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.tar.gz uploaded to s3 bucket"), string(out))
+			assert.Regexp(t, regexp.MustCompile("system(.*)backup.tar.gz uploaded to s3 bucket"), string(out))
+			assert.Equal(t, nodeSelectorNode.Name, pod.Spec.NodeName, fmt.Sprintf("backup pod %s is not scheduled on the correct node %s", pod.Spec.NodeName, nodeSelectorNode.Name))
+			break
+		}
+	}
+	assert.Equal(t, true, found, "no aws backup pod found")
+	return nil
 }
 
 //TODO: This is to be enabled in 5.0
