@@ -1,8 +1,8 @@
 apiVersion: v2
 name: neo4j-cluster-core
 home: https://www.neo4j.com
-version: 4.4.21
-appVersion: 4.4.21
+version: 4.4.22
+appVersion: 4.4.22
 description: Neo4j is the world's leading graph database
 keywords:
   - graph
@@ -19,5 +19,5 @@ maintainers:
     email: harshit.singhvi@neotechnology.com
 dependencies:
   - name: neo4j-shared-templates
-    version: "4.4.21"
+    version: "4.4.22"
     repository: "file://../neo4j-shared-templates"
