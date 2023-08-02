@@ -5,3 +5,4 @@ devenv.local
 .kube/
 .DS_Store
 *.test
+.backup_linux

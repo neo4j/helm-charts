@@ -1,0 +1,143 @@
+## @param nameOverride String to partially override common.names.fullname
+nameOverride: ""
+## @param fullnameOverride String to fully override common.names.fullname
+fullnameOverride: ""
+# disableLookups will disable all the lookups done in the helm charts
+# This should be set to true when using ArgoCD since ArgoCD uses helm template and the helm lookups will fail
+# You can enable this when executing helm commands with --dry-run command
+disableLookups: false
+
+neo4j:
+  image: "neo4j/helm-charts-backup"
+  imageTag: "5.10.0"
+  podLabels: {}
+#    app: "demo"
+#    acac: "dcdddc"
+  podAnnotations: {}
+#    ssdvvs: "svvvsvs"
+#    vfsvswef: "vcfvgb"
+  # define the backup job schedule . default is * * * * *
+  jobSchedule: ""
+  # default is 3
+  successfulJobsHistoryLimit:
+  # default is 1
+  failedJobsHistoryLimit:
+  # default is 3
+  backoffLimit:
+  #add labels if required
+  labels: {}
+
+backup:
+  # Ensure the bucket is already existing in the respective cloud provider
+  # In case of azure the bucket is the container name in the storage account
+  # bucket: azure-storage-container
+  bucketName: ""
+
+  #address details of the neo4j instance from which backup is to be done (serviceName or ip either one is required)
+
+  #ex: standalone-admin.default.svc.cluster.local:6362
+  # admin service name -  standalone-admin
+  # namespace - default
+  # cluster domain - cluster.local
+  # port - 6362
+
+  #ex: 10.3.3.2:6362
+  # admin service ip - 10.3.3.2
+  # port - 6362
+
+  databaseAdminServiceName: ""
+  databaseAdminServiceIP: ""
+  #default name is 'default'
+  databaseNamespace: ""
+  #default port is 6362
+  databaseBackupPort: ""
+  #default value is cluster.local
+  databaseClusterDomain: ""
+
+  #name of the database to backup ex: neo4j or neo4j,system (You can provide command separated database names)
+  # In case of comma separated databases failure of any single database will lead to failure of complete operation
+  database: ""
+  # cloudProvider can be either gcp, aws, or azure
+  cloudProvider: ""
+
+  # name of the kubernetes secret containing the respective cloud provider credentials
+  # Ensure you have read,write access to the mentioned bucket
+  # For AWS :
+  # add the below in a file and create a secret via
+  # 'kubectl create secret generic awscred --from-file=credentials=/demo/awscredentials'
+
+  #  [ default ]
+  #  region = us-east-1
+  #  aws_access_key_id = XXXXX
+  #  aws_secret_access_key = XXXX
+
+  # For AZURE :
+  # add the storage account name and key in below format in a file create a secret via
+  # 'kubectl create secret generic azurecred --from-file=credentials=/demo/azurecredentials'
+
+  #  AZURE_STORAGE_ACCOUNT_NAME=XXXX
+  #  AZURE_STORAGE_ACCOUNT_KEY=XXXX
+
+  # For GCP :
+  # create the secret via the gcp service account json key file.
+  # ex: 'kubectl create secret generic gcpcred --from-file=credentials=/demo/gcpcreds.json'
+  secretName: ""
+  # provide the keyname used in the above secret
+  secretKeyName: ""
+
+  #Below are all neo4j-admin database backup flags / options
+  #To know more about the flags read here : https://neo4j.com/docs/operations-manual/current/backup-restore/online-backup/
+  pageCache: ""
+  includeMetadata: "all"
+  type: "AUTO"
+  keepFailed: false
+  parallelRecovery: false
+  verbose: true
+  heapSize: ""
+
+#Below are all neo4j-admin database check flags / options
+#To know more about the flags read here : https://neo4j.com/docs/operations-manual/current/tools/neo4j-admin/consistency-checker/
+consistencyCheck:
+  enable: false
+  checkIndexes: true
+  checkGraph: true
+  checkCounts: true
+  checkPropertyOwners: true
+  #The database name for which consistency check needs to be done.
+  #Defaults to the backup.database values if left empty
+  #The database name here should match with one of the database names present in backup.database. If not , the consistency check will be ignored
+  database: ""
+  maxOffHeapMemory: ""
+  threads: ""
+  verbose: true
+
+# Set to name of an existing Service Account to use if desired
+serviceAccountName: ""
+
+# Volume to use as temporary storage for files before they are uploaded to cloud. For large databases local storage may not have sufficient space.
+# In that case set an ephemeral or persistent volume with sufficient space here
+# The chart defaults to an emptyDir, use this to overwrite default behavior
+#tempVolume:
+#  persistentVolumeClaim:
+#    claimName: backup-pvc
+
+# securityContext defines privilege and access control settings for a Pod. Making sure that we don't run Neo4j as root user.
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 7474
+  runAsGroup: 7474
+  fsGroup: 7474
+  fsGroupChangePolicy: "Always"
+
+# default ephemeral storage of backup container
+resources:
+  requests:
+    ephemeralStorage: "4Gi"
+  limits:
+    ephemeralStorage: "5Gi"
+
+# nodeSelector labels
+# please ensure the respective labels are present on one of nodes or else helm charts will throw an error
+nodeSelector: {}
+#  label1: "true"
+#  label2: "value1"

@@ -3,7 +3,8 @@
 {{- $isLoadBalancerEnabled := index .Values.services.neo4j.enabled }}
 {{- $loadBalancer := list -}}
 {{- $loadBalancerExists := false -}}
-{{- if and (not .Values.disableLookups) $clusterEnabled -}}
+
+{{- if and (not .Values.disableLookups) ($clusterEnabled) -}}
   {{- $loadBalancer = (lookup "v1" "Service" .Release.Namespace (printf "%s-lb-neo4j" (include "neo4j.name" $))) }}
   {{- $loadBalancerExists = $loadBalancer | all }}
 {{- end -}}
@@ -35,8 +36,8 @@ metadata:
     app: "{{ template "neo4j.name" . }}"
     helm.neo4j.com/service: "neo4j"
     {{- include "neo4j.labels" .Values.neo4j | indent 4 }}
-  {{- if $clusterEnabled }}
   annotations:
+  {{- if $clusterEnabled }}
     helm.sh/resource-policy: keep
   {{- end }}
   {{- range $key, $value := .Values.services.neo4j.annotations }}
@@ -53,27 +54,27 @@ spec:
     {{- if .http.enabled }}
     - protocol: TCP
       port: {{ .http.port | default 7474 }}
-      targetPort: 7474
-      name: http
+      targetPort: {{ .http.targetPort | default 7474 }}
+      name: {{ .http.name | default "http" }}
     {{- end }}
     {{- if .https.enabled }}
     - protocol: TCP
       port: {{ .https.port | default 7473 }}
-      targetPort: 7473
-      name: https
+      targetPort: {{ .https.targetPort | default 7473 }}
+      name: {{ .https.name | default "https" }}
     {{- end }}
     {{- if .bolt.enabled }}
     - protocol: TCP
       port: {{ .bolt.port | default 7687 }}
-      targetPort: 7687
-      name: tcp-bolt
+      targetPort: {{ .bolt.targetPort | default 7687 }}
+      name: {{ .bolt.name | default "tcp-bolt" }}
     {{- end }}
     {{ with .backup }}
     {{- if .enabled }}
     - protocol: TCP
       port: {{ .port | default 6362 }}
-      targetPort: 6362
-      name: tcp-backup
+      targetPort: {{ .targetPort | default 6362 }}
+      name: {{ .name | default "tcp-backup" }}
     {{- end }}
     {{- end }}
     {{- end }}

@@ -1217,10 +1217,14 @@ func TestImagePullSecretWithLookupsDisabledWithDryRun(t *testing.T) {
 			helmValues = model.DefaultEnterpriseValues
 		}
 		helmValues.DisableLookups = true
-		helmValues.Image.ImagePullSecrets = []string{"demo"}
-		_, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
-		if !assert.NoError(t, err) {
-			return
+		imagePullSecretName := "demo"
+		helmValues.Image.ImagePullSecrets = []string{imagePullSecretName}
+		manifests, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		assert.NoError(t, err, "error seen while testing helm chart with imagePullSecrets with Disabled Lookups")
+		secrets := manifests.OfType(&v1.Secret{})
+		for _, secret := range secrets {
+			secretName := secret.(*v1.Secret).Name
+			assert.NotEqual(t, secretName, imagePullSecretName, fmt.Sprintf("Found a secret %s matching with imagePullSecret %s", secretName, imagePullSecretName))
 		}
 	})
 }
@@ -1362,6 +1366,32 @@ func TestNeo4jConfigWithEmptyLdapPasswordFromSecret(t *testing.T) {
 	}))
 }
 
+// TestVolumeClaimLabels checks if provided labels are getting attached to the pvc metadata or not
+func TestVolumeClaimLabels(t *testing.T) {
+	t.Parallel()
+	var helmValues model.HelmValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		helmValues = model.DefaultCommunityValues
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		labels := make(map[string]string, 2)
+		labels["key1"] = "value1"
+		labels["key2"] = "value2"
+		helmValues.Volumes.Data.Labels = labels
+		manifests, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		assert.NoError(t, err, "no error should be seen while checking for labels on volume claims")
+		statefulSet := manifests.OfTypeWithName(&appsv1.StatefulSet{}, model.DefaultHelmTemplateReleaseName.String())
+		if !assert.NotNil(t, statefulSet, fmt.Sprintf("no statefulset found with name %s", model.DefaultHelmTemplateReleaseName)) {
+			return
+		}
+
+		volumeClaims := statefulSet.(*appsv1.StatefulSet).Spec.VolumeClaimTemplates
+		assert.Equal(t, len(volumeClaims), 1, fmt.Sprintf("only one volume claim should be present ,found %d", len(volumeClaims)))
+		assert.Equal(t, volumeClaims[0].ObjectMeta.Labels, labels, "labels are not matching")
+	}))
+}
+
 // TestNeo4jConfigWithEmptyLdapPasswordMountPath checks for error when empty ldapPasswordMountPath is provided along with a valid ldapPasswordFromSecret
 func TestNeo4jConfigWithEmptyLdapPasswordMountPath(t *testing.T) {
 	t.Parallel()
@@ -1422,6 +1452,60 @@ func TestLdapVolumeAndVolumeMountsExistsOrNot(t *testing.T) {
 		} else {
 			assert.Error(t, err, "error should be seen when using ldapPasswordFromSecret with community edition")
 			assert.Contains(t, err.Error(), "ldapPasswordFromSecret and ldapPasswordMountPath are Enterprise Edition feature only")
+		}
+	}))
+}
+
+// TestNeo4jServicePortVariables set neo4j loadbalancer service port,targetPort,name and checks if they are getting reflected or not
+func TestNeo4jServicePortVariables(t *testing.T) {
+	t.Parallel()
+	var helmValues model.HelmValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		helmValues = model.DefaultCommunityValues
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.Services.Neo4j.Ports.HTTP.Enabled = true
+		helmValues.Services.Neo4j.Ports.HTTP.Port = 7474
+		helmValues.Services.Neo4j.Ports.HTTP.TargetPort = 8000
+		helmValues.Services.Neo4j.Ports.HTTP.Name = "http-port"
+
+		helmValues.Services.Neo4j.Ports.HTTPS.Enabled = true
+		helmValues.Services.Neo4j.Ports.HTTPS.Port = 7473
+		helmValues.Services.Neo4j.Ports.HTTPS.TargetPort = 8001
+		helmValues.Services.Neo4j.Ports.HTTPS.Name = "https-port"
+
+		helmValues.Services.Neo4j.Ports.Bolt.Enabled = true
+		helmValues.Services.Neo4j.Ports.Bolt.Port = 7687
+		helmValues.Services.Neo4j.Ports.Bolt.TargetPort = 8002
+		helmValues.Services.Neo4j.Ports.Bolt.Name = "bolt-port"
+
+		helmValues.DisableLookups = true
+		manifests, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		assert.NoError(t, err, "no error should be seen while checking for neo4j lb service ports configuration")
+		lbServiceName := fmt.Sprintf("%s-lb-neo4j", helmValues.Neo4J.Name)
+		lbService := manifests.OfTypeWithName(&v1.Service{}, lbServiceName)
+		if !assert.NotNil(t, lbService, fmt.Sprintf("no loadbalancer service found with name %s", lbServiceName)) {
+			return
+		}
+
+		ports := lbService.(*v1.Service).Spec.Ports
+		assert.Len(t, ports, 3, "there should be only 3 ports in the lbservice")
+		for _, port := range ports {
+			switch port.Name {
+			case "http-port":
+				assert.Equal(t, int(port.Port), 7474, "http port should be 7474")
+				assert.Equal(t, int(port.TargetPort.IntVal), 8000, "http target port should be 8000")
+				continue
+			case "https-port":
+				assert.Equal(t, int(port.Port), 7473, "https port should be 7473")
+				assert.Equal(t, int(port.TargetPort.IntVal), 8001, "https target port should be 8001")
+				continue
+			case "bolt-port":
+				assert.Equal(t, int(port.Port), 7687, "bolt port should be 7687")
+				assert.Equal(t, int(port.TargetPort.IntVal), 8002, "bolt target port should be 8002")
+				continue
+			}
 		}
 	}))
 }

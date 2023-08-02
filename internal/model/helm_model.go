@@ -2,6 +2,8 @@ package model
 
 import (
 	"fmt"
+	"os"
+	"strings"
 )
 
 type ReleaseName interface {
@@ -141,6 +143,35 @@ var DefaultEnterpriseValues = HelmValues{
 			Mode:           "selector",
 			DisableSubPath: false,
 		},
+	},
+}
+
+var DefaultNeo4jBackupValues = Neo4jBackupValues{
+	ConsistencyCheck: ConsistencyCheck{
+		Enable:              true,
+		CheckIndexes:        true,
+		CheckGraph:          true,
+		CheckCounts:         true,
+		CheckPropertyOwners: true,
+		Verbose:             true,
+	},
+	Neo4J: Neo4jBackupNeo4j{
+		Image:                      strings.Split(os.Getenv("NEO4J_DOCKER_BACKUP_IMG"), ":")[0],
+		ImageTag:                   strings.Split(os.Getenv("NEO4J_DOCKER_BACKUP_IMG"), ":")[1],
+		JobSchedule:                "* * * * *",
+		SuccessfulJobsHistoryLimit: 3,
+		FailedJobsHistoryLimit:     1,
+		BackoffLimit:               6,
+	},
+	TempVolume: map[string]interface{}{
+		"emptyDir": nil,
+	},
+	SecurityContext: SecurityContext{
+		RunAsNonRoot:        true,
+		RunAsUser:           7474,
+		RunAsGroup:          7474,
+		FsGroup:             7474,
+		FsGroupChangePolicy: "Always",
 	},
 }
 

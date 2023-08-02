@@ -69,6 +69,14 @@ If selector is chosen process the selector template and then overwrite "dynamic"
 "The storage capacity of volumes.{{ .name }} must be specified when using '{{ .mode }}' mode. Set volumes.{{ .name }}.{{ .mode }}.requests.storage to a suitable value (e.g. 100Gi)"
 {{- end }}
 
+{{- define "neo4j.volumeClaimMetadata" -}}
+- metadata:
+    name: "{{ .name }}"
+    {{- if .volume.labels }}
+    labels: {{ .volume.labels | toYaml | nindent 6 }}
+    {{- end }}
+{{- end -}}
+
 {{- define "neo4j.volumeClaimTemplates" -}}
 {{- $neo4jName := include "neo4j.name" . }}
 {{- $template := .Template -}}
@@ -76,8 +84,7 @@ If selector is chosen process the selector template and then overwrite "dynamic"
 {{- if $spec -}}
 {{- $volumeClaim := dict "Template" $template "Values" $.Values "volume" $spec "name" $name | include "neo4j.volumeClaimTemplateSpec" -}}
 {{- if $volumeClaim -}}
-- metadata:
-    name: "{{ $name }}"
+  {{- template "neo4j.volumeClaimMetadata" (dict "volume" $spec "name" $name) }}
   spec: {{- $volumeClaim | nindent 4 }}
 {{/* blank line, important! */}}{{ end -}}
 {{- end -}}
