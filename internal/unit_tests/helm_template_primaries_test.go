@@ -1072,6 +1072,103 @@ func TestApocConfigMapIsPresent(t *testing.T) {
 	}))
 }
 
+// TestApocCredentialsArePresentInConfigMap ensure the apoc config map contains the apoc credentials reference
+func TestApocCredentialsArePresentInConfigMap(t *testing.T) {
+
+	t.Parallel()
+
+	helmValues := model.DefaultCommunityValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.DisableLookups = true
+
+		helmValues.ApocCredentials = model.ApocCredentials{
+			Jdbc: map[string]string{
+				"aliasName":       "jdbc",
+				"secretName":      "jdbcsecret",
+				"secretMountPath": "/secret/jdbcCred",
+			},
+		}
+		manifest, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		configMaps := manifest.OfType(&v1.ConfigMap{})
+		assert.NotEqual(t, len(configMaps), 0, "Number of configMaps are zero !!")
+
+		var apocConfigMapPresent bool
+		var apocConfigMap *v1.ConfigMap
+		for _, configMap := range configMaps {
+			if strings.Contains(configMap.(*v1.ConfigMap).Name, "apoc-config") {
+				apocConfigMapPresent = true
+				apocConfigMap = configMap.(*v1.ConfigMap)
+				break
+			}
+		}
+		//apoc-config configMap should not be present since we are not passing apoc configs
+		assert.Equal(t, apocConfigMapPresent, true, "apocConfigMap not present !!! Should be present")
+
+		value, present := apocConfigMap.Data["apoc.conf"]
+		assert.Equal(t, present, true, "configMap does not contain apoc.conf as key !!")
+
+		assert.Contains(t, value, "apoc.jdbc.jdbc.url=\"$(bash -c 'cat /secret/jdbcCred/URL')\"")
+
+	}))
+}
+
+// TestApocCredentialsVolumesAndMounts ensure that the required volume mounts and volumes are present or not when apoc_credentials are specified
+func TestApocCredentialsVolumesAndMounts(t *testing.T) {
+
+	t.Parallel()
+
+	helmValues := model.DefaultCommunityValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.DisableLookups = true
+
+		helmValues.ApocCredentials = model.ApocCredentials{
+			Jdbc: map[string]string{
+				"aliasName":       "jdbc",
+				"secretName":      "jdbcsecret",
+				"secretMountPath": "/secret/jdbcCred",
+			},
+		}
+		manifest, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		statefulSet := manifest.OfType(&appsv1.StatefulSet{})[0]
+		assert.NotNil(t, statefulSet, "statefulset missing")
+
+		volumes := statefulSet.(*appsv1.StatefulSet).Spec.Template.Spec.Volumes
+		assert.NotEqual(t, len(volumes), 0, "no volumes found")
+		var names []string
+		for _, volume := range volumes {
+			names = append(names, volume.Name)
+		}
+		assert.Contains(t, names, "apoc-jdbc-url", "missing apoc credentials jdbc volume")
+
+		volumeMounts := statefulSet.(*appsv1.StatefulSet).Spec.Template.Spec.Containers[0].VolumeMounts
+		assert.NotEqual(t, len(volumeMounts), 0, "no volume mounts found")
+		names = []string{}
+		var mountPath []string
+		for _, volumeMount := range volumeMounts {
+			names = append(names, volumeMount.Name)
+			mountPath = append(mountPath, volumeMount.MountPath)
+		}
+		assert.Contains(t, names, "apoc-jdbc-url", "missing apoc credentials jdbc volume mount")
+		assert.Contains(t, mountPath, "/secret/jdbcCred", "missing apoc credentials jdbc volume mount path")
+	}))
+}
+
 func TestMissingImageCredentials(t *testing.T) {
 	t.Parallel()
 

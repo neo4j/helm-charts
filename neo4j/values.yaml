@@ -301,31 +301,33 @@ config:
   # server.memory.heap.initial_size: "317m"
   # server.memory.heap.max_size: "317m"
 
-apoc_config:
-  apoc.trigger.enabled: "true"
-  apoc.import.file.enabled: "true"
-  apoc.jdbc.apoctest.url: "jdbc:foo:bar"
+apoc_config: {}
+#  apoc.trigger.enabled: "true"
+#  apoc.import.file.enabled: "true"
+#  apoc.jdbc.apoctest.url: "jdbc:foo:bar"
 
-apoc_credentials:
-   jdbc:
-    keyName: "jdbc"
-    secretName: "jdbcsecret"
-    secretMountPath: "/secret/jdbcCred"
+apoc_credentials: {}
+#   jdbc:
+#    aliasName: "jdbc"
+#    secretName: "jdbcsecret"
+#    secretMountPath: "/secret/jdbcCred"
+#
+#   elasticsearch:
+#     aliasName: "es"
+#     secretName: "essecret"
+#     secretMountPath: "/secret/esCred"
 
-   couchbase:
-    keyName: "couchbase"
-    secretName: "couchbasesecret"
-    secretMountPath: "/secret/couchbaseCred"
+#   couchbase:
+#    aliasName: "couchbase"
+#    secretName: "couchbasesecret"
+#    secretMountPath: "/secret/couchbaseCred"
+#
+#   mongodb:
+#    aliasName: "mongodb"
+#    secretName: "mongosecret"
+#    secretMountPath: "/secret/mongodbCred"
 
-   mongodb:
-    keyName: "mongodb"
-    secretName: "mongosecret"
-    secretMountPath: "/secret/mongodbCred"
 
-   elasticsearch:
-    keyName: "es"
-    secretName: "essecret"
-    secretMountPath: "/secret/esCred"
 
 
 # securityContext defines privilege and access control settings for a Pod. Making sure that we dont run Neo4j as root user.
