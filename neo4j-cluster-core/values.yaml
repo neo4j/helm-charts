@@ -261,9 +261,30 @@ config:
   #dbms.memory.heap.initial_size: "317m"
   #dbms.memory.heap.max_size: "317m"
 
-#apoc_config:
+apoc_config: {}
 #  apoc.trigger.enabled: "true"
 #  apoc.jdbc.apoctest.url: "jdbc:foo:bar"
+
+apoc_credentials: {}
+#   jdbc:
+#    aliasName: "jdbc"
+#    secretName: "jdbcsecret"
+#    secretMountPath: "/secret/jdbcCred"
+#
+#   elasticsearch:
+#     aliasName: "es"
+#     secretName: "essecret"
+#     secretMountPath: "/secret/esCred"
+
+#   couchbase:
+#    aliasName: "couchbase"
+#    secretName: "couchbasesecret"
+#    secretMountPath: "/secret/couchbaseCred"
+#
+#   mongodb:
+#    aliasName: "mongodb"
+#    secretName: "mongosecret"
+#    secretMountPath: "/secret/mongodbCred"
 
 # securityContext defines privilege and access control settings for a Pod. Making sure that we dont run Neo4j as root user.
 securityContext:

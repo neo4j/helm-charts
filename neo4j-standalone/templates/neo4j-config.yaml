@@ -1,6 +1,7 @@
 {{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
 {{- $clusterEnabled := or ( index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" ) ( index .Values.config "dbms.clustering.enable" | default "" | regexMatch "(?i)true|yes" ) }}
 {{- template "neo4j.checkLicenseAgreement" . -}}
+{{- template "neo4j.apocCredentials.validation" . }}
 # Neo4j config values that are required for neo4j to work correctly in Kubernetes, these are not overridden by user-provided values
 apiVersion: v1
 kind: ConfigMap
@@ -156,7 +157,7 @@ data:
   {{- end }}
   {{- end }}
 ---
-{{- if not (empty $.Values.apoc_config) -}}
+{{- if (or $.Values.apoc_config $.Values.apoc_credentials) -}}
 # User-provided Neo4j Apoc config values
 apiVersion: v1
 kind: ConfigMap
@@ -167,17 +168,16 @@ metadata:
     app: "{{ template "neo4j.appName" $ }}"
     {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
 data:
-  {{- with .Values.apoc_config }}
   apoc.conf: |-
     {{- if hasKey . "dbms.jvm.additional" }}
       {{- fail "dbms.jvm.additional properties cannot be set in values.apoc_config. Set additional JVM arguments in values.jvm.additionalJvmArguments" }}
     {{- end }}
-    {{- range $key, $value := . }}
+    {{- range $key, $value := .Values.apoc_config }}
       {{- if not (kindIs "string" $value) }}
         {{- cat "config values must be strings." $key "value:" $value "type:" (kindOf $value) " (put values in double quotes so they are treated as strings in yaml)" | fail }}
       {{- end }}
      {{- printf "%s=%s" $key $value | nindent 6 }}
     {{- end }}
-  {{- end }}
+    {{- include "neo4j.apocCredentials.generateConfig" . | nindent 6 }}
 ---
 {{- end }}
