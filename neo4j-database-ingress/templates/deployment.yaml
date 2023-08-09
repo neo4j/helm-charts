@@ -137,7 +137,7 @@ spec:
           {{- end }}
           env:
             - name: NEO4J_HTTP
-              value: "{{- $.Values.neo4j.service.name}}:{{- $.Values.neo4j.service.httpPort}}/browser"
+              value: "{{- $.Values.neo4j.service.name}}:{{- $.Values.neo4j.service.httpPort}}"
             - name: NEO4J_BOLT
               value: "{{- $.Values.neo4j.service.name}}:{{- $.Values.neo4j.service.boltPort}}"
           {{- with .Values.extraEnvs }}
