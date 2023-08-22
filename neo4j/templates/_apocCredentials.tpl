@@ -97,7 +97,7 @@
                 {{- $aliasName := (get $credential "aliasName") }}
                 {{- $secretName := (get $credential "secretName") }}
                 {{- $secretMountPath := (get $credential "secretMountPath") }}
-                {{- printf "apoc.%s.%s.url=\"$(bash -c 'cat %s/URL')\"\n" $credentialName $aliasName $secretMountPath }}
+                {{- printf "apoc.%s.%s.url=$(bash -c 'cat %s/URL')\n" $credentialName $aliasName $secretMountPath }}
             {{- end -}}
         {{- end -}}
     {{- end -}}
