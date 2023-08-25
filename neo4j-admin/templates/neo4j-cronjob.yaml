@@ -33,6 +33,14 @@ spec:
           restartPolicy: Never
           securityContext: {{ .Values.securityContext | toYaml  | nindent 12 }}
           {{- include "neo4j.nodeSelector" . }}
+          {{- if $.Values.affinity }}
+          affinity:
+            {{- $.Values.affinity | toYaml | nindent 12 }}
+          {{- end }}
+          {{- if gt (len $.Values.tolerations) 0 }}
+          tolerations:
+            {{- $.Values.tolerations | toYaml | nindent 12 }}
+          {{- end }}
           containers:
             - name: graph-backup
               image: {{ .Values.neo4j.image }}:{{ .Values.neo4j.imageTag }}

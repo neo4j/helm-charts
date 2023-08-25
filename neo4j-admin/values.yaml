@@ -141,3 +141,25 @@ resources:
 nodeSelector: {}
 #  label1: "true"
 #  label2: "value1"
+
+# affinity
+affinity: {}
+#  nodeAffinity:
+#    requiredDuringSchedulingIgnoredDuringExecution:
+#      nodeSelectorTerms:
+#        - matchExpressions:
+#            - key: key
+#              operator: In
+#              values:
+#                - value
+
+# tolerations
+tolerations: []
+#- key: key1
+#  operator: Equal
+#  value: value1
+#  effect: NoExecute
+#- key: key2
+#  operator: Equal
+#  value: value2
+#  effect: NoSchedule
