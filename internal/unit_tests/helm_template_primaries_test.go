@@ -1115,7 +1115,7 @@ func TestApocCredentialsArePresentInConfigMap(t *testing.T) {
 		value, present := apocConfigMap.Data["apoc.conf"]
 		assert.Equal(t, present, true, "configMap does not contain apoc.conf as key !!")
 
-		assert.Contains(t, value, "apoc.jdbc.jdbc.url=\"$(bash -c 'cat /secret/jdbcCred/URL')\"")
+		assert.Contains(t, value, "apoc.jdbc.jdbc.url=$(bash -c 'cat /secret/jdbcCred/URL')")
 
 	}))
 }
