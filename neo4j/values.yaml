@@ -304,7 +304,6 @@ config:
 apoc_config: {}
 #  apoc.trigger.enabled: "true"
 #  apoc.import.file.enabled: "true"
-#  apoc.jdbc.apoctest.url: "jdbc:foo:bar"
 
 #apoc_credentials allow you to set configs like apoc.jdbc.<aliasname>.url and apoc.es.<aliasname>.url via a kubernetes secret mounted on the provided path
 #ensure the secret exists beforehand or else an error will be thrown by the helm chart
