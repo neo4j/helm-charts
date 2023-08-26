@@ -308,6 +308,7 @@ apoc_config: {}
 #apoc_credentials allow you to set configs like apoc.jdbc.<aliasname>.url and apoc.es.<aliasname>.url via a kubernetes secret mounted on the provided path
 #ensure the secret exists beforehand or else an error will be thrown by the helm chart
 #aliasName , secretName and secretMountPath are compulsory fields. Empty fields will result in error
+#please ensure you are using the compatible apoc-extended plugin jar while using apoc_credentials
 apoc_credentials: {}
 #   jdbc:
 #    aliasName: "jdbc"
