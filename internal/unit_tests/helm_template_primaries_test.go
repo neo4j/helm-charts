@@ -1510,6 +1510,24 @@ func TestNeo4jServicePortVariables(t *testing.T) {
 	}))
 }
 
+// TestServiceAccountCreation checks if serviceaccount yamls are not generated when a serviceaccount name is provided
+func TestServiceAccountCreation(t *testing.T) {
+	t.Parallel()
+	var helmValues model.HelmValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		helmValues = model.DefaultCommunityValues
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.PodSpec.ServiceAccountName = "demoserviceaccount"
+		manifests, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		assert.NoError(t, err, fmt.Sprintf("error seen while testing service account creation"))
+		serviceaccounts := manifests.OfType(&v1.ServiceAccount{})
+		assert.Len(t, serviceaccounts, 0, fmt.Sprintf("service accounts found %v", serviceaccounts))
+
+	}))
+}
+
 func TestErrorIsThrownForInvalidMemoryResources(t *testing.T) {
 
 	t.Parallel()
