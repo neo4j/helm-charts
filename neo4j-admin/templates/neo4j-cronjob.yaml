@@ -32,8 +32,8 @@ spec:
           {{- end }}
           restartPolicy: Never
           securityContext: {{ .Values.securityContext | toYaml  | nindent 12 }}
-          {{- include "neo4j.tolerations" .Values.tolerations | nindent 12 }}
-          {{- include "neo4j.affinity" . | nindent 12 }}
+          {{- include "neo4j.tolerations" .Values.tolerations | nindent 10 }}
+          {{- include "neo4j.affinity" .Values.affinity| nindent 10 }}
           {{- include "neo4j.nodeSelector" . }}
           containers:
             - name: graph-backup
@@ -54,9 +54,9 @@ spec:
                 - name: DATABASE_BACKUP_PORT
                   value: {{ .Values.backup.databaseBackupPort | default "6362" | trim | quote }}
                 - name: DATABASE_CLUSTER_DOMAIN
-                  value: {{ .Values.backup.databaseClusterDomain | default "cluster.local"  | trim }}
+                  value: {{ .Values.backup.databaseClusterDomain | default "cluster.local"  | trim | quote }}
                 - name: DATABASE
-                  value: {{ .Values.backup.database | default "*" | trim }}
+                  value: {{ .Values.backup.database | default "*" | trim | quote }}
                 - name: CLOUD_PROVIDER
                   value: {{ required "You must specify a CLOUD_PROVIDER" .Values.backup.cloudProvider | trim }}
                 - name: BUCKET_NAME

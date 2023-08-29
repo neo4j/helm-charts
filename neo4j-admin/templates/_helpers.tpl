@@ -49,7 +49,7 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- end -}}
 
 {{- define "neo4j.tolerations" -}}
-{{/* Add tolerations only if .Values.podSpec.tolerations contains entries */}}
+{{/* Add tolerations only if .Values.tolerations contains entries */}}
     {{- if . -}}
 tolerations:
 {{ toYaml . }}
@@ -59,6 +59,6 @@ tolerations:
 {{- define "neo4j.affinity" -}}
     {{- if . -}}
 affinity:
-{{ toYaml . }}
+{{ toYaml . | indent 1 }}
     {{- end -}}
 {{- end -}}
