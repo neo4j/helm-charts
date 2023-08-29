@@ -268,6 +268,12 @@ apoc_config: {}
 #  apoc.trigger.enabled: "true"
 #  apoc.jdbc.apoctest.url: "jdbc:foo:bar"
 
+#apoc_credentials allow you to set configs like apoc.jdbc.<aliasname>.url and apoc.es.<aliasname>.url via a kubernetes secret mounted on the provided path
+#ensure the secret exists beforehand or else an error will be thrown by the helm chart
+#aliasName , secretName and secretMountPath are compulsory fields. Empty fields will result in error
+#please ensure you are using the compatible apoc-extended plugin jar while using apoc_credentials
+#please ensure the secret is created with the key named as "URL"
+  #Ex: kubectl create secret generic jdbcsecret --from-literal=URL="jdbc:mysql://30.0.0.0:3306/Northwind?user=root&password=password"
 apoc_credentials: {}
 #   jdbc:
 #    aliasName: "jdbc"
@@ -279,15 +285,6 @@ apoc_credentials: {}
 #     secretName: "essecret"
 #     secretMountPath: "/secret/esCred"
 
-#   couchbase:
-#    aliasName: "couchbase"
-#    secretName: "couchbasesecret"
-#    secretMountPath: "/secret/couchbaseCred"
-#
-#   mongodb:
-#    aliasName: "mongodb"
-#    secretName: "mongosecret"
-#    secretMountPath: "/secret/mongodbCred"
 
 # securityContext defines privilege and access control settings for a Pod. Making sure that we dont run Neo4j as root user.
 securityContext:
