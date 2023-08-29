@@ -114,6 +114,19 @@ consistencyCheck:
 # Set to name of an existing Service Account to use if desired
 serviceAccountName: ""
 
+#Add tolerations to the Neo4j pod
+tolerations: []
+#    - key: "key1"
+#      operator: "Equal"
+#      value: "value1"
+#      effect: "NoSchedule"
+#    - key: "key2"
+#      operator: "Equal"
+#      value: "value2"
+#      effect: "NoSchedule"
+
+
+
 # Volume to use as temporary storage for files before they are uploaded to cloud. For large databases local storage may not have sufficient space.
 # In that case set an ephemeral or persistent volume with sufficient space here
 # The chart defaults to an emptyDir, use this to overwrite default behavior

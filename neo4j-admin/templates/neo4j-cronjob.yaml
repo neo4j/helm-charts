@@ -32,6 +32,8 @@ spec:
           {{- end }}
           restartPolicy: Never
           securityContext: {{ .Values.securityContext | toYaml  | nindent 12 }}
+          {{- include "neo4j.tolerations" .Values.tolerations | nindent 12 }}
+          {{- include "neo4j.affinity" . | nindent 12 }}
           {{- include "neo4j.nodeSelector" . }}
           containers:
             - name: graph-backup
