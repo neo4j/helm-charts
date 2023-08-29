@@ -25,7 +25,7 @@ neo4j:
 
   # Minimum number of machines initially required to form a clustered database. The StatefulSet will not reach the ready state
   # until at least this many members have discovered each other. The default is 1 (standalone)
-  #minimumClusterSize: 1
+#  minimumClusterSize: 1
 
   # set edition: "enterprise" to use Neo4j Enterprise Edition
   #
@@ -301,9 +301,28 @@ config:
   # server.memory.heap.initial_size: "317m"
   # server.memory.heap.max_size: "317m"
 
-# apoc_config:
+apoc_config: {}
 #  apoc.trigger.enabled: "true"
-#  apoc.jdbc.apoctest.url: "jdbc:foo:bar"
+#  apoc.import.file.enabled: "true"
+
+#apoc_credentials allow you to set configs like apoc.jdbc.<aliasname>.url and apoc.es.<aliasname>.url via a kubernetes secret mounted on the provided path
+#ensure the secret exists beforehand or else an error will be thrown by the helm chart
+#aliasName , secretName and secretMountPath are compulsory fields. Empty fields will result in error
+#please ensure you are using the compatible apoc-extended plugin jar while using apoc_credentials
+#please ensure the secret is created with the key named as "URL"
+  #Ex: kubectl create secret generic jdbcsecret --from-literal=URL="jdbc:mysql://30.0.0.0:3306/Northwind?user=root&password=password"
+apoc_credentials: {}
+#   jdbc:
+#    aliasName: "jdbc"
+#    secretName: "jdbcsecret"
+#    secretMountPath: "/secret/jdbcCred"
+#
+#   elasticsearch:
+#     aliasName: "es"
+#     secretName: "essecret"
+#     secretMountPath: "/secret/esCred"
+
+
 
 # securityContext defines privilege and access control settings for a Pod. Making sure that we dont run Neo4j as root user.
 securityContext:
