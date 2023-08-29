@@ -110,7 +110,7 @@ data:
 
   {{- if $clusterEnabled }}
   # Clustering
-  dbms.cluster.discovery.type: K8S
+  dbms.cluster.discovery.resolver_type: K8S
   dbms.kubernetes.service_port_name: "tcp-discovery"
   dbms.kubernetes.label_selector: "app={{ template "neo4j.name" . }},helm.neo4j.com/service=internals,helm.neo4j.com/clustering=true"
   dbms.routing.default_router: "SERVER"
