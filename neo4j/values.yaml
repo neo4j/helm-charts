@@ -309,6 +309,8 @@ apoc_config: {}
 #ensure the secret exists beforehand or else an error will be thrown by the helm chart
 #aliasName , secretName and secretMountPath are compulsory fields. Empty fields will result in error
 #please ensure you are using the compatible apoc-extended plugin jar while using apoc_credentials
+#please ensure the secret is created with the key named as "URL"
+  #Ex: kubectl create secret generic jdbcsecret --from-literal=URL="jdbc:mysql://30.0.0.0:3306/Northwind?user=root&password=password"
 apoc_credentials: {}
 #   jdbc:
 #    aliasName: "jdbc"
