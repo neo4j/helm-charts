@@ -240,7 +240,7 @@ func TestNeo4jBackupPodTolerations(t *testing.T) {
 	}
 }
 
-// TestNeo4jBackupPodTolerations checks for tolerations in the backup cronjob
+// TestNeo4jBackupPodAffinity checks for affinity in the backup cronjob
 func TestNeo4jBackupPodAffinity(t *testing.T) {
 	t.Parallel()
 
