@@ -28,7 +28,14 @@ type HelmValues struct {
 	Jvm                      Jvm               `yaml:"jvm,omitempty"`
 	LdapPasswordFromSecret   string            `yaml:"ldapPasswordFromSecret,omitempty"`
 	LdapPasswordMountPath    string            `yaml:"ldapPasswordMountPath,omitempty"`
+	ApocCredentials          ApocCredentials   `yaml:"apoc_credentials,omitempty"`
 }
+
+type ApocCredentials struct {
+	Jdbc          map[string]string `yaml:"jdbc,omitempty"`
+	Elasticsearch map[string]string `yaml:"elasticsearch,omitempty"`
+}
+
 type Resources struct {
 	CPU    string `yaml:"cpu,omitempty"`
 	Memory string `yaml:"memory,omitempty"`
