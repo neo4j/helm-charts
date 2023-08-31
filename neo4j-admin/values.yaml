@@ -130,3 +130,37 @@ resources:
 nodeSelector: {}
 #  label1: "true"
 #  label2: "value1"
+
+# set backup pod affinity
+affinity: {}
+#  podAffinity:
+#    requiredDuringSchedulingIgnoredDuringExecution:
+#      - labelSelector:
+#          matchExpressions:
+#            - key: security
+#              operator: In
+#              values:
+#                - S1
+#        topologyKey: topology.kubernetes.io/zone
+#  podAntiAffinity:
+#    preferredDuringSchedulingIgnoredDuringExecution:
+#      - weight: 100
+#        podAffinityTerm:
+#          labelSelector:
+#            matchExpressions:
+#              - key: security
+#                operator: In
+#                values:
+#                  - S2
+#          topologyKey: topology.kubernetes.io/zone
+
+#Add tolerations to the backup pod
+tolerations: []
+#  - key: "key1"
+#    operator: "Equal"
+#    value: "value1"
+#    effect: "NoSchedule"
+#  - key: "key2"
+#    operator: "Equal"
+#    value: "value2"
+#    effect: "NoSchedule"
