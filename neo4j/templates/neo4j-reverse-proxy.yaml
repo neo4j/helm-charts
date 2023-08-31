@@ -1,0 +1,77 @@
+
+{{- if $.Values.reverseProxy.enabled -}}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: neo4j-reverseProxy
+  labels:
+    name: neo4j-reverseProxy
+spec:
+  containers:
+    - name: neo4j-reverseProxy
+      image: {{ $.Values.reverseProxy.image }}
+      ports:
+        - containerPort: {{ $.Values.reverseProxy.port }}
+      env:
+        - name: RELEASE_NAME
+          value: {{ $.Values.reverseProxy.serviceName | quote }}
+        - name: PORT
+          value: {{ (toString $.Values.reverseProxy.port) | quote }}
+        - name: DOMAIN
+          value: {{ $.Values.reverseProxy.domain | quote }}
+        - name: NAMESPACE
+          value: {{ $.Values.reverseProxy.namespace | quote }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: neo4j-reverseproxy-service
+spec:
+  type: ClusterIP
+  selector:
+    name: neo4j-reverseProxy
+  ports:
+    - protocol: TCP
+      port: {{ $.Values.reverseProxy.port }}
+      targetPort: {{ $.Values.reverseProxy.port }}
+---
+{{- end -}}
+
+
+{{- if and $.Values.reverseProxy.enabled $.Values.reverseProxy.ingress.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: neo4j-reverseProxy-ingress
+  namespace: default
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - pathType: Prefix
+            backend:
+              service:
+                name: neo4j-reverseProxy-service
+                port:
+                  number: {{ $.Values.reverseProxy.port }}
+            path: /
+---
+{{/*---*/}}
+{{/*apiVersion: charts.nginx.org/v1alpha1*/}}
+{{/*kind: NginxIngress*/}}
+{{/*metadata:*/}}
+{{/*  name: neo4j-reverseProxy-nginxingress-controller*/}}
+{{/*  namespace: nginx-ingress*/}}
+{{/*spec:*/}}
+{{/*  controller:*/}}
+{{/*    image:*/}}
+{{/*      pullPolicy: IfNotPresent*/}}
+{{/*      repository: nginx/nginx-ingress*/}}
+{{/*      tag: 3.2.1-ubi*/}}
+{{/*    ingressClass: nginx*/}}
+{{/*    kind: deployment*/}}
+{{/*    nginxplus: false*/}}
+{{/*    replicaCount: 1*/}}
+{{- end -}}
+
