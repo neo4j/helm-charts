@@ -206,3 +206,74 @@ func TestBackupNodeSelectorLabelsWithDisableLookups(t *testing.T) {
 	cronjob := cronjobs[0].(*batchv1.CronJob)
 	assert.Equal(t, cronjob.Spec.JobTemplate.Spec.Template.Spec.NodeSelector, nodeSelectorLabels, "nodeSelector Labels not matching")
 }
+
+// TestNeo4jBackupPodTolerations checks for tolerations in the backup cronjob
+func TestNeo4jBackupPodTolerations(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	dummyToleration := model.Toleration{
+		Key:      "demo",
+		Operator: "Equal",
+		Value:    "demo",
+		Effect:   "NoSchedule",
+	}
+	helmValues.Tolerations = []model.Toleration{dummyToleration}
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+	helmValues.Backup.SecretName = "demo"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "demo2"
+	helmValues.Backup.Database = "neo4j1"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while performing helm template on backup helm chart with tolerations")
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
+	tolerations := cronjobs[0].(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Tolerations
+	assert.Len(t, tolerations, 1, "more than one tolerations found")
+	for _, toleration := range tolerations {
+		assert.Equal(t, toleration.Key, dummyToleration.Key, fmt.Sprintf("Toleration key found %s not matching with %s", toleration.Key, dummyToleration.Key))
+		assert.Equal(t, string(toleration.Operator), dummyToleration.Operator, fmt.Sprintf("Toleration operator found %s not matching with %s", toleration.Operator, dummyToleration.Operator))
+		assert.Equal(t, toleration.Value, dummyToleration.Value, fmt.Sprintf("Toleration value found %s not matching with %s", toleration.Value, dummyToleration.Value))
+		assert.Equal(t, string(toleration.Effect), dummyToleration.Effect, fmt.Sprintf("Toleration effect found %s not matching with %s", toleration.Effect, dummyToleration.Effect))
+	}
+}
+
+// TestNeo4jBackupPodAffinity checks for affinity in the backup cronjob
+func TestNeo4jBackupPodAffinity(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+
+	helmValues.Affinity = model.Affinity{PodAffinity: model.PodAffinity{
+		RequiredDuringSchedulingIgnoredDuringExecution: []model.RequiredDuringSchedulingIgnoredDuringExecution{
+			{
+				LabelSelector: model.LabelSelector{
+					MatchExpressions: []model.MatchExpressions{
+						{
+							Key:      "demo",
+							Operator: "demo",
+							Values:   []string{"demo"},
+						},
+					},
+				},
+				TopologyKey: "demo"},
+		},
+	}}
+
+	helmValues.DisableLookups = true
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+	helmValues.Backup.SecretName = "demo"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "demo2"
+	helmValues.Backup.Database = "neo4j1"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while performing helm template on backup helm chart with affinity")
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
+	affinity := cronjobs[0].(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Affinity
+	assert.NotNil(t, affinity.PodAffinity, "affinity missing from backup pod")
+	assert.Equal(t, len(affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution), 1)
+}

@@ -10,6 +10,34 @@ type Neo4jBackupValues struct {
 	TempVolume         map[string]interface{} `yaml:"tempVolume"`
 	SecurityContext    SecurityContext        `yaml:"securityContext"`
 	NodeSelector       map[string]string      `yaml:"nodeSelector,omitempty"`
+	Tolerations        []Toleration           `yaml:"tolerations,omitempty"`
+	Affinity           Affinity               `yaml:"affinity,omitempty"`
+}
+
+type Affinity struct {
+	PodAffinity PodAffinity `yaml:"podAffinity"`
+}
+type PodAffinity struct {
+	RequiredDuringSchedulingIgnoredDuringExecution []RequiredDuringSchedulingIgnoredDuringExecution `yaml:"requiredDuringSchedulingIgnoredDuringExecution"`
+}
+type RequiredDuringSchedulingIgnoredDuringExecution struct {
+	LabelSelector LabelSelector `yaml:"labelSelector"`
+	TopologyKey   string        `yaml:"topologyKey"`
+}
+type LabelSelector struct {
+	MatchExpressions []MatchExpressions `yaml:"matchExpressions"`
+}
+type MatchExpressions struct {
+	Key      string   `yaml:"key"`
+	Operator string   `yaml:"operator"`
+	Values   []string `yaml:"values"`
+}
+
+type Toleration struct {
+	Key      string `yaml:"key,omitempty"`
+	Operator string `yaml:"operator,omitempty"`
+	Value    string `yaml:"value,omitempty"`
+	Effect   string `yaml:"effect,omitempty"`
 }
 
 type Neo4jBackupNeo4j struct {
