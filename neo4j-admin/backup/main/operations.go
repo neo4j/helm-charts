@@ -125,11 +125,13 @@ func handleError(err error) {
 }
 
 func deleteBackupFiles(backupFileNames []string) error {
-	for _, backupFileName := range backupFileNames {
-		log.Printf("Deleting file /backups/%s", backupFileName)
-		err := os.Remove(fmt.Sprintf("/backups/%s", backupFileName))
-		if err != nil {
-			return err
+	if value, present := os.LookupEnv("KEEP_BACKUP_FILES"); present && value == "false" {
+		for _, backupFileName := range backupFileNames {
+			log.Printf("Deleting file /backups/%s", backupFileName)
+			err := os.Remove(fmt.Sprintf("/backups/%s", backupFileName))
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

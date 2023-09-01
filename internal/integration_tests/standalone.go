@@ -692,6 +692,7 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 	helmValues.Backup.SecretKeyName = "credentials"
 	helmValues.Backup.Verbose = true
 	helmValues.Backup.Type = "FULL"
+	helmValues.Backup.KeepBackupFiles = true
 	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
 
@@ -712,6 +713,7 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
 			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.tar.gz uploaded to GCS bucket"), string(out))
+			assert.NotContains(t, string(out), "Deleting file")
 			break
 		}
 	}
