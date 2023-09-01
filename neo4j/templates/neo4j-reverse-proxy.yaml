@@ -3,46 +3,46 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: neo4j-reverseProxy
+  name: {{ include "neo4j.fullname" . }}-reverseproxy
   labels:
-    name: neo4j-reverseProxy
+    name: {{ include "neo4j.fullname" . }}-reverseproxy
 spec:
   containers:
-    - name: neo4j-reverseProxy
+    - name: {{ include "neo4j.fullname" . }}-reverseproxy
       image: {{ $.Values.reverseProxy.image }}
       ports:
-        - containerPort: {{ $.Values.reverseProxy.port }}
+        - containerPort: {{ atoi $.Values.reverseProxy.port }}
       env:
         - name: RELEASE_NAME
-          value: {{ $.Values.reverseProxy.serviceName | quote }}
+          value: {{ $.Values.reverseProxy.serviceName }}
         - name: PORT
-          value: {{ (toString $.Values.reverseProxy.port) | quote }}
+          value: {{ $.Values.reverseProxy.port | quote }}
         - name: DOMAIN
-          value: {{ $.Values.reverseProxy.domain | quote }}
+          value: {{ $.Values.reverseProxy.domain }}
         - name: NAMESPACE
-          value: {{ $.Values.reverseProxy.namespace | quote }}
+          value: {{ $.Values.reverseProxy.namespace }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: neo4j-reverseproxy-service
+  name: {{ include "neo4j.fullname" . }}-reverseproxy-service
 spec:
   type: ClusterIP
   selector:
-    name: neo4j-reverseProxy
+    name: {{ include "neo4j.fullname" . }}-reverseproxy
   ports:
     - protocol: TCP
-      port: {{ $.Values.reverseProxy.port }}
-      targetPort: {{ $.Values.reverseProxy.port }}
+      port: {{ atoi $.Values.reverseProxy.port }}
+      targetPort: {{ atoi $.Values.reverseProxy.port }}
 ---
-{{- end -}}
 
+{{- end -}}
 
 {{- if and $.Values.reverseProxy.enabled $.Values.reverseProxy.ingress.enabled -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: neo4j-reverseProxy-ingress
+  name: {{ include "neo4j.fullname" . }}-reverseproxy-ingress
   namespace: default
 spec:
   ingressClassName: nginx
@@ -52,16 +52,16 @@ spec:
           - pathType: Prefix
             backend:
               service:
-                name: neo4j-reverseProxy-service
+                name: neo4j-reverseproxy-service
                 port:
-                  number: {{ $.Values.reverseProxy.port }}
+                  number: {{ atoi $.Values.reverseProxy.port }}
             path: /
 ---
 {{/*---*/}}
 {{/*apiVersion: charts.nginx.org/v1alpha1*/}}
 {{/*kind: NginxIngress*/}}
 {{/*metadata:*/}}
-{{/*  name: neo4j-reverseProxy-nginxingress-controller*/}}
+{{/*  name: neo4j-reverseproxy-nginxingress-controller*/}}
 {{/*  namespace: nginx-ingress*/}}
 {{/*spec:*/}}
 {{/*  controller:*/}}

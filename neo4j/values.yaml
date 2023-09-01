@@ -489,7 +489,7 @@ reverseProxy:
   serviceName: "standalone-admin"
   namespace: "default"
   domain: "cluster.local"
-  port: 80
+  port: "80"
   ingress:
     enabled: false
 
