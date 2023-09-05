@@ -84,6 +84,9 @@ backup:
   # provide the keyname used in the above secret
   secretKeyName: ""
 
+  #setting this to true will not delete the backup files generated at the /backup mount
+  keepBackupFiles: true
+
   #Below are all neo4j-admin database backup flags / options
   #To know more about the flags read here : https://neo4j.com/docs/operations-manual/4.4/backup-restore/online-backup/
   pageCache: ""

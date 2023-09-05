@@ -77,5 +77,6 @@ type Backup struct {
 	CheckIndexStructure      bool   `yaml:"checkIndexStructure" default:"true"`
 	CheckGraph               bool   `yaml:"checkGraph" default:"true"`
 	CheckConsistency         bool   `yaml:"checkConsistency" default:"false"`
+	KeepBackupFiles          bool   `yaml:"keepBackupFiles" default:"true"`
 	PrepareRestore           bool   `yaml:"prepareRestore" default:"false"`
 }
