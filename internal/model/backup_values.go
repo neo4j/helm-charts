@@ -61,12 +61,11 @@ type Backup struct {
 	PageCache                string `yaml:"pageCache,omitempty"`
 	HeapSize                 string `yaml:"heapSize,omitempty"`
 	FallbackToFull           bool   `yaml:"fallbackToFull" default:"true"`
-	RemoveExistingFiles      bool   `yaml:"removeExistingFiles" default:"true"`
-	RemoveBackupFiles        bool   `yaml:"removeBackupFiles" default:"true"`
 	IncludeMetadata          string `yaml:"includeMetadata,omitempty"`
 	Type                     string `yaml:"type,omitempty"`
 	KeepFailed               bool   `yaml:"keepFailed" default:"false"`
 	ParallelRecovery         bool   `yaml:"parallelRecovery" default:"false"`
+	KeepBackupFiles          bool   `yaml:"keepBackupFiles" default:"true"`
 	Verbose                  bool   `yaml:"verbose" default:"true"`
 }
 

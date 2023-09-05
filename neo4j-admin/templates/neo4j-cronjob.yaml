@@ -61,6 +61,8 @@ spec:
                   value: {{ required "You must specify a CLOUD_PROVIDER" .Values.backup.cloudProvider | trim }}
                 - name: BUCKET_NAME
                   value: {{ required "You must specify a BUCKET NAME" .Values.backup.bucketName | trim }}
+                - name: KEEP_BACKUP_FILES
+                  value: "{{ .Values.backup.keepBackupFiles | default true }}"
                 - name: PAGE_CACHE
                   value: {{ .Values.backup.pageCache | trim }}
                 - name: HEAP_SIZE
