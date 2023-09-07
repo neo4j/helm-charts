@@ -1,3 +1,4 @@
+{{- $port := include "neo4j.reverseProxy.port" . -}}
 apiVersion: v1
 kind: Pod
 metadata:
@@ -11,12 +12,12 @@ spec:
       image: {{ $.Values.reverseProxy.image }}
       imagePullPolicy: Always
       ports:
-        - containerPort: {{ atoi $.Values.reverseProxy.port }}
+        - containerPort: {{ $port }}
       env:
         - name: SERVICE_NAME
           value: {{ $.Values.reverseProxy.serviceName }}
         - name: PORT
-          value: {{ $.Values.reverseProxy.port | quote }}
+          value: {{ $port | quote }}
         - name: DOMAIN
           value: {{ $.Values.reverseProxy.domain | default "cluster.local" }}
         - name: NAMESPACE
@@ -33,7 +34,7 @@ spec:
     name: {{ include "neo4j.fullname" . }}-reverseproxy
   ports:
     - protocol: TCP
-      port: {{ atoi $.Values.reverseProxy.port }}
-      targetPort: {{ atoi $.Values.reverseProxy.port }}
+      port: {{ $port }}
+      targetPort: {{ $port }}
 ---
 
