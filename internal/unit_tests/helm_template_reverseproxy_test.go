@@ -78,7 +78,7 @@ func TestReverseProxyIngressEmptyConfigWhenTLSEnabled(t *testing.T) {
 	helmValues.ReverseProxy.Ingress.TLS.Config = nil
 	_, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
 	assert.Error(t, err, "no error found")
-	assert.Contains(t, err.Error(), "Empty secretName for tls config")
+	assert.Contains(t, err.Error(), "Empty tls config")
 }
 
 // TestReverseProxyIngressEmptySecretName checks if error is seen when no secretname is provided
