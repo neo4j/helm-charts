@@ -14,7 +14,7 @@ reverseProxy:
   # serviceName , namespace , domain together combined will form the complete k8s service url. Ex: standalone-admin.default.svc.cluster.local
   # When used against a cluster ensure the service being used is pointing to the cluster instances.
   # This could be the loadbalancer from neo4j helm chart or the headless service installed via neo4j-headless-service helm chart
-  serviceName: "demo-headless"
+  serviceName: "standalone-admin"
   # The namespace should be same as that of the running Neo4j standalone or cluster
   # Default value is "default"
   namespace: "default"
@@ -31,7 +31,7 @@ reverseProxy:
 #      "demo": "value"
 #      "demo2": "value2"
     tls:
-      enabled: true
+      enabled: false
       config:
       - hosts:
         - localhost

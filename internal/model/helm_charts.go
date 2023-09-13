@@ -21,6 +21,8 @@ var HelmChart = newNeo4jHelmChart("neo4j", []string{"enterprise"})
 
 var BackupHelmChart = newHelmChart("neo4j-admin")
 
+var ReverseProxyHelmChart = newHelmChart("neo4j-reverse-proxy")
+
 var ClusterReadReplicaHelmChart = newNeo4jHelmChart("neo4j", []string{"enterprise"})
 
 var PrimaryHelmCharts = []Neo4jHelmChartBuilder{Neo4jHelmChartCommunityAndEnterprise}

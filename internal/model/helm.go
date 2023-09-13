@@ -215,10 +215,12 @@ func HelmTemplateFromStruct(t *testing.T, chart HelmChartBuilder, values interfa
 
 	var helmValues []byte
 	var err error
-	if chart.Name() == "neo4j-admin" {
-		helmValues, err = yaml.Marshal(values.(Neo4jBackupValues))
-		log.Printf("%v", err)
-	} else {
+	switch chart.Name() {
+	case "neo4j-admin":
+		helmValues, _ = yaml.Marshal(values.(Neo4jBackupValues))
+	case "neo4j-reverse-proxy":
+		helmValues, _ = yaml.Marshal(values.(Neo4jReverseProxyValues))
+	default:
 		helmValues, _ = yaml.Marshal(values.(HelmValues))
 	}
 
@@ -247,9 +249,12 @@ func HelmTemplateFromStruct(t *testing.T, chart HelmChartBuilder, values interfa
 
 func (c *HelmClient) Install(t *testing.T, releaseName string, namespace string, values interface{}) (string, error) {
 	var helmValues []byte
-	if c.chartName == "neo4j-admin" {
+	switch c.chartName {
+	case "neo4j-admin":
 		helmValues, _ = yaml.Marshal(values.(Neo4jBackupValues))
-	} else {
+	case "neo4j-reverse-proxy":
+		helmValues, _ = yaml.Marshal(values.(Neo4jReverseProxyValues))
+	default:
 		helmValues, _ = yaml.Marshal(values.(HelmValues))
 	}
 	helmArgs := []string{

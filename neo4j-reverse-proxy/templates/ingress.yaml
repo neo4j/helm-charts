@@ -5,7 +5,7 @@ kind: Ingress
 metadata:
   name: {{ include "neo4j.fullname" . }}-reverseproxy-ingress
   namespace: "{{ .Release.Namespace }}"
-  {{- include "neo4j.annotations" $.Values.reverseProxy.ingress.annotations }}
+  {{- include "neo4j.annotations" $.Values.reverseProxy.ingress.annotations | indent 2 }}
 spec:
   ingressClassName: nginx
   {{- include "neo4j.ingress.tls" . | indent 2 }}
