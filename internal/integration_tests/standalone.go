@@ -764,6 +764,7 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 	//installing nginx ingress controller
 	err := run(t, "helm", "upgrade", "--install", "ingress-nginx", "ingress-nginx", "--repo", "https://kubernetes.github.io/ingress-nginx", "--namespace", "ingress-nginx", "--create-namespace")
 	assert.NoError(t, err)
+	time.Sleep(1 * time.Minute)
 
 	_, err = helmClient.Install(t, reverseProxyReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
