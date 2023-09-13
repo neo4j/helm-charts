@@ -503,16 +503,6 @@ podSpec:
 # print the neo4j user password set during install to the `helm install` log
 logInitialPassword: true
 
-reverseProxy:
-  enabled: false
-  image: "harshitsinghvi22/helm-charts:rpv12"
-  serviceName: "standalone-admin"
-  namespace: "default"
-  domain: "cluster.local"
-  port: "80"
-  ingress:
-    enabled: false
-
 # Jvm configuration for Neo4j
 jvm:
   # If true any additional arguments are added after the Neo4j default jvm arguments.
