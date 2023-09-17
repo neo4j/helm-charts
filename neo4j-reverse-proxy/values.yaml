@@ -21,9 +21,13 @@ reverseProxy:
   # default is set to cluster.local
   domain: "cluster.local"
 
-  # This assumes ingress-nginx controller is already installed in your kubernetes cluster.
+  # This assumes ingress-nginx controller or haproxy-ingress-controller is already installed in your kubernetes cluster.
+  # You can install ingress-nginx by following instructions on this link https://github.com/kubernetes/ingress-nginx/blob/main/docs/deploy/index.md#quick-start
+  # You can install haproxy-ingress by following instructions on this link https://haproxy-ingress.github.io/docs/getting-started/
   ingress:
     enabled: true
+    #default value is nginx. It can be either nginx or haproxy
+    className: nginx
     annotations: {}
 #      "demo": "value"
 #      "demo2": "value2"
