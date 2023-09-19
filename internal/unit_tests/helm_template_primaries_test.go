@@ -817,6 +817,31 @@ func TestNeo4jPodNodeAffinity(t *testing.T) {
 	}))
 }
 
+// TestNeo4jPodAntiAffinity checks for podAntiAffinity setting in statefulset
+func TestNeo4jPodAntiAffinity(t *testing.T) {
+	t.Parallel()
+	helmValues := model.DefaultEnterpriseValues
+	helmValues.PodSpec.PodAntiAffinity = true
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+
+		manifest, err := model.HelmTemplateFromStruct(t, model.HelmChart, helmValues)
+		assert.NoError(t, err)
+		neo4jStatefulSet := manifest.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
+		podAntiAffinity := neo4jStatefulSet.Spec.Template.Spec.Affinity.PodAntiAffinity
+		assert.NotNil(t, podAntiAffinity, "nil podAntiAffinity found")
+		assert.NotNil(t, podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
+		assert.NotEqual(t, len(podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution), 0)
+
+		helmValues.PodSpec.PodAntiAffinity = false
+		manifest, err = model.HelmTemplateFromStruct(t, model.HelmChart, helmValues)
+		assert.NoError(t, err)
+		neo4jStatefulSet = manifest.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
+		affinity := neo4jStatefulSet.Spec.Template.Spec.Affinity
+		assert.Nil(t, affinity, "affinity found")
+		
+	}))
+}
+
 func TestExtraLabels(t *testing.T) {
 	t.Parallel()
 

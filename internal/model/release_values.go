@@ -1,7 +1,5 @@
 package model
 
-import v1 "k8s.io/api/core/v1"
-
 type HelmValues struct {
 	FullnameOverride         string            `yaml:"fullnameOverride,omitempty"`
 	NameOverride             string            `yaml:"nameOverride,omitempty"`
@@ -23,7 +21,7 @@ type HelmValues struct {
 	Image                    Image             `yaml:"image,omitempty"`
 	Statefulset              Statefulset       `yaml:"statefulset,omitempty"`
 	Env                      Env               `yaml:"env,omitempty"`
-	PodSpec                  v1.PodSpec        `yaml:"podSpec,omitempty"`
+	PodSpec                  PodSpec           `yaml:"podSpec,omitempty"`
 	LogInitialPassword       bool              `yaml:"logInitialPassword,omitempty"`
 	Jvm                      Jvm               `yaml:"jvm,omitempty"`
 	Logs                     Logging           `yaml:"logs,omitempty"`
@@ -31,6 +29,20 @@ type HelmValues struct {
 	LdapPasswordMountPath    string            `yaml:"ldapPasswordMountPath,omitempty"`
 	ApocCredentials          ApocCredentials   `yaml:"apoc_credentials,omitempty"`
 }
+
+type PodSpec struct {
+	Annotations                   map[string]string      `yaml:"annotations,omitempty"`
+	NodeAffinity                  map[string]interface{} `yaml:"nodeAffinity,omitempty"`
+	PodAntiAffinity               interface{}            `yaml:"podAntiAffinity,omitempty"`
+	Tolerations                   []interface{}          `yaml:"tolerations,omitempty"`
+	PriorityClassName             string                 `yaml:"priorityClassName,omitempty"`
+	Loadbalancer                  string                 `yaml:"loadbalancer,omitempty"`
+	ServiceAccountName            string                 `yaml:"serviceAccountName,omitempty"`
+	TerminationGracePeriodSeconds int                    `yaml:"terminationGracePeriodSeconds,omitempty"`
+	InitContainers                []interface{}          `yaml:"initContainers,omitempty"`
+	Containers                    []interface{}          `yaml:"containers,omitempty"`
+}
+
 type ApocCredentials struct {
 	Jdbc          map[string]string `yaml:"jdbc,omitempty"`
 	Elasticsearch map[string]string `yaml:"elasticsearch,omitempty"`
@@ -245,18 +257,6 @@ type Statefulset struct {
 type Env struct {
 }
 
-type PodSpec struct {
-	Annotations                   map[string]string `yaml:"annotations,omitempty"`
-	NodeAffinity                  v1.NodeAffinity   `yaml:"nodeAffinity,omitempty"`
-	PodAntiAffinity               bool              `yaml:"podAntiAffinity,omitempty"`
-	Tolerations                   []v1.Toleration   `yaml:"tolerations,omitempty"`
-	PriorityClassName             string            `yaml:"priorityClassName,omitempty"`
-	Loadbalancer                  string            `yaml:"loadbalancer,omitempty"`
-	ServiceAccountName            string            `yaml:"serviceAccountName,omitempty"`
-	TerminationGracePeriodSeconds int               `yaml:"terminationGracePeriodSeconds,omitempty"`
-	InitContainers                []v1.Container    `yaml:"initContainers,omitempty"`
-	Containers                    []v1.Container    `yaml:"containers,omitempty"`
-}
 type Jvm struct {
 	UseNeo4JDefaultJvmArguments bool     `yaml:"useNeo4jDefaultJvmArguments,omitempty"`
 	AdditionalJvmArguments      []string `yaml:"additionalJvmArguments,omitempty"`
@@ -264,4 +264,8 @@ type Jvm struct {
 type Logging struct {
 	ServerLogsXML string `yaml:"serverLogsXml,omitempty"`
 	UserLogsXML   string `yaml:"userLogsXml,omitempty"`
+}
+
+type PodAntiAffinity struct {
+	RequiredDuringSchedulingIgnoredDuringExecution []RequiredDuringSchedulingIgnoredDuringExecution `yaml:"requiredDuringSchedulingIgnoredDuringExecution"`
 }
