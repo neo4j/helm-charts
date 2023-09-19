@@ -821,20 +821,23 @@ func TestNeo4jPodNodeAffinity(t *testing.T) {
 func TestNeo4jPodAntiAffinity(t *testing.T) {
 	t.Parallel()
 	helmValues := model.DefaultEnterpriseValues
-	helmValues.PodSpec.PodAntiAffinity = model.PodAntiAffinity{
-		RequiredDuringSchedulingIgnoredDuringExecution: []model.RequiredDuringSchedulingIgnoredDuringExecution{
-			{
-				LabelSelector: model.LabelSelector{
-					MatchLabels: map[string]string{
-						"demo": "demo",
-					},
-				},
-				TopologyKey: "demo",
-			},
-		},
-	}
-	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
 
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		if edition == "community" {
+			helmValues = model.DefaultCommunityValues
+		}
+		helmValues.PodSpec.PodAntiAffinity = model.PodAntiAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: []model.RequiredDuringSchedulingIgnoredDuringExecution{
+				{
+					LabelSelector: model.LabelSelector{
+						MatchLabels: map[string]string{
+							"demo": "demo",
+						},
+					},
+					TopologyKey: "demo",
+				},
+			},
+		}
 		manifest, err := model.HelmTemplateFromStruct(t, model.HelmChart, helmValues)
 		assert.NoError(t, err)
 		neo4jStatefulSet := manifest.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
