@@ -27,6 +27,7 @@ type RequiredDuringSchedulingIgnoredDuringExecution struct {
 }
 type LabelSelector struct {
 	MatchExpressions []MatchExpressions `yaml:"matchExpressions,omitempty"`
+	MatchLabels      map[string]string  `yaml:"matchLabels,omitempty"`
 }
 
 type MatchExpressions struct {
