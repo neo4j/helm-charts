@@ -21,7 +21,7 @@ spec:
         - name: DOMAIN
           value: {{ $.Values.reverseProxy.domain | default "cluster.local" }}
         - name: NAMESPACE
-          value: {{ $.Values.reverseProxy.namespace | default "default" }}
+          value: {{ .Release.Namespace }}
 ---
 apiVersion: v1
 kind: Service
