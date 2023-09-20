@@ -2,6 +2,10 @@
 {{- $clusterEnabled := or ( index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" ) ( index .Values.config "dbms.clustering.enable" | default "" | regexMatch "(?i)true|yes" ) -}}
 {{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "" | regexMatch "(?i)no|false" -}}
 {{- $offlineMaintenanceEnabled :=  .Values.neo4j.offlineMaintenanceModeEnabled -}}
+{{- $backupEnabled := false }}
+{{- if $isEnterprise }}
+  {{- $backupEnabled = index $.Values.config "dbms.backup.enabled" | default "true" | regexMatch "(?i)yes|true" }}
+{{- end }}
 {{- $neo4jImage := include "neo4j.image" . -}}
 {{- template "neo4j.checkNodeSelectorLabels" . -}}
 {{- template "podSpec.checkLoadBalancerParam" . -}}
@@ -112,8 +116,10 @@ spec:
               name: bolt
             - containerPort: 7473
               name: https
+            {{- if $backupEnabled }}
             - containerPort: 6362
               name: backup
+            {{- end }}
           {{- with .Values.neo4j.resources }}
           resources:
             {{- if hasKey . "requests" | or (hasKey . "limits") }}
