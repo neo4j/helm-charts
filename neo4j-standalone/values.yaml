@@ -414,6 +414,12 @@ podSpec:
   # If set to false then no anti-affinity rules are applied
   # If set to an object then that object is used for the Neo4j podAntiAffinity
   podAntiAffinity: true
+#    requiredDuringSchedulingIgnoredDuringExecution:
+#      - labelSelector:
+#          matchLabels:
+#            app: "demo"
+#        topologyKey: kubernetes.io/hostname
+#            helm.neo4j.com/pod_category: "neo4j-instance"
 
   #Add tolerations to the Neo4j pod
   tolerations:
