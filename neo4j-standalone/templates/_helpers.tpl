@@ -367,14 +367,18 @@ tolerations:
 {{- define "neo4j.affinity" -}}
     {{- if or (.Values.podSpec.nodeAffinity) (.Values.podSpec.podAntiAffinity) }}
 affinity:
-    {{- if .Values.podSpec.podAntiAffinity }}
+    {{- if and .Values.podSpec.podAntiAffinity }}
+        {{- if eq (typeOf .Values.podSpec.podAntiAffinity) "bool" }}
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
         - labelSelector:
             matchLabels:
-              app: "{{ template "neo4j.appName" . }}"
+              app: "{{ template "neo4j.name" . }}"
               helm.neo4j.com/pod_category: "neo4j-instance"
           topologyKey: kubernetes.io/hostname
+        {{- else }}
+    podAntiAffinity: {{ toYaml .Values.podSpec.podAntiAffinity | nindent 6 }}
+        {{- end }}
     {{- end }}
     {{- if .Values.podSpec.nodeAffinity }}
     nodeAffinity:
