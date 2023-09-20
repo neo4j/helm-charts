@@ -3,6 +3,10 @@
 {{- $authDisabled := index .Values.config "dbms.security.auth_enabled" | default "" | regexMatch "(?i)no|false" -}}
 {{- $offlineMaintenanceEnabled :=  .Values.neo4j.offlineMaintenanceModeEnabled }}
 {{- $neo4jImage := include "neo4j.image" . }}
+{{- $backupEnabled := false }}
+{{- if $isEnterprise }}
+{{- $backupEnabled = index $.Values.config "server.backup.enabled" | default "true" | regexMatch "(?i)yes|true" }}
+{{- end }}
 {{- template "neo4j.volumes.validation" . -}}
 {{- template "neo4j.checkNodeSelectorLabels" . -}}
 {{- template "neo4j.checkLicenseAgreement" . -}}
@@ -112,8 +116,10 @@ spec:
               name: bolt
             - containerPort: 7473
               name: https
+            {{- if $backupEnabled }}
             - containerPort: 6362
               name: backup
+            {{- end }}
           {{- with .Values.neo4j.resources }}
           resources:
             {{- if hasKey . "requests" | or (hasKey . "limits") }}
