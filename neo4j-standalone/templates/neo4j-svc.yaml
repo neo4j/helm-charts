@@ -72,10 +72,12 @@ spec:
     app: "{{ template "neo4j.appName" $ }}"
     helm.neo4j.com/instance: "{{ include "neo4j.fullname" $ }}"
   ports:
+    {{- if $backupEnabled }}
     - protocol: TCP
       port: 6362
       targetPort: 6362
       name: tcp-backup
+    {{- end }}
     - protocol: TCP
       port: 7687
       targetPort: 7687
@@ -136,10 +138,12 @@ spec:
     app: "{{ template "neo4j.appName" $ }}"
     helm.neo4j.com/instance: "{{ include "neo4j.fullname" $ }}"
   ports:
+    {{- if $backupEnabled }}
     - protocol: TCP
       port: 6362
       targetPort: 6362
       name: tcp-backup
+    {{- end }}
     - protocol: TCP
       port: 7687
       targetPort: 7687

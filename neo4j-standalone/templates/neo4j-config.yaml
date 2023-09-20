@@ -1,5 +1,9 @@
 {{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
 {{- $clusterEnabled := or ( index .Values.config "dbms.mode" | default "" | regexMatch "(?i)core|replica" ) ( index .Values.config "dbms.clustering.enable" | default "" | regexMatch "(?i)true|yes" ) }}
+{{- $backupEnabled := false }}
+{{- if $isEnterprise }}
+  {{- $backupEnabled = index $.Values.config "dbms.backup.enabled" | default "true" | regexMatch "(?i)yes|true" }}
+{{- end }}
 {{- template "neo4j.checkLicenseAgreement" . -}}
 {{- template "neo4j.apocCredentials.validation" . }}
 # Neo4j config values that are required for neo4j to work correctly in Kubernetes, these are not overridden by user-provided values
@@ -93,7 +97,7 @@ data:
   # If we set default advertised address it over-rides the bolt address used to populate the browser in a really annoying way
   # dbms.default_advertised_address: "$(bash -c 'echo ${SERVICE_DOMAIN}')"
 
-  {{- if $isEnterprise }}
+  {{- if and $isEnterprise $backupEnabled }}
   dbms.backup.listen_address: "0.0.0.0:6362"
   {{- end }}
 
