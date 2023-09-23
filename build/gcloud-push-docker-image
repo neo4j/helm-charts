@@ -41,6 +41,16 @@ function push_to_gcr {
         cd ..
     fi
 
+    cd neo4j-reverse-proxy
+    NEO4J_REVERSE_PROXY_IMG="eu.gcr.io/${CLOUDSDK_CORE_PROJECT}/neo4j-helm-chart:reverseproxy44"
+    echo "NEO4J_REVERSE_PROXY_IMG = ${NEO4J_REVERSE_PROXY_IMG}"
+
+    docker build -t "${NEO4J_REVERSE_PROXY_IMG}" --no-cache -f Dockerfile .
+    docker push "${NEO4J_REVERSE_PROXY_IMG}"
+    echo "##teamcity[setParameter name='env.NEO4J_REVERSE_PROXY_IMG' value='${NEO4J_REVERSE_PROXY_IMG}']"
+    docker rmi "${NEO4J_REVERSE_PROXY_IMG}"
+    cd ..
+
 }
 
 if [ "${DISTRIBUTION}" == "redhat" ]; then

@@ -1,0 +1,22 @@
+Thank you for installing neo4j-reverse-proxy helm chart
+
+This chart installs the following resources in "{{ .Release.Namespace }}" namespace:
+ * Pod = "{{ include "neo4j.fullname" . }}-reverseproxy"
+ * ClusterIP service =  "{{ include "neo4j.fullname" . }}-reverseproxy-service"
+
+{{- if $.Values.reverseProxy.ingress.enabled }}
+{{- $ingressName := printf "%s-reverseproxy-ingress" (include "neo4j.fullname" .) -}}
+{{- $hostname := printf "$(kubectl get ingress/%s -n %s -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"  $ingressName .Release.Namespace -}}
+{{- $port := include "neo4j.reverseProxy.port" . }}
+ * Ingress = "{{ include "neo4j.fullname" . }}-reverseproxy-ingress"
+
+You can get the ingress address by executing the below command. (It can take a few seconds for the address to appear)
+    {{ printf "kubectl get ingress/%s -n %s -o jsonpath='{.status.loadBalancer.ingress[0].ip}'"  $ingressName .Release.Namespace }}
+
+You can execute the following URL in your browser to access Neo4j
+{{- if $.Values.reverseProxy.ingress.tls.enabled }}
+ https://[INGRESS_ADDRESS]:{{ $port }}
+{{- else }}
+ http://[INGRESS_ADDRESS]:{{ $port }}
+{{- end }}
+{{- end }}

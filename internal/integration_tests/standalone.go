@@ -220,6 +220,7 @@ func kCreateSecret(namespace model.Namespace) ([][]string, Closeable, error) {
 		{"create", "secret", "-n", string(namespace), "generic", "awscred", fmt.Sprintf("--from-file=credentials=%s", awsCredFileName)},
 		{"create", "secret", "-n", string(namespace), "generic", "azurecred", fmt.Sprintf("--from-file=credentials=%s", azureCredFileName)},
 		{"create", "secret", "-n", string(namespace), "generic", "gcpcred", fmt.Sprintf("--from-file=credentials=%s", gcpCredFileName)},
+		{"create", "secret", "-n", string(namespace), "tls", "ingress-secret", fmt.Sprintf("--key=%s/%s", tempDir, "private.key"), fmt.Sprintf("--cert=%s/%s", tempDir, "public.crt")},
 	}, closeable, err
 }
 
@@ -555,6 +556,9 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 		{name: "Install Backup Helm Chart For GCP", test: func(t *testing.T) {
 			assert.NoError(t, InstallNeo4jBackupGCPHelmChart(t, name), "Backup to GCP should succeed")
 		}},
+		{name: "Install Reverse Proxy Helm Chart", test: func(t *testing.T) {
+			assert.NoError(t, InstallReverseProxyHelmChart(t, name), "Reverse Proxy installation with ingress should succeed")
+		}},
 	}, err
 }
 
@@ -718,6 +722,55 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 		}
 	}
 	assert.Equal(t, true, found, "no gcp backup pod found")
+	return nil
+}
+
+func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.ReleaseName) error {
+	if model.Neo4jEdition == "community" {
+		t.Skip()
+		return nil
+	}
+	reverseProxyReleaseName := model.NewReleaseName("rp-" + TestRunIdentifier)
+	namespace := string(standaloneReleaseName.Namespace())
+
+	t.Cleanup(func() {
+		_ = runAll(t, "helm", [][]string{
+			{"uninstall", reverseProxyReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
+		}, false)
+	})
+
+	helmClient := model.NewHelmClient(model.DefaultNeo4jReverseProxyChartName)
+	helmValues := model.DefaultNeo4jReverseProxyValues
+	helmValues.ReverseProxy.ServiceName = fmt.Sprintf("%s-admin", standaloneReleaseName.String())
+	helmValues.ReverseProxy.Namespace = namespace
+
+	//installing nginx ingress controller
+	err := run(t, "helm", "upgrade", "--install", "ingress-nginx", "ingress-nginx", "--repo", "https://kubernetes.github.io/ingress-nginx", "--namespace", "ingress-nginx", "--create-namespace")
+	assert.NoError(t, err)
+	time.Sleep(1 * time.Minute)
+
+	_, err = helmClient.Install(t, reverseProxyReleaseName.String(), namespace, helmValues)
+	assert.NoError(t, err)
+
+	time.Sleep(1 * time.Minute)
+	reverseProxyPodName := fmt.Sprintf("%s-reverseproxy", reverseProxyReleaseName.String())
+	pod, err := Clientset.CoreV1().Pods(namespace).Get(context.Background(), reverseProxyPodName, metav1.GetOptions{})
+	assert.NoError(t, err, "cannot retrieve reverse proxy pod")
+	assert.NotNil(t, pod, "empty reverse proxy pod found")
+
+	ingressName := fmt.Sprintf("%s-reverseproxy-ingress", reverseProxyReleaseName.String())
+	ingress, err := Clientset.NetworkingV1().Ingresses(namespace).Get(context.Background(), ingressName, metav1.GetOptions{})
+	assert.NoError(t, err, "cannot retrieve reverse proxy ingress")
+	assert.NotNil(t, ingress, "empty reverse proxy ingress found")
+	ingressIP := ingress.Status.LoadBalancer.Ingress[0].IP
+	assert.NotEmpty(t, ingressIP, "no ingress ip found")
+
+	ingressURL := fmt.Sprintf("https://%s:443", ingressIP)
+	stdout, _, err := RunCommand(exec.Command("curl", "-ivk", ingressURL))
+	assert.NoError(t, err)
+	assert.NotNil(t, string(stdout), "no curl output found")
+	assert.Contains(t, string(stdout), "bolt_routing")
+
 	return nil
 }
 

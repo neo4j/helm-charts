@@ -1,0 +1,40 @@
+{{- $port := include "neo4j.reverseProxy.port" . -}}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "neo4j.fullname" . }}-reverseproxy
+  labels:
+    name: {{ include "neo4j.fullname" . }}-reverseproxy
+  namespace: "{{ .Release.Namespace }}"
+spec:
+  containers:
+    - name: {{ include "neo4j.fullname" . }}-reverseproxy
+      image: {{ $.Values.reverseProxy.image }}
+      imagePullPolicy: Always
+      ports:
+        - containerPort: {{ $port }}
+      env:
+        - name: SERVICE_NAME
+          value: {{ $.Values.reverseProxy.serviceName }}
+        - name: PORT
+          value: {{ $port | quote }}
+        - name: DOMAIN
+          value: {{ $.Values.reverseProxy.domain | default "cluster.local" }}
+        - name: NAMESPACE
+          value: {{ .Release.Namespace }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "neo4j.fullname" . }}-reverseproxy-service
+  namespace: "{{ .Release.Namespace }}"
+spec:
+  type: ClusterIP
+  selector:
+    name: {{ include "neo4j.fullname" . }}-reverseproxy
+  ports:
+    - protocol: TCP
+      port: {{ $port }}
+      targetPort: {{ $port }}
+---
+
