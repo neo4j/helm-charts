@@ -3,7 +3,7 @@ name: neo4j-reverse-proxy
 home: https://www.neo4j.com
 version: 5.11.0
 appVersion: "-"
-description: Sets up a http server and reverse proxys bolt and http requests
+description: Sets up an http server and a reverse proxy for bolt and http requests
 keywords:
   - graph
   - database
