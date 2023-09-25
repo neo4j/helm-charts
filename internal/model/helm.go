@@ -238,13 +238,14 @@ func HelmTemplateFromStruct(t *testing.T, chart HelmChartBuilder, values interfa
 		io.WriteString(stdin, string(helmValues))
 	}()
 
-	stdErrOut, err := cmd.CombinedOutput()
+	stdout, stderr, err := RunCommand(cmd)
+	//stdErrOut, err := cmd.CombinedOutput()
 	t.Logf("Running %s\n", cmd.Args)
 	t.Logf("With StdIn:\n%s\n", helmValues)
 	if err != nil {
-		return nil, multierror.Append(errors.New("Error running helm template"), err, fmt.Errorf(string(stdErrOut)))
+		return nil, multierror.Append(errors.New("Error running helm template"), err, fmt.Errorf(string(stderr)))
 	}
-	return decodeK8s(stdErrOut)
+	return decodeK8s(stdout)
 }
 
 func (c *HelmClient) Install(t *testing.T, releaseName string, namespace string, values interface{}) (string, error) {

@@ -3,7 +3,7 @@
 {{- $backupEnabled := false }}
 {{- if $isEnterprise }}
 {{- $clusterEnabled = eq (include "neo4j.isClusterEnabled" .) "true" }}
-{{- $backupEnabled = index $.Values.config "dbms.backup.enabled" | default "true" | regexMatch "(?i)yes|true" }}
+{{- $backupEnabled = index $.Values.config "server.backup.enabled" | default "true" | regexMatch "(?i)yes|true" }}
 {{- end }}
 {{- $jmxEnabled := index $.Values.config "server.metrics.jmx.enabled" | default "" | regexMatch "(?i)yes|true" }}
 {{- $graphiteEnabled := index $.Values.config "server.metrics.graphite.enabled" | default "" | regexMatch "(?i)yes|true" }}
@@ -70,10 +70,12 @@ spec:
     app: "{{ template "neo4j.name" $ }}"
     helm.neo4j.com/instance: "{{ include "neo4j.fullname" $ }}"
   ports:
+    {{- if $backupEnabled }}
     - protocol: TCP
       port: 6362
       targetPort: 6362
       name: tcp-backup
+    {{- end }}
     - protocol: TCP
       port: 7687
       targetPort: 7687
@@ -134,10 +136,12 @@ spec:
     app: "{{ template "neo4j.name" $ }}"
     helm.neo4j.com/instance: "{{ include "neo4j.fullname" $ }}"
   ports:
+    {{- if $backupEnabled }}
     - protocol: TCP
       port: 6362
       targetPort: 6362
       name: tcp-backup
+    {{- end }}
     - protocol: TCP
       port: 7687
       targetPort: 7687

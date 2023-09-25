@@ -1,4 +1,8 @@
 {{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
+{{- $backupEnabled := false }}
+{{- if $isEnterprise }}
+{{- $backupEnabled = index $.Values.config "server.backup.enabled" | default "true" | regexMatch "(?i)yes|true" }}
+{{- end }}
 {{- $clusterEnabled := eq (include "neo4j.isClusterEnabled" .) "true" }}
 {{- template "neo4j.checkLicenseAgreement" . -}}
 {{- template "neo4j.apocCredentials.validation" . }}
@@ -100,7 +104,7 @@ data:
   # If we set default advertised address it over-rides the bolt address used to populate the browser in a really annoying way
   # dbms.default_advertised_address: "$(bash -c 'echo ${SERVICE_DOMAIN}')"
 
-  {{- if $isEnterprise }}
+  {{- if and $isEnterprise $backupEnabled }}
   server.backup.listen_address: "0.0.0.0:6362"
   {{- end }}
 

@@ -253,6 +253,68 @@ func TestEnterpriseContainsDefaultBackupAddress(t *testing.T) {
 	})
 }
 
+// TestNeo4jBackupPorts checks for backup ports in the services when backup disabled and enabled
+func TestNeo4jBackupPorts(t *testing.T) {
+	t.Parallel()
+
+	var helmValues model.HelmValues
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		if edition == "community" {
+			helmValues = model.DefaultCommunityValues
+			manifest, err := model.HelmTemplateFromStruct(t, chart, helmValues)
+			assert.NoError(t, err, "error while testing backup ports when backup is enabled")
+			statefulSet := manifest.OfTypeWithName(&appsv1.StatefulSet{}, model.DefaultHelmTemplateReleaseName.String())
+			assert.NotNil(t, statefulSet, fmt.Sprintf("no statefulset found with name %s", model.DefaultHelmTemplateReleaseName))
+
+			ports := statefulSet.(*appsv1.StatefulSet).Spec.Template.Spec.Containers[0].Ports
+			for _, port := range ports {
+				assert.NotEqual(t, port.Name, "backup", "found backup port name in statefulset when backup is disabled")
+				assert.NotEqual(t, port.ContainerPort, int32(6362), "found backup port in statefulset when backup is disabled")
+			}
+		} else {
+			helmValues = model.DefaultEnterpriseValues
+			manifest, err := model.HelmTemplateFromStruct(t, chart, helmValues)
+			assert.NoError(t, err, "error while testing backup ports when backup is enabled")
+
+			services := manifest.OfType(&v1.Service{})
+			for _, service := range services {
+				svcPorts := service.(*v1.Service).Spec.Ports
+				for _, port := range svcPorts {
+					if port.Name == "tcp-backup" {
+						assert.Equal(t, port.Port, int32(6362), fmt.Sprintf("Backup Port found %d is not matching with 6362", port.Port))
+						assert.Equal(t, port.TargetPort.IntValue(), 6362, fmt.Sprintf("Backup Target Port found %d is not matching with 6362", port.TargetPort.IntVal))
+					}
+				}
+			}
+
+			neo4jConfigs := make(map[string]string, 1)
+			neo4jConfigs["server.backup.enabled"] = "false"
+			helmValues.Config = neo4jConfigs
+			manifest, err = model.HelmTemplateFromStruct(t, chart, helmValues)
+			assert.NoError(t, err, "error while testing backup ports when backup is disabled")
+
+			services = manifest.OfType(&v1.Service{})
+			for _, service := range services {
+				svcPorts := service.(*v1.Service).Spec.Ports
+				for _, port := range svcPorts {
+					assert.NotEqual(t, port.Name, "tcp-backup", "found backup port when backup is disabled")
+				}
+			}
+
+			statefulSet := manifest.OfTypeWithName(&appsv1.StatefulSet{}, model.DefaultHelmTemplateReleaseName.String())
+			assert.NotNil(t, statefulSet, fmt.Sprintf("no statefulset found with name %s", model.DefaultHelmTemplateReleaseName))
+
+			ports := statefulSet.(*appsv1.StatefulSet).Spec.Template.Spec.Containers[0].Ports
+			for _, port := range ports {
+				assert.NotEqual(t, port.Name, "backup", "found backup port name in statefulset when backup is disabled")
+				assert.NotEqual(t, port.ContainerPort, int32(6362), "found backup port in statefulset when backup is disabled")
+			}
+		}
+
+	}))
+}
+
 func TestAdditionalEnvVars(t *testing.T) {
 	t.Parallel()
 
@@ -814,6 +876,53 @@ func TestNeo4jPodNodeAffinity(t *testing.T) {
 		if !assert.NotEqual(t, len(nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution), 0) {
 			return
 		}
+	}))
+}
+
+// TestNeo4jPodAntiAffinity checks for podAntiAffinity setting in statefulset
+func TestNeo4jPodAntiAffinity(t *testing.T) {
+	t.Parallel()
+	helmValues := model.DefaultEnterpriseValues
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		if edition == "community" {
+			helmValues = model.DefaultCommunityValues
+		}
+		helmValues.PodSpec.PodAntiAffinity = model.PodAntiAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: []model.RequiredDuringSchedulingIgnoredDuringExecution{
+				{
+					LabelSelector: model.LabelSelector{
+						MatchLabels: map[string]string{
+							"demo": "demo",
+						},
+					},
+					TopologyKey: "demo",
+				},
+			},
+		}
+		manifest, err := model.HelmTemplateFromStruct(t, model.HelmChart, helmValues)
+		assert.NoError(t, err)
+		neo4jStatefulSet := manifest.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
+		podAntiAffinity := neo4jStatefulSet.Spec.Template.Spec.Affinity.PodAntiAffinity
+		assert.NotNil(t, podAntiAffinity, "nil podAntiAffinity found")
+		assert.NotNil(t, podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
+		assert.NotEqual(t, len(podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution), 0)
+
+		helmValues.PodSpec.PodAntiAffinity = false
+		manifest, err = model.HelmTemplateFromStruct(t, model.HelmChart, helmValues)
+		assert.NoError(t, err)
+		neo4jStatefulSet = manifest.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
+		affinity := neo4jStatefulSet.Spec.Template.Spec.Affinity
+		assert.Nil(t, affinity, "affinity found")
+
+		helmValues.PodSpec.PodAntiAffinity = true
+		manifest, err = model.HelmTemplateFromStruct(t, model.HelmChart, helmValues)
+		assert.NoError(t, err)
+		neo4jStatefulSet = manifest.First(&appsv1.StatefulSet{}).(*appsv1.StatefulSet)
+		podAntiAffinity = neo4jStatefulSet.Spec.Template.Spec.Affinity.PodAntiAffinity
+		assert.NotNil(t, podAntiAffinity, "nil podAntiAffinity found")
+		assert.NotNil(t, podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
+		assert.NotEqual(t, len(podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution), 0)
 	}))
 }
 

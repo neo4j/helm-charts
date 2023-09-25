@@ -22,11 +22,12 @@ type PodAffinity struct {
 	RequiredDuringSchedulingIgnoredDuringExecution []RequiredDuringSchedulingIgnoredDuringExecution `yaml:"requiredDuringSchedulingIgnoredDuringExecution"`
 }
 type RequiredDuringSchedulingIgnoredDuringExecution struct {
-	LabelSelector LabelSelector `yaml:"labelSelector"`
-	TopologyKey   string        `yaml:"topologyKey"`
+	LabelSelector LabelSelector `yaml:"labelSelector,omitempty"`
+	TopologyKey   string        `yaml:"topologyKey,omitempty"`
 }
 type LabelSelector struct {
-	MatchExpressions []MatchExpressions `yaml:"matchExpressions"`
+	MatchExpressions []MatchExpressions `yaml:"matchExpressions,omitempty"`
+	MatchLabels      map[string]string  `yaml:"matchLabels,omitempty"`
 }
 
 type MatchExpressions struct {
