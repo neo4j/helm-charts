@@ -175,6 +175,23 @@ var DefaultNeo4jBackupValues = Neo4jBackupValues{
 	},
 }
 
+var DefaultNeo4jReverseProxyValues = Neo4jReverseProxyValues{
+	ReverseProxy: ReverseProxy{
+		Image: os.Getenv("NEO4J_REVERSE_PROXY_IMG"),
+		Ingress: Ingress{
+			Enabled: true,
+			TLS: TLS{
+				Enabled: true,
+				Config: []Config{
+					{
+						SecretName: "ingress-secret",
+					},
+				},
+			},
+		},
+	},
+}
+
 var DefaultCommunityValues = HelmValues{
 	Neo4J: Neo4J{
 		Name:    "test",
