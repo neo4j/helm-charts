@@ -25,7 +25,7 @@ PACKAGE_SIGNING_PASSPHRASE="${PACKAGE_SIGNING_PASSPHRASE:?PACKAGE_SIGNING_PASSPH
 
 if [ ${S3_UPLOAD_TO_SUB_FOLDER} == "neo4j" ]; then
     CHART_VERSION=$(helm show chart ./neo4j| grep -E "version:(.*)" | awk -F ": " '{print $2}')
-    tar -czvf "neo4j-helm-charts-${CHART_VERSION}.tgz" neo4j neo4j-persistent-volume neo4j-headless-service neo4j-docker-desktop-pv neo4j-admin
+    tar -czvf "neo4j-helm-charts-${CHART_VERSION}.tgz" neo4j neo4j-persistent-volume neo4j-headless-service neo4j-docker-desktop-pv neo4j-admin neo4j-reverse-proxy
     aws s3 cp --acl public-read "neo4j-helm-charts-${CHART_VERSION}.tgz" s3://dist.neo4j.org/helm/
     rm -f "neo4j-helm-charts-${CHART_VERSION}.tgz"
 fi
@@ -35,6 +35,7 @@ echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j --key "${PACKAGE_
 echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-admin --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
 echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-headless-service --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
 echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-persistent-volume --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
+echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-reverse-proxy --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
 # echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-docker-desktop-pv --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
 
 echo "Copying packaged files to ${BUILD_OUT_DIR}"
