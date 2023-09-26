@@ -1,0 +1,36 @@
+# Default values for neo4j reverse proxy helm chart
+
+## @param nameOverride String to partially override common.names.fullname
+nameOverride: ""
+## @param fullnameOverride String to fully override common.names.fullname
+fullnameOverride: ""
+
+# Parameters for reverse proxy
+reverseProxy:
+  image: "neo4j/helm-charts-reverse-proxy:4.4.25"
+
+  # Name of the kubernetes service. This service should have the ports 7474 and 7687 open.
+  # This could be the admin service ex: "standalone-admin" or the loadbalancer service ex: "standalone" created via the neo4j helm chart
+  # serviceName , namespace , domain together will form the complete k8s service url. Ex: standalone-admin.default.svc.cluster.local
+  # When used against a cluster ensure the service being used is pointing to all the cluster instances.
+  # This could be the loadbalancer from neo4j helm chart or the headless service installed via neo4j-headless-service helm chart
+  serviceName: ""
+  # default is set to cluster.local
+  domain: "cluster.local"
+
+  # This assumes ingress-nginx controller or haproxy-ingress-controller is already installed in your kubernetes cluster.
+  # You can install ingress-nginx by following instructions on this link https://github.com/kubernetes/ingress-nginx/blob/main/docs/deploy/index.md#quick-start
+  # You can install haproxy-ingress by following instructions on this link https://haproxy-ingress.github.io/docs/getting-started/
+  ingress:
+    enabled: true
+    #default value is nginx. It can be either nginx or haproxy
+    className: nginx
+    annotations: {}
+#      "demo": "value"
+#      "demo2": "value2"
+    tls:
+      enabled: false
+      config: []
+#      - secretName: "demo2"
+#        hosts:
+#          - localhost

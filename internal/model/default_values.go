@@ -11,6 +11,7 @@ import (
 var DefaultPassword = fmt.Sprintf("defaulthelmpassword%da", RandomIntBetween(100000, 999999999))
 var DefaultAuthSecretName = "neo4j-auth"
 var DefaultNeo4jBackupChartName = "neo4j-admin"
+var DefaultNeo4jReverseProxyChartName = "neo4j-reverse-proxy"
 var BucketName = "helm-backup-test"
 
 var ImagePullSecretUsername,
@@ -48,6 +49,11 @@ func init() {
 	_, present := os.LookupEnv("NEO4J_DOCKER_BACKUP_IMG")
 	if !present {
 		log.Panic("Please set NEO4J_DOCKER_BACKUP_IMG env variable !!")
+	}
+
+	_, present = os.LookupEnv("NEO4J_REVERSE_PROXY_IMG")
+	if !present {
+		log.Panic("Please set NEO4J_REVERSE_PROXY_IMG env variable !!")
 	}
 
 	_, present = os.LookupEnv("BLOOM_LICENSE")
