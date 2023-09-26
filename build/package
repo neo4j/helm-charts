@@ -24,12 +24,12 @@ PACKAGE_SIGNING_PASSPHRASE="${PACKAGE_SIGNING_PASSPHRASE:?PACKAGE_SIGNING_PASSPH
 NEO4J_VERSION="${NEO4JVERSION:?NEO4JVERSION is required}"
 
 if [ ${S3_UPLOAD_TO_SUB_FOLDER} == "neo4j" ]; then
-    tar -czvf "neo4j-helm-charts-${NEO4J_VERSION}.tgz" neo4j-standalone neo4j-cluster* neo4j-gcloud* neo4j-docker* neo4j-admin
+    tar -czvf "neo4j-helm-charts-${NEO4J_VERSION}.tgz" neo4j-standalone neo4j-cluster* neo4j-gcloud* neo4j-docker* neo4j-admin neo4j-reverse-proxy
     aws s3 cp --acl public-read "neo4j-helm-charts-${NEO4J_VERSION}.tgz" s3://dist.neo4j.org/helm/
     rm -f "neo4j-helm-charts-${NEO4J_VERSION}.tgz"
 fi
 
-HELM_CHARTS_LIST=("neo4j-standalone" "neo4j-admin" "neo4j-cluster-core" "neo4j-cluster-read-replica" "neo4j-cluster-headless-service" "neo4j-cluster-loadbalancer" "neo4j-gcloud-pv" "neo4j-docker-desktop-pv")
+HELM_CHARTS_LIST=("neo4j-standalone" "neo4j-admin" "neo4j-reverse-proxy" "neo4j-cluster-core" "neo4j-cluster-read-replica" "neo4j-cluster-headless-service" "neo4j-cluster-loadbalancer" "neo4j-gcloud-pv" "neo4j-docker-desktop-pv")
 
 for chart in "${HELM_CHARTS_LIST[@]}"
 do
