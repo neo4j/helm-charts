@@ -2,7 +2,6 @@ package model
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
 )
@@ -68,7 +67,6 @@ func (r *releaseName) InternalServiceName() string {
 }
 func (r *releaseName) ShortName() string {
 	len := len(string(*r)) / 2
-	log.Printf("short Name := %s", string(*r)[0:len])
 	return string(*r)[0:len]
 }
 
