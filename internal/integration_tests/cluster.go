@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/neo4j/helm-charts/internal/helpers"
+	"github.com/neo4j/helm-charts/internal/integration_tests/gcloud"
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
@@ -128,7 +129,7 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t *testing.T, 
 			Name:      k8sServiceAccountName,
 			Namespace: namespace,
 			Annotations: map[string]string{
-				"iam.gke.io/gcp-service-account": fmt.Sprintf("%s@neo4j-helm.iam.gserviceaccount.com", gcpServiceAccountName),
+				"iam.gke.io/gcp-service-account": fmt.Sprintf("%s@%s.iam.gserviceaccount.com", gcpServiceAccountName, gcloud.CurrentProject()),
 			},
 		},
 	}

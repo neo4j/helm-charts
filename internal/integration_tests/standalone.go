@@ -780,7 +780,7 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t *testing.T, standalone
 			Name:      k8sServiceAccountName,
 			Namespace: namespace,
 			Annotations: map[string]string{
-				"iam.gke.io/gcp-service-account": fmt.Sprintf("%s@neo4j-helm.iam.gserviceaccount.com", gcpServiceAccountName),
+				"iam.gke.io/gcp-service-account": fmt.Sprintf("%s@%s.iam.gserviceaccount.com", gcpServiceAccountName, string(gcloud.CurrentProject())),
 			},
 		},
 	}
@@ -892,22 +892,22 @@ func createGCPServiceAccount(k8sServiceAccountName string, namespace string, gcp
 	//mutex required since GCP does not allow you to create and add iam policies to service accounts concurrently
 	mutex.Lock()
 	stdout, stderr, err := RunCommand(exec.Command("gcloud", "iam", "service-accounts", "create", gcpServiceAccountName,
-		"--project=neo4j-helm"))
+		fmt.Sprintf("--project=%s", string(gcloud.CurrentProject()))))
 	if err != nil {
 		return fmt.Errorf("error seen while trying to create gcp service account  %s \n Here's why err := %s \n stderr := %s", gcpServiceAccountName, err, string(stderr))
 	}
 	log.Printf("GCP service account creation done \n Stdout = %s \n Stderr = %s", string(stdout), string(stderr))
 
-	stdout, stderr, err = RunCommand(exec.Command("gcloud", "projects", "add-iam-policy-binding", "neo4j-helm", "--member",
-		fmt.Sprintf("serviceAccount:%s@neo4j-helm.iam.gserviceaccount.com", gcpServiceAccountName), "--role", "roles/storage.admin"))
+	stdout, stderr, err = RunCommand(exec.Command("gcloud", "projects", "add-iam-policy-binding", string(gcloud.CurrentProject()), "--member",
+		fmt.Sprintf("serviceAccount:%s@%s.iam.gserviceaccount.com", gcpServiceAccountName, string(gcloud.CurrentProject())), "--role", "roles/storage.admin"))
 	if err != nil {
 		return fmt.Errorf("error seen while trying to add iam policy binding to gcp service account %s \n Here's why err := %s \n stderr := %s", gcpServiceAccountName, err, string(stderr))
 	}
 	log.Printf("Adding iam policy binding \n Stdout = %s \n Stderr = %s", string(stdout), string(stderr))
 
 	stdout, stderr, err = RunCommand(exec.Command("gcloud", "iam", "service-accounts", "add-iam-policy-binding",
-		fmt.Sprintf("%s@neo4j-helm.iam.gserviceaccount.com", gcpServiceAccountName), "--role", "roles/iam.workloadIdentityUser",
-		"--member", fmt.Sprintf("serviceAccount:neo4j-helm.svc.id.goog[%s/%s]", namespace, k8sServiceAccountName)))
+		fmt.Sprintf("%s@%s.iam.gserviceaccount.com", gcpServiceAccountName, string(gcloud.CurrentProject())), "--role", "roles/iam.workloadIdentityUser",
+		"--member", fmt.Sprintf("serviceAccount:%s.svc.id.goog[%s/%s]", string(gcloud.CurrentProject()), namespace, k8sServiceAccountName)))
 	if err != nil {
 		return fmt.Errorf("error seen while trying to add iam policy binding to k8s service account %s \n Here's why err := %s \n stderr := %s", k8sServiceAccountName, err, string(stderr))
 	}
@@ -920,7 +920,7 @@ func createGCPServiceAccount(k8sServiceAccountName string, namespace string, gcp
 }
 
 func deleteGCPServiceAccount(gcpServiceAccountName string) error {
-	_, _, err := RunCommand(exec.Command("gcloud", "iam", "service-accounts", "delete", fmt.Sprintf("%s@neo4j-helm.iam.gserviceaccount.com", gcpServiceAccountName)))
+	_, _, err := RunCommand(exec.Command("gcloud", "iam", "service-accounts", "delete", fmt.Sprintf("%s@%s.iam.gserviceaccount.com", gcpServiceAccountName, string(gcloud.CurrentProject()))))
 	if err != nil {
 		return fmt.Errorf("error seen while trying to add iam policy binding \n Here's why err := %s ", err)
 	}
