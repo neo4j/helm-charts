@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/neo4j/helm-charts/internal/helpers"
+	"github.com/neo4j/helm-charts/internal/integration_tests/gcloud"
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/neo4j/helm-charts/internal/resources"
 	"github.com/stretchr/testify/assert"
@@ -131,7 +132,7 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t *testing.T, 
 			Name:      k8sServiceAccountName,
 			Namespace: namespace,
 			Annotations: map[string]string{
-				"iam.gke.io/gcp-service-account": fmt.Sprintf("%s@neo4j-helm.iam.gserviceaccount.com", gcpServiceAccountName),
+				"iam.gke.io/gcp-service-account": fmt.Sprintf("%s@%s.iam.gserviceaccount.com", gcpServiceAccountName, string(gcloud.CurrentProject())),
 			},
 		},
 	}
@@ -177,10 +178,8 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t *testing.T, 
 			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
 			assert.Contains(t, string(out), "Backup Completed for database system !!")
 			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
-			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to GCS bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.report.tar.gz uploaded to GCS bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("system(.*)backup.report.tar.gz uploaded to GCS bucket"), string(out))
+			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.tar.gz uploaded to GCS bucket"), string(out))
+			assert.Regexp(t, regexp.MustCompile("system(.*)backup.tar.gz uploaded to GCS bucket"), string(out))
 			assert.NotContains(t, string(out), "Deleting file")
 			break
 		}

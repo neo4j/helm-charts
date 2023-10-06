@@ -82,7 +82,7 @@ spec:
                 - name: VERBOSE
                   value: "{{ .Values.backup.verbose | default true }}"
                 - name: AZURE_STORAGE_ACCOUNT_NAME
-                    value: "{{ .Values.backup.azureStorageAccountName | default "" }}"
+                  value: "{{ .Values.backup.azureStorageAccountName | default "" }}"
                 - name: CONSISTENCY_CHECK_ENABLE
                   value: "{{ .Values.backup.checkConsistency | default true }}"
                 - name: CONSISTENCY_CHECK_INDEXES

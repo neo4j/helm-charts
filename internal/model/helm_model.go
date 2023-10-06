@@ -161,7 +161,7 @@ var DefaultNeo4jBackupValues = Neo4jBackupValues{
 		JobSchedule:                "* * * * *",
 		SuccessfulJobsHistoryLimit: 3,
 		FailedJobsHistoryLimit:     1,
-		BackoffLimit:               6,
+		BackoffLimit:               3,
 	},
 	Backup: Backup{
 		CheckIndexes:        true,

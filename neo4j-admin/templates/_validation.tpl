@@ -46,16 +46,6 @@
     {{- end -}}
 {{- end -}}
 
-{{- define "neo4j.backup.checkIfSecretKeyNameExistsOrNot" -}}
-
-        {{- if kindIs "invalid" .Values.backup.secretKeyName -}}
-            {{- fail (printf "Missing secretKeyName !!") -}}
-        {{- else if (not (.Values.backup.secretKeyName | trim)) -}}
-            {{- fail (printf "Empty secretKeyName") -}}
-        {{- end -}}
-
-{{- end -}}
-
 {{- define "neo4j.backup.checkDatabaseIPAndServiceName" -}}
 
     {{- if and (kindIs "invalid" .Values.backup.databaseAdminServiceName) (kindIs "invalid" .Values.backup.databaseAdminServiceIP) -}}
