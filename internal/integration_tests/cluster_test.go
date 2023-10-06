@@ -117,10 +117,7 @@ func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
 		t.Skip()
 		return
 	}
-
-	//This test case needs to be parallel in 4.4 since we are using a cluster of 6 nodes
-	//Since all our neo4j installtion uses podAntiAffinity which makes only one neo4j installation per node , 6 tends to block the execution of this test case
-	// Hence either we increase the number of nodes or make this run sequential
+	
 	t.Parallel()
 
 	var closeables []Closeable
