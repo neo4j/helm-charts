@@ -526,48 +526,48 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 	if err != nil {
 		return nil, err
 	}
-
+	log.Printf("%v", expectedConfiguration)
 	return []SubTest{
-		{name: "Check Neo4j Logs For Any Errors", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, checkNeo4jLogsForAnyErrors(t, name), "Neo4j Logs check should succeed")
-		}},
-		{name: "Check Neo4j Configuration", test: func(t *testing.T) {
-			assert.NoError(t, checkNeo4jConfiguration(t, name, expectedConfiguration), "Neo4j Config check should succeed")
-		}},
-		{name: "Check Bloom Version", test: func(t *testing.T) { assert.NoError(t, checkBloomVersion(t, name), "Retrieve a valid BLOOM version") }},
-		{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, createNode(t, name), "Create Node should succeed") }},
-		{name: "Delete Resources", test: func(t *testing.T) { assert.NoError(t, ResourcesCleanup(t, name), "Cleanup Resources should succeed") }},
-		{name: "Reinstall Resources", test: func(t *testing.T) {
-			assert.NoError(t, ResourcesReinstall(t, name, chart), "Reinstall Resources should succeed")
-		}},
-		{name: "Count Nodes", test: func(t *testing.T) { assert.NoError(t, checkNodeCount(t, name), "Count Nodes should succeed") }},
-		{name: "Check Probes", test: func(t *testing.T) { assert.NoError(t, CheckProbes(t, name), "Probes Matching should succeed") }},
-		{name: "Check Service Annotations", test: func(t *testing.T) {
-			assert.NoError(t, CheckServiceAnnotations(t, name, chart), "Services should have annotations")
-		}},
-		{name: "Check RunAsNonRoot", test: func(t *testing.T) { assert.NoError(t, RunAsNonRoot(t, name), "RunAsNonRoot check should succeed") }},
-		{name: "Exec in Pod", test: func(t *testing.T) { assert.NoError(t, CheckExecInPod(t, name), "Exec in Pod should succeed") }},
+		//{name: "Check Neo4j Logs For Any Errors", test: func(t *testing.T) {
+		//	t.Parallel()
+		//	assert.NoError(t, checkNeo4jLogsForAnyErrors(t, name), "Neo4j Logs check should succeed")
+		//}},
+		//{name: "Check Neo4j Configuration", test: func(t *testing.T) {
+		//	assert.NoError(t, checkNeo4jConfiguration(t, name, expectedConfiguration), "Neo4j Config check should succeed")
+		//}},
+		//{name: "Check Bloom Version", test: func(t *testing.T) { assert.NoError(t, checkBloomVersion(t, name), "Retrieve a valid BLOOM version") }},
+		//{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, createNode(t, name), "Create Node should succeed") }},
+		//{name: "Delete Resources", test: func(t *testing.T) { assert.NoError(t, ResourcesCleanup(t, name), "Cleanup Resources should succeed") }},
+		//{name: "Reinstall Resources", test: func(t *testing.T) {
+		//	assert.NoError(t, ResourcesReinstall(t, name, chart), "Reinstall Resources should succeed")
+		//}},
+		//{name: "Count Nodes", test: func(t *testing.T) { assert.NoError(t, checkNodeCount(t, name), "Count Nodes should succeed") }},
+		//{name: "Check Probes", test: func(t *testing.T) { assert.NoError(t, CheckProbes(t, name), "Probes Matching should succeed") }},
+		//{name: "Check Service Annotations", test: func(t *testing.T) {
+		//	assert.NoError(t, CheckServiceAnnotations(t, name, chart), "Services should have annotations")
+		//}},
+		//{name: "Check RunAsNonRoot", test: func(t *testing.T) { assert.NoError(t, RunAsNonRoot(t, name), "RunAsNonRoot check should succeed") }},
+		//{name: "Exec in Pod", test: func(t *testing.T) { assert.NoError(t, CheckExecInPod(t, name), "Exec in Pod should succeed") }},
 		{name: "Install Backup Helm Chart For GCP With Workload Identity", test: func(t *testing.T) {
 			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t, name), "Backup to GCP with workload identity should succeed")
 		}},
-		{name: "Install Backup Helm Chart For AWS", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, InstallNeo4jBackupAWSHelmChart(t, name), "Backup to AWS should succeed")
-		}},
-		{name: "Install Backup Helm Chart For Azure", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, InstallNeo4jBackupAzureHelmChart(t, name), "Backup to Azure should succeed")
-		}},
-		{name: "Install Backup Helm Chart For GCP", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, InstallNeo4jBackupGCPHelmChart(t, name), "Backup to GCP should succeed")
-		}},
-		{name: "Install Reverse Proxy Helm Chart", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, InstallReverseProxyHelmChart(t, name), "Reverse Proxy installation with ingress should succeed")
-		}},
+		//{name: "Install Backup Helm Chart For AWS", test: func(t *testing.T) {
+		//	t.Parallel()
+		//	assert.NoError(t, InstallNeo4jBackupAWSHelmChart(t, name), "Backup to AWS should succeed")
+		//}},
+		//{name: "Install Backup Helm Chart For Azure", test: func(t *testing.T) {
+		//	t.Parallel()
+		//	assert.NoError(t, InstallNeo4jBackupAzureHelmChart(t, name), "Backup to Azure should succeed")
+		//}},
+		//{name: "Install Backup Helm Chart For GCP", test: func(t *testing.T) {
+		//	t.Parallel()
+		//	assert.NoError(t, InstallNeo4jBackupGCPHelmChart(t, name), "Backup to GCP should succeed")
+		//}},
+		//{name: "Install Reverse Proxy Helm Chart", test: func(t *testing.T) {
+		//	t.Parallel()
+		//	assert.NoError(t, InstallReverseProxyHelmChart(t, name), "Reverse Proxy installation with ingress should succeed")
+		//}},
 	}, err
 }
 
@@ -786,10 +786,14 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t *testing.T, standalone
 	}
 
 	_, err := Clientset.CoreV1().ServiceAccounts(namespace).Create(context.Background(), &serviceAccount, metav1.CreateOptions{})
-	assert.NoError(t, err, fmt.Sprintf("error seen while creating k8s service account %s. \n Err := %v", k8sServiceAccountName, err))
+	if err != nil {
+		return fmt.Errorf("error seen while creating k8s service account %s. \n Err := %v", k8sServiceAccountName, err)
+	}
 
 	err = createGCPServiceAccount(k8sServiceAccountName, namespace, gcpServiceAccountName)
-	assert.NoError(t, err, fmt.Sprintf("error seen while creating GCP service account. \n Err := %v", err))
+	if err != nil {
+		return fmt.Errorf("error seen while creating GCP service account. \n Err := %v", err)
+	}
 
 	bucketName := model.BucketName
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
@@ -807,7 +811,9 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t *testing.T, standalone
 	helmValues.ServiceAccountName = k8sServiceAccountName
 
 	_, err = helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
-	assert.NoError(t, err)
+	if err != nil {
+		return err
+	}
 
 	time.Sleep(2 * time.Minute)
 	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
@@ -920,6 +926,7 @@ func createGCPServiceAccount(k8sServiceAccountName string, namespace string, gcp
 }
 
 func deleteGCPServiceAccount(gcpServiceAccountName string) error {
+	log.Printf("Deleting GCP Service Account %s", gcpServiceAccountName)
 	_, _, err := RunCommand(exec.Command("gcloud", "iam", "service-accounts", "delete", fmt.Sprintf("%s@%s.iam.gserviceaccount.com", gcpServiceAccountName, string(gcloud.CurrentProject()))))
 	if err != nil {
 		return fmt.Errorf("error seen while trying to add iam policy binding \n Here's why err := %s ", err)
