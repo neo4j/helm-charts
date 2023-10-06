@@ -131,8 +131,8 @@ func TestBackupNameFullOverride(t *testing.T) {
 	assert.Equal(t, cronjob.ObjectMeta.Name, helmValues.FullnameOverride, "missing fullNameOverride")
 }
 
-// TestBackupEmptySecretKeyName checks backup helm chart with fullNameOverride
-func TestBackupEmptySecretKeyName(t *testing.T) {
+// TestBackupEmptySecretKeyNameWithSecretName checks for empty secretkeyname when secretname is provided
+func TestBackupEmptySecretKeyNameWithSecretName(t *testing.T) {
 	t.Parallel()
 
 	helmValues := model.DefaultNeo4jBackupValues
@@ -145,6 +145,58 @@ func TestBackupEmptySecretKeyName(t *testing.T) {
 	_, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
 	assert.Error(t, err, "error must be seen while trying to install helm backup")
 	assert.Contains(t, err.Error(), "Empty secretKeyName")
+}
+
+// TestBackupEmptySecretKeyNameWithoutSecretNameAndServiceAccountName checks for error when serviceAccountName and secretName , secretKeyName are missing
+func TestBackupEmptySecretKeyNameWithoutSecretNameAndServiceAccountName(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.Backup.SecretName = ""
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "demo2"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+	helmValues.Backup.Database = "neo4j1"
+
+	_, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.Error(t, err, "error must be seen while trying to install helm backup")
+	assert.Contains(t, err.Error(), "Please provide either secretName or serviceAccountName. Both cannot be empty.")
+}
+
+// TestBackupAzureStorageAccountNameWithSecretNameAndServiceAccountName checks for error when serviceAccountName and secretName , secretKeyName are missing
+func TestBackupAzureStorageAccountNameWithSecretNameAndServiceAccountName(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.Backup.SecretName = "demo"
+	helmValues.Backup.AzureStorageAccountName = "demo"
+	helmValues.ServiceAccountName = "saName"
+	helmValues.Backup.CloudProvider = "azure"
+	helmValues.Backup.BucketName = "demo2"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+	helmValues.Backup.Database = "neo4j1"
+
+	_, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.Error(t, err, "error must not be seen while trying to install helm backup")
+	assert.Contains(t, err.Error(), "Both secretName|secretKeyName and azureStorageAccountName key cannot be present")
+}
+
+// TestBackupAzureStorageAccountNameWithoutSecretNameAndServiceAccountName checks for error when serviceAccountName and secretName , secretKeyName are missing
+func TestBackupAzureStorageAccountNameWithoutSecretNameAndServiceAccountName(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.Backup.SecretName = ""
+	helmValues.Backup.AzureStorageAccountName = ""
+	helmValues.ServiceAccountName = ""
+	helmValues.Backup.CloudProvider = "azure"
+	helmValues.Backup.BucketName = "demo2"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+	helmValues.Backup.Database = "neo4j1"
+
+	_, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.Error(t, err, "error must not be seen while trying to install helm backup")
+	assert.Contains(t, err.Error(), "Both secretName|secretKeyName and azureStorageAccountName key cannot be empty")
 }
 
 // TestBackupInvalidSecretName checks backup helm chart installation with a secret that does not exists

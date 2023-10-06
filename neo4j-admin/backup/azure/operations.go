@@ -12,21 +12,17 @@ import (
 
 func (a *azureClient) CheckContainerAccess(containerName string) error {
 
-	client, err := azblob.NewClientWithSharedKeyCredential(a.serviceURL, a.credential, nil)
-	if err != nil {
-		return fmt.Errorf("error while creating azblob client \n err = %v", err)
-	}
-
-	pager := client.NewListBlobsFlatPager(containerName, &azblob.ListBlobsFlatOptions{
+	pager := a.client.NewListBlobsFlatPager(containerName, &azblob.ListBlobsFlatOptions{
 		Include: azblob.ListBlobsInclude{Snapshots: true, Versions: true},
 	})
 
-	_, err = pager.NextPage(context.TODO())
+	_, err := pager.NextPage(context.TODO())
 	if err != nil {
-		azureResponseError := err.(*azcore.ResponseError)
-		if azureResponseError.ErrorCode == "ContainerNotFound" {
+		var azureResponseError *azcore.ResponseError
+		if errors.As(err, &azureResponseError) && azureResponseError.ErrorCode == "ContainerNotFound" {
 			return errors.New(fmt.Sprintf("ContainerName = %s , ErrorMessage = %s", containerName, azureResponseError.RawResponse.Status))
 		}
+		log.Printf("error %v", err)
 		return err
 	}
 	log.Printf("Connectivity with Azure container '%s' established", containerName)
@@ -44,13 +40,8 @@ func (a *azureClient) UploadFile(fileNames []string, containerName string) error
 			return fmt.Errorf("Couldn't open file %v to upload. Here's why: %v\n", filePath, err)
 		}
 
-		client, err := azblob.NewClientWithSharedKeyCredential(a.serviceURL, a.credential, nil)
-		if err != nil {
-			return fmt.Errorf("error while creating azblob client \n err = %v", err)
-		}
-
 		log.Printf("Starting upload of file %s", filePath)
-		_, err = client.UploadFile(context.TODO(), containerName, fileName, file, nil)
+		_, err = a.client.UploadFile(context.TODO(), containerName, fileName, file, nil)
 		if err != nil {
 			return fmt.Errorf("Couldn't upload file %v to %v Here's why: %v\n", filePath, containerName, err)
 		}

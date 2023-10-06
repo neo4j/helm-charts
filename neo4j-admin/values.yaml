@@ -84,7 +84,8 @@ backup:
   secretName: ""
   # provide the keyname used in the above secret
   secretKeyName: ""
-
+  # provide the azure storage account name
+  azureStorageAccountName: ""
   #setting this to true will not delete the backup files generated at the /backup mount
   keepBackupFiles: true
 

@@ -13,6 +13,7 @@ import (
 )
 
 func awsOperations() {
+
 	awsClient, err := aws.NewAwsClient(os.Getenv("CREDENTIAL_PATH"))
 	handleError(err)
 
