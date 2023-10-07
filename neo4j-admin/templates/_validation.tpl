@@ -12,19 +12,38 @@
                 {{ fail (printf "Secret %s must contain key %s" .Values.backup.secretName .Values.backup.secretKeyName) }}
             {{- end -}}
         {{- end -}}
-    {{- else -}}
-        {{- fail (printf "Missing secretName. Set it via --set backup.secretName")  -}}
     {{- end -}}
 {{- end -}}
 
-{{- define "neo4j.backup.checkIfSecretKeyNameExistsOrNot" -}}
-
-        {{- if kindIs "invalid" .Values.backup.secretKeyName -}}
-            {{- fail (printf "Missing secretKeyName !!") -}}
-        {{- else if (not (.Values.backup.secretKeyName | trim)) -}}
-            {{- fail (printf "Empty secretKeyName") -}}
+{{- define "neo4j.backup.checkAzureStorageAccountName" -}}
+    {{- if eq .Values.backup.cloudProvider "azure" }}
+        {{- if and (or (empty .Values.backup.secretName) (empty .Values.backup.secretKeyName)) (empty .Values.backup.azureStorageAccountName) -}}
+            {{ fail (printf "Both secretName|secretKeyName and azureStorageAccountName key cannot be empty. Please set one of them via --set backup.secretName or --set backup.azureStorageAccountName") }}
         {{- end -}}
 
+        {{- if and (or (.Values.backup.secretName) (.Values.backup.secretKeyName)) (.Values.backup.azureStorageAccountName) -}}
+            {{ fail (printf "Both secretName|secretKeyName and azureStorageAccountName key cannot be present. Please set only one of them via --set backup.secretName or --set backup.azureStorageAccountName") }}
+        {{- end -}}
+    {{- end -}}
+{{- end -}}
+
+{{/*check for secretKeyName existence only when secretName is provided*/}}
+{{- define "neo4j.backup.checkIfSecretKeyNameExistsOrNot" -}}
+   {{- if .Values.backup.secretName -}}
+    {{- if kindIs "invalid" .Values.backup.secretKeyName -}}
+        {{- fail (printf "Missing secretKeyName !!") -}}
+    {{- else if (not (.Values.backup.secretKeyName | trim)) -}}
+        {{- fail (printf "Empty secretKeyName") -}}
+    {{- end -}}
+   {{- end -}}
+
+{{- end -}}
+
+{{/* checks if serviceAccountName is provided or not  when secretName is missing */}}
+{{- define "neo4j.backup.checkServiceAccountName" -}}
+    {{- if and (empty .Values.serviceAccountName) (empty .Values.backup.secretName) -}}
+        {{ fail (printf "Please provide either secretName or serviceAccountName. Both cannot be empty. Please set only one of them via --set backup.secretName or --set serviceAccountName") }}
+    {{- end -}}
 {{- end -}}
 
 {{- define "neo4j.backup.checkDatabaseIPAndServiceName" -}}

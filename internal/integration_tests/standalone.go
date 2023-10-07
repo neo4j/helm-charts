@@ -47,15 +47,17 @@ func CheckError(err error) {
 }
 
 var (
-	Clientset *kubernetes.Clientset
-	Config    *restclient.Config
+	Clientset                   *kubernetes.Clientset
+	Config                      *restclient.Config
+	gcpServiceAccountNamePrefix = "gcp-sa"
+	k8sServiceAccountNamePrefix = "k8s-sa"
+	mutex                       sync.Mutex
 )
 
 func init() {
 	os.Setenv("KUBECONFIG", ".kube/config")
-	var err error
 	// gets kubeconfig from env variable
-	Config, err = clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
+	Config, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	CheckError(err)
 	Clientset, err = kubernetes.NewForConfig(Config)
 	CheckError(err)
@@ -459,6 +461,7 @@ func createPersistentVolume(name *model.PersistentDiskName, zone gcloud.Zone, pr
 
 func prepareK8s(t *testing.T, releaseName model.ReleaseName) (Closeable, error) {
 	var closeables []Closeable
+
 	addCloseable := func(closeable Closeable) {
 		closeables = append([]Closeable{closeable}, closeables...)
 	}
@@ -523,7 +526,7 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 	if err != nil {
 		return nil, err
 	}
-
+	log.Printf("%v", expectedConfiguration)
 	return []SubTest{
 		{name: "Check Neo4j Logs For Any Errors", test: func(t *testing.T) {
 			t.Parallel()
@@ -545,16 +548,24 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 		}},
 		{name: "Check RunAsNonRoot", test: func(t *testing.T) { assert.NoError(t, RunAsNonRoot(t, name), "RunAsNonRoot check should succeed") }},
 		{name: "Exec in Pod", test: func(t *testing.T) { assert.NoError(t, CheckExecInPod(t, name), "Exec in Pod should succeed") }},
+		{name: "Install Backup Helm Chart For GCP With Workload Identity", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t, name), "Backup to GCP with workload identity should succeed")
+		}},
 		{name: "Install Backup Helm Chart For AWS", test: func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupAWSHelmChart(t, name), "Backup to AWS should succeed")
 		}},
 		{name: "Install Backup Helm Chart For Azure", test: func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupAzureHelmChart(t, name), "Backup to Azure should succeed")
 		}},
 		{name: "Install Backup Helm Chart For GCP", test: func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupGCPHelmChart(t, name), "Backup to GCP should succeed")
 		}},
 		{name: "Install Reverse Proxy Helm Chart", test: func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, InstallReverseProxyHelmChart(t, name), "Reverse Proxy installation with ingress should succeed")
 		}},
 	}, err
@@ -742,6 +753,98 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 	return nil
 }
 
+func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t *testing.T, standaloneReleaseName model.ReleaseName) error {
+	if model.Neo4jEdition == "community" {
+		t.Skip()
+		return nil
+	}
+	shortName := standaloneReleaseName.ShortName()
+	backupReleaseName := model.NewReleaseName(fmt.Sprintf("%s-gcp-workload-%s", shortName, TestRunIdentifier))
+	gcpServiceAccountName := fmt.Sprintf("%s-%s", gcpServiceAccountNamePrefix, shortName)
+	k8sServiceAccountName := fmt.Sprintf("%s-%s", k8sServiceAccountNamePrefix, shortName)
+	namespace := string(standaloneReleaseName.Namespace())
+
+	t.Cleanup(func() {
+		_ = runAll(t, "helm", [][]string{
+			{"uninstall", backupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
+		}, false)
+		_ = deleteGCPServiceAccount(gcpServiceAccountName)
+	})
+
+	serviceAccount := v1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ServiceAccount",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      k8sServiceAccountName,
+			Namespace: namespace,
+			Annotations: map[string]string{
+				"iam.gke.io/gcp-service-account": fmt.Sprintf("%s@%s.iam.gserviceaccount.com", gcpServiceAccountName, string(gcloud.CurrentProject())),
+			},
+		},
+	}
+
+	_, err := Clientset.CoreV1().ServiceAccounts(namespace).Create(context.Background(), &serviceAccount, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("error seen while creating k8s service account %s. \n Err := %v", k8sServiceAccountName, err)
+	}
+
+	err = createGCPServiceAccount(k8sServiceAccountName, namespace, gcpServiceAccountName)
+	if err != nil {
+		return fmt.Errorf("error seen while creating GCP service account. \n Err := %v", err)
+	}
+
+	bucketName := model.BucketName
+	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.Backup = model.Backup{
+		BucketName:               bucketName,
+		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", standaloneReleaseName.String()),
+		DatabaseNamespace:        string(standaloneReleaseName.Namespace()),
+		Database:                 "neo4j,system",
+		CloudProvider:            "gcp",
+		Verbose:                  true,
+		Type:                     "FULL",
+		KeepBackupFiles:          true,
+	}
+	helmValues.ServiceAccountName = k8sServiceAccountName
+
+	_, err = helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
+	if err != nil {
+		return err
+	}
+
+	time.Sleep(2 * time.Minute)
+	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
+	assert.NoError(t, err, "cannot retrieve gcp backup cronjob")
+	assert.Equal(t, cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule, fmt.Sprintf("gcp cronjob schedule %s not matching with the schedule defined in values.yaml %s", cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule))
+
+	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
+	assert.NoError(t, err, "error while retrieving pod list during gcp backup operation")
+
+	var found bool
+	for _, pod := range pods.Items {
+		if strings.Contains(pod.Name, "gcp-workload") {
+			found = true
+			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
+			assert.NoError(t, err, "error while getting gcp workload backup pod logs")
+			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
+			assert.Contains(t, string(out), "Backup Completed for database system !!")
+			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
+			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"), string(out))
+			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to GCS bucket"), string(out))
+			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.report.tar.gz uploaded to GCS bucket"), string(out))
+			assert.Regexp(t, regexp.MustCompile("system(.*)backup.report.tar.gz uploaded to GCS bucket"), string(out))
+			assert.NotContains(t, string(out), "Deleting file")
+			break
+		}
+	}
+	assert.Equal(t, true, found, "no gcp workload backup pod found")
+
+	return nil
+}
+
 func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.ReleaseName) error {
 	if model.Neo4jEdition == "community" {
 		t.Skip()
@@ -788,5 +891,45 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 	assert.NotNil(t, string(stdout), "no curl output found")
 	assert.Contains(t, string(stdout), "bolt_routing")
 
+	return nil
+}
+
+func createGCPServiceAccount(k8sServiceAccountName string, namespace string, gcpServiceAccountName string) error {
+	//mutex required since GCP does not allow you to create and add iam policies to service accounts concurrently
+	mutex.Lock()
+	stdout, stderr, err := RunCommand(exec.Command("gcloud", "iam", "service-accounts", "create", gcpServiceAccountName,
+		fmt.Sprintf("--project=%s", string(gcloud.CurrentProject()))))
+	if err != nil {
+		return fmt.Errorf("error seen while trying to create gcp service account  %s \n Here's why err := %s \n stderr := %s", gcpServiceAccountName, err, string(stderr))
+	}
+	log.Printf("GCP service account creation done \n Stdout = %s \n Stderr = %s", string(stdout), string(stderr))
+
+	stdout, stderr, err = RunCommand(exec.Command("gcloud", "projects", "add-iam-policy-binding", string(gcloud.CurrentProject()), "--member",
+		fmt.Sprintf("serviceAccount:%s@%s.iam.gserviceaccount.com", gcpServiceAccountName, string(gcloud.CurrentProject())), "--role", "roles/storage.admin"))
+	if err != nil {
+		return fmt.Errorf("error seen while trying to add iam policy binding to gcp service account %s \n Here's why err := %s \n stderr := %s", gcpServiceAccountName, err, string(stderr))
+	}
+	log.Printf("Adding iam policy binding \n Stdout = %s \n Stderr = %s", string(stdout), string(stderr))
+
+	stdout, stderr, err = RunCommand(exec.Command("gcloud", "iam", "service-accounts", "add-iam-policy-binding",
+		fmt.Sprintf("%s@%s.iam.gserviceaccount.com", gcpServiceAccountName, string(gcloud.CurrentProject())), "--role", "roles/iam.workloadIdentityUser",
+		"--member", fmt.Sprintf("serviceAccount:%s.svc.id.goog[%s/%s]", string(gcloud.CurrentProject()), namespace, k8sServiceAccountName)))
+	if err != nil {
+		return fmt.Errorf("error seen while trying to add iam policy binding to k8s service account %s \n Here's why err := %s \n stderr := %s", k8sServiceAccountName, err, string(stderr))
+	}
+	log.Printf("Adding iam policy binding to service account \n Stdout = %s \n Stderr = %s", string(stdout), string(stderr))
+
+	// sleep for few seconds to allow the settings be applied...immediate helm install after this step leads to failure
+	time.Sleep(60 * time.Second)
+	mutex.Unlock()
+	return nil
+}
+
+func deleteGCPServiceAccount(gcpServiceAccountName string) error {
+	log.Printf("Deleting GCP Service Account %s", gcpServiceAccountName)
+	_, _, err := RunCommand(exec.Command("gcloud", "iam", "service-accounts", "delete", fmt.Sprintf("%s@%s.iam.gserviceaccount.com", gcpServiceAccountName, string(gcloud.CurrentProject()))))
+	if err != nil {
+		return fmt.Errorf("error seen while trying to add iam policy binding \n Here's why err := %s ", err)
+	}
 	return nil
 }

@@ -11,6 +11,7 @@ type ReleaseName interface {
 	Namespace() Namespace
 	DiskName() PersistentDiskName
 	PodName() string
+	ShortName() string
 	EnvConfigMapName() string
 	UserConfigMapName() string
 	InternalServiceName() string
@@ -63,6 +64,10 @@ func (r *releaseName) ServerLogsConfigMapName() string {
 }
 func (r *releaseName) InternalServiceName() string {
 	return string(*r) + "-internals"
+}
+func (r *releaseName) ShortName() string {
+	len := len(string(*r)) / 2
+	return string(*r)[0:len]
 }
 
 func NewCoreReleaseName(clusterName ReleaseName, number int) ReleaseName {
@@ -129,6 +134,11 @@ func (r *clusterMemberReleaseName) DefaultConfigMapName() string {
 	return r.memberName.DefaultConfigMapName()
 }
 
+func (r *clusterMemberReleaseName) ShortName() string {
+	len := len(string(r.memberName)) / 2
+	return string(r.memberName)[0:len]
+}
+
 type Namespace string
 type PersistentDiskName string
 
@@ -160,8 +170,8 @@ var DefaultNeo4jBackupValues = Neo4jBackupValues{
 		ImageTag:                   strings.Split(os.Getenv("NEO4J_DOCKER_BACKUP_IMG"), ":")[1],
 		JobSchedule:                "* * * * *",
 		SuccessfulJobsHistoryLimit: 3,
-		FailedJobsHistoryLimit:     1,
-		BackoffLimit:               6,
+		FailedJobsHistoryLimit:     3,
+		BackoffLimit:               3,
 	},
 	TempVolume: map[string]interface{}{
 		"emptyDir": nil,
