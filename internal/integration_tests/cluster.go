@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/neo4j/helm-charts/internal/helpers"
+	"github.com/neo4j/helm-charts/internal/integration_tests/gcloud"
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/neo4j/helm-charts/internal/resources"
 	"github.com/stretchr/testify/assert"
@@ -73,6 +74,10 @@ func clusterTests(loadBalancerName model.ReleaseName, core1 model.ReleaseName) (
 			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupAWSHelmChartWithNodeSelector(t, core1), "Backup to AWS should succeed")
 		}},
+		{name: "Install Backup Helm Chart For GCP With Workload Identity", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t, core1), "Backup to GCP with workload identity should succeed")
+		}},
 		{name: "ImagePullSecret tests", test: func(t *testing.T) {
 			t.Parallel()
 			assert.NoError(t, imagePullSecretTests(t, loadBalancerName), "Perform ImagePullSecret Tests")
@@ -98,6 +103,90 @@ func clusterTests(loadBalancerName model.ReleaseName, core1 model.ReleaseName) (
 		}},
 	}
 	return subTests, nil
+}
+
+func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t *testing.T, clusterReleaseName model.ReleaseName) error {
+	if model.Neo4jEdition == "community" {
+		t.Skip()
+		return nil
+	}
+	shortName := clusterReleaseName.ShortName()
+	backupReleaseName := model.NewReleaseName(fmt.Sprintf("%s-gcp-workload-%s", shortName, TestRunIdentifier))
+	gcpServiceAccountName := fmt.Sprintf("%s-%s", gcpServiceAccountNamePrefix, shortName)
+	k8sServiceAccountName := fmt.Sprintf("%s-%s", k8sServiceAccountNamePrefix, shortName)
+	namespace := string(clusterReleaseName.Namespace())
+
+	t.Cleanup(func() {
+		_ = runAll(t, "helm", [][]string{
+			{"uninstall", backupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
+		}, false)
+		_ = deleteGCPServiceAccount(gcpServiceAccountName)
+	})
+
+	serviceAccount := v1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ServiceAccount",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      k8sServiceAccountName,
+			Namespace: namespace,
+			Annotations: map[string]string{
+				"iam.gke.io/gcp-service-account": fmt.Sprintf("%s@%s.iam.gserviceaccount.com", gcpServiceAccountName, string(gcloud.CurrentProject())),
+			},
+		},
+	}
+
+	_, err := Clientset.CoreV1().ServiceAccounts(namespace).Create(context.Background(), &serviceAccount, metav1.CreateOptions{})
+	assert.NoError(t, err, fmt.Sprintf("error seen while creating k8s service account %s. \n Err := %v", k8sServiceAccountName, err))
+
+	err = createGCPServiceAccount(k8sServiceAccountName, namespace, gcpServiceAccountName)
+	assert.NoError(t, err, fmt.Sprintf("error seen while creating GCP service account. \n Err := %v", err))
+
+	bucketName := model.BucketName
+	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.Backup = model.Backup{
+		BucketName:               bucketName,
+		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", clusterReleaseName.String()),
+		DatabaseNamespace:        string(clusterReleaseName.Namespace()),
+		Database:                 "neo4j,system",
+		CloudProvider:            "gcp",
+		Verbose:                  true,
+		Type:                     "FULL",
+		KeepBackupFiles:          true,
+	}
+	helmValues.ServiceAccountName = k8sServiceAccountName
+
+	_, err = helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
+	assert.NoError(t, err)
+
+	time.Sleep(2 * time.Minute)
+	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
+	assert.NoError(t, err, "cannot retrieve gcp backup cronjob")
+	assert.Equal(t, cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule, fmt.Sprintf("gcp cronjob schedule %s not matching with the schedule defined in values.yaml %s", cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule))
+
+	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
+	assert.NoError(t, err, "error while retrieving pod list during gcp backup operation")
+
+	var found bool
+	for _, pod := range pods.Items {
+		if strings.Contains(pod.Name, "gcp-workload") {
+			found = true
+			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
+			assert.NoError(t, err, "error while getting gcp workload backup pod logs")
+			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
+			assert.Contains(t, string(out), "Backup Completed for database system !!")
+			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
+			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.tar.gz uploaded to GCS bucket"), string(out))
+			assert.Regexp(t, regexp.MustCompile("system(.*)backup.tar.gz uploaded to GCS bucket"), string(out))
+			assert.NotContains(t, string(out), "Deleting file")
+			break
+		}
+	}
+	assert.Equal(t, true, found, "no gcp workload backup pod found")
+
+	return nil
 }
 
 // InstallNeo4jBackupAWSHelmChartWithNodeSelector installs backup cronjob using the given nodeselector labels

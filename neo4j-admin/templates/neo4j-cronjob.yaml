@@ -1,5 +1,7 @@
 {{- template "neo4j.backup.checkDatabaseIPAndServiceName" . -}}
+{{- template "neo4j.backup.checkAzureStorageAccountName" . -}}
 {{- template "neo4j.backup.checkIfSecretExistsOrNot" . -}}
+{{- template "neo4j.backup.checkServiceAccountName" . -}}
 {{- template "neo4j.checkNodeSelectorLabels" . -}}
 apiVersion: batch/v1
 kind: CronJob
@@ -76,9 +78,11 @@ spec:
                 - name: PREPARE_RESTORE
                   value: "{{ .Values.backup.prepareRestore | default true }}"
                 - name: CREDENTIAL_PATH
-                  value: "{{ printf "/credentials/%s" .Values.backup.secretKeyName  }}"
+                  value: "{{ printf "/credentials/%s" .Values.backup.secretKeyName | default ""  }}"
                 - name: VERBOSE
                   value: "{{ .Values.backup.verbose | default true }}"
+                - name: AZURE_STORAGE_ACCOUNT_NAME
+                  value: "{{ .Values.backup.azureStorageAccountName | default "" }}"
                 - name: CONSISTENCY_CHECK_ENABLE
                   value: "{{ .Values.backup.checkConsistency | default true }}"
                 - name: CONSISTENCY_CHECK_INDEXES
@@ -88,18 +92,22 @@ spec:
                 - name: CONSISTENCY_CHECK_GRAPH
                   value: "{{ .Values.backup.checkGraph | default true }}"
               volumeMounts:
+              {{- if .Values.backup.secretName }}
                 - name: credentials
                   mountPath: /credentials
                   readOnly: true
+              {{- end }}
                 - name: "backup"
                   mountPath: "/backups"
           volumes:
+            {{- if .Values.backup.secretName }}
             - name: credentials
               secret:
                 secretName: "{{ .Values.backup.secretName }}"
                 items:
                   - key: "{{ .Values.backup.secretKeyName }}"
                     path: "{{ .Values.backup.secretKeyName }}"
+            {{- end }}
             - name: "backup"
 {{- if $.Values.tempVolume }}
   {{- toYaml $.Values.tempVolume | nindent 14 }}
