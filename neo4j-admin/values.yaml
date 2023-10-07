@@ -85,6 +85,7 @@ backup:
   # provide the keyname used in the above secret
   secretKeyName: ""
   # provide the azure storage account name
+  # this to be provided when you are using workload identity integration for azure
   azureStorageAccountName: ""
   #setting this to true will not delete the backup files generated at the /backup mount
   keepBackupFiles: true
@@ -116,6 +117,10 @@ consistencyCheck:
   verbose: true
 
 # Set to name of an existing Service Account to use if desired
+# Follow the following links for setting up a service account with workload identity
+# Azure - https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview?tabs=go
+# GCP - https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity
+# AWS - https://docs.aws.amazon.com/eks/latest/userguide/associate-service-account-role.html
 serviceAccountName: ""
 
 # Volume to use as temporary storage for files before they are uploaded to cloud. For large databases local storage may not have sufficient space.
