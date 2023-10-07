@@ -117,7 +117,7 @@ func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
 		t.Skip()
 		return
 	}
-	
+
 	t.Parallel()
 
 	var closeables []Closeable
