@@ -153,15 +153,15 @@ type Spec struct {
 	Type string `yaml:"type,omitempty"`
 }
 type Port struct {
-	Enabled    bool   `yaml:"enabled,omitempty"`
+	Enabled    bool   `yaml:"enabled"`
 	Port       int    `yaml:"port"`
 	TargetPort int    `yaml:"targetPort"`
 	Name       string `yaml:"name"`
 }
 
 type Ports struct {
-	HTTP   Port `yaml:"http,omitempty"`
-	HTTPS  Port `yaml:"https,omitempty"`
+	HTTP   Port `yaml:"http"`
+	HTTPS  Port `yaml:"https"`
 	Bolt   Port `yaml:"bolt,omitempty"`
 	Backup Port `yaml:"backup,omitempty"`
 }

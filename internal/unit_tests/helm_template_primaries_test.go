@@ -1716,6 +1716,43 @@ func TestNeo4jServicePortVariables(t *testing.T) {
 	}))
 }
 
+// TestNeo4jServicePortVariablesWithHTTPPortDisabled disables http port and check if the port is removed from loadbalancer service or not
+func TestNeo4jServicePortVariablesWithHTTPPortDisabled(t *testing.T) {
+	t.Parallel()
+	var helmValues model.HelmValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		helmValues = model.DefaultCommunityValues
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.Services.Neo4j.Ports.HTTP.Enabled = false
+
+		helmValues.Services.Neo4j.Ports.HTTPS.Enabled = true
+		helmValues.Services.Neo4j.Ports.HTTPS.Port = 7473
+		helmValues.Services.Neo4j.Ports.HTTPS.TargetPort = 8001
+		helmValues.Services.Neo4j.Ports.HTTPS.Name = "https-port"
+
+		helmValues.DisableLookups = true
+		manifests, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		assert.NoError(t, err, "no error should be seen while checking for neo4j lb service ports configuration with http port disabled")
+		lbServiceName := fmt.Sprintf("%s-lb-neo4j", helmValues.Neo4J.Name)
+		lbService := manifests.OfTypeWithName(&v1.Service{}, lbServiceName)
+		assert.NotNil(t, lbService, fmt.Sprintf("no loadbalancer service found with name %s", lbServiceName))
+
+		ports := lbService.(*v1.Service).Spec.Ports
+		assert.Len(t, ports, 2, "there should be only 3 ports in the lbservice")
+		for _, port := range ports {
+			assert.NotEqual(t, port.Name, "http-port", "http-port is not expected")
+			switch port.Name {
+			case "https-port":
+				assert.Equal(t, int(port.Port), 7473, "https port should be 7473")
+				assert.Equal(t, int(port.TargetPort.IntVal), 8001, "https target port should be 8001")
+				continue
+			}
+		}
+	}))
+}
+
 // TestServiceAccountCreation checks if serviceaccount yamls are not generated when a serviceaccount name is provided
 func TestServiceAccountCreation(t *testing.T) {
 	t.Parallel()
