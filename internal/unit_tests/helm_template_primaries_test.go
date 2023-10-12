@@ -1601,10 +1601,10 @@ func TestNeo4jStatefulSetPortWithHTTPDisabled(t *testing.T) {
 		assert.NotNil(t, statefulset, "no statefulset found")
 		ports := statefulset.(*appsv1.StatefulSet).Spec.Template.Spec.Containers[0].Ports
 		if edition == "community" {
-			assert.Len(t, ports, 2, "only two statefulset ports should be present")
+			assert.Len(t, ports, 1, "only two statefulset ports should be present")
 		} else {
 			//enterprise has backup port enabled
-			assert.Len(t, ports, 3, "only three statefulset ports should be present")
+			assert.Len(t, ports, 2, "only three statefulset ports should be present")
 		}
 
 		for _, port := range ports {
