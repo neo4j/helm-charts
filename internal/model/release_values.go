@@ -172,7 +172,7 @@ type Neo4jService struct {
 	Enabled      bool              `yaml:"enabled,omitempty" default:"true"`
 	Annotations  map[string]string `yaml:"annotations,omitempty"`
 	Spec         Spec              `yaml:"spec,omitempty"`
-	Ports        Ports             `yaml:"ports,omitempty"`
+	Ports        Ports             `yaml:"ports"`
 	Selector     ServiceSelector   `yaml:"selector,omitempty"`
 	MultiCluster bool              `yaml:"multiCluster,omitempty"`
 }

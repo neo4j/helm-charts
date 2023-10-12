@@ -1753,6 +1753,109 @@ func TestNeo4jServicePortVariablesWithHTTPPortDisabled(t *testing.T) {
 	}))
 }
 
+// TestNeo4jStatefulSetPortWithHTTPDisabled disables http port and check if the port is removed from statefulset service or not
+func TestNeo4jStatefulSetPortWithHTTPDisabled(t *testing.T) {
+	t.Parallel()
+	var helmValues model.HelmValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		helmValues = model.DefaultCommunityValues
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		config := make(map[string]string, 1)
+		config["server.http.enabled"] = "false"
+		helmValues.Config = config
+
+		helmValues.DisableLookups = true
+		manifests, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		assert.NoError(t, err, "no error should be seen while checking for statefulset ports  with http port disabled")
+		statefulset := manifests.OfTypeWithName(&appsv1.StatefulSet{}, model.DefaultHelmTemplateReleaseName.String())
+		assert.NotNil(t, statefulset, "no statefulset found")
+		ports := statefulset.(*appsv1.StatefulSet).Spec.Template.Spec.Containers[0].Ports
+		if edition == "community" {
+			assert.Len(t, ports, 1, "only two statefulset ports should be present")
+		} else {
+			//enterprise has backup port enabled
+			assert.Len(t, ports, 2, "only three statefulset ports should be present")
+		}
+
+		for _, port := range ports {
+			assert.NotEqual(t, port.Name, "http", "http is not expected")
+			assert.NotEqual(t, port.ContainerPort, int32(7474), "7474 is not expected")
+			assert.NotEqual(t, port.Name, "https", "https is not expected")
+			assert.NotEqual(t, port.ContainerPort, int32(7473), "7473 is not expected")
+		}
+
+	}))
+}
+
+// TestNeo4jServicePortVariablesWithHTTPPortDisabledViaConfig disables http port via config and check if the port is removed from k8s service or not
+func TestNeo4jServicePortVariablesWithHTTPPortDisabledViaConfig(t *testing.T) {
+	t.Parallel()
+	var helmValues model.HelmValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		helmValues = model.DefaultCommunityValues
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.Services.Neo4j.Ports.HTTP.Enabled = false
+		helmValues.Services.Neo4j.Ports.HTTPS.Enabled = false
+		helmValues.Services.Neo4j.Enabled = true
+		helmValues.DisableLookups = true
+		config := make(map[string]string, 1)
+		config["server.http.enabled"] = "false"
+		helmValues.Config = config
+		manifests, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		assert.NoError(t, err, "no error should be seen while checking for neo4j lb service ports configuration with http port disabled")
+
+		services := manifests.OfType(&v1.Service{})
+		assert.NotNil(t, services, "no services found with name")
+
+		for _, service := range services {
+			ports := service.(*v1.Service).Spec.Ports
+			for _, port := range ports {
+				assert.NotEqual(t, port.Name, "http-port", "http-port is not expected")
+				assert.NotEqual(t, port.Port, int32(7474), "7474 is not expected")
+				assert.NotEqual(t, port.TargetPort, "7474", "7474 target port is not expected")
+			}
+		}
+
+	}))
+}
+
+// TestNeo4jServicePortVariablesWithHTTPSPortDisabledViaConfig disables https port via config and check if the port is removed from k8s service or not
+func TestNeo4jServicePortVariablesWithHTTPSPortDisabledViaConfig(t *testing.T) {
+	t.Parallel()
+	var helmValues model.HelmValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		helmValues = model.DefaultCommunityValues
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.Services.Neo4j.Enabled = true
+		helmValues.DisableLookups = true
+		config := make(map[string]string, 1)
+		config["server.https.enabled"] = "false"
+		helmValues.Config = config
+		manifests, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		assert.NoError(t, err, "no error should be seen while checking for neo4j lb service ports configuration with http port disabled")
+
+		services := manifests.OfType(&v1.Service{})
+		assert.NotNil(t, services, "no services found with name")
+
+		for _, service := range services {
+			ports := service.(*v1.Service).Spec.Ports
+			for _, port := range ports {
+				assert.NotEqual(t, port.Name, "https-port", "https-port is not expected")
+				assert.NotEqual(t, port.Port, int32(7473), "7473 is not expected")
+				assert.NotEqual(t, port.TargetPort, "7473", "7473 target port is not expected")
+
+			}
+		}
+
+	}))
+}
+
 // TestServiceAccountCreation checks if serviceaccount yamls are not generated when a serviceaccount name is provided
 func TestServiceAccountCreation(t *testing.T) {
 	t.Parallel()

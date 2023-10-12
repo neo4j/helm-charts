@@ -3,9 +3,10 @@
 {{- $backupEnabled := false }}
 {{- if $isEnterprise }}
 {{- $clusterEnabled = eq (include "neo4j.isClusterEnabled" .) "true" }}
-{{- $backupEnabled = index $.Values.config "server.backup.enabled" | default "true" | regexMatch "(?i)yes|true" }}
+{{- $backupEnabled = eq (index $.Values.config "server.backup.enabled" | default "true") "true" }}
 {{- end }}
-{{- $httpEnabled := index $.Values.config "server.http.enabled" | default "true" | regexMatch "(?i)yes|true" }}
+{{- $httpEnabled := eq (index $.Values.config "server.http.enabled" | default "true") "true" }}
+{{- $httpsEnabled := eq (index $.Values.config "server.https.enabled" | default "false") "true" }}
 {{- $jmxEnabled := index $.Values.config "server.metrics.jmx.enabled" | default "" | regexMatch "(?i)yes|true" }}
 {{- $graphiteEnabled := index $.Values.config "server.metrics.graphite.enabled" | default "" | regexMatch "(?i)yes|true" }}
 {{- $prometheusEnabled := index $.Values.config "server.metrics.prometheus.enabled" | default "" | regexMatch "(?i)yes|true" }}
@@ -43,10 +44,12 @@ spec:
       targetPort: 7474
       name: tcp-http
     {{- end }}
+    {{- if $httpsEnabled }}
     - protocol: TCP
       port: 7473
       targetPort: 7473
       name: tcp-https
+    {{- end }}
 ---
 {{- with .Values.services.admin }}
 {{- if .enabled }}
@@ -89,10 +92,12 @@ spec:
       targetPort: 7474
       name: tcp-http
     {{- end }}
+    {{- if $httpsEnabled }}
     - protocol: TCP
       port: 7473
       targetPort: 7473
       name: tcp-https
+    {{- end }}
     {{- if $prometheusEnabled }}
     - protocol: TCP
       port: 2004
@@ -157,10 +162,12 @@ spec:
       targetPort: 7474
       name: tcp-http
     {{- end }}
+    {{- if $httpsEnabled }}
     - protocol: TCP
       port: 7473
       targetPort: 7473
       name: tcp-https
+    {{- end }}
     {{- if $clusterEnabled }}
     #enable the ports for non Read Replicas
     - protocol: TCP
