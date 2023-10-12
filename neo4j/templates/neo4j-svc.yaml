@@ -3,10 +3,10 @@
 {{- $backupEnabled := false }}
 {{- if $isEnterprise }}
 {{- $clusterEnabled = eq (include "neo4j.isClusterEnabled" .) "true" }}
-{{- $backupEnabled = eq (index $.Values.config "server.backup.enabled" | default "true") "true" }}
+{{- $backupEnabled = index $.Values.config "server.backup.enabled" | default "true" | regexMatch "(?i)yes|true" }}
 {{- end }}
-{{- $httpEnabled := eq (index $.Values.config "server.http.enabled" | default "true") "true" }}
-{{- $httpsEnabled := eq (index $.Values.config "server.https.enabled" | default "false") "true" }}
+{{- $httpEnabled := index $.Values.config "server.http.enabled" | default "true" | regexMatch "(?i)yes|true" }}
+{{- $httpsEnabled := index $.Values.config "server.https.enabled" | default "false" | regexMatch "(?i)yes|true" }}
 {{- $jmxEnabled := index $.Values.config "server.metrics.jmx.enabled" | default "" | regexMatch "(?i)yes|true" }}
 {{- $graphiteEnabled := index $.Values.config "server.metrics.graphite.enabled" | default "" | regexMatch "(?i)yes|true" }}
 {{- $prometheusEnabled := index $.Values.config "server.metrics.prometheus.enabled" | default "" | regexMatch "(?i)yes|true" }}
