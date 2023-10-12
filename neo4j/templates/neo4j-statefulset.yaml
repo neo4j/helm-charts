@@ -4,6 +4,8 @@
 {{- $offlineMaintenanceEnabled :=  .Values.neo4j.offlineMaintenanceModeEnabled }}
 {{- $neo4jImage := include "neo4j.image" . }}
 {{- $backupEnabled := false }}
+{{- $httpEnabled := index $.Values.config "server.http.enabled" | default "true" | regexMatch "(?i)yes|true" }}
+{{- $httpsEnabled := index $.Values.config "server.https.enabled" | default "false" | regexMatch "(?i)yes|true" }}
 {{- if $isEnterprise }}
 {{- $backupEnabled = index $.Values.config "server.backup.enabled" | default "true" | regexMatch "(?i)yes|true" }}
 {{- end }}
@@ -110,12 +112,16 @@ spec:
             - name: SERVICE_NEO4J
               value: "{{ include "neo4j.fullname" . }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}"
           ports:
+            {{- if $httpEnabled }}
             - containerPort: 7474
               name: http
+            {{- end }}
             - containerPort: 7687
               name: bolt
+            {{- if $httpsEnabled }}
             - containerPort: 7473
               name: https
+            {{- end }}
             {{- if $backupEnabled }}
             - containerPort: 6362
               name: backup

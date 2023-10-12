@@ -368,3 +368,4 @@ WARNING: Passwords set using 'neo4j.password' will be stored in plain text in th
 Please consider using 'neo4j.passwordFromSecret' for improved security.
 {{- end -}}
 {{- end -}}
+
