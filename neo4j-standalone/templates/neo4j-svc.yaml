@@ -8,7 +8,7 @@
 {{- $backupEnabled = index $.Values.config "dbms.backup.enabled" | default "true" | regexMatch "(?i)yes|true" }}
 {{- end }}
 {{- $httpEnabled := index $.Values.config "dbms.connector.http.enabled" | default "true" | regexMatch "(?i)yes|true" }}
-{{- $httpsEnabled := index $.Values.config "dbms.connector.https.enabled" | default "true" | regexMatch "(?i)yes|true" }}
+{{- $httpsEnabled := index $.Values.config "dbms.connector.https.enabled" | default "false" | regexMatch "(?i)yes|true" }}
 {{- $jmxEnabled := index $.Values.config "metrics.jmx.enabled" | default "" | regexMatch "(?i)yes|true" }}
 {{- $graphiteEnabled := index $.Values.config "metrics.graphite.enabled" | default "" | regexMatch "(?i)yes|true" }}
 {{- $prometheusEnabled := index $.Values.config "metrics.prometheus.enabled" | default "" | regexMatch "(?i)yes|true" }}

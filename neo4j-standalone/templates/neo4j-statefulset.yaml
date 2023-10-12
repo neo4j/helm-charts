@@ -8,7 +8,7 @@
 {{- end }}
 {{- $neo4jImage := include "neo4j.image" . -}}
 {{- $httpEnabled := index $.Values.config "dbms.connector.http.enabled" | default "true" | regexMatch "(?i)yes|true" }}
-{{- $httpsEnabled := index $.Values.config "dbms.connector.https.enabled" | default "true" | regexMatch "(?i)yes|true" }}
+{{- $httpsEnabled := index $.Values.config "dbms.connector.https.enabled" | default "false" | regexMatch "(?i)yes|true" }}
 {{- template "neo4j.checkNodeSelectorLabels" . -}}
 {{- template "podSpec.checkLoadBalancerParam" . -}}
 {{- template "neo4j.checkLicenseAgreement" . -}}
