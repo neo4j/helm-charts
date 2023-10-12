@@ -148,29 +148,25 @@ type Default struct {
 type Spec struct {
 	Type string `yaml:"type,omitempty"`
 }
-type HTTPPort struct {
-	Enabled bool `yaml:"enabled,omitempty"`
+
+type Port struct {
+	Enabled    bool   `yaml:"enabled"`
+	Port       int    `yaml:"port"`
+	TargetPort int    `yaml:"targetPort"`
+	Name       string `yaml:"name"`
 }
-type HTTPSPort struct {
-	Enabled bool `yaml:"enabled,omitempty"`
-}
-type BoltPort struct {
-	Enabled bool `yaml:"enabled,omitempty"`
-}
-type BackupPort struct {
-	Enabled bool `yaml:"enabled,omitempty"`
-}
+
 type Ports struct {
-	HTTP   HTTPPort   `yaml:"http,omitempty"`
-	HTTPS  HTTPSPort  `yaml:"https,omitempty"`
-	Bolt   BoltPort   `yaml:"bolt,omitempty"`
-	Backup BackupPort `yaml:"backup,omitempty"`
+	HTTP   Port `yaml:"http"`
+	HTTPS  Port `yaml:"https"`
+	Bolt   Port `yaml:"bolt,omitempty"`
+	Backup Port `yaml:"backup,omitempty"`
 }
 type Neo4JService struct {
 	Enabled      bool              `yaml:"enabled,omitempty"`
 	Annotations  map[string]string `yaml:"annotations,omitempty"`
 	Spec         Spec              `yaml:"spec,omitempty"`
-	Ports        Ports             `yaml:"ports,omitempty"`
+	Ports        Ports             `yaml:"ports"`
 	MultiCluster bool              `yaml:"multiCluster,omitempty"`
 }
 type Admin struct {
@@ -184,7 +180,7 @@ type Internals struct {
 }
 type Services struct {
 	Default   Default      `yaml:"default,omitempty"`
-	Neo4J     Neo4JService `yaml:"neo4j,omitempty"`
+	Neo4j     Neo4JService `yaml:"neo4j,omitempty"`
 	Admin     Admin        `yaml:"admin,omitempty"`
 	Internals Internals    `yaml:"internals,omitempty"`
 }

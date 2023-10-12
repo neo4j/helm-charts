@@ -56,7 +56,6 @@ func TestClusterCoreInternalPorts(t *testing.T) {
 		6362: 6362,
 		7687: 7687,
 		7474: 7474,
-		7473: 7473,
 		7688: 7688,
 		6000: 6000,
 		5000: 5000,
