@@ -11,7 +11,7 @@ import (
 var _, thisFile, _, _ = runtime.Caller(0)
 var modelDir = path.Dir(thisFile)
 
-var LoadBalancerHelmChart = newHelmChart("neo4j-headless-service")
+var LoadBalancerHelmChart = newHelmChart("neo4j-loadbalancer")
 
 var HeadlessServiceHelmChart = newHelmChart("neo4j-headless-service")
 

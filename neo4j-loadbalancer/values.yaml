@@ -39,6 +39,8 @@ ports:
 # If you do not want the automatic selector rename to "selectorOverride" and no "helm.neo4j.com/neo4j.name" will be applied.
 selector:
   "helm.neo4j.com/neo4j.loadbalancer": "include"
+  # for neo4j cluster enable this selector
+  # helm.neo4j.com/clustering: "true"
 
 # Add additional Service.spec here if needed
 spec:
