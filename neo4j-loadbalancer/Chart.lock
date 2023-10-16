@@ -1,6 +1,0 @@
-dependencies:
-- name: neo4j-shared-templates
-  repository: file://../neo4j-shared-templates
-  version: 4.4.26
-digest: sha256:2de9e8368a9375a583c347cc4185033ae139137cf7b906b38a855097af7eb0bc
-generated: "2023-09-26T10:28:54.068435637Z"
