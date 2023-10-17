@@ -1,0 +1,16 @@
+{{- if .Release.IsInstall -}}
+
+Thank you for installing {{ .Chart.Name }}.
+
+Your release "{{ .Release.Name }}" has been installed in namespace "{{ .Release.Namespace }}".
+
+{{ else -}}
+
+You have updated {{ .Chart.Name }} in namespace "{{ .Release.Namespace }}".
+
+{{ end -}}
+
+To view the status of your Load Balancer service you can use
+  $ kubectl get service -n {{ .Release.Namespace }} {{ .Release.Name }}-lb-neo4j
+
+Once your Load Balancer has an External-IP assigned you can connect to your Neo4j cluster using "neo4j://<EXTERNAL-IP>:7474".
