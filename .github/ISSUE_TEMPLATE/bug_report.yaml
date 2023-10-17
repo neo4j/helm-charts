@@ -32,11 +32,15 @@ body:
       label: Chart Name
       description: What chart are you running ?
       options:
-        - Cluster
-        - Standalone
-        - Read Replica
-        - Headless Service
-        - LoadBalancer
+        - Neo4j Cluster (v4.4.x)
+        - Neo4j Standalone (v4.4.x)
+        - Neo4j Read Replica (v4.4.x)
+        - Neo4j Headless Service (v4.4.x)
+        - Neo4j Cluster LoadBalancer (v4.4.x)
+        - Neo4j
+        - Neo4j Admin
+        - Neo4j Reverse Proxy
+        - Neo4j LoadBalancer 
     validations:
       required: true      
   - type: dropdown
