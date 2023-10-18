@@ -43,7 +43,7 @@ Convert a neo4j.conf properties text into valid yaml
 
 {{- define "neo4j.isClusterEnabled" -}}
       {{- $minClusterSize := index $.Values.neo4j "minimumClusterSize" | default 1 | int -}}
-      {{- if ge $minClusterSize 3 -}}
+      {{- if ge $minClusterSize 2 -}}
           {{- if not (eq $.Values.neo4j.edition "enterprise") -}}
                {{- fail (printf "Please use enterprise edition for clustering. You can set edition via --set neo4j.edition=enterprise") -}}
           {{- end -}}

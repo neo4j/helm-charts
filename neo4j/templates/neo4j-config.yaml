@@ -92,6 +92,7 @@ data:
   {{- if $clusterEnabled }}
     {{- $primariesCount := index $.Values.neo4j "minimumClusterSize" }}
   initial.dbms.default_primaries_count: "{{ $primariesCount }}"
+  internal.db.cluster.raft.minimum_voting_members: "{{ $primariesCount }}"
   dbms.cluster.minimum_initial_system_primaries_count: "{{ $primariesCount }}"
   {{- end }}
 
