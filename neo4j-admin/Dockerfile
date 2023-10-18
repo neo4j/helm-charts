@@ -9,5 +9,6 @@ RUN \
       microdnf update -y && microdnf install -y bash nc curl wget gnupg yum-utils redhat-lsb-core unzip less ;  \
     fi
 ADD backup/backup_linux bin/backup
+ENV NEO4J_server_config_strict__validation_enabled=false
 RUN chown neo4j:neo4j bin/backup
 CMD ["/bin/bash", "-c", "bin/backup"]
