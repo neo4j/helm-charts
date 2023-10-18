@@ -168,7 +168,7 @@ spec:
       targetPort: 7473
       name: tcp-https
     {{- end }}
-    {{- if $clusterEnabled }}
+{{/*    {{- if $clusterEnabled }}*/}}
     #enable the ports for non Read Replicas
     - protocol: TCP
       port: 7688
@@ -186,7 +186,7 @@ spec:
       port: 6000
       targetPort: 6000
       name: tcp-tx
-    {{- end }}
+{{/*    {{- end }}*/}}
     {{- if $prometheusEnabled }}
     - protocol: TCP
       port: 2004
