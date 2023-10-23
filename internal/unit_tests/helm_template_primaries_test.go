@@ -3,6 +3,7 @@ package unit_tests
 import (
 	"errors"
 	"fmt"
+	v12 "k8s.io/api/policy/v1"
 	"sort"
 
 	"github.com/neo4j/helm-charts/internal/helpers"
@@ -1871,6 +1872,68 @@ func TestServiceAccountCreation(t *testing.T) {
 		serviceaccounts := manifests.OfType(&v1.ServiceAccount{})
 		assert.Len(t, serviceaccounts, 0, fmt.Sprintf("service accounts found %v", serviceaccounts))
 
+	}))
+}
+
+// TestPodDisruptionBudgetLabelsAndValues checks if podDisruptionBudget has the provided labels and minAvai and maxUnavai values set or not
+func TestPodDisruptionBudgetLabelsAndValues(t *testing.T) {
+	t.Parallel()
+	var helmValues model.HelmValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		helmValues = model.DefaultCommunityValues
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.PodDisruptionBudget.Enabled = true
+		helmValues.PodDisruptionBudget.Labels = map[string]string{
+			"demo": "neo4j",
+		}
+		helmValues.PodDisruptionBudget.MaxUnavailable = "5"
+		helmValues.PodDisruptionBudget.MinAvailable = "3"
+		helmValues.PodDisruptionBudget.MatchLabels = map[string]string{
+			"name": "pdb",
+		}
+		matchExpressions := []model.MatchExpressions{
+			{
+				Key:      "demo",
+				Operator: "Equals",
+				Values:   []string{"neo4j"},
+			},
+		}
+		helmValues.PodDisruptionBudget.MatchExpressions = matchExpressions
+
+		manifests, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		assert.NoError(t, err, fmt.Sprintf("error seen while testing pod distruption budget labels"))
+		podDisruptionBudgets := manifests.OfType(&v12.PodDisruptionBudget{})
+		assert.Len(t, podDisruptionBudgets, 1, "more than 1 podDisruptionBudget found")
+		podDisruptionBudget := podDisruptionBudgets[0]
+		assert.Contains(t, podDisruptionBudget.(*v12.PodDisruptionBudget).Labels, "demo", "missing label 'demo'")
+		assert.Equal(t, podDisruptionBudget.(*v12.PodDisruptionBudget).Spec.MinAvailable.String(), helmValues.PodDisruptionBudget.MinAvailable)
+		assert.Equal(t, podDisruptionBudget.(*v12.PodDisruptionBudget).Spec.MaxUnavailable.String(), helmValues.PodDisruptionBudget.MaxUnavailable)
+		assert.Contains(t, podDisruptionBudget.(*v12.PodDisruptionBudget).Spec.Selector.MatchLabels, "name", "missing label 'name'")
+		assert.Len(t, podDisruptionBudget.(*v12.PodDisruptionBudget).Spec.Selector.MatchExpressions, 1, "more than 1 matchExpressions found")
+		for _, matchExpr := range podDisruptionBudget.(*v12.PodDisruptionBudget).Spec.Selector.MatchExpressions {
+			assert.Equal(t, string(matchExpr.Operator), matchExpressions[0].Operator)
+			assert.Equal(t, matchExpr.Key, matchExpressions[0].Key)
+			assert.Equal(t, matchExpr.Values, matchExpressions[0].Values)
+		}
+	}))
+}
+
+// TestPodDisruptionBudgetLabelsAndValues checks if podDisruptionBudget has the provided labels and minAvai and maxUnavai values set or not
+func TestEmptyPodDisruptionBudgetWhenDisabled(t *testing.T) {
+	t.Parallel()
+	var helmValues model.HelmValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		helmValues = model.DefaultCommunityValues
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.PodDisruptionBudget.Enabled = false
+		manifests, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		assert.NoError(t, err, fmt.Sprintf("error seen while testing pod distruption budget labels"))
+		podDisruptionBudgets := manifests.OfType(&v12.PodDisruptionBudget{})
+		assert.Nil(t, podDisruptionBudgets, "podDisruptionBudget found")
 	}))
 }
 
