@@ -67,7 +67,7 @@ func clusterTests(clusterRelease model.ReleaseName) ([]SubTest, error) {
 			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupAWSHelmChartWithNodeSelector(t, clusterRelease), "Backup to AWS should succeed")
 		}},
-		{name: "Install Backup Helm Chart For GCP With Workload Identity", test: func(t *testing.T) {
+		{name: "Install Backup Helm Chart For GCP With Workload Identity For Cluster", test: func(t *testing.T) {
 			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t, clusterRelease), "Backup to GCP with workload identity should succeed")
 		}},
@@ -135,10 +135,10 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t *testing.T, 
 	}
 
 	_, err := Clientset.CoreV1().ServiceAccounts(namespace).Create(context.Background(), &serviceAccount, metav1.CreateOptions{})
-	assert.NoError(t, err, fmt.Sprintf("error seen while creating k8s service account %s. \n Err := %v", k8sServiceAccountName, err))
+	assert.NoError(t, err, fmt.Sprintf("error seen while creating k8s service account for cluster %s. \n Err := %v", k8sServiceAccountName, err))
 
 	err = createGCPServiceAccount(k8sServiceAccountName, namespace, gcpServiceAccountName)
-	assert.NoError(t, err, fmt.Sprintf("error seen while creating GCP service account. \n Err := %v", err))
+	assert.NoError(t, err, fmt.Sprintf("error seen while creating GCP service account for cluster %s. \n Err := %v", gcpServiceAccountName, err))
 
 	bucketName := model.BucketName
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)

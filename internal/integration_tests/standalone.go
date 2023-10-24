@@ -896,6 +896,7 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 
 func createGCPServiceAccount(k8sServiceAccountName string, namespace string, gcpServiceAccountName string) error {
 	//mutex required since GCP does not allow you to create and add iam policies to service accounts concurrently
+	log.Printf("k8sServiceAccountName = %s \n gcpServiceAccountName = %s", k8sServiceAccountName, gcpServiceAccountName)
 	mutex.Lock()
 	stdout, stderr, err := RunCommand(exec.Command("gcloud", "iam", "service-accounts", "create", gcpServiceAccountName,
 		fmt.Sprintf("--project=%s", string(gcloud.CurrentProject()))))
