@@ -897,18 +897,20 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 func createGCPServiceAccount(k8sServiceAccountName string, namespace string, gcpServiceAccountName string) error {
 	//mutex required since GCP does not allow you to create and add iam policies to service accounts concurrently
 	log.Printf("k8sServiceAccountName = %s \n gcpServiceAccountName = %s", k8sServiceAccountName, gcpServiceAccountName)
-	project := string(gcloud.CurrentProject())
 	mutex.Lock()
+	project := string(gcloud.CurrentProject())
 	stdout, stderr, err := RunCommand(exec.Command("gcloud", "iam", "service-accounts", "create", gcpServiceAccountName,
 		fmt.Sprintf("--project=%s", project)))
 	if err != nil {
 		return fmt.Errorf("error seen while trying to create gcp service account  %s \n Here's why err := %s \n stderr := %s", gcpServiceAccountName, err, string(stderr))
 	}
-	serviceAccountEmail := fmt.Sprintf("serviceAccount:%s@%s.iam.gserviceaccount.com", gcpServiceAccountName, project)
-	log.Printf("GCP service account creation done \n Stdout = %s \n Stderr = %s serviceAccountEmail := %s", string(stdout), string(stderr), serviceAccountEmail)
+	serviceAccountConfig := fmt.Sprintf("serviceAccount:%s@%s.iam.gserviceaccount.com", gcpServiceAccountName, project)
+	serviceAccountEmail := fmt.Sprintf("%s@%s.iam.gserviceaccount.com", gcpServiceAccountName, project)
+	log.Printf("serviceAccountConfig %s serviceAccountEmail %s", serviceAccountConfig, serviceAccountEmail)
+	log.Printf("GCP service account creation done \n Stdout = %s \n Stderr = %s", string(stdout), string(stderr))
 
 	stdout, stderr, err = RunCommand(exec.Command("gcloud", "projects", "add-iam-policy-binding",
-		project, "--member", serviceAccountEmail, "--role", "roles/storage.admin"))
+		project, "--member", serviceAccountConfig, "--role", "roles/storage.admin"))
 	if err != nil {
 		return fmt.Errorf("error seen while trying to add iam policy binding to gcp service account %s \n Here's why err := %s \n stderr := %s", gcpServiceAccountName, err, string(stderr))
 	}
@@ -916,7 +918,7 @@ func createGCPServiceAccount(k8sServiceAccountName string, namespace string, gcp
 
 	stdout, stderr, err = RunCommand(exec.Command("gcloud", "iam", "service-accounts", "add-iam-policy-binding",
 		serviceAccountEmail, "--role", "roles/iam.workloadIdentityUser",
-		"--member", fmt.Sprintf("serviceAccount:%s.svc.id.goog[%s/%s]", project, namespace, k8sServiceAccountName)))
+		"--member", fmt.Sprintf("serviceAccount:%s.svc.id.goog[%s/%s]", string(gcloud.CurrentProject()), namespace, k8sServiceAccountName)))
 	if err != nil {
 		return fmt.Errorf("error seen while trying to add iam policy binding to k8s service account %s \n Here's why err := %s \n stderr := %s", k8sServiceAccountName, err, string(stderr))
 	}
