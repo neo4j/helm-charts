@@ -1,32 +1,42 @@
 package model
 
 type HelmValues struct {
-	FullnameOverride         string            `yaml:"fullnameOverride,omitempty"`
-	NameOverride             string            `yaml:"nameOverride,omitempty"`
-	Neo4J                    Neo4J             `yaml:"neo4j,omitempty"`
-	Volumes                  Volumes           `yaml:"volumes,omitempty"`
-	AdditionalVolumes        []interface{}     `yaml:"additionalVolumes,omitempty"`
-	AdditionalVolumeMounts   []interface{}     `yaml:"additionalVolumeMounts,omitempty"`
-	NodeSelector             map[string]string `yaml:"nodeSelector,omitempty"`
-	DisableLookups           bool              `default:"true" yaml:"disableLookups"`
-	Services                 Services          `yaml:"services,omitempty"`
-	Config                   map[string]string `yaml:"config,omitempty"`
-	SecurityContext          SecurityContext   `yaml:"securityContext,omitempty"`
-	ContainerSecurityContext SecurityContext   `yaml:"containerSecurityContext,omitempty"`
-	ReadinessProbe           ReadinessProbe    `yaml:"readinessProbe,omitempty"`
-	LivenessProbe            LivenessProbe     `yaml:"livenessProbe,omitempty"`
-	StartupProbe             StartupProbe      `yaml:"startupProbe,omitempty"`
-	Ssl                      Ssl               `yaml:"ssl,omitempty"`
-	ClusterDomain            string            `yaml:"clusterDomain,omitempty"`
-	Image                    Image             `yaml:"image,omitempty"`
-	Statefulset              Statefulset       `yaml:"statefulset,omitempty"`
-	Env                      map[string]string `yaml:"env,omitempty"`
-	PodSpec                  PodSpec           `yaml:"podSpec,omitempty"`
-	LogInitialPassword       bool              `yaml:"logInitialPassword,omitempty"`
-	Jvm                      Jvm               `yaml:"jvm,omitempty"`
-	LdapPasswordFromSecret   string            `yaml:"ldapPasswordFromSecret,omitempty"`
-	LdapPasswordMountPath    string            `yaml:"ldapPasswordMountPath,omitempty"`
-	ApocCredentials          ApocCredentials   `yaml:"apoc_credentials,omitempty"`
+	FullnameOverride         string              `yaml:"fullnameOverride,omitempty"`
+	NameOverride             string              `yaml:"nameOverride,omitempty"`
+	Neo4J                    Neo4J               `yaml:"neo4j,omitempty"`
+	Volumes                  Volumes             `yaml:"volumes,omitempty"`
+	AdditionalVolumes        []interface{}       `yaml:"additionalVolumes,omitempty"`
+	AdditionalVolumeMounts   []interface{}       `yaml:"additionalVolumeMounts,omitempty"`
+	NodeSelector             map[string]string   `yaml:"nodeSelector,omitempty"`
+	DisableLookups           bool                `default:"true" yaml:"disableLookups"`
+	Services                 Services            `yaml:"services,omitempty"`
+	Config                   map[string]string   `yaml:"config,omitempty"`
+	SecurityContext          SecurityContext     `yaml:"securityContext,omitempty"`
+	ContainerSecurityContext SecurityContext     `yaml:"containerSecurityContext,omitempty"`
+	ReadinessProbe           ReadinessProbe      `yaml:"readinessProbe,omitempty"`
+	LivenessProbe            LivenessProbe       `yaml:"livenessProbe,omitempty"`
+	StartupProbe             StartupProbe        `yaml:"startupProbe,omitempty"`
+	Ssl                      Ssl                 `yaml:"ssl,omitempty"`
+	ClusterDomain            string              `yaml:"clusterDomain,omitempty"`
+	Image                    Image               `yaml:"image,omitempty"`
+	Statefulset              Statefulset         `yaml:"statefulset,omitempty"`
+	Env                      map[string]string   `yaml:"env,omitempty"`
+	PodSpec                  PodSpec             `yaml:"podSpec,omitempty"`
+	LogInitialPassword       bool                `yaml:"logInitialPassword,omitempty"`
+	Jvm                      Jvm                 `yaml:"jvm,omitempty"`
+	LdapPasswordFromSecret   string              `yaml:"ldapPasswordFromSecret,omitempty"`
+	LdapPasswordMountPath    string              `yaml:"ldapPasswordMountPath,omitempty"`
+	ApocCredentials          ApocCredentials     `yaml:"apoc_credentials,omitempty"`
+	PodDisruptionBudget      PodDisruptionBudget `yaml:"podDisruptionBudget"`
+}
+
+type PodDisruptionBudget struct {
+	Enabled          bool               `yaml:"enabled"`
+	MatchLabels      map[string]string  `yaml:"matchLabels,omitempty"`
+	MatchExpressions []MatchExpressions `yaml:"matchExpressions,omitempty"`
+	Labels           map[string]string  `yaml:"labels,omitempty"`
+	MinAvailable     string             `yaml:"minAvailable,omitempty"`
+	MaxUnavailable   string             `yaml:"maxUnavailable,omitempty"`
 }
 
 type PodSpec struct {
