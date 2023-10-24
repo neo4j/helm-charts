@@ -442,3 +442,17 @@ jvm:
   # - "-XX:HeapDumpPath=/logs/neo4j.hprof"
   # - "-XX:MaxMetaspaceSize=180m"
   # - "-XX:ReservedCodeCacheSize=40m"
+
+# define your podDisruptionBudget details here
+podDisruptionBudget:
+  enabled: false
+  matchLabels: {}
+  #    "demo": "neo4j"
+  matchExpressions: []
+  #    - key: "demo"
+  #      operator: "Equals"
+  #      value: "neo4j"
+  labels: {}
+  #    "name": "neo4j"
+  minAvailable: ""
+  maxUnavailable: ""
