@@ -904,8 +904,8 @@ func createGCPServiceAccount(k8sServiceAccountName string, namespace string, gcp
 	if err != nil {
 		return fmt.Errorf("error seen while trying to create gcp service account  %s \n Here's why err := %s \n stderr := %s", gcpServiceAccountName, err, string(stderr))
 	}
-	serviceAccountConfig := fmt.Sprintf("serviceAccount:%s@%s.iam.gserviceaccount.com", gcpServiceAccountName, project)
 	serviceAccountEmail := fmt.Sprintf("%s@%s.iam.gserviceaccount.com", gcpServiceAccountName, project)
+	serviceAccountConfig := fmt.Sprintf("serviceAccount:%s", serviceAccountEmail)
 	log.Printf("serviceAccountConfig %s serviceAccountEmail %s", serviceAccountConfig, serviceAccountEmail)
 	log.Printf("GCP service account creation done \n Stdout = %s \n Stderr = %s", string(stdout), string(stderr))
 
