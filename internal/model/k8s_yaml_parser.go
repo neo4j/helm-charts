@@ -2,6 +2,7 @@ package model
 
 import (
 	"bytes"
+	monitoring "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 	"io"
@@ -13,6 +14,11 @@ import (
 	"reflect"
 	"testing"
 )
+
+func init() {
+	// add prometheus serivcemonitor spec to the runtime so that it can be decoded
+	monitoring.AddToScheme(scheme.Scheme)
+}
 
 func splitYAML(resources []byte) ([][]byte, error) {
 
@@ -209,7 +215,6 @@ func decodeK8s(in []byte) (*K8sResources, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	objects := make([]runtime.Object, len(yamls))
 	schemas := make([]schema.GroupVersionKind, len(yamls))
 	for i, yaml := range yamls {

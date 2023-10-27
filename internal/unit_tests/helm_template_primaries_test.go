@@ -4,15 +4,16 @@ import (
 	"errors"
 	"fmt"
 	v12 "k8s.io/api/policy/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sort"
 
 	"github.com/neo4j/helm-charts/internal/helpers"
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/neo4j/helm-charts/internal/resources"
+	pv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -1934,6 +1935,66 @@ func TestEmptyPodDisruptionBudgetWhenDisabled(t *testing.T) {
 		assert.NoError(t, err, fmt.Sprintf("error seen while testing pod distruption budget labels"))
 		podDisruptionBudgets := manifests.OfType(&v12.PodDisruptionBudget{})
 		assert.Nil(t, podDisruptionBudgets, "podDisruptionBudget found")
+	}))
+}
+
+// TestServiceMonitorWhenEnabled checks for service monitor spec when enabled
+func TestServiceMonitorWhenEnabled(t *testing.T) {
+	t.Parallel()
+	//assert.NoError(t, installPrometheusCRDS(), "error seen while installing prometheus crds")
+	var helmValues model.HelmValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		helmValues = model.DefaultCommunityValues
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.ServiceMonitor.Enabled = true
+		helmValues.ServiceMonitor.Port = "2204"
+		helmValues.ServiceMonitor.Labels = map[string]string{
+			"name": "service-monitor",
+		}
+		helmValues.ServiceMonitor.Interval = "30s"
+		helmValues.ServiceMonitor.JobLabel = "name"
+		helmValues.ServiceMonitor.Path = "/metrics"
+		helmValues.ServiceMonitor.NamespaceSelector = model.NamespaceSelector{
+			Any:        false,
+			MatchNames: []string{"demo", "default"},
+		}
+		helmValues.ServiceMonitor.TargetLabels = []string{"name"}
+
+		manifests, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		assert.NoError(t, err, fmt.Sprintf("error seen while testing service monitor when enabled"))
+		serviceMonitors := manifests.OfType(&pv1.ServiceMonitor{})
+		assert.Len(t, serviceMonitors, 1, "serviceMonitor not found")
+		serviceMonitor := serviceMonitors[0].(*pv1.ServiceMonitor)
+		assert.Len(t, serviceMonitor.Spec.Endpoints, 1, "more than one endpoint found in service monitor")
+		endPoint := serviceMonitor.Spec.Endpoints[0]
+		assert.Equal(t, endPoint.Port, helmValues.ServiceMonitor.Port)
+		assert.Equal(t, endPoint.Path, helmValues.ServiceMonitor.Path)
+		assert.Equal(t, string(endPoint.Interval), helmValues.ServiceMonitor.Interval)
+		assert.Equal(t, serviceMonitor.Labels, helmValues.ServiceMonitor.Labels)
+		assert.Equal(t, serviceMonitor.Spec.TargetLabels, helmValues.ServiceMonitor.TargetLabels)
+		assert.Equal(t, serviceMonitor.Spec.NamespaceSelector.MatchNames, helmValues.ServiceMonitor.NamespaceSelector.MatchNames)
+	}))
+}
+
+// TestServiceMonitorWhenDisabled checks for service monitor spec when disabled
+func TestServiceMonitorWhenDisabled(t *testing.T) {
+	t.Parallel()
+	//assert.NoError(t, installPrometheusCRDS(), "error seen while installing prometheus crds")
+	var helmValues model.HelmValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		helmValues = model.DefaultCommunityValues
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.ServiceMonitor.Enabled = false
+
+		manifests, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		assert.NoError(t, err, fmt.Sprintf("error seen while testing service monitor when disabled"))
+		serviceMonitors := manifests.OfType(&pv1.ServiceMonitor{})
+		assert.Nil(t, serviceMonitors)
+
 	}))
 }
 

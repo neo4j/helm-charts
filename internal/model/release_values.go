@@ -29,6 +29,27 @@ type HelmValues struct {
 	LdapPasswordMountPath    string              `yaml:"ldapPasswordMountPath,omitempty"`
 	ApocCredentials          ApocCredentials     `yaml:"apoc_credentials,omitempty"`
 	PodDisruptionBudget      PodDisruptionBudget `yaml:"podDisruptionBudget"`
+	ServiceMonitor           ServiceMonitor      `yaml:"serviceMonitor"`
+}
+
+type ServiceMonitor struct {
+	Enabled           bool                   `yaml:"enabled"`
+	Labels            map[string]string      `yaml:"labels,omitempty"`
+	JobLabel          string                 `yaml:"jobLabel,omitempty"`
+	Interval          string                 `yaml:"interval,omitempty"`
+	Port              string                 `yaml:"port,omitempty"`
+	Path              string                 `yaml:"path,omitempty"`
+	NamespaceSelector NamespaceSelector      `yaml:"namespaceSelector"`
+	TargetLabels      []string               `yaml:"targetLabels,omitempty"`
+	Selector          ServiceMonitorSelector `yaml:"selector,omitempty"`
+}
+
+type ServiceMonitorSelector struct {
+	MatchLabels map[string]string `yaml:"matchLabels,omitempty"`
+}
+type NamespaceSelector struct {
+	Any        bool     `yaml:"any"`
+	MatchNames []string `yaml:"matchNames,omitempty"`
 }
 
 type PodDisruptionBudget struct {
