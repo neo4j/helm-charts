@@ -2,6 +2,7 @@ package model
 
 import (
 	"bytes"
+	monitoring "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
 	"io"
@@ -13,6 +14,11 @@ import (
 	"reflect"
 	"testing"
 )
+
+func init() {
+	// add prometheus serivcemonitor spec to the runtime so that it can be decoded
+	monitoring.AddToScheme(scheme.Scheme)
+}
 
 func splitYAML(resources []byte) ([][]byte, error) {
 

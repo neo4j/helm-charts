@@ -481,3 +481,25 @@ podDisruptionBudget:
   #    "name": "neo4j"
   minAvailable: ""
   maxUnavailable: ""
+
+
+# Service Monitor for prometheus
+# Please ensure prometheus operator or the service monitor CRD is present in your cluster before using service monitor config
+serviceMonitor:
+  enabled: false
+  labels: {}
+  #    "demo": "value"
+  jobLabel: ""
+  interval: ""
+  port: ""
+  path: ""
+  namespaceSelector: {}
+  #    any: false
+  #    matchNames:
+  #      - default
+  targetLabels: []
+  #    - "demo"
+  #    - "value"
+  selector: {}
+#    matchLabels:
+#      helm.neo4j.com/service: "admin"
