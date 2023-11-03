@@ -42,7 +42,6 @@ func (a *awsClient) CheckBucketAccess(bucketName string) error {
 			return fmt.Errorf("s3 Bucket %s does not exist", bucketName)
 		}
 	}
-	log.Printf("%v", objects)
 	log.Printf("Connectivity with S3 Bucket '%s' established", bucketName)
 
 	return nil

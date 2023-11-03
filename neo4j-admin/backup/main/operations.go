@@ -67,20 +67,20 @@ func azureOperations() {
 	err = azureClient.CheckContainerAccess(containerName)
 	handleError(err)
 
-	//backupFileNames, consistencyCheckReports, err := backupOperations()
-	//handleError(err)
+	backupFileNames, consistencyCheckReports, err := backupOperations()
+	handleError(err)
 
-	//err = azureClient.UploadFile(backupFileNames, containerName)
+	err = azureClient.UploadFile(backupFileNames, containerName)
 	err = azureClient.UploadFile([]string{"demo.yaml", "datadog.yaml", "demo-config.yaml"}, containerName)
 	handleError(err)
-	//
-	//enableConsistencyCheck := os.Getenv("CONSISTENCY_CHECK_ENABLE")
-	//if enableConsistencyCheck == "true" {
-	//	err = azureClient.UploadFile(consistencyCheckReports, containerName)
-	//	handleError(err)
-	//}
-	//err = deleteBackupFiles(backupFileNames, consistencyCheckReports)
-	//handleError(err)
+
+	enableConsistencyCheck := os.Getenv("CONSISTENCY_CHECK_ENABLE")
+	if enableConsistencyCheck == "true" {
+		err = azureClient.UploadFile(consistencyCheckReports, containerName)
+		handleError(err)
+	}
+	err = deleteBackupFiles(backupFileNames, consistencyCheckReports)
+	handleError(err)
 }
 
 func backupOperations() ([]string, []string, error) {
