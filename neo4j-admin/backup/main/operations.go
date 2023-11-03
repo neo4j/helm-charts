@@ -71,7 +71,6 @@ func azureOperations() {
 	handleError(err)
 
 	err = azureClient.UploadFile(backupFileNames, containerName)
-	err = azureClient.UploadFile([]string{"demo.yaml", "datadog.yaml", "demo-config.yaml"}, containerName)
 	handleError(err)
 
 	enableConsistencyCheck := os.Getenv("CONSISTENCY_CHECK_ENABLE")
