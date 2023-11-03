@@ -52,7 +52,7 @@ func (a *azureClient) UploadFile(fileNames []string, containerName string) error
 		prefix = containerName[index+1:]
 	}
 	//location := "/backups"
-	location := "/Users/harshit/Desktop/sample"
+	location := os.Getenv("LOCATION")
 	for _, fileName := range fileNames {
 
 		filePath := fmt.Sprintf("%s/%s", location, fileName)

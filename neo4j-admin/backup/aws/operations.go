@@ -33,10 +33,16 @@ func (a *awsClient) CheckBucketAccess(bucketName string) error {
 	}
 
 	// Get the first page of results for ListObjectsV2 for a bucket
-	_, err := client.ListObjectsV2(context.TODO(), s3Input)
+	objects, err := client.ListObjectsV2(context.TODO(), s3Input)
 	if err != nil {
 		return fmt.Errorf("Unable to connect to s3 bucket %s \n Here's why: %v\n", bucketName, err)
 	}
+	if strings.Contains(bucketName, "/") {
+		if len(objects.Contents) == 0 {
+			return fmt.Errorf("s3 Bucket %s does not exist", bucketName)
+		}
+	}
+	log.Printf("%v", objects)
 	log.Printf("Connectivity with S3 Bucket '%s' established", bucketName)
 
 	return nil
@@ -52,7 +58,8 @@ func (a *awsClient) UploadFile(fileNames []string, bucketName string) error {
 		index := strings.Index(bucketName, "/")
 		parentBucketName = bucketName[:index]
 	}
-	location := "/backups"
+	//location := "/backups"
+	location := os.Getenv("LOCATION")
 	for _, fileName := range fileNames {
 
 		filePath := fmt.Sprintf("%s/%s", location, fileName)

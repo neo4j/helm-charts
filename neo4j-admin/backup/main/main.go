@@ -7,7 +7,7 @@ import (
 
 func main() {
 
-	//startupOperations()
+	startupOperations()
 
 	cloudProvider := os.Getenv("CLOUD_PROVIDER")
 	switch cloudProvider {

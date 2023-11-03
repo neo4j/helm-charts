@@ -70,7 +70,8 @@ func (g *gcpClient) UploadFile(fileNames []string, bucketName string) error {
 		parentBucketName = bucketName[:index]
 		prefix = bucketName[index+1:]
 	}
-	location := "/backups"
+	//location := "/backups"
+	location := os.Getenv("LOCATION")
 	for _, fileName := range fileNames {
 
 		filePath := fmt.Sprintf("%s/%s", location, fileName)

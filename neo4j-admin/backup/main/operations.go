@@ -125,6 +125,8 @@ func startupOperations() {
 
 	err = neo4jAdmin.CheckDatabaseConnectivity(address)
 	handleError(err)
+
+	os.Setenv("LOCATION", "/backups")
 }
 
 // generateAddress returns the backup address in the format <hostip:port> or <standalone-admin.default.svc.cluster.local:port>
