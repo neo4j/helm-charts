@@ -8,13 +8,23 @@ import (
 	"golang.org/x/net/context"
 	"log"
 	"os"
+	"strings"
 )
 
 func (a *azureClient) CheckContainerAccess(containerName string) error {
 
-	pager := a.client.NewListBlobsFlatPager(containerName, &azblob.ListBlobsFlatOptions{
+	prefix := ""
+	parentContainerName := containerName
+	options := &azblob.ListBlobsFlatOptions{
 		Include: azblob.ListBlobsInclude{Snapshots: true, Versions: true},
-	})
+	}
+	if strings.Contains(containerName, "/") {
+		index := strings.Index(containerName, "/")
+		prefix = containerName[index+1:]
+		parentContainerName = containerName[:index]
+		options.Prefix = &prefix
+	}
+	pager := a.client.NewListBlobsFlatPager(parentContainerName, options)
 
 	_, err := pager.NextPage(context.TODO())
 	if err != nil {
@@ -31,7 +41,18 @@ func (a *azureClient) CheckContainerAccess(containerName string) error {
 
 // UploadFile uploads the file present at the provided location to the azure container
 func (a *azureClient) UploadFile(fileNames []string, containerName string) error {
-	location := "/backups"
+
+	prefix := ""
+	parentContainerName := containerName
+	// if bucketName is demo/test/test2
+	// parentBucketName will be "demo"
+	if strings.Contains(containerName, "/") {
+		index := strings.Index(containerName, "/")
+		parentContainerName = containerName[:index]
+		prefix = containerName[index+1:]
+	}
+	//location := "/backups"
+	location := os.Getenv("LOCATION")
 	for _, fileName := range fileNames {
 
 		filePath := fmt.Sprintf("%s/%s", location, fileName)
@@ -40,8 +61,12 @@ func (a *azureClient) UploadFile(fileNames []string, containerName string) error
 			return fmt.Errorf("Couldn't open file %v to upload. Here's why: %v\n", filePath, err)
 		}
 
+		name := fileName
+		if prefix != "" {
+			name = fmt.Sprintf("%s/%s", prefix, fileName)
+		}
 		log.Printf("Starting upload of file %s", filePath)
-		_, err = a.client.UploadFile(context.TODO(), containerName, fileName, file, nil)
+		_, err = a.client.UploadFile(context.TODO(), parentContainerName, name, file, nil)
 		if err != nil {
 			return fmt.Errorf("Couldn't upload file %v to %v Here's why: %v\n", filePath, containerName, err)
 		}
