@@ -9,20 +9,38 @@ import (
 	"github.com/neo4j/helm-charts/neo4j-admin/backup/common"
 	"log"
 	"os"
+	"strings"
 )
 
 // CheckBucketAccess checks if the given bucket name is accessible or not
 func (a *awsClient) CheckBucketAccess(bucketName string) error {
 
-	// Create an Amazon S3 service client
+	//Create an Amazon S3 service client
 	client := s3.NewFromConfig(*a.cfg)
 
-	// Get the first page of results for ListObjectsV2 for a bucket
-	_, err := client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
+	s3Input := &s3.ListObjectsV2Input{
 		Bucket: aws.String(bucketName),
-	})
+	}
+	if strings.Contains(bucketName, "/") {
+		firstIndex := strings.Index(bucketName, "/")
+		name := bucketName[:firstIndex]
+		prefix := bucketName[firstIndex+1:]
+		log.Printf("Name = %s , Prefix = %s", name, prefix)
+		s3Input = &s3.ListObjectsV2Input{
+			Bucket: aws.String(name),
+			Prefix: aws.String(prefix),
+		}
+	}
+
+	// Get the first page of results for ListObjectsV2 for a bucket
+	objects, err := client.ListObjectsV2(context.TODO(), s3Input)
 	if err != nil {
 		return fmt.Errorf("Unable to connect to s3 bucket %s \n Here's why: %v\n", bucketName, err)
+	}
+	if strings.Contains(bucketName, "/") {
+		if len(objects.Contents) == 0 {
+			return fmt.Errorf("s3 Bucket %s does not exist", bucketName)
+		}
 	}
 	log.Printf("Connectivity with S3 Bucket '%s' established", bucketName)
 	return nil
@@ -31,6 +49,15 @@ func (a *awsClient) CheckBucketAccess(bucketName string) error {
 // UploadFile uploads the file present at the provided location to the s3 bucket
 func (a *awsClient) UploadFile(fileName string, location string, bucketName string) error {
 
+	keyName := fileName
+	parentBucketName := bucketName
+	// if bucketName is demo/test/test2
+	// parentBucketName will be "demo"
+	if strings.Contains(bucketName, "/") {
+		index := strings.Index(bucketName, "/")
+		parentBucketName = bucketName[:index]
+		keyName = fmt.Sprintf("%s/%s", bucketName[index+1:], fileName)
+	}
 	filePath := fmt.Sprintf("%s/%s", location, fileName)
 	yes, err := common.IsFileBigger(filePath)
 	if err != nil {
@@ -39,7 +66,7 @@ func (a *awsClient) UploadFile(fileName string, location string, bucketName stri
 
 	//use UploadLargeObject if file size is more than 4GB
 	if yes {
-		return a.UploadLargeObject(fileName, location, bucketName)
+		return a.UploadLargeObject(fileName, location, bucketName, parentBucketName)
 	}
 
 	file, err := os.Open(filePath)
@@ -53,8 +80,8 @@ func (a *awsClient) UploadFile(fileName string, location string, bucketName stri
 
 	log.Printf("Starting upload of file %s", filePath)
 	_, err = s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
-		Bucket: aws.String(bucketName),
-		Key:    aws.String(fileName),
+		Bucket: aws.String(parentBucketName),
+		Key:    aws.String(keyName),
 		Body:   file,
 	})
 	if err != nil {
@@ -65,7 +92,15 @@ func (a *awsClient) UploadFile(fileName string, location string, bucketName stri
 	return nil
 }
 
-func (a *awsClient) UploadLargeObject(fileName string, location string, bucketName string) error {
+func (a *awsClient) UploadLargeObject(fileName string, location string, bucketName string, parentBucketName string) error {
+
+	keyName := fileName
+	// if bucketName is demo/test/test2
+	// parentBucketName will be "demo"
+	if strings.Contains(bucketName, "/") {
+		index := strings.Index(bucketName, "/")
+		keyName = fmt.Sprintf("%s/%s", bucketName[index+1:], fileName)
+	}
 	filePath := fmt.Sprintf("%s/%s", location, fileName)
 
 	//divide the file into 1GB parts
@@ -84,8 +119,8 @@ func (a *awsClient) UploadLargeObject(fileName string, location string, bucketNa
 
 	log.Printf("Starting upload of file %s", filePath)
 	_, err = uploader.Upload(context.TODO(), &s3.PutObjectInput{
-		Bucket: aws.String(bucketName),
-		Key:    aws.String(fileName),
+		Bucket: aws.String(parentBucketName),
+		Key:    aws.String(keyName),
 		Body:   file,
 	})
 	if err != nil {

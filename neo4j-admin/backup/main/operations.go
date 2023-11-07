@@ -43,7 +43,7 @@ func gcpOperations() {
 	handleError(err)
 
 	for _, backupFileName := range backupFileNames {
-		err = gcpClient.UploadFile(backupFileName, "/backups", bucketName)
+		err = gcpClient.UploadFile(backupFileName, os.Getenv("LOCATION"), bucketName)
 		handleError(err)
 	}
 
@@ -101,6 +101,8 @@ func startupOperations() {
 
 	err = neo4jAdmin.CheckDatabaseConnectivity(address)
 	handleError(err)
+
+	os.Setenv("LOCATION", "/backups")
 }
 
 // generateAddress returns the backup address in the format <hostip:port> or <standalone-admin.default.svc.cluster.local:port>
