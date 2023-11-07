@@ -92,10 +92,6 @@ spec:
           envFrom:
             - configMapRef:
                 name: "{{ include "neo4j.fullname" . }}-env"
-            {{- if not $authDisabled }}
-            - secretRef:
-                name: "{{ template "neo4j.secretName" . }}"
-            {{- end }}
           env:
             - name: HELM_NEO4J_VERSION
               value: "{{ .Values.neo4j.version | default .Chart.AppVersion }}"
@@ -143,6 +139,10 @@ spec:
               name: neo4j-server-logs
             - mountPath: "/config/user-logs.xml"
               name: neo4j-user-logs
+            {{- if not $authDisabled }}
+            - mountPath: "/config/neo4j-auth"
+              name: neo4j-auth
+            {{- end }}
             {{- include "neo4j.additionalVolumeMounts" .Values.additionalVolumeMounts | nindent 12 }}
             {{- include "neo4j.apoc.volumeMount" . | indent 12 }}
             {{- include "neo4j.apocCredentials.volumeMount" . | indent 12 }}
@@ -205,6 +205,11 @@ spec:
         - name: neo4j-user-logs
           configMap:
             name: "{{ include "neo4j.fullname" . }}-user-logs-config"
+        {{- if not $authDisabled }}
+        - name: "neo4j-auth"
+          secret:
+            secretName: "{{ template "neo4j.secretName" . }}"
+        {{- end }}
         {{- include "neo4j.additionalVolumes" .Values.additionalVolumes | indent 8 }}
         {{- include "neo4j.apoc.volume" . | indent 8 }}
         {{- include "neo4j.apocCredentials.volume" . | indent 8 }}

@@ -2159,6 +2159,89 @@ func TestDisableSubPathExprFlag(t *testing.T) {
 	})
 }
 
+// TestNeo4jAuthPathVolumeMountWithPasswordFromSecret ensure that the neo4j-auth volume mount via passswordFromSecret is present
+func TestNeo4jAuthPathVolumeMountWithPasswordFromSecret(t *testing.T) {
+
+	t.Parallel()
+
+	helmValues := model.DefaultCommunityValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.DisableLookups = true
+		helmValues.Neo4J.PasswordFromSecret = "demo-secret"
+		manifest, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		statefulSet := manifest.OfType(&appsv1.StatefulSet{})[0]
+		assert.NotNil(t, statefulSet, "statefulset missing")
+
+		volumes := statefulSet.(*appsv1.StatefulSet).Spec.Template.Spec.Volumes
+		assert.NotEqual(t, len(volumes), 0, "no volumes found")
+		var names []string
+		for _, volume := range volumes {
+			names = append(names, volume.Name)
+		}
+		assert.Contains(t, names, "neo4j-auth", "missing neo4j-auth volume")
+
+		volumeMounts := statefulSet.(*appsv1.StatefulSet).Spec.Template.Spec.Containers[0].VolumeMounts
+		assert.NotEqual(t, len(volumeMounts), 0, "no volume mounts found")
+		names = []string{}
+		var mountPath []string
+		for _, volumeMount := range volumeMounts {
+			names = append(names, volumeMount.Name)
+			mountPath = append(mountPath, volumeMount.MountPath)
+		}
+		assert.Contains(t, names, "neo4j-auth", "missing neo4j-auth volume mount")
+		assert.Contains(t, mountPath, "/config/neo4j-auth", "missing neo4j-auth volume mount path")
+	}))
+}
+
+// TestNeo4jAuthPathVolumeMountWithoutPasswordFromSecret ensure that the neo4j-auth volume mount without passwordFromSecret is present
+func TestNeo4jAuthPathVolumeMountWithoutPasswordFromSecret(t *testing.T) {
+
+	t.Parallel()
+
+	helmValues := model.DefaultCommunityValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.DisableLookups = true
+		manifest, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		statefulSet := manifest.OfType(&appsv1.StatefulSet{})[0]
+		assert.NotNil(t, statefulSet, "statefulset missing")
+
+		volumes := statefulSet.(*appsv1.StatefulSet).Spec.Template.Spec.Volumes
+		assert.NotEqual(t, len(volumes), 0, "no volumes found")
+		var names []string
+		for _, volume := range volumes {
+			names = append(names, volume.Name)
+		}
+		assert.Contains(t, names, "neo4j-auth", "missing neo4j-auth volume")
+
+		volumeMounts := statefulSet.(*appsv1.StatefulSet).Spec.Template.Spec.Containers[0].VolumeMounts
+		assert.NotEqual(t, len(volumeMounts), 0, "no volume mounts found")
+		names = []string{}
+		var mountPath []string
+		for _, volumeMount := range volumeMounts {
+			names = append(names, volumeMount.Name)
+			mountPath = append(mountPath, volumeMount.MountPath)
+		}
+		assert.Contains(t, names, "neo4j-auth", "missing neo4j-auth volume mount")
+		assert.Contains(t, mountPath, "/config/neo4j-auth", "missing neo4j-auth volume mount path")
+	}))
+}
+
 // checkMemoryResources runs helm template on all charts of all editions with invalid memory values
 func checkMemoryResources(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string, memorySlice []string, containsErrMsg string) {
 
