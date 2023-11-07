@@ -47,8 +47,9 @@ func (a *awsClient) CheckBucketAccess(bucketName string) error {
 }
 
 // UploadFile uploads the file present at the provided location to the s3 bucket
-func (a *awsClient) UploadFile(fileName string, location string, bucketName string) error {
+func (a *awsClient) UploadFile(fileName string, bucketName string) error {
 
+	location := os.Getenv("LOCATION")
 	keyName := fileName
 	parentBucketName := bucketName
 	// if bucketName is demo/test/test2
@@ -66,7 +67,7 @@ func (a *awsClient) UploadFile(fileName string, location string, bucketName stri
 
 	//use UploadLargeObject if file size is more than 4GB
 	if yes {
-		return a.UploadLargeObject(fileName, location, bucketName, parentBucketName)
+		return a.UploadLargeObject(fileName, bucketName, parentBucketName)
 	}
 
 	file, err := os.Open(filePath)
@@ -92,8 +93,9 @@ func (a *awsClient) UploadFile(fileName string, location string, bucketName stri
 	return nil
 }
 
-func (a *awsClient) UploadLargeObject(fileName string, location string, bucketName string, parentBucketName string) error {
+func (a *awsClient) UploadLargeObject(fileName string, bucketName string, parentBucketName string) error {
 
+	location := os.Getenv("LOCATION")
 	keyName := fileName
 	// if bucketName is demo/test/test2
 	// parentBucketName will be "demo"

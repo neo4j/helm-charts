@@ -23,7 +23,7 @@ func awsOperations() {
 	handleError(err)
 
 	for _, backupFileName := range backupFileNames {
-		err = awsClient.UploadFile(backupFileName, "/backups", bucketName)
+		err = awsClient.UploadFile(backupFileName, bucketName)
 		handleError(err)
 	}
 
@@ -43,7 +43,7 @@ func gcpOperations() {
 	handleError(err)
 
 	for _, backupFileName := range backupFileNames {
-		err = gcpClient.UploadFile(backupFileName, os.Getenv("LOCATION"), bucketName)
+		err = gcpClient.UploadFile(backupFileName, bucketName)
 		handleError(err)
 	}
 
@@ -63,7 +63,7 @@ func azureOperations() {
 	handleError(err)
 
 	for _, backupFileName := range backupFileNames {
-		err = azureClient.UploadFile(backupFileName, "/backups", containerName)
+		err = azureClient.UploadFile(backupFileName, containerName)
 		handleError(err)
 	}
 

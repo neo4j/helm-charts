@@ -90,7 +90,7 @@ func TestUploadFileForGCP(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := client.UploadFile(tt.fileName, os.Getenv("LOCATION"), tt.bucketName); (err != nil) != tt.wantErr {
+			if err := client.UploadFile(tt.fileName, tt.bucketName); (err != nil) != tt.wantErr {
 				t.Errorf("UploadFile() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

@@ -58,8 +58,9 @@ func (g *gcpClient) CheckBucketAccess(bucketName string) error {
 }
 
 // UploadFile uploads the file present at the provided location to the gcs bucket
-func (g *gcpClient) UploadFile(fileName string, location string, bucketName string) error {
+func (g *gcpClient) UploadFile(fileName string, bucketName string) error {
 
+	location := os.Getenv("LOCATION")
 	prefix := ""
 	parentBucketName := bucketName
 	// if bucketName is demo/test/test2

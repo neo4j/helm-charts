@@ -40,8 +40,9 @@ func (a *azureClient) CheckContainerAccess(containerName string) error {
 }
 
 // UploadFile uploads the file present at the provided location to the azure container
-func (a *azureClient) UploadFile(fileName string, location string, containerName string) error {
+func (a *azureClient) UploadFile(fileName string, containerName string) error {
 
+	location := os.Getenv("LOCATION")
 	prefix := ""
 	parentContainerName := containerName
 	// if bucketName is demo/test/test2
