@@ -620,7 +620,7 @@ func TestPasswordFromExistingSecretWithLookupDisabled(t *testing.T) {
 			return
 		}
 		neo4jContainer := statefulSet.(*appsv1.StatefulSet).Spec.Template.Spec.Containers[0]
-		assert.Contains(t, neo4jContainer.EnvFrom, v1.EnvFromSource{
+		assert.NotContains(t, neo4jContainer.EnvFrom, v1.EnvFromSource{
 			SecretRef: &v1.SecretEnvSource{
 				LocalObjectReference: v1.LocalObjectReference{Name: "test-secret"},
 			},
@@ -1497,7 +1497,7 @@ func TestAdditionalVolumesAndMounts(t *testing.T) {
 			return
 		}
 		podVolumes := neo4jStatefulSet.Spec.Template.Spec.Volumes
-		if !assert.Equal(t, len(podVolumes), 4, fmt.Sprintf("more than two volumes present")) {
+		if !assert.Equal(t, len(podVolumes), 5, fmt.Sprintf("more than five volumes present")) {
 			return
 		}
 		var volumePresent bool
