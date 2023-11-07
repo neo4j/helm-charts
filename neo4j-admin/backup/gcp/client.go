@@ -1,4 +1,4 @@
-package aws
+package gcp
 
 import (
 	"cloud.google.com/go/storage"
