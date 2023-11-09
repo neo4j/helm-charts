@@ -1,5 +1,5 @@
 config:
-  dbms.directories.plugins: "/var/lib/neo4j/plugins"
+  dbms.directories.plugins: "/var/lib/neo4j/labs"
   dbms.security.procedures.unrestricted: "apoc.*"
   dbms.config.strict_validation: "false"
   dbms.security.procedures.allowlist: "gds.*,apoc.*"

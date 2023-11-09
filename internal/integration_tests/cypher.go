@@ -154,23 +154,11 @@ func createNodeOnReadReplica(t *testing.T, releaseName model.ReleaseName) error 
 // It's a way to check if apoc plugin is loaded and the customized apoc config is loaded or not
 func checkApocConfig(t *testing.T, releaseName model.ReleaseName) error {
 
-	results, err := runQuery(t, releaseName, "CALL apoc.config.list() YIELD key, value WHERE key = \"apoc.jdbc.apoctest.url\" RETURN *;", nil, false)
-	if !assert.NoError(t, err) {
-		t.Logf("%v", err)
-		return fmt.Errorf("error seen while firing apoc cypher \n err := %v", err)
-	}
-	if !assert.NotEqual(t, len(results), 0) {
-		return fmt.Errorf("no results received from cypher query")
-	}
-
-	for _, result := range results {
-		if value, found := result.Get("value"); found {
-			if assert.Equal(t, value, "jdbc:foo:bar") {
-				return nil
-			}
-		}
-	}
-	return fmt.Errorf("no record yielded for apoc cypher query")
+	_, err := runQuery(t, releaseName, "call apoc.load.json(\"file:///foo.json\");", nil, false)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Failed to invoke procedure `apoc.load.json`: Caused by: java.io.IOException: Cannot open file /import/foo.json for reading.")
+	assert.NotContains(t, err.Error(), "Failed to invoke procedure `apoc.load.json`: Caused by: java.lang.RuntimeException: Import from files not enabled, please set apoc.import.file.enabled=true in your apoc.conf")
+	return nil
 }
 
 // checkReadReplicaConfiguration checks runs a cypher query to check the read replica configuration

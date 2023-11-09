@@ -1,10 +1,10 @@
 module github.com/neo4j/helm-charts
 
-go 1.17
+go 1.19
 
 require (
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/neo4j/neo4j-go-driver/v4 v4.4.1
+	github.com/neo4j/neo4j-go-driver/v4 v4.4.7
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.68.0
 	github.com/sergi/go-diff v1.1.0
 	github.com/stretchr/testify v1.8.2
