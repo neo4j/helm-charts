@@ -97,9 +97,6 @@ func init() {
 	NodeSelectorArgs = []string{
 		"--set", fmt.Sprintf("nodeSelector.%s", NodeSelectorLabel),
 	}
-	//CustomApocImageArgs = []string{
-	//	"--set", fmt.Sprintf("image.customImage=%s", "harshitsinghvi22/apoc:v1"),
-	//}
 	PriorityClassNameArgs = []string{
 		"--set", fmt.Sprintf("podSpec.priorityClassName=%s", PriorityClassName),
 	}
