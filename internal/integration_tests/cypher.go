@@ -153,7 +153,7 @@ func createNodeOnReadReplica(t *testing.T, releaseName model.ReleaseName) error 
 // checkApocConfig fires a apoc cypher query
 // It's a way to check if apoc plugin is loaded and the customized apoc config is loaded or not
 func checkApocConfig(t *testing.T, releaseName model.ReleaseName) error {
-	
+
 	_, err := runQuery(t, releaseName, "call apoc.load.json(\"file:///foo.json\");", nil, false)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Failed to invoke procedure `apoc.load.json`: Caused by: java.io.IOException: Cannot open file /import/foo.json for reading.")
