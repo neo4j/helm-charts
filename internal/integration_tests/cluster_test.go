@@ -130,7 +130,7 @@ func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
 	clusterReleaseName := model.NewReleaseName("apoc-cluster-" + TestRunIdentifier)
 	loadBalancer := clusterLoadBalancer{model.NewLoadBalancerReleaseName(clusterReleaseName), nil}
 
-	apocCustomArgs := append(model.CustomApocImageArgs, resources.ApocClusterTestConfig.HelmArgs()...)
+	apocCustomArgs := resources.ApocClusterTestConfig.HelmArgs()
 	core1 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 1), apocCustomArgs}
 	core2 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 2), apocCustomArgs}
 	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3), apocCustomArgs}
