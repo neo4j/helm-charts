@@ -9,7 +9,6 @@
 {{- if $isEnterprise }}
 {{- $backupEnabled = index $.Values.config "server.backup.enabled" | default "true" | regexMatch "(?i)yes|true" }}
 {{- end }}
-{{- $secretName := include "neo4j.name" . | printf "%s-auth" }}
 {{- template "neo4j.volumes.validation" . -}}
 {{- template "neo4j.checkNodeSelectorLabels" . -}}
 {{- template "neo4j.checkLicenseAgreement" . -}}
