@@ -9,6 +9,7 @@
 {{- if $isEnterprise }}
 {{- $backupEnabled = index $.Values.config "server.backup.enabled" | default "true" | regexMatch "(?i)yes|true" }}
 {{- end }}
+{{- $secretName := include "neo4j.name" . | printf "%s-auth" }}
 {{- template "neo4j.volumes.validation" . -}}
 {{- template "neo4j.checkNodeSelectorLabels" . -}}
 {{- template "neo4j.checkLicenseAgreement" . -}}
@@ -50,6 +51,7 @@ spec:
         {{- include "neo4j.labels" $.Values.neo4j | indent 8 }}
       annotations:
         "checksum/{{ include "neo4j.fullname" . }}-config": {{ include (print $.Template.BasePath "/neo4j-config.yaml") . | sha256sum }}
+        "checksum/{{ include "neo4j.fullname" . }}-env": {{ include (print $.Template.BasePath "/neo4j-env.yaml") . | sha256sum }}
         {{- include "neo4j.annotations" $.Values.podSpec.annotations | indent 8 }}
     spec:
       {{- include "neo4j.affinity" . | indent 6 }}
