@@ -20,11 +20,14 @@ func NewAwsClient(credentialPath string) (*awsClient, error) {
 		if !present {
 			return nil, fmt.Errorf("error while creating aws client without credentials file\n Missing AWS_WEB_IDENTITY_TOKEN_FILE")
 		}
-		cfg, err = config.LoadDefaultConfig(context.TODO(), config.WithRegion(os.Getenv("AWS_REGION")))
+		cfg, err = config.LoadDefaultConfig(
+			context.TODO(),
+			config.WithRegion(os.Getenv("AWS_REGION")))
 		if err != nil {
 			return nil, fmt.Errorf("error while creating aws client without credentials file\n %v", err)
 		}
 	} else {
+
 		cfg, err = config.LoadDefaultConfig(
 			context.TODO(),
 			config.WithSharedCredentialsFiles(

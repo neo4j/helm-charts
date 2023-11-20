@@ -6,18 +6,35 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	smithyendpoints "github.com/aws/smithy-go/endpoints"
 	"github.com/neo4j/helm-charts/neo4j-admin/backup/common"
 	"log"
 	"os"
 	"strings"
 )
 
+type resolverV2 struct{}
+
+func (*resolverV2) ResolveEndpoint(ctx context.Context, params s3.EndpointParameters) (smithyendpoints.Endpoint, error) {
+	// s3.Options.BaseEndpoint is accessible here:
+	//fmt.Printf("The endpoint provided in config is %s\n", *params.Endpoint)
+
+	// fallback to default
+	return s3.NewDefaultEndpointResolverV2().ResolveEndpoint(ctx, params)
+}
+
 // CheckBucketAccess checks if the given bucket name is accessible or not
 func (a *awsClient) CheckBucketAccess(bucketName string) error {
 
-	//Create an Amazon S3 service client
 	client := s3.NewFromConfig(*a.cfg)
-
+	if _, present := os.LookupEnv("ENDPOINT"); present {
+		client = s3.NewFromConfig(*a.cfg, func(options *s3.Options) {
+			options.BaseEndpoint = aws.String(os.Getenv("ENDPOINT"))
+			options.EndpointResolverV2 = &resolverV2{}
+			options.UsePathStyle = true
+		})
+	}
+	//Create an Amazon S3 service client
 	s3Input := &s3.ListObjectsV2Input{
 		Bucket: aws.String(bucketName),
 	}
@@ -50,6 +67,14 @@ func (a *awsClient) CheckBucketAccess(bucketName string) error {
 // UploadFile uploads the file present at the provided location to the s3 bucket
 func (a *awsClient) UploadFile(fileNames []string, bucketName string) error {
 
+	s3Client := s3.NewFromConfig(*a.cfg)
+	if _, present := os.LookupEnv("ENDPOINT"); present {
+		s3Client = s3.NewFromConfig(*a.cfg, func(options *s3.Options) {
+			options.BaseEndpoint = aws.String(os.Getenv("ENDPOINT"))
+			options.EndpointResolverV2 = &resolverV2{}
+			options.UsePathStyle = true
+		})
+	}
 	parentBucketName := bucketName
 	// if bucketName is demo/test/test2
 	// parentBucketName will be "demo"
@@ -76,8 +101,6 @@ func (a *awsClient) UploadFile(fileNames []string, bucketName string) error {
 			return fmt.Errorf("Couldn't open file %v to upload. Here's why: %v\n", filePath, err)
 		}
 
-		s3Client := s3.NewFromConfig(*a.cfg)
-
 		log.Printf("Starting upload of file %s", filePath)
 		log.Printf("KeyName := %s", generateKeyName(bucketName, fileName))
 		_, err = s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
@@ -100,6 +123,13 @@ func (a *awsClient) UploadLargeObject(fileName string, location string, bucketNa
 	//divide the file into 1GB parts
 	var partGiBs int64 = 1
 	s3Client := s3.NewFromConfig(*a.cfg)
+	if _, present := os.LookupEnv("ENDPOINT"); present {
+		s3Client = s3.NewFromConfig(*a.cfg, func(options *s3.Options) {
+			options.BaseEndpoint = aws.String(os.Getenv("ENDPOINT"))
+			options.EndpointResolverV2 = &resolverV2{}
+			options.UsePathStyle = true
+		})
+	}
 	uploader := manager.NewUploader(s3Client, func(u *manager.Uploader) {
 		u.PartSize = partGiBs * 1024 * 1024 * 1024
 	})
