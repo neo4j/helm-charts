@@ -64,6 +64,9 @@ func checkNeo4jConfiguration(t *testing.T, releaseName model.ReleaseName, expect
 		if !(foundName && foundValue) {
 			return fmt.Errorf("record is missing expected name or value")
 		}
+		if valueUntyped == nil {
+			valueUntyped = ""
+		}
 
 		name := nameUntyped.(string)
 		value := valueUntyped.(string)
