@@ -158,12 +158,12 @@ func buildCert(random io.Reader, private *ecdsa.PrivateKey, validFrom time.Time,
 	return x509.ParseCertificate(derBytes)
 }
 
-func createAwsCredFile(dirName string) (string, error) {
+func createAwsCredFile(dirName string, accessKey string, secretKey string) (string, error) {
 	fileContent := `
 [default]
 region = us-east-1
 `
-	fileContent = fileContent + fmt.Sprintf("aws_access_key_id = %s\naws_secret_access_key = %s", os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"))
+	fileContent = fileContent + fmt.Sprintf("aws_access_key_id = %s\naws_secret_access_key = %s", accessKey, secretKey)
 	filePath := fmt.Sprintf("%s/awscredentials", dirName)
 	err := os.WriteFile(filePath, []byte(fileContent), 0666)
 	if err != nil {
@@ -198,7 +198,7 @@ func kCreateSecret(namespace model.Namespace) ([][]string, Closeable, error) {
 		return nil, closeable, err
 	}
 	generateCerts(tempDir)
-	awsCredFileName, err := createAwsCredFile(tempDir)
+	awsCredFileName, err := createAwsCredFile(tempDir, os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"))
 	if err != nil {
 		return nil, closeable, err
 	}
@@ -302,6 +302,73 @@ func proxyBolt(t *testing.T, releaseName model.ReleaseName, connectToPod bool) (
 		var cmdErr = cmd.Process.Kill()
 		if cmdErr != nil {
 			t.Log("failed to kill process: ", cmdErr)
+		}
+		stdout.Close()
+		return cmdErr
+	}, err
+}
+
+func proxyMinioTenant(namespace string, tenantName string) (int, Closeable, error) {
+
+	time.Sleep(1 * time.Minute)
+	localPort := 9000
+	program := "kubectl"
+	args := []string{"--namespace", namespace, "port-forward", fmt.Sprintf("svc/%s-hl", tenantName), fmt.Sprintf("%d:9000", localPort)}
+
+	log.Printf("running: %s %s\n", program, args)
+	cmd := exec.Command(program, args...)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return localPort, nil, err
+	}
+	// Use the same pipe for standard error
+	cmd.Stderr = cmd.Stdout
+
+	// Make a new channel which will be used to signal that we are ready
+	started := make(chan struct{})
+
+	// Create a scanner which scans in a line-by-line fashion
+	scanner := bufio.NewScanner(stdout)
+
+	// Use the scanner to scan the output line by line and log it
+	// It's running in a goroutine so that it doesn't block
+	go func() {
+		var once sync.Once
+		notifyStarted := func() { started <- struct{}{} }
+
+		// We're all done, unblock the channel
+		defer func() {
+			once.Do(notifyStarted)
+		}()
+
+		// Read line by line and process it until we see that Forwarding has begun
+		for scanner.Scan() {
+			line := scanner.Text()
+			log.Printf("PortForward:%s", line)
+			if strings.HasPrefix(line, "Forwarding from") {
+				once.Do(notifyStarted)
+			}
+		}
+		scannerErr := scanner.Err()
+		if scannerErr != nil {
+			log.Printf("Scanner logged error %s - this is usually expected when the proxy is terminated", scannerErr)
+		}
+	}()
+
+	// Start the command and check for errors
+	err = cmd.Start()
+	if err == nil {
+		// Wait for output to indicate we actually started forwarding
+		<-started
+		if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
+			err = fmt.Errorf("port forward process exited unexpectedly")
+		}
+	}
+
+	return localPort, func() error {
+		var cmdErr = cmd.Process.Kill()
+		if cmdErr != nil {
+			log.Printf("failed to kill process: %v", cmdErr)
 		}
 		stdout.Close()
 		return cmdErr
