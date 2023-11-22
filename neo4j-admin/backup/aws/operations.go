@@ -26,14 +26,7 @@ func (*resolverV2) ResolveEndpoint(ctx context.Context, params s3.EndpointParame
 // CheckBucketAccess checks if the given bucket name is accessible or not
 func (a *awsClient) CheckBucketAccess(bucketName string) error {
 
-	client := s3.NewFromConfig(*a.cfg)
-	if _, present := os.LookupEnv("ENDPOINT"); present {
-		client = s3.NewFromConfig(*a.cfg, func(options *s3.Options) {
-			options.BaseEndpoint = aws.String(os.Getenv("ENDPOINT"))
-			options.EndpointResolverV2 = &resolverV2{}
-			options.UsePathStyle = true
-		})
-	}
+	client := a.getS3Client()
 	//Create an Amazon S3 service client
 	s3Input := &s3.ListObjectsV2Input{
 		Bucket: aws.String(bucketName),
@@ -67,14 +60,7 @@ func (a *awsClient) CheckBucketAccess(bucketName string) error {
 // UploadFile uploads the file present at the provided location to the s3 bucket
 func (a *awsClient) UploadFile(fileNames []string, bucketName string) error {
 
-	s3Client := s3.NewFromConfig(*a.cfg)
-	if _, present := os.LookupEnv("ENDPOINT"); present {
-		s3Client = s3.NewFromConfig(*a.cfg, func(options *s3.Options) {
-			options.BaseEndpoint = aws.String(os.Getenv("ENDPOINT"))
-			options.EndpointResolverV2 = &resolverV2{}
-			options.UsePathStyle = true
-		})
-	}
+	s3Client := a.getS3Client()
 	parentBucketName := bucketName
 	// if bucketName is demo/test/test2
 	// parentBucketName will be "demo"
@@ -122,14 +108,7 @@ func (a *awsClient) UploadLargeObject(fileName string, location string, bucketNa
 
 	//divide the file into 1GB parts
 	var partGiBs int64 = 1
-	s3Client := s3.NewFromConfig(*a.cfg)
-	if _, present := os.LookupEnv("ENDPOINT"); present {
-		s3Client = s3.NewFromConfig(*a.cfg, func(options *s3.Options) {
-			options.BaseEndpoint = aws.String(os.Getenv("ENDPOINT"))
-			options.EndpointResolverV2 = &resolverV2{}
-			options.UsePathStyle = true
-		})
-	}
+	s3Client := a.getS3Client()
 	uploader := manager.NewUploader(s3Client, func(u *manager.Uploader) {
 		u.PartSize = partGiBs * 1024 * 1024 * 1024
 	})
@@ -164,4 +143,17 @@ func generateKeyName(bucketName string, fileName string) string {
 		keyName = fmt.Sprintf("%s/%s", bucketName[index+1:], fileName)
 	}
 	return keyName
+}
+
+func (a *awsClient) getS3Client() *s3.Client {
+	client := s3.NewFromConfig(*a.cfg)
+	// if minio endpoint is provided add the endpoint resolver
+	if value := os.Getenv("ENDPOINT"); strings.TrimSpace(value) != "" {
+		client = s3.NewFromConfig(*a.cfg, func(options *s3.Options) {
+			options.BaseEndpoint = aws.String(value)
+			options.EndpointResolverV2 = &resolverV2{}
+			options.UsePathStyle = true
+		})
+	}
+	return client
 }

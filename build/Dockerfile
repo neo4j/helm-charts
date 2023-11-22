@@ -17,13 +17,17 @@ RUN apt-get update && apt-get install -y \
   kubectl \
   awscli \
   jq \
+  && curl https://dl.min.io/client/mc/release/linux-amd64/mc --create-dirs -o /root/minio-binaries/mc \
+  && chmod +x /root/minio-binaries/mc \
   && ./tmp/get-helm-3 --no-sudo --version "${HELM_VERSION}" \
   && ./tmp/go_linux_installer -v -version "${GO_VERSION}" \
   && rm -rf /var/lib/apt/lists/* \
   && rm -rf /tmp/*
 
+
+
 ENV USE_GKE_GCLOUD_AUTH_PLUGIN True
 # Configure Go
 ENV GOPATH /root/go
-ENV PATH /root/go/bin:/root/.go/bin:$PATH
+ENV PATH /root/go/bin:/root/.go/bin:/root/minio-binaries/:$PATH
 RUN mkdir -p ${GOPATH}/src ${GOPATH}/bin
