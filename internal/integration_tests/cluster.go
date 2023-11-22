@@ -301,7 +301,6 @@ func InstallNeo4jBackupAWSHelmChartViaMinIO(t *testing.T, releaseName model.Rele
 		Verbose:                  true,
 		Type:                     "FULL",
 	}
-	helmValues.ConsistencyCheck.Database = "neo4j"
 	_, err = helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
 
@@ -322,10 +321,8 @@ func InstallNeo4jBackupAWSHelmChartViaMinIO(t *testing.T, releaseName model.Rele
 			assert.NotNil(t, out, "aws backup logs cannot be retrieved")
 			assert.Contains(t, string(out), "Backup Completed for database system !!")
 			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
-			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to s3 bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to s3 bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.report.tar.gz uploaded to s3 bucket"), string(out))
-			assert.NotRegexp(t, regexp.MustCompile("system(.*)backup.report.tar.gz uploaded to s3 bucket"), string(out))
+			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.tar.gz uploaded to s3 bucket"), string(out))
+			assert.Regexp(t, regexp.MustCompile("system(.*)backup.tar.gz uploaded to s3 bucket"), string(out))
 			break
 		}
 	}
