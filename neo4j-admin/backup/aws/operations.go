@@ -16,9 +16,6 @@ import (
 type resolverV2 struct{}
 
 func (*resolverV2) ResolveEndpoint(ctx context.Context, params s3.EndpointParameters) (smithyendpoints.Endpoint, error) {
-	// s3.Options.BaseEndpoint is accessible here:
-	//fmt.Printf("The endpoint provided in config is %s\n", *params.Endpoint)
-
 	// fallback to default
 	return s3.NewDefaultEndpointResolverV2().ResolveEndpoint(ctx, params)
 }
