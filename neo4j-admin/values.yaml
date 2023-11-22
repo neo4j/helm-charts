@@ -52,7 +52,12 @@ backup:
   databaseBackupPort: ""
   #default value is cluster.local
   databaseClusterDomain: ""
-
+  # specify minio endpoint ex: http://demo.minio.svc.cluster.local:9000
+  # please ensure this endpoint is the s3 api endpoint or else the backup helm chart will fail
+  # as of now it works only with non tls endpoints
+  # to be used only when aws is used as cloudProvider
+  minioEndpoint: ""
+  
   #name of the database to backup ex: neo4j or neo4j,system (You can provide command separated database names)
   # In case of comma separated databases failure of any single database will lead to failure of complete operation
   database: ""

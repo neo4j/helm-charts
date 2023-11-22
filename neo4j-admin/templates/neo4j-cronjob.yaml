@@ -83,6 +83,8 @@ spec:
                   value: "{{ .Values.backup.verbose | default true }}"
                 - name: AZURE_STORAGE_ACCOUNT_NAME
                   value: "{{ .Values.backup.azureStorageAccountName | default "" }}"
+                - name: ENDPOINT
+                  value: "{{ .Values.backup.minioEndpoint | default "" }}"
                 - name: CONSISTENCY_CHECK_ENABLE
                   value: "{{ .Values.backup.checkConsistency | default true }}"
                 - name: CONSISTENCY_CHECK_INDEXES
