@@ -3,7 +3,6 @@ package integration_tests
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/neo4j/helm-charts/internal/helpers"
@@ -17,7 +16,6 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -688,37 +686,7 @@ func performBackgroundInstall(t *testing.T, componentsToParallelInstall []helmCo
 }
 
 func installMinio(namespace string, tenantName string) error {
-	stdout, _, err := RunCommand(exec.Command("curl", "-q", "https://api.github.com/repos/minio/operator/releases/latest"))
-	if err != nil {
-		return err
-	}
-
-	var data map[string]interface{}
-	err = json.Unmarshal(stdout, &data)
-	if err != nil {
-		return err
-	}
-	system := runtime.GOOS
-	arch := runtime.GOARCH
-	version := strings.Replace(data["tag_name"].(string), "v", "", -1)
-	url := fmt.Sprintf(
-		"https://github.com/minio/operator/releases/download/%s/kubectl-minio_%s_%s_%s",
-		data["tag_name"].(string),
-		version,
-		system,
-		arch)
-	log.Printf("minio download github url = %s", url)
-	stdout, stderr, err := RunCommand(exec.Command("curl", "-qL", url, "-o", "/usr/local/bin/kubectl-minio"))
-	if err != nil {
-		log.Printf("%v", string(stderr))
-		return err
-	}
-	_, stderr, err = RunCommand(exec.Command("chmod", "+x", "/usr/local/bin/kubectl-minio"))
-	if err != nil {
-		log.Printf("%v", string(stderr))
-		return err
-	}
-	stdout, stderr, err = RunCommand(exec.Command("kubectl", "minio", "version"))
+	stdout, stderr, err := RunCommand(exec.Command("kubectl", "minio", "version"))
 	if !strings.Contains(strings.ToLower(string(stdout)), "kubectl-plugin version") {
 		if err != nil {
 			log.Printf("%v", string(stderr))

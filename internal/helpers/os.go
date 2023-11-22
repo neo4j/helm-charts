@@ -3,12 +3,15 @@ package helpers
 import (
 	"bytes"
 	"errors"
+	"log"
 	"os/exec"
+	"strings"
 )
 
 // RunCommand runs the command and returns its standard
 // output and standard error.
 func RunCommand(c *exec.Cmd) ([]byte, []byte, error) {
+	log.Printf("Command := %s", strings.Join(c.Args, " "))
 	if c.Stdout != nil {
 		return nil, nil, errors.New("exec: Stdout already set")
 	}
