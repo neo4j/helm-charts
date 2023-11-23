@@ -78,7 +78,6 @@ func clusterTests(loadBalancerName model.ReleaseName, core1 model.ReleaseName) (
 			assert.NoError(t, InstallNeo4jBackupAWSHelmChartWithNodeSelector(t, core1), "Backup to AWS should succeed")
 		}},
 		{name: "Install Backup Helm Chart For GCP With Workload Identity", test: func(t *testing.T) {
-			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t, core1), "Backup to GCP with workload identity should succeed")
 		}},
 		{name: "Install Backup Helm Chart For AWS Using MinIO", test: func(t *testing.T) {
@@ -94,9 +93,11 @@ func clusterTests(loadBalancerName model.ReleaseName, core1 model.ReleaseName) (
 			assert.NoError(t, checkPriorityClassName(t, loadBalancerName), "priorityClassName should match")
 		}},
 		{name: "Check K8s", test: func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, checkK8s(t, loadBalancerName), "Neo4j Config check should succeed")
 		}},
 		{name: "Check Ldap Password", test: func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, checkLdapPassword(t, loadBalancerName), "LdapPassword should be set")
 		}},
 		{name: "Create Node", test: func(t *testing.T) {
@@ -106,6 +107,7 @@ func clusterTests(loadBalancerName model.ReleaseName, core1 model.ReleaseName) (
 			assert.NoError(t, checkNodeCount(t, loadBalancerName), "Count Nodes should succeed")
 		}},
 		{name: "Database Creation Tests", test: func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, databaseCreationTests(t, loadBalancerName, "customers"), "Creates \"customer\" database and checks for its existence")
 		}},
 	}
