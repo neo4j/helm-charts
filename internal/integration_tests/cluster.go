@@ -73,6 +73,45 @@ func clusterTests(loadBalancerName model.ReleaseName, core1 model.ReleaseName) (
 
 	subTests := []SubTest{
 
+		{name: "Check K8s", test: func(t *testing.T) {
+			assert.NoError(t, checkK8s(t, loadBalancerName), "Neo4j Config check should succeed")
+		}},
+		{name: "Create Node", test: func(t *testing.T) {
+			assert.NoError(t, createNode(t, loadBalancerName), "Create Node should succeed")
+		}},
+		{name: "Count Nodes", test: func(t *testing.T) {
+			assert.NoError(t, checkNodeCount(t, loadBalancerName), "Count Nodes should succeed")
+		}},
+		{name: "ImagePullSecret tests", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, imagePullSecretTests(t, core1), "Perform ImagePullSecret Tests")
+		}},
+		{name: "Check PriorityClassName", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, checkPriorityClassName(t, loadBalancerName), "priorityClassName should match")
+		}},
+		{name: "Check Ldap Password", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, checkLdapPassword(t, loadBalancerName), "LdapPassword should be set")
+		}},
+		{name: "Database Creation Tests", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, databaseCreationTests(t, loadBalancerName, "customers"), "Creates \"customer\" database and checks for its existence")
+		}},
+	}
+	return subTests, nil
+}
+
+// clusterBackupTests contains all the tests related to backups
+func clusterBackupTests(core1 model.ReleaseName) ([]SubTest, error) {
+	expectedConfiguration, err := (&model.Neo4jConfiguration{}).PopulateFromFile(Neo4jConfFile)
+	if err != nil {
+		return nil, err
+	}
+	expectedConfiguration = addExpectedClusterConfiguration(expectedConfiguration)
+
+	subTests := []SubTest{
+
 		{name: "Install Backup Helm Chart For AWS", test: func(t *testing.T) {
 			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupAWSHelmChartWithNodeSelector(t, core1), "Backup to AWS should succeed")
@@ -83,32 +122,6 @@ func clusterTests(loadBalancerName model.ReleaseName, core1 model.ReleaseName) (
 		{name: "Install Backup Helm Chart For AWS Using MinIO", test: func(t *testing.T) {
 			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupAWSHelmChartViaMinIO(t, core1), "Backup to AWS using MinIO should succeed")
-		}},
-		{name: "ImagePullSecret tests", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, imagePullSecretTests(t, core1), "Perform ImagePullSecret Tests")
-		}},
-		{name: "Check PriorityClassName", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, checkPriorityClassName(t, loadBalancerName), "priorityClassName should match")
-		}},
-		{name: "Check K8s", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, checkK8s(t, loadBalancerName), "Neo4j Config check should succeed")
-		}},
-		{name: "Check Ldap Password", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, checkLdapPassword(t, loadBalancerName), "LdapPassword should be set")
-		}},
-		{name: "Create Node", test: func(t *testing.T) {
-			assert.NoError(t, createNode(t, loadBalancerName), "Create Node should succeed")
-		}},
-		{name: "Count Nodes", test: func(t *testing.T) {
-			assert.NoError(t, checkNodeCount(t, loadBalancerName), "Count Nodes should succeed")
-		}},
-		{name: "Database Creation Tests", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, databaseCreationTests(t, loadBalancerName, "customers"), "Creates \"customer\" database and checks for its existence")
 		}},
 	}
 	return subTests, nil

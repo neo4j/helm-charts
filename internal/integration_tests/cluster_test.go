@@ -108,6 +108,12 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	subTests = append(subTests, headLessServiceTests(headlessService.Name())...)
 	subTests = append(subTests, readReplicaTests(readReplica1.Name(), readReplica2.Name(), loadBalancer.Name())...)
 	runSubTests(t, subTests)
+	//running backup tests separately
+	subTests, err = clusterBackupTests(core1.Name())
+	if !assert.NoError(t, err) {
+		return
+	}
+	runSubTests(t, subTests)
 
 	t.Logf("Succeeded running all tests in '%s'", t.Name())
 }
