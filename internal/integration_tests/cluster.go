@@ -642,7 +642,7 @@ func checkPods(t *testing.T, name model.ReleaseName) error {
 
 	//5 = 3 cores + 2 read replica
 	// there could be some backup pods too
-	if !assert.GreaterOrEqual(t, pods.Items, 5) {
+	if !assert.GreaterOrEqual(t, len(pods.Items), 5) {
 		return fmt.Errorf("number of pods should be greater than")
 	}
 	for _, pod := range pods.Items {
