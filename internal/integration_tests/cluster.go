@@ -87,7 +87,7 @@ func clusterTests(loadBalancerName model.ReleaseName, core1 model.ReleaseName) (
 		}},
 		{name: "ImagePullSecret tests", test: func(t *testing.T) {
 			t.Parallel()
-			assert.NoError(t, imagePullSecretTests(t, loadBalancerName), "Perform ImagePullSecret Tests")
+			assert.NoError(t, imagePullSecretTests(t, core1), "Perform ImagePullSecret Tests")
 		}},
 		{name: "Check PriorityClassName", test: func(t *testing.T) {
 			t.Parallel()
