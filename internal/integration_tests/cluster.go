@@ -82,6 +82,17 @@ func clusterTests(loadBalancerName model.ReleaseName, core1 model.ReleaseName) (
 		{name: "Count Nodes", test: func(t *testing.T) {
 			assert.NoError(t, checkNodeCount(t, loadBalancerName), "Count Nodes should succeed")
 		}},
+		{name: "Install Backup Helm Chart For GCP With Workload Identity", test: func(t *testing.T) {
+			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t, core1), "Backup to GCP with workload identity should succeed")
+		}},
+		{name: "Install Backup Helm Chart For AWS", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, InstallNeo4jBackupAWSHelmChartWithNodeSelector(t, core1), "Backup to AWS should succeed")
+		}},
+		{name: "Install Backup Helm Chart For AWS Using MinIO", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, InstallNeo4jBackupAWSHelmChartViaMinIO(t, core1), "Backup to AWS using MinIO should succeed")
+		}},
 		{name: "ImagePullSecret tests", test: func(t *testing.T) {
 			t.Parallel()
 			assert.NoError(t, imagePullSecretTests(t, core1), "Perform ImagePullSecret Tests")
@@ -104,26 +115,7 @@ func clusterTests(loadBalancerName model.ReleaseName, core1 model.ReleaseName) (
 
 // clusterBackupTests contains all the tests related to backups
 func clusterBackupTests(core1 model.ReleaseName) ([]SubTest, error) {
-	expectedConfiguration, err := (&model.Neo4jConfiguration{}).PopulateFromFile(Neo4jConfFile)
-	if err != nil {
-		return nil, err
-	}
-	expectedConfiguration = addExpectedClusterConfiguration(expectedConfiguration)
-
-	subTests := []SubTest{
-
-		{name: "Install Backup Helm Chart For AWS", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, InstallNeo4jBackupAWSHelmChartWithNodeSelector(t, core1), "Backup to AWS should succeed")
-		}},
-		{name: "Install Backup Helm Chart For GCP With Workload Identity", test: func(t *testing.T) {
-			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t, core1), "Backup to GCP with workload identity should succeed")
-		}},
-		{name: "Install Backup Helm Chart For AWS Using MinIO", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, InstallNeo4jBackupAWSHelmChartViaMinIO(t, core1), "Backup to AWS using MinIO should succeed")
-		}},
-	}
+	subTests := []SubTest{}
 	return subTests, nil
 }
 
@@ -649,11 +641,12 @@ func checkPods(t *testing.T, name model.ReleaseName) error {
 	}
 
 	//5 = 3 cores + 2 read replica
-	if !assert.Len(t, pods.Items, 5) {
-		return fmt.Errorf("number of pods should be 5")
+	// there could be some backup pods too
+	if !assert.GreaterOrEqual(t, pods.Items, 5) {
+		return fmt.Errorf("number of pods should be greater than")
 	}
 	for _, pod := range pods.Items {
-		if assert.Contains(t, pod.Labels, "app") {
+		if _, present := pod.Labels["app"]; present {
 			if !assert.Equal(t, "neo4j-cluster", pod.Labels["app"]) {
 				return fmt.Errorf("pod should have label app=neo4jcluster , found app=%s", pod.Labels["app"])
 			}
