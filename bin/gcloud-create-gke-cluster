@@ -22,6 +22,8 @@ RELEASE_CHANNEL="stable"
 
 # make a new Kubernetes cluster
 #
+
+echo "NUMBER OF NODES ${NUM_NODES}"
 gcloud container clusters create "${CLOUDSDK_CONTAINER_CLUSTER}" \
      --release-channel=${RELEASE_CHANNEL} \
      --cluster-version 1.24 \
