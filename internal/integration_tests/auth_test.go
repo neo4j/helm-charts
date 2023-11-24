@@ -215,6 +215,12 @@ func TestBackupInvalidSecretKeyName(t *testing.T) {
 	}
 	namespace := string(releaseName.Namespace())
 
+	t.Cleanup(func() {
+		_ = runAll(t, "kubectl", [][]string{
+			{"delete", "namespace", string(releaseName.Namespace())},
+		}, false)
+	})
+
 	secretName := "secret-wrong-key"
 	helmValues := model.DefaultNeo4jBackupValues
 	helmValues.Backup.SecretName = secretName
@@ -267,6 +273,12 @@ func TestBackupNodeSelectorLabels(t *testing.T) {
 		return
 	}
 	namespace := string(releaseName.Namespace())
+
+	t.Cleanup(func() {
+		_ = runAll(t, "kubectl", [][]string{
+			{"delete", "namespace", string(releaseName.Namespace())},
+		}, false)
+	})
 
 	secretKey := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
