@@ -15,7 +15,10 @@ CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is require
 
 # Parameters
 NODE_MACHINE="e2-standard-4"
-NUM_NODES="12"
+#v4.4 has core and read replicas hence the test case require more nodes
+# we can move to autoscaling in future but with autoscaling enabled the node provisioning might take some time
+# which will increase the total test time
+NUM_NODES="15"
 
 # For more info on release channels see https://cloud.google.com/kubernetes-engine/docs/concepts/release-channels
 RELEASE_CHANNEL="stable"
