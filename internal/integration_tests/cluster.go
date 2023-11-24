@@ -83,7 +83,6 @@ func clusterTests(loadBalancerName model.ReleaseName, core1 model.ReleaseName) (
 			assert.NoError(t, checkNodeCount(t, loadBalancerName), "Count Nodes should succeed")
 		}},
 		{name: "Install Backup Helm Chart For GCP With Workload Identity", test: func(t *testing.T) {
-			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t, core1), "Backup to GCP with workload identity should succeed")
 		}},
 		{name: "Install Backup Helm Chart For AWS", test: func(t *testing.T) {
