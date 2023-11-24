@@ -65,11 +65,6 @@ func removeLabelFromNodes(t *testing.T) error {
 
 // clusterTests contains all the tests related to cluster
 func clusterTests(loadBalancerName model.ReleaseName, core1 model.ReleaseName) ([]SubTest, error) {
-	expectedConfiguration, err := (&model.Neo4jConfiguration{}).PopulateFromFile(Neo4jConfFile)
-	if err != nil {
-		return nil, err
-	}
-	expectedConfiguration = addExpectedClusterConfiguration(expectedConfiguration)
 
 	subTests := []SubTest{
 

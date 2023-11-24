@@ -8,9 +8,9 @@ import (
 import "testing"
 
 func TestVolumesInGCloudK8s(t *testing.T) {
+	t.Parallel()
 	chart := model.StandaloneHelmChart
 	releaseName := model.NewReleaseName("volumes-" + TestRunIdentifier)
-	t.Parallel()
 
 	t.Logf("Starting setup of '%s'", t.Name())
 	_, err := installNeo4j(t, releaseName, chart, resources.TestAntiAffinityRule.HelmArgs()...)
