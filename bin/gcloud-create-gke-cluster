@@ -14,7 +14,7 @@ CLOUDSDK_CONTAINER_CLUSTER="${CLOUDSDK_CONTAINER_CLUSTER:?CLOUDSDK_CONTAINER_CLU
 CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
 
 # Parameters
-NODE_MACHINE="e2-standard-4"
+NODE_MACHINE="e2-standard-2"
 #v4.4 has core and read replicas hence the test case require more nodes
 # we can move to autoscaling in future but with autoscaling enabled the node provisioning might take some time
 # which will increase the total test time
