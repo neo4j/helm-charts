@@ -2,6 +2,7 @@ package integration_tests
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/neo4j/helm-charts/internal/helpers"
@@ -12,6 +13,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"log"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -62,35 +65,11 @@ func removeLabelFromNodes(t *testing.T) error {
 
 // clusterTests contains all the tests related to cluster
 func clusterTests(loadBalancerName model.ReleaseName, core1 model.ReleaseName) ([]SubTest, error) {
-	expectedConfiguration, err := (&model.Neo4jConfiguration{}).PopulateFromFile(Neo4jConfFile)
-	if err != nil {
-		return nil, err
-	}
-	expectedConfiguration = addExpectedClusterConfiguration(expectedConfiguration)
 
 	subTests := []SubTest{
 
-		{name: "Install Backup Helm Chart For AWS", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, InstallNeo4jBackupAWSHelmChartWithNodeSelector(t, core1), "Backup to AWS should succeed")
-		}},
-		{name: "Install Backup Helm Chart For GCP With Workload Identity", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t, core1), "Backup to GCP with workload identity should succeed")
-		}},
-		{name: "ImagePullSecret tests", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, imagePullSecretTests(t, loadBalancerName), "Perform ImagePullSecret Tests")
-		}},
-		{name: "Check PriorityClassName", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, checkPriorityClassName(t, loadBalancerName), "priorityClassName should match")
-		}},
 		{name: "Check K8s", test: func(t *testing.T) {
 			assert.NoError(t, checkK8s(t, loadBalancerName), "Neo4j Config check should succeed")
-		}},
-		{name: "Check Ldap Password", test: func(t *testing.T) {
-			assert.NoError(t, checkLdapPassword(t, loadBalancerName), "LdapPassword should be set")
 		}},
 		{name: "Create Node", test: func(t *testing.T) {
 			assert.NoError(t, createNode(t, loadBalancerName), "Create Node should succeed")
@@ -98,10 +77,40 @@ func clusterTests(loadBalancerName model.ReleaseName, core1 model.ReleaseName) (
 		{name: "Count Nodes", test: func(t *testing.T) {
 			assert.NoError(t, checkNodeCount(t, loadBalancerName), "Count Nodes should succeed")
 		}},
+		{name: "Install Backup Helm Chart For GCP With Workload Identity", test: func(t *testing.T) {
+			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t, core1), "Backup to GCP with workload identity should succeed")
+		}},
+		{name: "Install Backup Helm Chart For AWS", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, InstallNeo4jBackupAWSHelmChartWithNodeSelector(t, core1), "Backup to AWS should succeed")
+		}},
+		{name: "Install Backup Helm Chart For AWS Using MinIO", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, InstallNeo4jBackupAWSHelmChartViaMinIO(t, core1), "Backup to AWS using MinIO should succeed")
+		}},
+		{name: "ImagePullSecret tests", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, imagePullSecretTests(t, core1), "Perform ImagePullSecret Tests")
+		}},
+		{name: "Check PriorityClassName", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, checkPriorityClassName(t, loadBalancerName), "priorityClassName should match")
+		}},
+		{name: "Check Ldap Password", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, checkLdapPassword(t, loadBalancerName), "LdapPassword should be set")
+		}},
 		{name: "Database Creation Tests", test: func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, databaseCreationTests(t, loadBalancerName, "customers"), "Creates \"customer\" database and checks for its existence")
 		}},
 	}
+	return subTests, nil
+}
+
+// clusterBackupTests contains all the tests related to backups
+func clusterBackupTests(core1 model.ReleaseName) ([]SubTest, error) {
+	subTests := []SubTest{}
 	return subTests, nil
 }
 
@@ -195,7 +204,7 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 		t.Skip()
 		return nil
 	}
-	backupReleaseName := model.NewReleaseName("standalone-backup-aws-" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("cluster-backup-aws-" + TestRunIdentifier)
 	namespace := string(releaseName.Namespace())
 
 	t.Cleanup(func() {
@@ -238,7 +247,7 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 
 	var found bool
 	for _, pod := range pods.Items {
-		if strings.Contains(pod.Name, "standalone-backup-aws") {
+		if strings.Contains(pod.Name, "cluster-backup-aws") {
 			found = true
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
 			assert.NoError(t, err, "error while getting aws backup pod logs")
@@ -252,6 +261,74 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 		}
 	}
 	assert.Equal(t, true, found, "no aws backup pod found")
+	return nil
+}
+
+// InstallNeo4jBackupAWSHelmChartViaMinIO installs backup cronjob and performs backup to minio bucket
+func InstallNeo4jBackupAWSHelmChartViaMinIO(t *testing.T, releaseName model.ReleaseName) error {
+	if model.Neo4jEdition == "community" {
+		t.Skip()
+		return nil
+	}
+	backupReleaseName := model.NewReleaseName("cluster-backup-aws-minio" + TestRunIdentifier)
+	namespace := string(releaseName.Namespace())
+
+	t.Cleanup(func() {
+		_ = runAll(t, "helm", [][]string{
+			{"uninstall", backupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
+		}, false)
+		deleteMinio(namespace)
+	})
+
+	tenantName := "tenant1"
+	secretName := "miniocred"
+	err := installMinio(namespace, tenantName)
+	assert.NoError(t, err, "error while installing minio")
+
+	err = kCreateMinioSecret(namespace, tenantName, secretName)
+	assert.NoError(t, err, "error while generating minio kubernetes secret")
+
+	bucketName := model.BucketName
+	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.Backup = model.Backup{
+		BucketName:               bucketName,
+		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", releaseName.String()),
+		DatabaseNamespace:        string(releaseName.Namespace()),
+		Database:                 "neo4j,system",
+		CloudProvider:            "aws",
+		SecretName:               secretName,
+		SecretKeyName:            "credentials",
+		MinioEndpoint:            fmt.Sprintf("http://%s-hl.%s.svc.cluster.local:9000", tenantName, namespace),
+		Verbose:                  true,
+		Type:                     "FULL",
+	}
+	_, err = helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
+	assert.NoError(t, err)
+
+	time.Sleep(2 * time.Minute)
+	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
+	assert.NoError(t, err, "cannot retrieve aws backup cronjob")
+	assert.Equal(t, cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule, fmt.Sprintf("aws cronjob schedule %s not matching with the schedule defined in values.yaml %s", cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule))
+
+	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
+	assert.NoError(t, err, "error while retrieving pod list during aws backup operation")
+
+	var found bool
+	for _, pod := range pods.Items {
+		if strings.Contains(pod.Name, "cluster-backup-aws-minio") {
+			found = true
+			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
+			assert.NoError(t, err, "error while getting aws backup pod logs")
+			assert.NotNil(t, out, "aws backup logs cannot be retrieved")
+			assert.Contains(t, string(out), "Backup Completed for database system !!")
+			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
+			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.tar.gz uploaded to s3 bucket"), string(out))
+			assert.Regexp(t, regexp.MustCompile("system(.*)backup.tar.gz uploaded to s3 bucket"), string(out))
+			break
+		}
+	}
+	assert.Equal(t, true, found, "no aws minio backup pod found")
 	return nil
 }
 
@@ -559,11 +636,12 @@ func checkPods(t *testing.T, name model.ReleaseName) error {
 	}
 
 	//5 = 3 cores + 2 read replica
-	if !assert.Len(t, pods.Items, 5) {
-		return fmt.Errorf("number of pods should be 5")
+	// there could be some backup pods too
+	if !assert.GreaterOrEqual(t, len(pods.Items), 5) {
+		return fmt.Errorf("number of pods should be greater than")
 	}
 	for _, pod := range pods.Items {
-		if assert.Contains(t, pod.Labels, "app") {
+		if _, present := pod.Labels["app"]; present {
 			if !assert.Equal(t, "neo4j-cluster", pod.Labels["app"]) {
 				return fmt.Errorf("pod should have label app=neo4jcluster , found app=%s", pod.Labels["app"])
 			}
@@ -716,4 +794,114 @@ func performBackgroundInstall(t *testing.T, componentsToParallelInstall []helmCo
 		return closeables, combinedError
 	}
 	return closeables, nil
+}
+
+func installMinio(namespace string, tenantName string) error {
+	stdout, stderr, err := RunCommand(exec.Command("kubectl", "minio", "version"))
+	if !strings.Contains(strings.ToLower(string(stdout)), "kubectl-plugin version") {
+		if err != nil {
+			log.Printf("%v", string(stderr))
+			return err
+		}
+	}
+
+	stdout, stderr, err = RunCommand(exec.Command("kubectl", "minio", "init", "-n", namespace))
+	if !strings.Contains(strings.ToLower(string(stdout)), "To open Operator UI, start a port forward using this command") {
+		if err != nil {
+			log.Printf("%v", string(stderr))
+			return err
+		}
+	}
+
+	stdout, stderr, err = RunCommand(exec.Command("kubectl", "minio", "tenant", "create", tenantName, "--servers", "2", "--volumes", "4", "--capacity", "10Gi", "--disable-tls", "-n", namespace))
+	if err != nil {
+		log.Printf("%v", string(stderr))
+		return err
+	}
+
+	return nil
+}
+
+func deleteMinio(namespace string) error {
+	_, stderr, err := RunCommand(exec.Command("kubectl", "minio", "delete", "-f", "-d", "-n", namespace))
+	if err != nil {
+		log.Printf("%v", string(stderr))
+		return err
+	}
+	return nil
+}
+
+func getMiniIOKeys(namespace string, tenantName string) (string, string, error) {
+	secretName := fmt.Sprintf("%s-user-1", tenantName)
+	stdout, stderr, err := RunCommand(exec.Command("kubectl", "get", "secret", secretName, "-n", namespace, "--template={{.data.CONSOLE_ACCESS_KEY}}"))
+	if err != nil {
+		log.Printf("%v", string(stderr))
+		return "", "", err
+	}
+	accessKey, err := base64.StdEncoding.DecodeString(string(stdout))
+	if err != nil {
+		log.Printf("Unable to decode minio access key")
+		return "", "", err
+	}
+
+	stdout, stderr, err = RunCommand(exec.Command("kubectl", "get", "secret", secretName, "-n", namespace, "--template={{.data.CONSOLE_SECRET_KEY}}"))
+	if err != nil {
+		log.Printf("%v", string(stderr))
+		return "", "", err
+	}
+	secretKey, err := base64.StdEncoding.DecodeString(string(stdout))
+	if err != nil {
+		log.Printf("Unable to decode minio secret key")
+		return "", "", err
+	}
+	log.Printf("Access Key = %s , Secret Key = %s", string(accessKey), string(secretKey))
+	return string(accessKey), string(secretKey), nil
+}
+
+func kCreateMinioSecret(namespace string, tenantName string, secretName string) error {
+	accessKey, secretKey, err := getMiniIOKeys(namespace, tenantName)
+	if err != nil {
+		return err
+	}
+
+	tempDir, err := os.MkdirTemp("", namespace)
+	if err != nil {
+		return err
+	}
+	path, err := createAwsCredFile(tempDir, accessKey, secretKey)
+	if err != nil {
+		return err
+	}
+	_, stderr, err := RunCommand(exec.Command("kubectl", "create", "secret", "-n", namespace, "generic", secretName, fmt.Sprintf("--from-file=credentials=%s", path)))
+	if err != nil {
+		log.Printf("%v", string(stderr))
+		return err
+	}
+
+	port, cleanupProxy, err := proxyMinioTenant(namespace, tenantName)
+	defer cleanupProxy()
+	if err != nil {
+		return err
+	}
+
+	endpoint := fmt.Sprintf("http://127.0.0.1:%d", port)
+	err = createMinioBucket(accessKey, secretKey, endpoint)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func createMinioBucket(accessKey string, secretKey string, endpoint string) error {
+	_, stderr, err := RunCommand(exec.Command("mc", "alias", "set", "myminio", endpoint, accessKey, secretKey))
+	if err != nil {
+		log.Printf("%v", string(stderr))
+		return err
+	}
+	_, stderr, err = RunCommand(exec.Command("mc", "mb", "myminio/helm-backup-test"))
+	if err != nil {
+		log.Printf("%v", string(stderr))
+		return err
+	}
+	return nil
 }

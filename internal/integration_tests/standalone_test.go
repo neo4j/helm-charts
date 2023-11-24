@@ -9,10 +9,10 @@ import "testing"
 
 // Install Neo4j on the provided GKE K8s cluster and then run the tests from the table above using it
 func TestInstallStandaloneOnGCloudK8s(t *testing.T) {
+	t.Parallel()
 	releaseName := model.NewReleaseName("install-" + TestRunIdentifier)
 	chart := model.StandaloneHelmChart
 
-	t.Parallel()
 	t.Logf("Starting setup of '%s'", t.Name())
 
 	defaultHelmArgs := []string{}

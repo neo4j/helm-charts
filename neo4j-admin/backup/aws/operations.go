@@ -6,17 +6,25 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	smithyendpoints "github.com/aws/smithy-go/endpoints"
 	"github.com/neo4j/helm-charts/neo4j-admin/backup/common"
 	"log"
 	"os"
 	"strings"
 )
 
+type resolverV2 struct{}
+
+func (*resolverV2) ResolveEndpoint(ctx context.Context, params s3.EndpointParameters) (smithyendpoints.Endpoint, error) {
+	// fallback to default
+	return s3.NewDefaultEndpointResolverV2().ResolveEndpoint(ctx, params)
+}
+
 // CheckBucketAccess checks if the given bucket name is accessible or not
 func (a *awsClient) CheckBucketAccess(bucketName string) error {
 
 	//Create an Amazon S3 service client
-	client := s3.NewFromConfig(*a.cfg)
+	client := a.getS3Client()
 
 	s3Input := &s3.ListObjectsV2Input{
 		Bucket: aws.String(bucketName),
@@ -50,6 +58,7 @@ func (a *awsClient) CheckBucketAccess(bucketName string) error {
 func (a *awsClient) UploadFile(fileName string, bucketName string) error {
 
 	location := os.Getenv("LOCATION")
+	s3Client := a.getS3Client()
 	keyName := fileName
 	parentBucketName := bucketName
 	// if bucketName is demo/test/test2
@@ -76,8 +85,6 @@ func (a *awsClient) UploadFile(fileName string, bucketName string) error {
 	}
 
 	defer file.Close()
-
-	s3Client := s3.NewFromConfig(*a.cfg)
 
 	log.Printf("Starting upload of file %s", filePath)
 	_, err = s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
@@ -107,7 +114,7 @@ func (a *awsClient) UploadLargeObject(fileName string, bucketName string, parent
 
 	//divide the file into 1GB parts
 	var partGiBs int64 = 1
-	s3Client := s3.NewFromConfig(*a.cfg)
+	s3Client := a.getS3Client()
 	uploader := manager.NewUploader(s3Client, func(u *manager.Uploader) {
 		u.PartSize = partGiBs * 1024 * 1024 * 1024
 	})
@@ -130,4 +137,17 @@ func (a *awsClient) UploadLargeObject(fileName string, bucketName string, parent
 	}
 	log.Printf("File (Large) %s uploaded to s3 bucket %s !!", fileName, bucketName)
 	return err
+}
+
+func (a *awsClient) getS3Client() *s3.Client {
+	client := s3.NewFromConfig(*a.cfg)
+	// if minio endpoint is provided add the endpoint resolver
+	if value := os.Getenv("ENDPOINT"); strings.TrimSpace(value) != "" {
+		client = s3.NewFromConfig(*a.cfg, func(options *s3.Options) {
+			options.BaseEndpoint = aws.String(value)
+			options.EndpointResolverV2 = &resolverV2{}
+			options.UsePathStyle = true
+		})
+	}
+	return client
 }

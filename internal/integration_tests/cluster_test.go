@@ -11,11 +11,11 @@ import (
 )
 
 func TestInstallNeo4jClusterInGcloud(t *testing.T) {
+	t.Parallel()
 	if model.Neo4jEdition != "enterprise" {
 		t.Skip()
 		return
 	}
-	t.Parallel()
 
 	var closeables []Closeable
 	addCloseable := func(closeableList ...Closeable) {
@@ -113,12 +113,11 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 }
 
 func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
+	t.Parallel()
 	if model.Neo4jEdition != "enterprise" {
 		t.Skip()
 		return
 	}
-
-	t.Parallel()
 
 	var closeables []Closeable
 	addCloseable := func(closeableList ...Closeable) {
