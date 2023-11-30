@@ -15,24 +15,36 @@ ports:
     # port: 80
     # targetPort: 7474
     # name: "http"
+    #
+    # if type is NodePort, uncomment to explicitly specify the nodePort to publish http
+    # nodePort: 30474
   https:
     enabled: true #Set this to false to remove HTTPS from this service (this does not affect whether https is enabled for the neo4j process)
-    # uncomment to publish http on port 443 (neo4j default is 7474)
+    # uncomment to publish https on port 443 (neo4j default is 7473)
     # port: 443
     # targetPort: 7473
     # name: "https"
+    #
+    # if type is NodePort, uncomment to explicitly specify the nodePort to publish https
+    # nodePort: 30473
   bolt:
     enabled: true #Set this to false to remove BOLT from this service (this does not affect whether https is enabled for the neo4j process)
     # Uncomment to explicitly specify the port to publish Neo4j Bolt (7687 is the default)
     # port: 7687
     # targetPort: 7687
     # name: "tcp-bolt"
+    #
+    # if type is NodePort, uncomment to explicitly specify the nodePort to publish Neo4j Bolt
+    # nodePort: 30687
   backup:
     enabled: false #Set this to true to expose backup port externally (n.b. this could have security implications. Backup is not authenticated by default)
     # Uncomment to explicitly specify the port to publish Neo4j Backup (6362 is the default)
     # port: 6362
     # targetPort: 6362
     # name: "tcp-backup"
+    #
+    # if type is NodePort, uncomment to explicitly specify the nodePort to publish Neo4j Backup
+    # nodePort: 30362
 
 # A "helm.neo4j.com/neo4j.name" will be applied automatically from `neo4j.name`.
 # Specify *additional* selectors to apply here (generally not required).

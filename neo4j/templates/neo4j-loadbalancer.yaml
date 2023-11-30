@@ -55,18 +55,27 @@ spec:
     - protocol: TCP
       port: {{ .http.port | default 7474 }}
       targetPort: {{ .http.targetPort | default 7474 }}
+      {{- if and (eq $spec.type "NodePort") (.http.nodePort) }}
+      nodePort: {{ .http.nodePort }}
+      {{- end }}
       name: {{ .http.name | default "http" }}
     {{- end }}
     {{- if .https.enabled }}
     - protocol: TCP
       port: {{ .https.port | default 7473 }}
       targetPort: {{ .https.targetPort | default 7473 }}
+      {{- if and (eq $spec.type "NodePort") (.https.nodePort) }}
+      nodePort: {{ .https.nodePort }}
+      {{- end }}
       name: {{ .https.name | default "https" }}
     {{- end }}
     {{- if .bolt.enabled }}
     - protocol: TCP
       port: {{ .bolt.port | default 7687 }}
       targetPort: {{ .bolt.targetPort | default 7687 }}
+      {{- if and (eq $spec.type "NodePort") (.bolt.nodePort) }}
+      nodePort: {{ .bolt.nodePort }}
+      {{- end }}
       name: {{ .bolt.name | default "tcp-bolt" }}
     {{- end }}
     {{ with .backup }}
@@ -74,6 +83,9 @@ spec:
     - protocol: TCP
       port: {{ .port | default 6362 }}
       targetPort: {{ .targetPort | default 6362 }}
+      {{- if and (eq $spec.type "NodePort") (.nodePort) }}
+      nodePort: {{ .nodePort }}
+      {{- end }}
       name: {{ .name | default "tcp-backup" }}
     {{- end }}
     {{- end }}
