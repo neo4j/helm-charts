@@ -3,6 +3,8 @@
 {{- if $isEnterprise }}
 {{- $backupEnabled = index $.Values.config "server.backup.enabled" | default "true" | regexMatch "(?i)yes|true" }}
 {{- end }}
+{{- $primaryAnalyticsType := and ($.Values.analytics.enabled) (eq $.Values.analytics.type.name "primary") }}
+{{- $secondaryAnalyticsType := and ($.Values.analytics.enabled) (eq $.Values.analytics.type.name "secondary") }}
 {{- $clusterEnabled := eq (include "neo4j.isClusterEnabled" .) "true" }}
 {{- template "neo4j.checkLicenseAgreement" . -}}
 {{- template "neo4j.apocCredentials.validation" . }}
@@ -95,6 +97,11 @@ data:
   dbms.cluster.minimum_initial_system_primaries_count: "{{ $primariesCount }}"
   {{- end }}
 
+  {{- if $primaryAnalyticsType }}
+  # Config for Primary type analytics instance
+  initial.dbms.default_primaries_count: "1"
+  {{- end }}
+
   # Bolt keep alive
   # this helps to ensure that LoadBalancers do not close bolt connections that are in use but appear idle
   server.bolt.connection_keep_alive: "30s"
@@ -112,15 +119,31 @@ data:
   # Other
   internal.dbms.ssl.system.ignore_dot_files: "true"
 
-  {{- if $clusterEnabled }}
+  {{- if or $clusterEnabled $secondaryAnalyticsType }}
   # Clustering
   dbms.cluster.discovery.resolver_type: K8S
   dbms.kubernetes.service_port_name: "tcp-discovery"
-  dbms.kubernetes.label_selector: "app={{ template "neo4j.name" . }},helm.neo4j.com/service=internals,helm.neo4j.com/clustering=true"
   dbms.routing.default_router: "SERVER"
   dbms.routing.client_side.enforce_for_domains: "*.{{ .Values.clusterDomain }}"
   dbms.routing.enabled: "true"
+  {{- end }}
 
+  {{- if $clusterEnabled }}
+  dbms.kubernetes.label_selector: "app={{ template "neo4j.name" . }},helm.neo4j.com/service=internals,helm.neo4j.com/clustering=true"
+  {{- else if $secondaryAnalyticsType }}
+  # Config for Secondary type analytics instance
+  dbms.kubernetes.label_selector: "app={{ template "neo4j.name" . }},helm.neo4j.com/service=internals"
+  dbms.security.procedures.unrestricted: "gds.*"
+  dbms.security.http_auth_allowlist: "gds.*"
+  dbms.security.procedures.allowlist: "gds.*"
+  server.cluster.system_database_mode: "SECONDARY"
+  initial.server.mode_constraint: "SECONDARY"
+  dbms.cluster.minimum_initial_system_primaries_count: "2"
+  internal.db.cluster.raft.minimum_voting_members: "2"
+  {{- end }}
+
+  # set the below configs in case of cluster or analytics
+  {{- if or $clusterEnabled $.Values.analytics.enabled }}
   # Because "if we set default advertised address it over-rides the bolt address used to populate the browser in a really annoying way" we have to set the
   # advertised address for each cluster service individually instead
   server.bolt.advertised_address: "$(bash -c 'echo ${SERVICE_NEO4J}')"
@@ -164,6 +187,9 @@ data:
   dbms.ssl.policy.{{ $name }}.enabled: "true"
   {{- end }}
   {{- end }}
+
+
+
 ---
 {{- if (or $.Values.apoc_config $.Values.apoc_credentials) -}}
 # User-provided Neo4j Apoc config values

@@ -168,7 +168,7 @@ spec:
       targetPort: 7473
       name: tcp-https
     {{- end }}
-    {{- if $clusterEnabled }}
+    {{- if or $clusterEnabled $.Values.analytics.enabled }}
     #enable the ports for non Read Replicas
     - protocol: TCP
       port: 7688

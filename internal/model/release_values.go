@@ -30,6 +30,16 @@ type HelmValues struct {
 	ApocCredentials          ApocCredentials     `yaml:"apoc_credentials,omitempty"`
 	PodDisruptionBudget      PodDisruptionBudget `yaml:"podDisruptionBudget"`
 	ServiceMonitor           ServiceMonitor      `yaml:"serviceMonitor"`
+	Analytics                Analytics           `yaml:"analytics"`
+}
+
+type Analytics struct {
+	Enabled bool `yaml:"enabled"`
+	Type    Type `yaml:"type"`
+}
+
+type Type struct {
+	Name string `yaml:"name"`
 }
 
 type ServiceMonitor struct {
