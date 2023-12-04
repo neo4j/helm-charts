@@ -8,7 +8,7 @@ disableLookups: false
 
 neo4j:
   image: "neo4j/helm-charts-backup"
-  imageTag: "4.4.27"
+  imageTag: "4.4.28"
   podLabels: {}
 #    app: "demo"
 #    acac: "dcdddc"
