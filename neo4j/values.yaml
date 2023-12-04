@@ -655,7 +655,6 @@ serviceMonitor:
 analytics:
   # This flag will enable the internal ports and certain configs necessary to allow 1 primary + n secondary neo4j instances scenario
   enabled: false
-  numberOfSecondaries: 2
   type:
     # values can be primary or secondary
     # this field denotes the neo4j instance type either primary or secondary

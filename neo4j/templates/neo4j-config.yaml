@@ -138,8 +138,8 @@ data:
   dbms.security.procedures.allowlist: "gds.*"
   server.cluster.system_database_mode: "SECONDARY"
   initial.server.mode_constraint: "SECONDARY"
-  dbms.cluster.minimum_initial_system_primaries_count: "{{ $.Values.analytics.numberOfSecondaries}}"
-  internal.db.cluster.raft.minimum_voting_members: "{{ $.Values.analytics.numberOfSecondaries}}"
+  dbms.cluster.minimum_initial_system_primaries_count: "2"
+  internal.db.cluster.raft.minimum_voting_members: "2"
   {{- end }}
 
   # set the below configs in case of cluster or analytics
