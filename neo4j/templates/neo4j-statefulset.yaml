@@ -54,7 +54,7 @@ spec:
         {{- include "neo4j.annotations" $.Values.podSpec.annotations | indent 8 }}
     spec:
       {{- include "neo4j.affinity" . | indent 6 }}
-      {{- if $.Values.podSpec.serviceAccountName | or $clusterEnabled }}
+      {{- if or $.Values.analytics.enabled $.Values.podSpec.serviceAccountName $clusterEnabled }}
       serviceAccountName: "{{ if kindIs "string" $.Values.podSpec.serviceAccountName | and $.Values.podSpec.serviceAccountName }}{{ $.Values.podSpec.serviceAccountName }}{{ else }}{{ include "neo4j.fullname" . }}{{ end }}"
       {{- end }}
       securityContext: {{ toYaml .Values.securityContext | nindent 8 }}
