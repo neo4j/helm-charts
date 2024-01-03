@@ -639,6 +639,7 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 }
 
 func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.ReleaseName) error {
+	log.Printf("\nPRINTING AWS KEYS := %s  %s \n", os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"))
 	if model.Neo4jEdition == "community" {
 		t.Skip()
 		return nil
