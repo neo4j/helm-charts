@@ -147,8 +147,12 @@ securityContext:
 resources:
   requests:
     ephemeralStorage: "4Gi"
+    cpu: ""
+    memory: ""
   limits:
     ephemeralStorage: "5Gi"
+    cpu: ""
+    memory: ""
 
 # nodeSelector labels
 # please ensure the respective labels are present on one of nodes or else helm charts will throw an error

@@ -62,3 +62,27 @@ affinity:
 {{ toYaml . | indent 1 }}
     {{- end -}}
 {{- end -}}
+
+{{- define "neo4j.resourcesAndLimits" -}}
+requests:
+  ephemeral-storage: {{ .Values.resources.requests.ephemeralStorage | default "4Gi" }}
+
+  {{- if and (not (kindIs "invalid" .Values.resources.requests.cpu)) (not (empty $.Values.resources.requests.cpu)) }}
+  cpu: {{ .Values.resources.requests.cpu | default "" }}
+  {{- end }}
+
+  {{- if and (not (kindIs "invalid" .Values.resources.requests.memory)) (not (empty $.Values.resources.requests.memory)) }}
+  memory: {{ .Values.resources.requests.memory | default "" }}
+  {{- end }}
+limits:
+  ephemeral-storage: {{ .Values.resources.limits.ephemeralStorage | default "5Gi" }}
+
+  {{- if and (not (kindIs "invalid" .Values.resources.limits.cpu)) (not (empty $.Values.resources.limits.cpu)) }}
+  cpu: {{ .Values.resources.limits.cpu | default "" }}
+  {{- end }}
+
+  {{- if and (not (kindIs "invalid" .Values.resources.limits.memory)) (not (empty $.Values.resources.limits.memory)) }}
+  memory: {{ .Values.resources.limits.memory | default "" }}
+  {{- end }}
+
+{{- end -}}

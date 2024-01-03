@@ -11,8 +11,24 @@ type Neo4jBackupValues struct {
 	TempVolume         map[string]interface{} `yaml:"tempVolume"`
 	SecurityContext    SecurityContext        `yaml:"securityContext"`
 	NodeSelector       map[string]string      `yaml:"nodeSelector,omitempty"`
+	Resources          Neo4jBackupResources   `yaml:"resources,omitempty"`
 	Tolerations        []Toleration           `yaml:"tolerations,omitempty"`
 	Affinity           Affinity               `yaml:"affinity,omitempty"`
+}
+
+type Neo4jBackupResources struct {
+	Requests Neo4jBackupRequests `yaml:"requests,omitempty"`
+	Limits   Neo4jBackupLimits   `yaml:"limits,omitempty"`
+}
+type Neo4jBackupRequests struct {
+	EphemeralStorage string `yaml:"ephemeralStorage,omitempty"`
+	CPU              string `yaml:"cpu,omitempty"`
+	Memory           string `yaml:"memory,omitempty"`
+}
+type Neo4jBackupLimits struct {
+	EphemeralStorage string `yaml:"ephemeralStorage,omitempty"`
+	CPU              string `yaml:"cpu,omitempty"`
+	Memory           string `yaml:"memory,omitempty"`
 }
 
 type Affinity struct {
