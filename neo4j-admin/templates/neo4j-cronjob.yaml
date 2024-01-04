@@ -41,11 +41,7 @@ spec:
             - name: graph-backup
               image: {{ .Values.neo4j.image }}:{{ .Values.neo4j.imageTag }}
               imagePullPolicy: Always
-              resources:
-                requests:
-                  ephemeral-storage: {{ .Values.resources.requests.ephemeralStorage | default "4Gi" }}
-                limits:
-                  ephemeral-storage: {{ .Values.resources.limits.ephemeralStorage | default "5Gi" }}
+              resources: {{- include "neo4j.resourcesAndLimits" . | nindent 16 }}
               env:
                 - name: DATABASE_SERVICE_NAME
                   value: {{ .Values.backup.databaseAdminServiceName  | trim }}

@@ -176,6 +176,14 @@ var DefaultNeo4jBackupValues = Neo4jBackupValues{
 	TempVolume: map[string]interface{}{
 		"emptyDir": nil,
 	},
+	Resources: Neo4jBackupResources{
+		Requests: Neo4jBackupRequests{
+			EphemeralStorage: "4Gi",
+		},
+		Limits: Neo4jBackupLimits{
+			EphemeralStorage: "4Gi",
+		},
+	},
 	SecurityContext: SecurityContext{
 		RunAsNonRoot:        true,
 		RunAsUser:           7474,
