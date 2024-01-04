@@ -1,5 +1,5 @@
 ARG IMAGE
-FROM golang:1.19-bullseye as build
+FROM golang:1.21-bullseye as build
 RUN apt-get install -y curl
 WORKDIR backup
 COPY backup/aws aws/
