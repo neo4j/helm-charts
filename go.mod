@@ -1,6 +1,6 @@
 module github.com/neo4j/helm-charts
 
-go 1.19
+go 1.21
 
 require (
 	github.com/hashicorp/go-multierror v1.1.1
