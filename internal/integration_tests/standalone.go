@@ -940,10 +940,18 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 	assert.NoError(t, err)
 
 	time.Sleep(1 * time.Minute)
-	reverseProxyPodName := fmt.Sprintf("%s-reverseproxy", reverseProxyReleaseName.String())
-	pod, err := Clientset.CoreV1().Pods(namespace).Get(context.Background(), reverseProxyPodName, metav1.GetOptions{})
+
+	reverseProxyDepName := fmt.Sprintf("%s-reverseproxy-dep", reverseProxyReleaseName.String())
+	deployment, err := Clientset.AppsV1().Deployments(namespace).Get(context.Background(), reverseProxyDepName, metav1.GetOptions{})
 	assert.NoError(t, err, "cannot retrieve reverse proxy pod")
-	assert.NotNil(t, pod, "empty reverse proxy pod found")
+	assert.NotNil(t, deployment, "no reverse proxy deployment found")
+
+	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("name=%s-reverseproxy", reverseProxyReleaseName.String()),
+	})
+	assert.NoError(t, err, "cannot retrieve reverse proxy pod")
+	assert.NotNil(t, pods, "no reverse proxy pods found")
+	assert.Equal(t, len(pods.Items), 1, "more than 1 reverse proxy pods found")
 
 	ingressName := fmt.Sprintf("%s-reverseproxy-ingress", reverseProxyReleaseName.String())
 	ingress, err := Clientset.NetworkingV1().Ingresses(namespace).Get(context.Background(), ingressName, metav1.GetOptions{})
