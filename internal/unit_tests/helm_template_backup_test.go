@@ -329,3 +329,32 @@ func TestBackupAzureStorageAccountNameWithoutSecretNameAndServiceAccountName(t *
 	assert.Error(t, err, "error must not be seen while trying to install helm backup")
 	assert.Contains(t, err.Error(), "Both secretName|secretKeyName and azureStorageAccountName key cannot be empty")
 }
+
+// TestNeo4jBackupResourcesAndLimits checks for requests and limits (cpu and memory) fields
+func TestNeo4jBackupResources(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+
+	helmValues.Resources.Requests.CPU = "1"
+	helmValues.Resources.Requests.Memory = "2"
+	helmValues.Resources.Limits.CPU = "2"
+	helmValues.Resources.Limits.Memory = "4"
+	helmValues.DisableLookups = true
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+	helmValues.Backup.SecretName = "demo"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "demo2"
+	helmValues.Backup.Database = "neo4j1"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while performing helm template on backup helm chart with affinity")
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
+	resources := cronjobs[0].(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers[0].Resources
+	assert.NotNil(t, resources, "resources missing from backup pod")
+	assert.Equal(t, resources.Limits.Cpu().String(), helmValues.Resources.Limits.CPU)
+	assert.Equal(t, resources.Requests.Cpu().String(), helmValues.Resources.Requests.CPU)
+	assert.Equal(t, resources.Limits.Memory().String(), helmValues.Resources.Limits.Memory)
+	assert.Equal(t, resources.Requests.Memory().String(), helmValues.Resources.Requests.Memory)
+}
