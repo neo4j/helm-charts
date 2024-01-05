@@ -1,27 +1,37 @@
 {{- $port := include "neo4j.reverseProxy.port" . -}}
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: {{ include "neo4j.fullname" . }}-reverseproxy
+  name: {{ include "neo4j.fullname" . }}-reverseproxy-dep
   labels:
-    name: {{ include "neo4j.fullname" . }}-reverseproxy
+    name: {{ include "neo4j.fullname" . }}-reverseproxy-dep
   namespace: "{{ .Release.Namespace }}"
 spec:
-  containers:
-    - name: {{ include "neo4j.fullname" . }}-reverseproxy
-      image: {{ $.Values.reverseProxy.image }}
-      imagePullPolicy: Always
-      ports:
-        - containerPort: {{ $port }}
-      env:
-        - name: SERVICE_NAME
-          value: {{ $.Values.reverseProxy.serviceName }}
-        - name: PORT
-          value: {{ $port | quote }}
-        - name: DOMAIN
-          value: {{ $.Values.reverseProxy.domain | default "cluster.local" }}
-        - name: NAMESPACE
-          value: {{ .Release.Namespace }}
+  replicas: 1
+  selector:
+    matchLabels:
+      name: {{ include "neo4j.fullname" . }}-reverseproxy
+  template:
+    metadata:
+      name: {{ include "neo4j.fullname" . }}-reverseproxy
+      labels:
+        name: {{ include "neo4j.fullname" . }}-reverseproxy
+    spec:
+      containers:
+        - name: {{ include "neo4j.fullname" . }}-reverseproxy
+          image: {{ $.Values.reverseProxy.image }}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: {{ $port }}
+          env:
+            - name: SERVICE_NAME
+              value: {{ $.Values.reverseProxy.serviceName }}
+            - name: PORT
+              value: {{ $port | quote }}
+            - name: DOMAIN
+              value: {{ $.Values.reverseProxy.domain | default "cluster.local" }}
+            - name: NAMESPACE
+              value: {{ .Release.Namespace }}
 ---
 apiVersion: v1
 kind: Service
