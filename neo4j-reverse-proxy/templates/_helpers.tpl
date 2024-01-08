@@ -44,3 +44,9 @@ tls: {{ toYaml $.Values.reverseProxy.ingress.tls.config | nindent 2 }}
 {{- $ingressName := printf "%s-reverseproxy-ingress" (include "neo4j.fullname" .) -}}
 {{- printf "$(kubectl get ingress/%s -n %s -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"  $ingressName .Release.Namespace -}}
 {{- end -}}
+
+{{- define ".neo4j.ingress.host" -}}
+{{- if and (not (kindIs "invalid" $.Values.reverseProxy.ingress.host)) (not (empty $.Values.reverseProxy.ingress.host)) }}
+host: {{ $.Values.reverseProxy.ingress.host | quote }}
+{{- end }}
+{{- end -}}

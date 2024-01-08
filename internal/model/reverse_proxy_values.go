@@ -18,6 +18,7 @@ type Ingress struct {
 	Enabled     bool              `yaml:"enabled"`
 	Annotations map[string]string `yaml:"annotations,omitempty"`
 	TLS         TLS               `yaml:"tls,omitempty"`
+	Host        string            `yaml:"host,omitempty"`
 }
 
 type TLS struct {

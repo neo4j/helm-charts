@@ -19,4 +19,5 @@ spec:
                 port:
                   number: {{ include "neo4j.reverseProxy.port" . }}
             path: /
+      {{- include ".neo4j.ingress.host" . | indent 6 -}}
 {{- end -}}
