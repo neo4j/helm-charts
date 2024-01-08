@@ -28,7 +28,7 @@ reverseProxy:
     annotations: {}
 #      "demo": "value"
 #      "demo2": "value2"
-    host: "demo"
+#    host: "demo"
     tls:
       enabled: false
       config: []
