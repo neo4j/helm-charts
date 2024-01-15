@@ -1872,6 +1872,32 @@ func TestNeo4jAuthPathVolumeMountWithoutPasswordFromSecret(t *testing.T) {
 	}))
 }
 
+// TestNeo4jPodSpecDNSPolicy ensure that the provided dns policy is being set
+func TestNeo4jPodSpecDNSPolicy(t *testing.T) {
+
+	t.Parallel()
+
+	helmValues := model.DefaultCommunityValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.DisableLookups = true
+		helmValues.PodSpec.DNSPolicy = "demo"
+		manifest, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		statefulSet := manifest.OfType(&appsv1.StatefulSet{})[0]
+		assert.NotNil(t, statefulSet, "statefulset missing")
+
+		dnsPolicy := statefulSet.(*appsv1.StatefulSet).Spec.Template.Spec.DNSPolicy
+		assert.Equal(t, string(dnsPolicy), "demo", "dns policy not matching")
+	}))
+}
+
 // checkMemoryResources runs helm template on all charts of all editions with invalid memory values
 func checkMemoryResources(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string, memorySlice []string, containsErrMsg string) {
 
