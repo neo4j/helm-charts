@@ -71,6 +71,7 @@ type PodSpec struct {
 	TerminationGracePeriodSeconds int                    `yaml:"terminationGracePeriodSeconds,omitempty"`
 	InitContainers                []interface{}          `yaml:"initContainers,omitempty"`
 	Containers                    []interface{}          `yaml:"containers,omitempty"`
+	DNSPolicy                     string                 `yaml:"dnsPolicy,omitempty"`
 }
 
 type ApocCredentials struct {
