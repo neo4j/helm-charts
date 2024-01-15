@@ -76,6 +76,7 @@ type PodSpec struct {
 	PodAntiAffinity               interface{}            `yaml:"podAntiAffinity,omitempty"`
 	Tolerations                   []interface{}          `yaml:"tolerations,omitempty"`
 	PriorityClassName             string                 `yaml:"priorityClassName,omitempty"`
+	DNSPolicy                     string                 `yaml:"dnsPolicy,omitempty"`
 	Loadbalancer                  string                 `yaml:"loadbalancer,omitempty"`
 	ServiceAccountName            string                 `yaml:"serviceAccountName,omitempty"`
 	TerminationGracePeriodSeconds int                    `yaml:"terminationGracePeriodSeconds,omitempty"`
