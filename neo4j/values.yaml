@@ -487,15 +487,15 @@ podSpec:
 
   # topologySpreadConstraints fields for Neo4j Pod
   # https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/
-  topologySpreadConstraints:
-    - maxSkew: 1
-      topologyKey: kubernetes.io/hostname
-      whenUnsatisfiable: DoNotSchedule
-      labelSelector:
-        matchLabels:
-          app: foo
-      matchLabelKeys:
-        - pod-template-hash
+  topologySpreadConstraints: []
+#    - maxSkew: 1
+#      topologyKey: kubernetes.io/hostname
+#      whenUnsatisfiable: DoNotSchedule
+#      labelSelector:
+#        matchLabels:
+#          app: foo
+#      matchLabelKeys:
+#        - pod-template-hash
 
   #Priority indicates the importance of a Pod relative to other Pods.
   # More Information : https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/

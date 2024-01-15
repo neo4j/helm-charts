@@ -71,17 +71,24 @@ type PodDisruptionBudget struct {
 	MaxUnavailable   string             `yaml:"maxUnavailable,omitempty"`
 }
 type PodSpec struct {
-	Annotations                   map[string]string      `yaml:"annotations,omitempty"`
-	NodeAffinity                  map[string]interface{} `yaml:"nodeAffinity,omitempty"`
-	PodAntiAffinity               interface{}            `yaml:"podAntiAffinity,omitempty"`
-	Tolerations                   []interface{}          `yaml:"tolerations,omitempty"`
-	PriorityClassName             string                 `yaml:"priorityClassName,omitempty"`
-	DNSPolicy                     string                 `yaml:"dnsPolicy,omitempty"`
-	Loadbalancer                  string                 `yaml:"loadbalancer,omitempty"`
-	ServiceAccountName            string                 `yaml:"serviceAccountName,omitempty"`
-	TerminationGracePeriodSeconds int                    `yaml:"terminationGracePeriodSeconds,omitempty"`
-	InitContainers                []interface{}          `yaml:"initContainers,omitempty"`
-	Containers                    []interface{}          `yaml:"containers,omitempty"`
+	Annotations                   map[string]string          `yaml:"annotations,omitempty"`
+	NodeAffinity                  map[string]interface{}     `yaml:"nodeAffinity,omitempty"`
+	PodAntiAffinity               interface{}                `yaml:"podAntiAffinity,omitempty"`
+	Tolerations                   []interface{}              `yaml:"tolerations,omitempty"`
+	PriorityClassName             string                     `yaml:"priorityClassName,omitempty"`
+	DNSPolicy                     string                     `yaml:"dnsPolicy,omitempty"`
+	Loadbalancer                  string                     `yaml:"loadbalancer,omitempty"`
+	ServiceAccountName            string                     `yaml:"serviceAccountName,omitempty"`
+	TerminationGracePeriodSeconds int                        `yaml:"terminationGracePeriodSeconds,omitempty"`
+	InitContainers                []interface{}              `yaml:"initContainers,omitempty"`
+	Containers                    []interface{}              `yaml:"containers,omitempty"`
+	TopologySpreadConstraints     []TopologySpreadConstraint `yaml:"topologySpreadConstraints,omitempty"`
+}
+
+type TopologySpreadConstraint struct {
+	MaxSkew           int    `yaml:"maxSkew"`
+	TopologyKey       string `yaml:"topologyKey"`
+	WhenUnsatisfiable string `yaml:"whenUnsatisfiable"`
 }
 
 type ApocCredentials struct {
