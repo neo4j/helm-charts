@@ -358,10 +358,10 @@ priorityClassName: "{{ .Values.podSpec.priorityClassName }}"
 
 {{- define "neo4j.tolerations" -}}
 {{/* Add tolerations only if .Values.podSpec.tolerations contains entries */}}
-    {{- if . -}}
+    {{- if . }}
 tolerations:
 {{ toYaml . }}
-    {{- end -}}
+    {{- end }}
 {{- end -}}
 
 {{- define "neo4j.affinity" -}}
@@ -412,4 +412,12 @@ affinity:
 WARNING: Passwords set using 'neo4j.password' will be stored in plain text in the Helm release ConfigMap.
 Please consider using 'neo4j.passwordFromSecret' for improved security.
 {{- end -}}
+{{- end -}}
+
+{{- define "neo4j.topologySpreadConstraints" -}}
+{{/* Add tolerations only if .Values.podSpec.topologySpreadConstraints contains entries */}}
+    {{- if $.Values.podSpec.topologySpreadConstraints }}
+topologySpreadConstraints:
+{{ toYaml $.Values.podSpec.topologySpreadConstraints }}
+    {{- end }}
 {{- end -}}
