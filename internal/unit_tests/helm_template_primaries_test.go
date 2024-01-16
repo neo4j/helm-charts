@@ -2261,6 +2261,39 @@ func TestNeo4jPodSpecDNSPolicy(t *testing.T) {
 	}))
 }
 
+// TestNeo4jPodSpecTopologySpreadConstraints ensure that the provided topologySpreadConstraints are being set
+func TestNeo4jPodSpecTopologySpreadConstraints(t *testing.T) {
+
+	t.Parallel()
+	tsc := model.TopologySpreadConstraint{
+		MaxSkew:           1,
+		TopologyKey:       "demo",
+		WhenUnsatisfiable: "demo",
+	}
+
+	helmValues := model.DefaultCommunityValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.DisableLookups = true
+		helmValues.PodSpec.TopologySpreadConstraints = []model.TopologySpreadConstraint{tsc}
+		manifest, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		statefulSet := manifest.OfType(&appsv1.StatefulSet{})[0]
+		assert.NotNil(t, statefulSet, "statefulset missing")
+
+		tscs := statefulSet.(*appsv1.StatefulSet).Spec.Template.Spec.TopologySpreadConstraints
+		assert.Equal(t, len(tscs), 1, "more than 1 or zero topology spread constraints found")
+		assert.Equal(t, tscs[0].MaxSkew, int32(1), "maxSkew not matching")
+		assert.Equal(t, tscs[0].TopologyKey, "demo", "topologyKey not matching")
+	}))
+}
+
 // checkMemoryResources runs helm template on all charts of all editions with invalid memory values
 func checkMemoryResources(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string, memorySlice []string, containsErrMsg string) {
 
