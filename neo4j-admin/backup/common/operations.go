@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-// IsFileBigger returns true if file size is bigger than 4GB
+// IsFileBigger returns true if file size is bigger than 1GB
 func IsFileBigger(filePath string) (bool, error) {
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {

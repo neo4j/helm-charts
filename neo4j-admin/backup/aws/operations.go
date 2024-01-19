@@ -74,9 +74,13 @@ func (a *awsClient) UploadFile(fileNames []string, bucketName string) error {
 		if err != nil {
 			return err
 		}
-		//use UploadLargeObject if file size is more than 4GB
+		//use UploadLargeObject if file size is more than 1GB
 		if yes {
-			return a.UploadLargeObject(fileName, location, bucketName, parentBucketName)
+			err = a.UploadLargeObject(fileName, location, bucketName, parentBucketName)
+			if err != nil {
+				return err
+			}
+			continue
 		}
 
 		file, err := os.Open(filePath)
