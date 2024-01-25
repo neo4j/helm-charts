@@ -204,6 +204,7 @@ type Port struct {
 	Enabled    bool   `yaml:"enabled"`
 	Port       int    `yaml:"port"`
 	TargetPort int    `yaml:"targetPort"`
+	NodePort   int    `yaml:"nodePort"`
 	Name       string `yaml:"name"`
 }
 
