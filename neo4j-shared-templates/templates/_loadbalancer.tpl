@@ -70,16 +70,14 @@ spec:
       nodePort: {{ .bolt.nodePort }}
       {{- end }}
     {{- end }}
-    {{ with .backup }}
-    {{- if .enabled }}
+    {{- if .backup.enabled }}
     - protocol: TCP
-      port: {{ .port | default 6362 }}
+      port: {{ .backup.port | default 6362 }}
       targetPort: 6362
       name: tcp-backup
       {{- if and (eq $spec.type "NodePort") (.backup.nodePort) }}
       nodePort: {{ .backup.nodePort }}
       {{- end }}
-    {{- end }}
     {{- end }}
     {{- end }}
     {{/* this condition opens internal ports only when multi-k8s-cluster is enabled */}}
