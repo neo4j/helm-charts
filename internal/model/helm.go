@@ -202,6 +202,8 @@ func HelmTemplateFromStruct(t *testing.T, chart HelmChartBuilder, values interfa
 		helmValues, _ = yaml.Marshal(values.(Neo4jBackupValues))
 	case "neo4j-reverse-proxy":
 		helmValues, _ = yaml.Marshal(values.(Neo4jReverseProxyValues))
+	case "neo4j-cluster-loadbalancer":
+		helmValues, _ = yaml.Marshal(values.(Neo4jLoadBalancerValues))
 	default:
 		helmValues, _ = yaml.Marshal(values.(HelmValues))
 	}

@@ -121,3 +121,43 @@ func TestOverrideLoadBalancerDefaultSettings(t *testing.T) {
 	service = k8s.OfTypeWithName(&v1.Service{}, "my-release-neo4j").(*v1.Service)
 	assert.Equal(t, v1.ServiceExternalTrafficPolicyTypeCluster, service.Spec.ExternalTrafficPolicy)
 }
+
+func TestLoadBalancerNodePortSettings(t *testing.T) {
+	t.Parallel()
+
+	var helmValues model.Neo4jLoadBalancerValues
+	helmValues.Neo4j.Name = "demo-lb"
+	helmValues.Neo4j.Edition = "enterprise"
+	helmValues.Spec.Type = "NodePort"
+	helmValues.Ports.HTTP.Enabled = true
+	helmValues.Ports.HTTP.NodePort = 1234
+
+	manifest, err := model.HelmTemplateFromStruct(t, model.LoadBalancerHelmChart, helmValues, "--dry-run")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	services := manifest.OfType(&v1.Service{})
+	assert.NotNil(t, services, "services missing")
+
+	var nodePortService *v1.Service
+	for _, service := range services {
+		if string(service.(*v1.Service).Spec.Type) == "NodePort" {
+			nodePortService = service.(*v1.Service)
+			break
+		}
+	}
+	assert.NotNil(t, nodePortService, "no nodeport service found")
+	ports := nodePortService.Spec.Ports
+	assert.NotNil(t, ports, "no ports found for nodeport service")
+
+	var portFound bool
+	for _, port := range ports {
+		if port.Name == "http" {
+			assert.Equal(t, port.NodePort, int32(1234), "nodePort found is not matching")
+			portFound = true
+			break
+		}
+	}
+	assert.Equal(t, portFound, true, "nodePort not found")
+}
