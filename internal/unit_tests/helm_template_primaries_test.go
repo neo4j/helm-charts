@@ -2294,6 +2294,52 @@ func TestNeo4jPodSpecTopologySpreadConstraints(t *testing.T) {
 	}))
 }
 
+// TestNeo4jPodSpecTopologySpreadConstraints ensure that the provided topologySpreadConstraints are being set
+func TestNeo4jLoadBalancerNodePort(t *testing.T) {
+
+	t.Parallel()
+
+	helmValues := model.DefaultCommunityValues
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+
+		if edition == "enterprise" {
+			helmValues = model.DefaultEnterpriseValues
+		}
+		helmValues.DisableLookups = true
+		helmValues.Services.Neo4j.Ports.HTTP.Enabled = true
+		helmValues.Services.Neo4j.Ports.HTTP.NodePort = 1234
+		helmValues.Services.Neo4j.Spec.Type = "NodePort"
+		manifest, err := model.HelmTemplateFromStruct(t, chart, helmValues, "--dry-run")
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		services := manifest.OfType(&v1.Service{})
+		assert.NotNil(t, services, "services missing")
+
+		var nodePortService *v1.Service
+		for _, service := range services {
+			if string(service.(*v1.Service).Spec.Type) == "NodePort" {
+				nodePortService = service.(*v1.Service)
+				break
+			}
+		}
+		assert.NotNil(t, nodePortService, "no nodeport service found")
+		ports := nodePortService.Spec.Ports
+		assert.NotNil(t, ports, "no ports found for nodeport service")
+
+		var portFound bool
+		for _, port := range ports {
+			if port.Name == "http" {
+				assert.Equal(t, port.NodePort, int32(1234), "nodePort found is not matching")
+				portFound = true
+				break
+			}
+		}
+		assert.Equal(t, portFound, true, "nodePort not found")
+	}))
+}
+
 // checkMemoryResources runs helm template on all charts of all editions with invalid memory values
 func checkMemoryResources(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string, memorySlice []string, containsErrMsg string) {
 
