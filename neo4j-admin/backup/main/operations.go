@@ -82,6 +82,15 @@ func azureOperations() {
 	handleError(err)
 }
 
+func onPrem() {
+	backupFileNames, consistencyCheckReports, err := backupOperations()
+	handleError(err)
+
+	err = deleteBackupFiles(backupFileNames, consistencyCheckReports)
+	handleError(err)
+
+}
+
 func backupOperations() ([]string, []string, error) {
 
 	address, err := generateAddress()

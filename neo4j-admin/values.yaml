@@ -63,7 +63,11 @@ backup:
   # In case of comma separated databases failure of any single database will lead to failure of complete operation
   database: ""
   # cloudProvider can be either gcp, aws, or azure
+  # if cloudProvider is empty then the backup will be done to the /backups mount.
+  # the /backups mount can point to a persitentVolume based on the definition set in tempVolume
   cloudProvider: ""
+
+
 
   # name of the kubernetes secret containing the respective cloud provider credentials
   # Ensure you have read,write access to the mentioned bucket

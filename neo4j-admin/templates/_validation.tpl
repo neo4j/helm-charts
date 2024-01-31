@@ -41,8 +41,17 @@
 
 {{/* checks if serviceAccountName is provided or not  when secretName is missing */}}
 {{- define "neo4j.backup.checkServiceAccountName" -}}
-    {{- if and (empty .Values.serviceAccountName) (empty .Values.backup.secretName) -}}
+    {{- if and (empty .Values.serviceAccountName) (empty .Values.backup.secretName) (not (empty .Values.backup.cloudProvider)) -}}
         {{ fail (printf "Please provide either secretName or serviceAccountName. Both cannot be empty. Please set only one of them via --set backup.secretName or --set serviceAccountName") }}
+    {{- end -}}
+{{- end -}}
+
+{{/* checks if serviceAccountName is provided or not  when secretName is missing */}}
+{{- define "neo4j.backup.checkBucketName" -}}
+    {{- if .Values.backup.cloudProvider -}}
+        {{- if empty .Values.backup.bucketName -}}
+            {{ fail (printf "Empty bucketName. Please set bucketName via --set backup.bucketName") }}
+        {{- end -}}
     {{- end -}}
 {{- end -}}
 
