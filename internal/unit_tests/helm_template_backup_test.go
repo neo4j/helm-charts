@@ -358,3 +358,34 @@ func TestNeo4jBackupResources(t *testing.T) {
 	assert.Equal(t, resources.Limits.Memory().String(), helmValues.Resources.Limits.Memory)
 	assert.Equal(t, resources.Requests.Memory().String(), helmValues.Resources.Requests.Memory)
 }
+
+// TestEmptyBucketName checks for error message when bucketname is not provided
+func TestEmptyBucketName(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = ""
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+
+	_, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.Error(t, err, "error not seen while checking for empty bucket name")
+	assert.Contains(t, err.Error(), "Empty bucketName. Please set bucketName via --set backup.bucketName")
+
+}
+
+// TestOnPremScenario checks for any errors when backup is performed on onprem
+func TestOnPremScenario(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+
+	helmValues.Backup.CloudProvider = ""
+	helmValues.Backup.BucketName = ""
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+
+	_, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while performing backup on onprem")
+
+}

@@ -20,6 +20,9 @@ func main() {
 	case "gcp":
 		gcpOperations()
 		break
+	case "":
+		onPrem()
+		break
 	default:
 		log.Fatalf("Incorrect cloud provider %s", cloudProvider)
 	}

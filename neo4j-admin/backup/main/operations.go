@@ -71,6 +71,15 @@ func azureOperations() {
 	handleError(err)
 }
 
+func onPrem() {
+	backupFileNames, err := backupOperations()
+	handleError(err)
+
+	err = deleteBackupFiles(backupFileNames)
+	handleError(err)
+
+}
+
 func backupOperations() ([]string, error) {
 
 	address, err := generateAddress()
