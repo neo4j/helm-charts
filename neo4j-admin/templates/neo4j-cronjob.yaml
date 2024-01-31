@@ -1,6 +1,7 @@
 {{- template "neo4j.backup.checkDatabaseIPAndServiceName" . -}}
 {{- template "neo4j.backup.checkAzureStorageAccountName" . -}}
 {{- template "neo4j.backup.checkIfSecretExistsOrNot" . -}}
+{{- template "neo4j.backup.checkBucketName" . -}}
 {{- template "neo4j.backup.checkServiceAccountName" . -}}
 {{- template "neo4j.checkNodeSelectorLabels" . -}}
 apiVersion: batch/v1
@@ -56,9 +57,9 @@ spec:
                 - name: DATABASE
                   value: {{ .Values.backup.database | default "*" | trim | quote }}
                 - name: CLOUD_PROVIDER
-                  value: {{ required "You must specify a CLOUD_PROVIDER" .Values.backup.cloudProvider | trim }}
+                  value: {{ .Values.backup.cloudProvider | trim }}
                 - name: BUCKET_NAME
-                  value: {{ required "You must specify a BUCKET NAME" .Values.backup.bucketName | trim }}
+                  value: {{ .Values.backup.bucketName | trim }}
                 - name: KEEP_BACKUP_FILES
                   value: "{{ .Values.backup.keepBackupFiles | default true }}"
                 - name: PAGE_CACHE
@@ -73,6 +74,8 @@ spec:
                   value: "{{ .Values.backup.type | default "AUTO" | trim }}"
                 - name: KEEP_FAILED
                   value: "{{ .Values.backup.keepFailed | default false }}"
+                - name: ONPREM
+                  value: "{{ .Values.backup.onPrem | default false }}"
                 - name: CREDENTIAL_PATH
                   value: "{{ printf "/credentials/%s" .Values.backup.secretKeyName | default ""  }}"
                 - name: VERBOSE
