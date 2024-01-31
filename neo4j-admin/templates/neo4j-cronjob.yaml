@@ -74,8 +74,6 @@ spec:
                   value: "{{ .Values.backup.type | default "AUTO" | trim }}"
                 - name: KEEP_FAILED
                   value: "{{ .Values.backup.keepFailed | default false }}"
-                - name: ONPREM
-                  value: "{{ .Values.backup.onPrem | default false }}"
                 - name: CREDENTIAL_PATH
                   value: "{{ printf "/credentials/%s" .Values.backup.secretKeyName | default ""  }}"
                 - name: VERBOSE
