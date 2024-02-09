@@ -21,6 +21,7 @@ spec:
         - name: {{ include "neo4j.fullname" . }}-reverseproxy
           image: {{ $.Values.reverseProxy.image }}
           imagePullPolicy: Always
+          securityContext: {{ toYaml .Values.reverseProxy.containerSecurityContext | nindent 12 }}
           ports:
             - containerPort: {{ $port }}
           env:
