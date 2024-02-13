@@ -512,7 +512,7 @@ func createPersistentVolume(name *model.PersistentDiskName, zone gcloud.Zone, pr
 		},
 		Spec: v1.PersistentVolumeClaimSpec{
 			AccessModes: pv.Spec.AccessModes,
-			Resources: v1.ResourceRequirements{
+			Resources: v1.VolumeResourceRequirements{
 				Requests: pv.Spec.Capacity,
 			},
 			VolumeName:       pv.Name,

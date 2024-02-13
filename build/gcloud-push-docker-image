@@ -54,9 +54,9 @@ function push_to_gcr {
 }
 
 if [ "${DISTRIBUTION}" == "redhat" ]; then
-  push_to_gcr "$(ls | grep -E "neo4j-enterprise-(.*)ubi8-docker-loadable.tar")" "ENTERPRISE"
-  push_to_gcr "$(ls | grep -E "neo4j-community-(.*)ubi8-docker-loadable.tar")" "COMMUNITY"
+  push_to_gcr "$(ls | grep -E "neo4j-enterprise-(.*)ubi9-docker-loadable.tar")" "ENTERPRISE"
+  push_to_gcr "$(ls | grep -E "neo4j-community-(.*)ubi9-docker-loadable.tar")" "COMMUNITY"
 else
-  push_to_gcr "$(ls | grep -E "neo4j-enterprise-(.*)-docker-loadable.tar" | grep -v "ubi8")" "ENTERPRISE"
-  push_to_gcr "$(ls | grep -E "neo4j-community-(.*)-docker-loadable.tar" | grep -v "ubi8")" "COMMUNITY"
+  push_to_gcr "$(ls | grep -E "neo4j-enterprise-(.*)-docker-loadable.tar" | grep -v "ubi9")" "ENTERPRISE"
+  push_to_gcr "$(ls | grep -E "neo4j-community-(.*)-docker-loadable.tar" | grep -v "ubi9")" "COMMUNITY"
 fi
