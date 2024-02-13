@@ -45,7 +45,7 @@ func checkNeo4jNotRunning(t *testing.T, releaseName model.ReleaseName) error {
 	cmd := []string{
 		"jps",
 	}
-	stdout, stderr, err := ExecInPod(releaseName, cmd)
+	stdout, stderr, err := ExecInPod(releaseName, cmd, "")
 	assert.Len(t, strings.Split(stdout, "\n"), 1)
 	assert.NotContains(t, stdout, "neo4j")
 	assert.Empty(t, stderr)

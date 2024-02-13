@@ -17,6 +17,7 @@ spec:
       labels:
         name: {{ include "neo4j.fullname" . }}-reverseproxy
     spec:
+      securityContext: {{ toYaml .Values.reverseProxy.podSecurityContext | nindent 8 }}
       containers:
         - name: {{ include "neo4j.fullname" . }}-reverseproxy
           image: {{ $.Values.reverseProxy.image }}
@@ -28,7 +29,7 @@ spec:
             - name: SERVICE_NAME
               value: {{ $.Values.reverseProxy.serviceName }}
             - name: PORT
-              value: {{ $port | quote }}
+              value: {{ add $port 8000 | quote }}
             - name: DOMAIN
               value: {{ $.Values.reverseProxy.domain | default "cluster.local" }}
             - name: NAMESPACE
@@ -46,6 +47,6 @@ spec:
   ports:
     - protocol: TCP
       port: {{ $port }}
-      targetPort: {{ $port }}
+      targetPort: {{ add $port 8000 }}
 ---
 

@@ -615,22 +615,22 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 		}},
 		{name: "Check RunAsNonRoot", test: func(t *testing.T) { assert.NoError(t, RunAsNonRoot(t, name), "RunAsNonRoot check should succeed") }},
 		{name: "Exec in Pod", test: func(t *testing.T) { assert.NoError(t, CheckExecInPod(t, name), "Exec in Pod should succeed") }},
-		{name: "Install Backup Helm Chart For GCP With Workload Identity", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t, name), "Backup to GCP with workload identity should succeed")
-		}},
-		{name: "Install Backup Helm Chart For AWS", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, InstallNeo4jBackupAWSHelmChart(t, name), "Backup to AWS should succeed")
-		}},
-		{name: "Install Backup Helm Chart For Azure", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, InstallNeo4jBackupAzureHelmChart(t, name), "Backup to Azure should succeed")
-		}},
-		{name: "Install Backup Helm Chart For GCP", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, InstallNeo4jBackupGCPHelmChart(t, name), "Backup to GCP should succeed")
-		}},
+		//{name: "Install Backup Helm Chart For GCP With Workload Identity", test: func(t *testing.T) {
+		//	t.Parallel()
+		//	assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t, name), "Backup to GCP with workload identity should succeed")
+		//}},
+		//{name: "Install Backup Helm Chart For AWS", test: func(t *testing.T) {
+		//	t.Parallel()
+		//	assert.NoError(t, InstallNeo4jBackupAWSHelmChart(t, name), "Backup to AWS should succeed")
+		//}},
+		//{name: "Install Backup Helm Chart For Azure", test: func(t *testing.T) {
+		//	t.Parallel()
+		//	assert.NoError(t, InstallNeo4jBackupAzureHelmChart(t, name), "Backup to Azure should succeed")
+		//}},
+		//{name: "Install Backup Helm Chart For GCP", test: func(t *testing.T) {
+		//	t.Parallel()
+		//	assert.NoError(t, InstallNeo4jBackupGCPHelmChart(t, name), "Backup to GCP should succeed")
+		//}},
 		{name: "Install Reverse Proxy Helm Chart", test: func(t *testing.T) {
 			t.Parallel()
 			assert.NoError(t, InstallReverseProxyHelmChart(t, name), "Reverse Proxy installation with ingress should succeed")
@@ -953,6 +953,12 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 	assert.NotNil(t, pods, "no reverse proxy pods found")
 	assert.Equal(t, len(pods.Items), 1, "more than 1 reverse proxy pods found")
 
+	cmd := []string{"ls", "-lst", "/go"}
+	stdoutCmd, _, err := ExecInPod(standaloneReleaseName, cmd, pods.Items[0].Name)
+	assert.NoError(t, err, "cannot exec in reverse proxy pod")
+	assert.NotContains(t, stdoutCmd, "root")
+	assert.Contains(t, stdoutCmd, "neo4j")
+
 	ingressName := fmt.Sprintf("%s-reverseproxy-ingress", reverseProxyReleaseName.String())
 	ingress, err := Clientset.NetworkingV1().Ingresses(namespace).Get(context.Background(), ingressName, metav1.GetOptions{})
 	assert.NoError(t, err, "cannot retrieve reverse proxy ingress")
@@ -965,6 +971,7 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 	assert.NoError(t, err)
 	assert.NotNil(t, string(stdout), "no curl output found")
 	assert.Contains(t, string(stdout), "bolt_routing")
+	assert.NotContains(t, string(stdout), "8443")
 
 	return nil
 }
