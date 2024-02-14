@@ -1,8 +1,8 @@
 apiVersion: v2
 name: neo4j-cluster-read-replica
 home: https://www.neo4j.com
-version: 4.4.29
-appVersion: 4.4.29
+version: 4.4.30
+appVersion: 4.4.30
 description: Neo4j is the world's leading graph database
 keywords:
   - graph
@@ -19,5 +19,5 @@ maintainers:
     email: harshit.singhvi@neotechnology.com
 dependencies:
   - name: neo4j-shared-templates
-    version: "4.4.29"
+    version: "4.4.30"
     repository: "file://../neo4j-shared-templates"
