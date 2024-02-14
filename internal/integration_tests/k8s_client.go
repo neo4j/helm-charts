@@ -264,7 +264,7 @@ func CheckExecInPod(t *testing.T, releaseName model.ReleaseName) error {
 		"id -u",
 	}
 
-	stdout, stderr, err := ExecInPod(releaseName, cmd)
+	stdout, stderr, err := ExecInPod(releaseName, cmd, "")
 
 	assert.NoError(t, err)
 	assert.Equal(t, "7474", stdout, "UID is different than expected")
@@ -273,13 +273,16 @@ func CheckExecInPod(t *testing.T, releaseName model.ReleaseName) error {
 	return err
 }
 
-func ExecInPod(releaseName model.ReleaseName, cmd []string) (string, string, error) {
-
+func ExecInPod(releaseName model.ReleaseName, cmd []string, podName string) (string, string, error) {
+	name := releaseName.PodName()
+	if podName != "" {
+		name = podName
+	}
 	var (
 		stdout bytes.Buffer
 		stderr bytes.Buffer
 	)
-	req := Clientset.CoreV1().RESTClient().Post().Resource("pods").Name(releaseName.PodName()).
+	req := Clientset.CoreV1().RESTClient().Post().Resource("pods").Name(name).
 		Namespace(string(releaseName.Namespace())).SubResource("exec")
 	option := &coreV1.PodExecOptions{
 		Command: cmd,

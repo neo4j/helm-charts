@@ -18,6 +18,24 @@ reverseProxy:
   # default is set to cluster.local
   domain: "cluster.local"
 
+  # securityContext defines privilege and access control settings for a Container. Making sure that we dont run Neo4j as root user.
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    runAsUser: 7474
+    runAsGroup: 7474
+    capabilities:
+      drop:
+        - all
+
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 7474
+    runAsGroup: 7474
+    fsGroup: 7474
+    fsGroupChangePolicy: "Always"
+
+
   # This assumes ingress-nginx controller or haproxy-ingress-controller is already installed in your kubernetes cluster.
   # You can install ingress-nginx by following instructions on this link https://github.com/kubernetes/ingress-nginx/blob/main/docs/deploy/index.md#quick-start
   # You can install haproxy-ingress by following instructions on this link https://haproxy-ingress.github.io/docs/getting-started/

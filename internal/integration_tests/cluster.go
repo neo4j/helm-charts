@@ -336,7 +336,7 @@ func InstallNeo4jBackupAWSHelmChartViaMinIO(t *testing.T, releaseName model.Rele
 // CheckLogsFormat checks whether the neo4j logs are in json format or not
 func CheckLogsFormat(t *testing.T, releaseName model.ReleaseName) error {
 
-	stdout, stderr, err := ExecInPod(releaseName, []string{"cat", "/logs/neo4j.log"})
+	stdout, stderr, err := ExecInPod(releaseName, []string{"cat", "/logs/neo4j.log"}, "")
 	if !assert.NoError(t, err) {
 		return fmt.Errorf("error seen while executing command `cat /logs/neo4j.log' ,\n err :- %v", err)
 	}
@@ -559,7 +559,7 @@ func checkNeo4jLogsForAnyErrors(t *testing.T, name model.ReleaseName) error {
 		"cat /logs/neo4j.log /logs/debug.log",
 	}
 
-	stdout, stderr, err := ExecInPod(name, cmd)
+	stdout, stderr, err := ExecInPod(name, cmd, "")
 	if !assert.NoError(t, err) {
 		return err
 	}
