@@ -26,7 +26,13 @@ func httpProxy(hostname string) (*httputil.ReverseProxy, error) {
 			if err != nil {
 				return fmt.Errorf("error while reading json response \n %v", err)
 			}
-			port := fmt.Sprintf(":%s", os.Getenv("PORT"))
+			portInt, err := strconv.Atoi(os.Getenv("PORT"))
+			if err != nil {
+				return err
+			}
+			//subtracting 8000 from the port number since we are adding 8000 in the helm chart template so as to not use port range < 1024
+			portInt -= 8000
+			port := fmt.Sprintf(":%d", portInt)
 			b := bytes.Replace(bodyBytes, []byte(":7687"), []byte(port), -1)
 			response.Header.Set("Content-Length", strconv.Itoa(len(b)))
 			response.Body = io.NopCloser(bytes.NewReader(b))

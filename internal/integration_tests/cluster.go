@@ -659,7 +659,7 @@ func checkNeo4jLogsForAnyErrors(t *testing.T, name model.ReleaseName) error {
 		"cat /logs/neo4j.log /logs/debug.log",
 	}
 
-	_, stderr, err := ExecInPod(name, cmd)
+	_, stderr, err := ExecInPod(name, cmd, "")
 	if !assert.NoError(t, err) {
 		return err
 	}
