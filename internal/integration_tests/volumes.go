@@ -35,7 +35,7 @@ func checkApoc(t *testing.T, releaseName model.ReleaseName) error {
 func checkVolume(t *testing.T, releaseName model.ReleaseName, volumePath string, sem chan error) {
 	cmd := []string{"ls", "-1a", volumePath}
 
-	stdout, stderr, err := ExecInPod(releaseName, cmd)
+	stdout, stderr, err := ExecInPod(releaseName, cmd, "")
 	assert.GreaterOrEqual(t, len(strings.Split(stdout, "\n")), 2, "Insufficient content in %s: %s", volumePath, stdout)
 	assert.Empty(t, stderr)
 	if !assert.NoError(t, err) {
@@ -62,7 +62,7 @@ func checkVolumes(t *testing.T, releaseName model.ReleaseName) error {
 
 	cmd := []string{"ls", "-1a", "/"}
 
-	stdout, stderr, err := ExecInPod(releaseName, cmd)
+	stdout, stderr, err := ExecInPod(releaseName, cmd, "")
 	if !assert.NoError(t, err) {
 		return err
 	}
