@@ -1,0 +1,32 @@
+name: Build Docker File (Dev)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - build/Dockerfile
+    branches:
+      - dev
+
+jobs:
+  build-docker-file:
+    name: Build Docker file
+    runs-on: ubuntu-latest
+#    env:
+#      ResourceGroupLocation: northeurope
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: "{{defaultContext}}:build"
+          push: true
+          tags: neo4j/helm-charts-tester:githubactions
