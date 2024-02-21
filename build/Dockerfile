@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
   curl \
   ca-certificates \
   openssl \
-  google-cloud-sdk-gke-gcloud-auth-plugin \
+  google-cloud-sdk-gke-auth-plugin \
   kubectl \
   awscli \
   jq \

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+# This removes a Kubernetes cluster from GKE
+
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+# Required env vars
+CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
+CLOUDSDK_CONTAINER_CLUSTER="${CLOUDSDK_CONTAINER_CLUSTER:?CLOUDSDK_CONTAINER_CLUSTER is required}"
+
+# delete the current Kubernetes cluster
+#
+gcloud container clusters delete --zone="${CLOUDSDK_COMPUTE_ZONE}" "${CLOUDSDK_CONTAINER_CLUSTER}"
+
+echo "This does not clean up any persistent disks that might have been created by this GKE cluster - those have to be cleaned up separately"
