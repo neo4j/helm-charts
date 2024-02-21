@@ -16,7 +16,6 @@ jobs:
     env:
       GCLOUD_SERVICE_KEY: ${{ secrets.GCLOUD_SERVICE_KEY }}
       CLOUDSDK_CORE_PROJECT: ${{ secrets.CLOUDSDK_CORE_PROJECT }}
-      CLOUDSDK_CONTAINER_CLUSTER: "ghactions-cluster"
       CLOUDSDK_COMPUTE_ZONE: "europe-west2-b"
     steps:
       - name: Checkout
@@ -24,6 +23,7 @@ jobs:
 
       - name: Authenticate Service Account
         run: |
+          echo "CLOUDSDK_CONTAINER_CLUSTER=ghactions-$(date +'%Y-%m-%d')" >> $GITHUB_ENV
           ./bin/gcloud/auth
 
       - name: Create GKE Cluster
