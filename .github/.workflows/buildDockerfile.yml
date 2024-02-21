@@ -4,9 +4,10 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - build/Dockerfile
+      - *
     branches:
       - dev
+      - feature/github_actions
 
 jobs:
   build-docker-file:
