@@ -30,4 +30,4 @@ jobs:
         with:
           context: "{{defaultContext}}:build"
           push: true
-          tags: neo4j/helm-charts-tester:githubactions
+          tags: neo4jbuildservice/helm-charts-tester:githubactions
