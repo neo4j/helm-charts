@@ -96,8 +96,9 @@ jobs:
           export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
           echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)
-#          go test -json -v ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
           go test -json -v ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
+#          go test -json -v ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
+
   
 #          ./bin/run-go-tests
 
