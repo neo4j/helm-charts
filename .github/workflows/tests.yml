@@ -21,41 +21,41 @@ env:
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_BACKUP }}
 
 jobs:
-  gke-setup:
-    name: Setup GKE
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Authenticate Service Account
-        id: serviceAccount
-        run: |
-          CURRENT_DATE=$(date +'%Y-%m-%d-%s')
-          echo "CLOUDSDK_CONTAINER_CLUSTER=ghactions-${CURRENT_DATE}" >> $GITHUB_ENV
-          echo "CLOUDSDK_CONTAINER_CLUSTER=ghactions-${CURRENT_DATE}" >> $GITHUB_OUTPUT
-          echo ${CLOUDSDK_CONTAINER_CLUSTER} > cluster_name.txt
-          ./bin/gcloud/auth
-
-#      - name: Upload cluster name
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: gke_cluster_name
-#          path: cluster_name.txt
-
-      - name: Create GKE Cluster
-        run: |
-          ./bin/gcloud/create_cluster
-    outputs:
-      CLOUDSDK_CONTAINER_CLUSTER: ${{ steps.serviceAccount.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+#  gke-setup:
+#    name: Setup GKE
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v2
+#
+#      - name: Authenticate Service Account
+#        id: serviceAccount
+#        run: |
+#          CURRENT_DATE=$(date +'%Y-%m-%d-%s')
+#          echo "CLOUDSDK_CONTAINER_CLUSTER=ghactions-${CURRENT_DATE}" >> $GITHUB_ENV
+#          echo "CLOUDSDK_CONTAINER_CLUSTER=ghactions-${CURRENT_DATE}" >> $GITHUB_OUTPUT
+#          echo ${CLOUDSDK_CONTAINER_CLUSTER} > cluster_name.txt
+#          ./bin/gcloud/auth
+#
+##      - name: Upload cluster name
+##        uses: actions/upload-artifact@v4
+##        with:
+##          name: gke_cluster_name
+##          path: cluster_name.txt
+#
+#      - name: Create GKE Cluster
+#        run: |
+#          ./bin/gcloud/create_cluster
+#    outputs:
+#      CLOUDSDK_CONTAINER_CLUSTER: ${{ steps.serviceAccount.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
 #      - name: Delete GKE Cluster
 #        run: |
 #          ./bin/gcloud/delete_cluster
 
   run-enterprise-tests:
     name: Execute enterprise tests
-    needs:
-      - gke-setup
+#    needs:
+#      - gke-setup
     runs-on: ubuntu-latest
     env:
       NEO4J_EDITION: enterprise
@@ -86,8 +86,10 @@ jobs:
       - id: 'get-credentials'
         uses: 'google-github-actions/get-gke-credentials@v2'
         with:
-          cluster_name: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+#          cluster_name: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+          cluster_name: "ghactions-2024-02-22-1708616384"
           location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
 
       - name: Run Integration tests
-        uses: ./bin/run-go-tests
+        run: |
+          ./bin/run-go-tests
