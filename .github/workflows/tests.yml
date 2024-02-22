@@ -99,9 +99,15 @@ jobs:
           cluster_name: "ghactions-2024-02-22-1708616384"
           location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
 
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+        with:
+          version: '>= 363.0.0'
+
       - name: Run Integration tests
         run: |
           gcloud auth list
+          echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)
           ./bin/run-go-tests
 
