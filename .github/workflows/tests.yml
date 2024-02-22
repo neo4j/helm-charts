@@ -13,12 +13,21 @@ env:
   GCLOUD_SERVICE_KEY: ${{ secrets.GCLOUD_SERVICE_KEY }}
   CLOUDSDK_CORE_PROJECT: ${{ secrets.CLOUDSDK_CORE_PROJECT }}
   CLOUDSDK_COMPUTE_ZONE: "europe-west2-b"
-  NEO4J_DOCKER_IMG: "neo4j:5.16.0-enterprise"
+  CLOUDSDK_COMPUTE_REGION: "europe-west2"
   GO_TEST_COUNT: 1
   GO_TEST_TIMEOUT: 20m
   GO_TEST_FORMAT: json
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_BACKUP }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_BACKUP }}
+  AZURE_STORAGE_ACCOUNT_NAME: ${{ secrets.AZURE_STORAGE_ACCOUNT_NAME }}
+  AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+  GCP_SERVICE_ACCOUNT_CRED: ${{ secrets.GCLOUD_SERVICE_KEY }}
+  BLOOM_LICENSE: ${{ secrets.BLOOM_LICENSE }}
+  NEO4J_DOCKER_BACKUP_IMG: "neo4j/helm-charts-backup:5.16.0"
+  NEO4J_REVERSE_PROXY_IMG: "neo4j/helm-charts-reverse-proxy:5.16.0"
+  NEO4J_DOCKER_IMG: "neo4j:5.16.0-enterprise"
+  IPS_USERNAME: ${{ secrets.IPS_USERNAME }}
+  IPS_EMAIL: ${{ secrets.IPS_EMAIL }}
 
 jobs:
 #  gke-setup:
@@ -92,4 +101,5 @@ jobs:
 
       - name: Run Integration tests
         run: |
+          IPS_PASS=$(gcloud auth print-access-token)
           ./bin/run-go-tests
