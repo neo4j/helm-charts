@@ -101,5 +101,18 @@ jobs:
 
       - name: Run Integration tests
         run: |
-          IPS_PASS=$(gcloud auth print-access-token)
+          gcloud auth list
+          export IPS_PASS=$(gcloud auth print-access-token)
           ./bin/run-go-tests
+
+#  gke-delete:
+#    name: Delete GKE Cluster
+#    runs-on: ubuntu-latest
+#    needs:
+#      - gke-setup
+#    steps:
+#      - name: Delete GKE Cluster
+#        if: always()
+#        run: |
+#          CLOUDSDK_CONTAINER_CLUSTER: ${{ steps.serviceAccount.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+#          ./bin/gcloud/delete_cluster
