@@ -106,7 +106,10 @@ jobs:
 
       - name: Run Integration tests
         run: |
-          gcloud auth list
+          mkdir -p .kube
+          cat ${KUBECONFIG} > .kube/config
+          CURRENT_DIRECTORY=$(pwd)
+          export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
           echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)
           ./bin/run-go-tests
