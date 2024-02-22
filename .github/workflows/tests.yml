@@ -30,44 +30,35 @@ env:
   IPS_EMAIL: ${{ secrets.IPS_EMAIL }}
 
 jobs:
-#  gke-setup:
-#    name: Setup GKE
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v2
-#
-#      - name: Authenticate Service Account
-#        id: serviceAccount
-#        run: |
-#          CURRENT_DATE=$(date +'%Y-%m-%d-%s')
-#          echo "CLOUDSDK_CONTAINER_CLUSTER=ghactions-${CURRENT_DATE}" >> $GITHUB_ENV
-#          echo "CLOUDSDK_CONTAINER_CLUSTER=ghactions-${CURRENT_DATE}" >> $GITHUB_OUTPUT
-#          echo ${CLOUDSDK_CONTAINER_CLUSTER} > cluster_name.txt
-#          ./bin/gcloud/auth
-#
-##      - name: Upload cluster name
-##        uses: actions/upload-artifact@v4
-##        with:
-##          name: gke_cluster_name
-##          path: cluster_name.txt
-#
-#      - name: Create GKE Cluster
-#        run: |
-#          ./bin/gcloud/create_cluster
-#    outputs:
-#      CLOUDSDK_CONTAINER_CLUSTER: ${{ steps.serviceAccount.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
-#      - name: Delete GKE Cluster
-#        run: |
-#          ./bin/gcloud/delete_cluster
+  gke-setup:
+    name: Setup GKE
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Authenticate Service Account
+        id: serviceAccount
+        run: |
+          CURRENT_DATE=$(date +'%Y-%m-%d-%s')
+          echo "CLOUDSDK_CONTAINER_CLUSTER=ghactions-${CURRENT_DATE}" >> $GITHUB_ENV
+          echo "CLOUDSDK_CONTAINER_CLUSTER=ghactions-${CURRENT_DATE}" >> $GITHUB_OUTPUT
+          ./bin/gcloud/auth
+
+      - name: Create GKE Cluster
+        run: |
+          ./bin/gcloud/create_cluster
+    outputs:
+      CLOUDSDK_CONTAINER_CLUSTER: ${{ steps.serviceAccount.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
 
   run-enterprise-tests:
     name: Execute enterprise tests
-#    needs:
-#      - gke-setup
+    needs:
+      - gke-setup
     runs-on: ubuntu-latest
     env:
       NEO4J_EDITION: enterprise
+      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
     container:
       image: neo4jbuildservice/helm-charts-tester:githubactions
       credentials:
@@ -77,26 +68,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-#      - name: Download math result for job 1
-#        uses: actions/download-artifact@v4
-#        with:
-#          name: gke_cluster_name
-
       - id: 'gcloud-auth'
         uses: 'google-github-actions/auth@v2'
         with:
           credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
 
-#      - name: Get Cluster Name
-#        run: |
-#          CLOUDSDK_CONTAINER_CLUSTER=$(cat "cluster_name.txt")
-#          echo ${CLOUDSDK_CONTAINER_CLUSTER} >> $GITHUB_ENV
-
       - id: 'get-credentials'
         uses: 'google-github-actions/get-gke-credentials@v2'
         with:
-#          cluster_name: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
-          cluster_name: "ghactions-2024-02-22-1708616384"
+          cluster_name: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+#          cluster_name: "ghactions-2024-02-22-1708616384"
           location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
 
       - name: 'Set up Cloud SDK'
@@ -120,14 +101,16 @@ jobs:
   
 #          ./bin/run-go-tests
 
-#  gke-delete:
-#    name: Delete GKE Cluster
-#    runs-on: ubuntu-latest
-#    needs:
-#      - gke-setup
-#    steps:
-#      - name: Delete GKE Cluster
-#        if: always()
-#        run: |
-#          CLOUDSDK_CONTAINER_CLUSTER: ${{ steps.serviceAccount.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
-#          ./bin/gcloud/delete_cluster
+  gke-delete:
+    name: Delete GKE Cluster
+    runs-on: ubuntu-latest
+    env:
+      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+    needs:
+      - run-enterprise-tests
+      - gke-setup
+    steps:
+      - name: Delete GKE Cluster
+        if: always()
+        run: |
+          ./bin/gcloud/delete_cluster
