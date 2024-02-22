@@ -96,7 +96,7 @@ jobs:
           export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
           echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)
-          go test -json -v ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
+          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
 #          go test -json -v ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
 
   
@@ -112,13 +112,20 @@ jobs:
       - gke-setup
       - run-enterprise-tests
     steps:
+
       - name: Checkout
         uses: actions/checkout@v2
+
+      - id: 'gcloud-auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
 
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v2'
         with:
           version: '>= 363.0.0'
+          
       - name: Delete GKE Cluster
         run: |
           ./bin/gcloud/delete_cluster
