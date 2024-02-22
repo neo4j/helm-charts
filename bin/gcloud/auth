@@ -15,7 +15,8 @@ GCLOUD_SERVICE_KEY="${GCLOUD_SERVICE_KEY:?GCLOUD_SERVICE_KEY is required}"
 SERVICE_KEY_FILE="gcloud.key"
 
 # Auth with gcloud
-echo "${GCLOUD_SERVICE_KEY}" | base64 -d > "${SERVICE_KEY_FILE}"
+#echo "${GCLOUD_SERVICE_KEY}" | base64 -d > "${SERVICE_KEY_FILE}"
+echo "${GCLOUD_SERVICE_KEY}" > "${SERVICE_KEY_FILE}"
 gcloud auth activate-service-account --key-file="${SERVICE_KEY_FILE}"
 rm "${SERVICE_KEY_FILE}"
 

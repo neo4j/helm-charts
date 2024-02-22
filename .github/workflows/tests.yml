@@ -22,7 +22,7 @@ env:
 
 jobs:
   gke-setup:
-    name: Execute enterprise tests
+    name: Setup GKE
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -76,7 +76,7 @@ jobs:
       - id: 'gcloud-auth'
         uses: 'google-github-actions/auth@v2'
         with:
-          credentials_json: '${{ secrets.GOOGLE_CREDS }}'
+          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
 
 #      - name: Get Cluster Name
 #        run: |
