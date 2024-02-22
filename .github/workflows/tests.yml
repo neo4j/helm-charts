@@ -9,55 +9,85 @@ on:
     branches:
       - dev
 
+env:
+  GCLOUD_SERVICE_KEY: ${{ secrets.GCLOUD_SERVICE_KEY }}
+  CLOUDSDK_CORE_PROJECT: ${{ secrets.CLOUDSDK_CORE_PROJECT }}
+  CLOUDSDK_COMPUTE_ZONE: "europe-west2-b"
+  NEO4J_DOCKER_IMG: "neo4j:5.16.0-enterprise"
+  GO_TEST_COUNT: 1
+  GO_TEST_TIMEOUT: 20m
+  GO_TEST_FORMAT: json
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_BACKUP }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_BACKUP }}
+
 jobs:
   gke-setup:
     name: Execute enterprise tests
     runs-on: ubuntu-latest
-    env:
-      GCLOUD_SERVICE_KEY: ${{ secrets.GCLOUD_SERVICE_KEY }}
-      CLOUDSDK_CORE_PROJECT: ${{ secrets.CLOUDSDK_CORE_PROJECT }}
-      CLOUDSDK_COMPUTE_ZONE: "europe-west2-b"
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
       - name: Authenticate Service Account
+        id: serviceAccount
         run: |
-          echo "CLOUDSDK_CONTAINER_CLUSTER=ghactions-$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+          CURRENT_DATE=$(date +'%Y-%m-%d')
+          echo "CLOUDSDK_CONTAINER_CLUSTER=ghactions-${CURRENT_DATE}" >> $GITHUB_ENV
+          echo "CLOUDSDK_CONTAINER_CLUSTER=ghactions-${CURRENT_DATE}" >> $GITHUB_OUTPUT
+          echo ${CLOUDSDK_CONTAINER_CLUSTER} > cluster_name.txt
           ./bin/gcloud/auth
+
+#      - name: Upload cluster name
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: gke_cluster_name
+#          path: cluster_name.txt
 
       - name: Create GKE Cluster
         run: |
           ./bin/gcloud/create_cluster
+    outputs:
+      CLOUDSDK_CONTAINER_CLUSTER: ${{ steps.serviceAccount.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+#      - name: Delete GKE Cluster
+#        run: |
+#          ./bin/gcloud/delete_cluster
 
-      - name: Delete GKE Cluster
-        run: |
-          ./bin/gcloud/delete_cluster
+  run-enterprise-tests:
+    name: Execute enterprise tests
+    needs:
+      - gke-setup
+    runs-on: ubuntu-latest
+    env:
+      NEO4J_EDITION: enterprise
+    container:
+      image: neo4jbuildservice/helm-charts-tester:githubactions
+      credentials:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
 
-#  run-enterprise-tests:
-#    name: Execute enterprise tests
-#    runs-on: ubuntu-latest
-#    env:
-#      NEO4J_EDITION: enterprise
-#      NEO4J_DOCKER_IMG: "neo4j:5.16.0-enterprise"
-#      GO_TEST_COUNT: 1
-#      GO_TEST_TIMEOUT: 20m
-#      GO_TEST_FORMAT: json
-#      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_BACKUP }}
-#      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_BACKUP }}
-#    steps:
-#      - name: Set up Docker Buildx
-#        uses: docker/setup-buildx-action@v3
-#
-#      - name: Login to Docker Hub
-#        uses: docker/login-action@v3
+#      - name: Download math result for job 1
+#        uses: actions/download-artifact@v4
 #        with:
-#          username: ${{ secrets.DOCKERHUB_USERNAME }}
-#          password: ${{ secrets.DOCKERHUB_TOKEN }}
-#
-#      - name: Build and push
-#        uses: docker/build-push-action@v5
-#        with:
-#          context: "{{defaultContext}}:build"
-#          push: true
-#          tags: neo4jbuildservice/helm-charts-tester:githubactions
+#          name: gke_cluster_name
+
+      - id: 'gcloud-auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GOOGLE_CREDS }}'
+
+#      - name: Get Cluster Name
+#        run: |
+#          CLOUDSDK_CONTAINER_CLUSTER=$(cat "cluster_name.txt")
+#          echo ${CLOUDSDK_CONTAINER_CLUSTER} >> $GITHUB_ENV
+
+      - id: 'get-credentials'
+        uses: 'google-github-actions/get-gke-credentials@v2'
+        with:
+          cluster_name: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+          location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
+
+      - name: Run Integration tests
+        uses: ./bin/run-go-tests
