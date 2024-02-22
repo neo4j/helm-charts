@@ -112,6 +112,13 @@ jobs:
       - gke-setup
       - run-enterprise-tests
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+        with:
+          version: '>= 363.0.0'
       - name: Delete GKE Cluster
         run: |
           ./bin/gcloud/delete_cluster
