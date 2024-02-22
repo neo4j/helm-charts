@@ -31,7 +31,7 @@ jobs:
       - name: Authenticate Service Account
         id: serviceAccount
         run: |
-          CURRENT_DATE=$(date +'%Y-%m-%d')
+          CURRENT_DATE=$(date +'%Y-%m-%d-%s')
           echo "CLOUDSDK_CONTAINER_CLUSTER=ghactions-${CURRENT_DATE}" >> $GITHUB_ENV
           echo "CLOUDSDK_CONTAINER_CLUSTER=ghactions-${CURRENT_DATE}" >> $GITHUB_OUTPUT
           echo ${CLOUDSDK_CONTAINER_CLUSTER} > cluster_name.txt
