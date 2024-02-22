@@ -105,12 +105,13 @@ jobs:
   gke-delete:
     name: Delete GKE Cluster
     runs-on: ubuntu-latest
+    if: always()
     env:
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
     needs:
       - gke-setup
+      - run-enterprise-tests
     steps:
       - name: Delete GKE Cluster
-        if: always()
         run: |
           ./bin/gcloud/delete_cluster
