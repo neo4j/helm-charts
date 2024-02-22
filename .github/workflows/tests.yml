@@ -16,7 +16,7 @@ env:
   CLOUDSDK_COMPUTE_REGION: "europe-west2"
   GO_TEST_COUNT: 1
   GO_TEST_TIMEOUT: 20m
-  GO_TEST_FORMAT: json
+  GO_TEST_FORMAT: 
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_BACKUP }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_BACKUP }}
   AZURE_STORAGE_ACCOUNT_NAME: ${{ secrets.AZURE_STORAGE_ACCOUNT_NAME }}
@@ -103,6 +103,9 @@ jobs:
         uses: 'google-github-actions/setup-gcloud@v2'
         with:
           version: '>= 363.0.0'
+
+      - name: Set up gotestfmt
+        run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
 
       - name: Run Integration tests
         run: |
