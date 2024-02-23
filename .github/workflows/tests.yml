@@ -24,23 +24,38 @@ env:
   GCP_SERVICE_ACCOUNT_CRED: ${{ secrets.GCLOUD_SERVICE_KEY }}
   BLOOM_LICENSE: ${{ secrets.BLOOM_LICENSE }}
   NEO4J_DOCKER_BACKUP_IMG: "neo4j/helm-charts-backup:5.16.0"
-  NEO4J_REVERSE_PROXY_IMG: "neo4j/helm-charts-reverse-proxy:5.16.0"
   NEO4J_DOCKER_IMG: "neo4j:5.16.0-enterprise"
   IPS_USERNAME: ${{ secrets.IPS_USERNAME }}
   IPS_EMAIL: ${{ secrets.IPS_EMAIL }}
 
 jobs:
+
+  current-date:
+    name: Current Date
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Current Date
+        id: currentDate
+        run: |
+          CURRENT_DATE=$(date +'%Y-%m-%d-%s')
+          echo "CURRENT_DATE=${CURRENT_DATE}" >> $GITHUB_OUTPUT
+    outputs:
+      CURRENT_DATE: ${{ steps.currentDate.outputs.CURRENT_DATE }}
+
   gke-setup:
     name: Setup GKE
     runs-on: ubuntu-latest
+    needs:
+      - current-date
+    env:
+      CURRENT_DATE: ${{ needs.current-date.outputs.CURRENT_DATE }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
       - name: Authenticate Service Account
         id: serviceAccount
-        run: |
-          CURRENT_DATE=$(date +'%Y-%m-%d-%s')
+        run: |          
           echo "CLOUDSDK_CONTAINER_CLUSTER=ghactions-${CURRENT_DATE}" >> $GITHUB_ENV
           echo "CLOUDSDK_CONTAINER_CLUSTER=ghactions-${CURRENT_DATE}" >> $GITHUB_OUTPUT
           ./bin/gcloud/auth
@@ -51,14 +66,40 @@ jobs:
     outputs:
       CLOUDSDK_CONTAINER_CLUSTER: ${{ steps.serviceAccount.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
 
+  build-reverseproxy:
+    name: Build Reverse Proxy Docker Image
+    runs-on: ubuntu-latest
+    needs:
+      - current-date
+    env:
+      CURRENT_DATE: ${{ needs.current-date.outputs.CURRENT_DATE }}
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: "{{defaultContext}}:neo4j-reverse-proxy"
+          push: true
+          tags: "neo4jbuildservice/helm-charts-tester:reverseproxy-${{ env.CURRENT_DATE }}"
+
   run-enterprise-tests:
     name: Execute enterprise tests
     needs:
       - gke-setup
+      - build-reverseproxy
     runs-on: ubuntu-latest
     env:
       NEO4J_EDITION: enterprise
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+      NEO4J_REVERSE_PROXY_IMG: "neo4jbuildservice/helm-charts-tester:reverseproxy-${{ needs.current-date.outputs.CURRENT_DATE }}"
     container:
       image: neo4jbuildservice/helm-charts-tester:githubactions
       credentials:
@@ -77,7 +118,6 @@ jobs:
         uses: 'google-github-actions/get-gke-credentials@v2'
         with:
           cluster_name: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
-#          cluster_name: "ghactions-2024-02-22-1708616384"
           location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
 
       - name: 'Set up Cloud SDK'
@@ -109,8 +149,8 @@ jobs:
     env:
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
     needs:
-      - gke-setup
       - run-enterprise-tests
+      - current-date
     steps:
 
       - name: Checkout
@@ -129,3 +169,11 @@ jobs:
       - name: Delete GKE Cluster
         run: |
           ./bin/gcloud/delete_cluster
+
+#      - name: Delete Reverse Proxy Docker Image
+#        run: |
+#          curl "https://hub.docker.com/v2/repositories/neo4jbuildservice/helm-charts-tester/tags/reverseproxy-${{ needs.current-date.outputs.CURRENT_DATE }}/" -X DELETE -H "Authorization: JWT ${{ secrets.DOCKERHUB_TOKEN }}"
+#
+
+
+
