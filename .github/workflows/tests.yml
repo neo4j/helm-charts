@@ -125,7 +125,7 @@ jobs:
         uses: 'google-github-actions/setup-gcloud@v2'
         with:
           version: '>= 363.0.0'
-          
+
       - name: Delete GKE Cluster
         run: |
           ./bin/gcloud/delete_cluster
