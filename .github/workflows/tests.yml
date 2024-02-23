@@ -94,7 +94,7 @@ jobs:
     name: Execute enterprise tests
     needs:
       - gke-setup
-      - build-reverseproxy
+      - current-date
     runs-on: ubuntu-latest
     env:
       NEO4J_EDITION: enterprise
