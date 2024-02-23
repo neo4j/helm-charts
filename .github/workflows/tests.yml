@@ -137,6 +137,7 @@ jobs:
           echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
+          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
 #          go test -json -v ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
 
   
@@ -150,7 +151,7 @@ jobs:
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
     needs:
       - run-enterprise-tests
-      - current-date
+      - gke-setup
     steps:
 
       - name: Checkout
