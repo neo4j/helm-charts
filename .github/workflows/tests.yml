@@ -25,6 +25,7 @@ env:
   BLOOM_LICENSE: ${{ secrets.BLOOM_LICENSE }}
   NEO4J_DOCKER_BACKUP_IMG: "neo4j/helm-charts-backup:5.16.0"
   NEO4J_DOCKER_IMG: "neo4j:5.16.0-enterprise"
+  NEO4J_DOCKER_IMG_COMMUNITY: "neo4j:5.16.0"
   IPS_USERNAME: ${{ secrets.IPS_USERNAME }}
   IPS_EMAIL: ${{ secrets.IPS_EMAIL }}
 
@@ -141,13 +142,8 @@ jobs:
 
       - name: Run Community Integration and Unit tests
         run: |
-          mkdir -p .kube
-          cat ${KUBECONFIG} > .kube/config
-          CURRENT_DIRECTORY=$(pwd)
-          export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
-          echo "printing kubeconfig path $KUBECONFIG"
-          export IPS_PASS=$(gcloud auth print-access-token)
           export NEO4J_EDITION=community
+          export NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG_COMMUNITY}
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
 
