@@ -92,7 +92,7 @@ jobs:
           tags: "neo4jbuildservice/helm-charts-tester:reverseproxy-${{ env.CURRENT_DATE }}"
 
   run-enterprise-tests:
-    name: Execute tests
+    name: Execute enterprise tests
     needs:
       - gke-setup
       - build-reverseproxy
@@ -143,7 +143,7 @@ jobs:
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
 
   run-community-tests:
-    name: Execute tests
+    name: Execute community tests
     needs:
       - gke-setup
       - build-reverseproxy
