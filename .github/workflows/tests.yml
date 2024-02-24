@@ -151,7 +151,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NEO4J_EDITION: "community"
-      NEO4J_DOCKER_IMG: ${{ env.NEO4J_DOCKER_IMG_COMMUNITY }}
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
       NEO4J_REVERSE_PROXY_IMG: "neo4jbuildservice/helm-charts-tester:reverseproxy-${{ needs.current-date.outputs.CURRENT_DATE }}"
     container:
@@ -189,7 +188,8 @@ jobs:
           CURRENT_DIRECTORY=$(pwd)
           export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
           echo "printing kubeconfig path $KUBECONFIG"
-          export IPS_PASS=$(gcloud auth print-access-token)                    
+          export IPS_PASS=$(gcloud auth print-access-token)      
+          export NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG_COMMUNITY}
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
 
