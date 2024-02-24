@@ -91,13 +91,15 @@ jobs:
           push: true
           tags: "neo4jbuildservice/helm-charts-tester:reverseproxy-${{ env.CURRENT_DATE }}"
 
-  run-tests:
+  run-enterprise-tests:
     name: Execute tests
     needs:
       - gke-setup
+      - build-reverseproxy
       - current-date
     runs-on: ubuntu-latest
     env:
+      NEO4J_EDITION: "enterprise"
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
       NEO4J_REVERSE_PROXY_IMG: "neo4jbuildservice/helm-charts-tester:reverseproxy-${{ needs.current-date.outputs.CURRENT_DATE }}"
     container:
@@ -140,6 +142,46 @@ jobs:
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
 
+  run-community-tests:
+    name: Execute tests
+    needs:
+      - gke-setup
+      - build-reverseproxy
+      - current-date
+    runs-on: ubuntu-latest
+    env:
+      NEO4J_EDITION: "community"
+      NEO4J_DOCKER_IMG: ${{ env.NEO4J_DOCKER_IMG_COMMUNITY }}
+      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+      NEO4J_REVERSE_PROXY_IMG: "neo4jbuildservice/helm-charts-tester:reverseproxy-${{ needs.current-date.outputs.CURRENT_DATE }}"
+    container:
+      image: neo4jbuildservice/helm-charts-tester:githubactions
+      credentials:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - id: 'gcloud-auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
+
+      - id: 'get-credentials'
+        uses: 'google-github-actions/get-gke-credentials@v2'
+        with:
+          cluster_name: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+          location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
+
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+        with:
+          version: '>= 363.0.0'
+
+      - name: Set up gotestfmt
+        run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
+
       - name: Run Community Integration and Unit tests
         run: |
           mkdir -p .kube
@@ -147,12 +189,9 @@ jobs:
           CURRENT_DIRECTORY=$(pwd)
           export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
           echo "printing kubeconfig path $KUBECONFIG"
-          export IPS_PASS=$(gcloud auth print-access-token)          
-          export NEO4J_EDITION=community
-          export NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG_COMMUNITY}
+          export IPS_PASS=$(gcloud auth print-access-token)                    
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-
 
   gke-delete:
     name: Delete GKE Cluster
@@ -161,7 +200,8 @@ jobs:
     env:
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
     needs:
-      - run-tests
+      - run-enterprise-tests
+      - run-community-tests
       - gke-setup
     steps:
 
