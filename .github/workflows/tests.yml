@@ -129,9 +129,8 @@ jobs:
 #          password: ${{ env.AWS_SECRET_ACCESS_KEY }}
       - name: Pull Neo4j dev image
         run: |
-          docker image ls
           docker pull 535893049302.dkr.ecr.eu-west-1.amazonaws.com/neo4j-dev:nightly-enterprise
-          echo "pull completed"
+
 #  run-enterprise-tests:
 #    name: Execute enterprise tests
 #    needs:
