@@ -27,7 +27,7 @@ env:
   NEO4J_DOCKER_IMG_COMMUNITY: "neo4j:5.16.0"
   IPS_USERNAME: ${{ secrets.IPS_USERNAME }}
   IPS_EMAIL: ${{ secrets.IPS_EMAIL }}
-  ECR_REPO_NAME: 535893049302.dkr.ecr.eu-west-1.amazonaws.com/helm-charts-tester-builds
+#  ECR_REPO_NAME: 535893049302.dkr.ecr.eu-west-1.amazonaws.com/helm-charts-tester-builds
 
 jobs:
 
@@ -90,14 +90,14 @@ jobs:
         with:
           context: "{{defaultContext}}:neo4j-reverse-proxy"
           push: true
-          tags: "${{ env.ECR_REPO_NAME }}:reverseproxy-${{ env.CURRENT_DATE }}"
+          tags: "${{ secrets.ECR_REPO_NAME }}:reverseproxy-${{ env.CURRENT_DATE }}"
 
       - name: Build and push backup image
         uses: docker/build-push-action@v5
         with:
           context: "{{defaultContext}}:neo4j-admin"
           push: true
-          tags: "${{ env.ECR_REPO_NAME }}:neo4j-admin-${{ env.CURRENT_DATE }}"
+          tags: "${{ secrets.ECR_REPO_NAME }}:neo4j-admin-${{ env.CURRENT_DATE }}"
           build-args: |
             IMAGE:535893049302.dkr.ecr.eu-west-1.amazonaws.com/helm-charts-tester-builds:enterprise-dev
             DISTRIBUTION:debian
@@ -113,7 +113,7 @@ jobs:
       NEO4J_EDITION: "enterprise"
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
     container:
-      image: ${{ env.ECR_REPO_NAME }}:githubactions
+      image: ${{ secrets.ECR_REPO_NAME }}:githubactions
       credentials:
         username: ${{ env.AWS_ACCESS_KEY_ID }}
         password: ${{ env.AWS_SECRET_ACCESS_KEY }}
@@ -149,8 +149,8 @@ jobs:
           echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)
           export NEO4J_EDITION=enterprise
-          export NEO4J_REVERSE_PROXY_IMG="${ECR_REPO_NAME}:reverseproxy-${{ needs.current-date.outputs.CURRENT_DATE }}"
-          export NEO4J_DOCKER_BACKUP_IMG="${ECR_REPO_NAME}:neo4j-admin-${{ needs.current-date.outputs.CURRENT_DATE }}"
+          export NEO4J_REVERSE_PROXY_IMG="${{ secrets.ECR_REPO_NAME }}:reverseproxy-${{ needs.current-date.outputs.CURRENT_DATE }}"
+          export NEO4J_DOCKER_BACKUP_IMG="${{ secrets.ECR_REPO_NAME }}:neo4j-admin-${{ needs.current-date.outputs.CURRENT_DATE }}"
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
 
@@ -164,9 +164,9 @@ jobs:
     env:
       NEO4J_EDITION: "community"
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
-      NEO4J_REVERSE_PROXY_IMG: "${{ env.ECR_REPO_NAME }}:reverseproxy-${{ needs.current-date.outputs.CURRENT_DATE }}"
+      NEO4J_REVERSE_PROXY_IMG: "${{ secrets.ECR_REPO_NAME }}:reverseproxy-${{ needs.current-date.outputs.CURRENT_DATE }}"
     container:
-      image: ${{ env.ECR_REPO_NAME }}:githubactions
+      image: ${{ secrets.ECR_REPO_NAME }}:githubactions
       credentials:
         username: ${{ env.AWS_ACCESS_KEY_ID }}
         password: ${{ env.AWS_SECRET_ACCESS_KEY }}
@@ -202,8 +202,8 @@ jobs:
           echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)
           export NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG_COMMUNITY}
-          export NEO4J_REVERSE_PROXY_IMG="${ECR_REPO_NAME}:reverseproxy-${{ needs.current-date.outputs.CURRENT_DATE }}"
-          export NEO4J_DOCKER_BACKUP_IMG="${ECR_REPO_NAME}:neo4j-admin-${{ needs.current-date.outputs.CURRENT_DATE }}"
+          export NEO4J_REVERSE_PROXY_IMG="${{ secrets.ECR_REPO_NAME }}:reverseproxy-${{ needs.current-date.outputs.CURRENT_DATE }}"
+          export NEO4J_DOCKER_BACKUP_IMG="${{ secrets.ECR_REPO_NAME }}:neo4j-admin-${{ needs.current-date.outputs.CURRENT_DATE }}"
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
 
