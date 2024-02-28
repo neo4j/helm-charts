@@ -99,8 +99,8 @@ jobs:
           push: true
           tags: "${{ vars.ECR_REPO_NAME }}:neo4j-admin-${{ env.CURRENT_DATE }}"
           build-args: |
-            IMAGE:535893049302.dkr.ecr.eu-west-1.amazonaws.com/helm-charts-tester-builds:enterprise-dev
-            DISTRIBUTION:debian
+            IMAGE=${{ vars.ECR_REPO_NAME }}:enterprise-dev
+            DISTRIBUTION=debian
 
   run-enterprise-tests:
     name: Execute enterprise tests
