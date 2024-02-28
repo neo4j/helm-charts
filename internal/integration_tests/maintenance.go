@@ -43,7 +43,8 @@ func enterMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart mod
 
 func checkNeo4jNotRunning(t *testing.T, releaseName model.ReleaseName) error {
 	cmd := []string{
-		"jps",
+		"ps",
+		"ax",
 	}
 	stdout, stderr, err := ExecInPod(releaseName, cmd, "")
 	assert.Len(t, strings.Split(stdout, "\n"), 1)
