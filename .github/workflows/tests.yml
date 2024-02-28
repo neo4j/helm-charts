@@ -91,6 +91,7 @@ jobs:
           context: "{{defaultContext}}:neo4j-reverse-proxy"
           push: true
           tags: "${{ vars.ECR_REPO_NAME }}:reverseproxy-${{ env.CURRENT_DATE }}"
+          provenance: false
 
       - name: Build and push backup image
         uses: docker/build-push-action@v5
@@ -98,6 +99,7 @@ jobs:
           context: "{{defaultContext}}:neo4j-admin"
           push: true
           tags: "${{ vars.ECR_REPO_NAME }}:neo4j-admin-${{ env.CURRENT_DATE }}"
+          provenance: false
           build-args: |
             IMAGE=${{ vars.ECR_REPO_NAME }}:enterprise-dev
             DISTRIBUTION=debian

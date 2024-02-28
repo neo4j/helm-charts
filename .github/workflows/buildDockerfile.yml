@@ -36,3 +36,4 @@ jobs:
           context: "{{defaultContext}}:build"
           push: true
           tags: ${{ env.ECR_REPO_NAME }}:githubactions
+          provenance: false
