@@ -102,30 +102,6 @@ jobs:
             IMAGE:535893049302.dkr.ecr.eu-west-1.amazonaws.com/helm-charts-tester-builds:enterprise-dev
             DISTRIBUTION:debian
 
-#
-#  docker-login:
-#    name: Login to AWS ECR
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Configure AWS credentials
-#        uses: aws-actions/configure-aws-credentials@v4 # More information on this action can be found below in the 'AWS Credentials' section
-#        with:
-#          aws-region: eu-west-1
-#          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
-#      - name: Login to Amazon ECR
-#        id: login-to-ecr
-#        uses: aws-actions/amazon-ecr-login@v2
-##      - name: Login to GitHub Container Registry
-##        uses: docker/login-action@v3
-##        with:
-##          registry: 535893049302.dkr.ecr.eu-west-1.amazonaws.com
-##          username: ${{ env.AWS_ACCESS_KEY_ID }}
-##          password: ${{ env.AWS_SECRET_ACCESS_KEY }}
-#      - name: Pull Neo4j dev image
-#        run: |
-#          docker pull 535893049302.dkr.ecr.eu-west-1.amazonaws.com/neo4j-dev:nightly-enterprise
-
   run-enterprise-tests:
     name: Execute enterprise tests
     needs:
@@ -136,8 +112,6 @@ jobs:
     env:
       NEO4J_EDITION: "enterprise"
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
-      NEO4J_REVERSE_PROXY_IMG: "${{ env.ECR_REPO_NAME }}:reverseproxy-${{ needs.current-date.outputs.CURRENT_DATE }}"
-      NEO4J_DOCKER_BACKUP_IMG: "${{ env.ECR_REPO_NAME }}:neo4j-admin-${{ needs.current-date.outputs.CURRENT_DATE }}"
     container:
       image: ${{ env.ECR_REPO_NAME }}:githubactions
       credentials:
@@ -175,6 +149,8 @@ jobs:
           echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)
           export NEO4J_EDITION=enterprise
+          export NEO4J_REVERSE_PROXY_IMG="${ECR_REPO_NAME}:reverseproxy-${{ needs.current-date.outputs.CURRENT_DATE }}"
+          export NEO4J_DOCKER_BACKUP_IMG="${ECR_REPO_NAME}:neo4j-admin-${{ needs.current-date.outputs.CURRENT_DATE }}"
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
 
@@ -226,6 +202,8 @@ jobs:
           echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)
           export NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG_COMMUNITY}
+          export NEO4J_REVERSE_PROXY_IMG="${ECR_REPO_NAME}:reverseproxy-${{ needs.current-date.outputs.CURRENT_DATE }}"
+          export NEO4J_DOCKER_BACKUP_IMG="${ECR_REPO_NAME}:neo4j-admin-${{ needs.current-date.outputs.CURRENT_DATE }}"
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
 
