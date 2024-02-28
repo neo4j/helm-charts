@@ -52,7 +52,7 @@ jobs:
       CURRENT_DATE: ${{ needs.current-date.outputs.CURRENT_DATE }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Authenticate Service Account
         id: serviceAccount
@@ -141,7 +141,7 @@ jobs:
         password: ${{ secrets.ECR_PW }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - id: 'gcloud-auth'
         uses: 'google-github-actions/auth@v2'
@@ -242,7 +242,7 @@ jobs:
     steps:
 
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - id: 'gcloud-auth'
         uses: 'google-github-actions/auth@v2'
