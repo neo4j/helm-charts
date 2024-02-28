@@ -112,8 +112,8 @@ jobs:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: "eu-west-1"
-          aws-secret-access-key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-access-key-id: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
       - name: Get pw and update secret
         run: |
           export ECR_PW=$(aws ecr get-login-password --region eu-west-1 --output text)
