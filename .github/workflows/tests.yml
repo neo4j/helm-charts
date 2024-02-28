@@ -188,8 +188,8 @@ jobs:
     container:
       image: ${{ vars.ECR_REPO_NAME }}:githubactions
       credentials:
-        username: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        password: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        username: AWS
+        password: ${{ secrets.ECR_PW }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
