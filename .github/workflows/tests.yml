@@ -130,6 +130,7 @@ jobs:
       - gke-setup
       - build-reverseproxy-backup
       - current-date
+      - update-ecr-pw
     runs-on: ubuntu-latest
     env:
       NEO4J_EDITION: "enterprise"
@@ -182,6 +183,7 @@ jobs:
       - gke-setup
       - build-reverseproxy-backup
       - current-date
+      - update-ecr-pw
     runs-on: ubuntu-latest
     env:
       NEO4J_EDITION: "community"
@@ -194,7 +196,7 @@ jobs:
         password: ${{ secrets.ECR_PW }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - id: 'gcloud-auth'
         uses: 'google-github-actions/auth@v2'
