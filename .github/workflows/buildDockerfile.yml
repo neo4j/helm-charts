@@ -11,6 +11,7 @@ on:
 env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_BACKUP }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_BACKUP }}
+  ECR_REPO_NAME: 535893049302.dkr.ecr.eu-west-1.amazonaws.com/helm-charts-tester-builds
 
 jobs:
   build-docker-file:
@@ -34,4 +35,4 @@ jobs:
         with:
           context: "{{defaultContext}}:build"
           push: true
-          tags: 535893049302.dkr.ecr.eu-west-1.amazonaws.com/helm-charts-tester-builds:githubactions
+          tags: ${{ env.ECR_REPO_NAME }}:githubactions

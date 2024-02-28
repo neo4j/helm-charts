@@ -67,8 +67,8 @@ jobs:
     outputs:
       CLOUDSDK_CONTAINER_CLUSTER: ${{ steps.serviceAccount.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
 
-  build-reverseproxy:
-    name: Build Reverse Proxy Docker Image
+  build-reverseproxy-backup:
+    name: Build Reverse Proxy and Backup Docker Image
     runs-on: ubuntu-latest
     needs:
       - current-date
@@ -92,7 +92,7 @@ jobs:
           push: true
           tags: "${{ env.ECR_REPO_NAME }}:reverseproxy-${{ env.CURRENT_DATE }}"
 
-      - name: Build and push neo4j-admin image
+      - name: Build and push backup image
         uses: docker/build-push-action@v5
         with:
           context: "{{defaultContext}}:neo4j-admin"
