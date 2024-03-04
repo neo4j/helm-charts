@@ -8,11 +8,6 @@ on:
     branches:
       - dev
 
-#env:
-#  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#  ECR_REPO_NAME: 535893049302.dkr.ecr.eu-west-1.amazonaws.com/helm-charts-tester-builds
-
 jobs:
   build-docker-file:
     name: Build Docker file
@@ -29,15 +24,11 @@ jobs:
           registry: europe-west2-docker.pkg.dev
           username: _json_key
           password: ${{ secrets.GCLOUD_SERVICE_KEY }}
-#          registry: 535893049302.dkr.ecr.eu-west-1.amazonaws.com
-#          username: ${{ env.AWS_ACCESS_KEY_ID }}
-#          password: ${{ env.AWS_SECRET_ACCESS_KEY }}
 
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: "{{defaultContext}}:build"
           push: true
-#          tags: ${{ env.ECR_REPO_NAME }}:githubactions
-          tags: "europe-west2-docker.pkg.dev/neo4j-helm/helm-charts-tester-builds/githubactions:latest"
+          tags: ${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
           provenance: false
