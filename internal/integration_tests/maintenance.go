@@ -3,7 +3,6 @@ package integration_tests
 import (
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/stretchr/testify/assert"
-	"strings"
 	"time"
 )
 import "testing"
@@ -43,11 +42,11 @@ func enterMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart mod
 
 func checkNeo4jNotRunning(t *testing.T, releaseName model.ReleaseName) error {
 	cmd := []string{
-		"jps",
+		"ps",
+		"ax",
 	}
 	stdout, stderr, err := ExecInPod(releaseName, cmd, "")
-	assert.Len(t, strings.Split(stdout, "\n"), 1)
-	assert.NotContains(t, stdout, "neo4j")
+	assert.Contains(t, stdout, "Neo4j is not running. Pod is in offline maintenance mode")
 	assert.Empty(t, stderr)
 	assert.NoError(t, err)
 	return err
