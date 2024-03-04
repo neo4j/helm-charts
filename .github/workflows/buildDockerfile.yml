@@ -39,5 +39,5 @@ jobs:
           context: "{{defaultContext}}:build"
           push: true
 #          tags: ${{ env.ECR_REPO_NAME }}:githubactions
-          tags: "europe-west-2-docker.pkg.dev/neo4j-helm/helm-charts-tester-builds:githubactions"
+          tags: "europe-west-2-docker.pkg.dev/neo4j-helm/helm-charts-tester-builds/githubactions:latest"
           provenance: false
