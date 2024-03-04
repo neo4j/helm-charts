@@ -128,7 +128,7 @@ jobs:
           context: "{{defaultContext}}:neo4j-reverse-proxy"
           push: true
 #          tags: "${{ vars.ECR_REPO_NAME }}:reverseproxy-${{ env.CURRENT_DATE }}"
-          tags: "europe-west-2-docker.pkg.dev/neo4j-helm/helm-charts-tester-builds:reverseproxy-${{ env.CURRENT_DATE }}"
+          tags: "europe-west2-docker.pkg.dev/neo4j-helm/helm-charts-tester-builds/reverseproxy:${{ env.CURRENT_DATE }}"
           provenance: false
 
 #      - name: Build and push backup image
