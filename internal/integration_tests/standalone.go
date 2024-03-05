@@ -615,26 +615,26 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 		}},
 		{name: "Check RunAsNonRoot", test: func(t *testing.T) { assert.NoError(t, RunAsNonRoot(t, name), "RunAsNonRoot check should succeed") }},
 		{name: "Exec in Pod", test: func(t *testing.T) { assert.NoError(t, CheckExecInPod(t, name), "Exec in Pod should succeed") }},
-		//{name: "Install Backup Helm Chart For GCP With Workload Identity", test: func(t *testing.T) {
-		//	t.Parallel()
-		//	assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t, name), "Backup to GCP with workload identity should succeed")
-		//}},
-		//{name: "Install Backup Helm Chart For AWS", test: func(t *testing.T) {
-		//	t.Parallel()
-		//	assert.NoError(t, InstallNeo4jBackupAWSHelmChart(t, name), "Backup to AWS should succeed")
-		//}},
-		//{name: "Install Backup Helm Chart For Azure", test: func(t *testing.T) {
-		//	t.Parallel()
-		//	assert.NoError(t, InstallNeo4jBackupAzureHelmChart(t, name), "Backup to Azure should succeed")
-		//}},
+		{name: "Install Backup Helm Chart For GCP With Workload Identity", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t, name), "Backup to GCP with workload identity should succeed")
+		}},
+		{name: "Install Backup Helm Chart For AWS", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, InstallNeo4jBackupAWSHelmChart(t, name), "Backup to AWS should succeed")
+		}},
+		{name: "Install Backup Helm Chart For Azure", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, InstallNeo4jBackupAzureHelmChart(t, name), "Backup to Azure should succeed")
+		}},
 		{name: "Install Backup Helm Chart For GCP", test: func(t *testing.T) {
 			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupGCPHelmChart(t, name), "Backup to GCP should succeed")
 		}},
-		//{name: "Install Reverse Proxy Helm Chart", test: func(t *testing.T) {
-		//	t.Parallel()
-		//	assert.NoError(t, InstallReverseProxyHelmChart(t, name), "Reverse Proxy installation with ingress should succeed")
-		//}},
+		{name: "Install Reverse Proxy Helm Chart", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, InstallReverseProxyHelmChart(t, name), "Reverse Proxy installation with ingress should succeed")
+		}},
 	}, err
 }
 
@@ -685,12 +685,14 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
 			assert.NoError(t, err, "error while getting aws backup pod logs")
 			assert.NotNil(t, out, "aws backup logs cannot be retrieved")
+			log.Printf("backup logs %v\n", string(out))
 			assert.Contains(t, string(out), "Backup Completed for database system !!")
 			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to s3 bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to s3 bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.report.tar.gz uploaded to s3 bucket"), string(out))
-			assert.NotRegexp(t, regexp.MustCompile("system(.*)backup.report.tar.gz uploaded to s3 bucket"), string(out))
+			assert.Regexp(t, regexp.MustCompile("No inconsistencies found !! No Inconsistency report generated."), string(out))
+			//assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.report.tar.gz uploaded to s3 bucket"), string(out))
+			//assert.NotRegexp(t, regexp.MustCompile("system(.*)backup.report.tar.gz uploaded to s3 bucket"), string(out))
 			break
 		}
 	}
@@ -745,12 +747,14 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
 			assert.NoError(t, err, "error while getting azure backup pod logs")
 			assert.NotNil(t, out, "azure backup logs cannot be retrieved")
+			log.Printf("backup logs %v\n", string(out))
 			assert.Contains(t, string(out), "Backup Completed for database system !!")
 			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to azure container"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to azure container"), string(out))
-			assert.NotRegexp(t, regexp.MustCompile("neo4j(.*)backup.report.tar.gz uploaded to azure container"), string(out))
-			assert.Regexp(t, regexp.MustCompile("system(.*)backup.report.tar.gz uploaded to azure container"), string(out))
+			assert.Regexp(t, regexp.MustCompile("No inconsistencies found !! No Inconsistency report generated."), string(out))
+			//assert.NotRegexp(t, regexp.MustCompile("neo4j(.*)backup.report.tar.gz uploaded to azure container"), string(out))
+			//assert.Regexp(t, regexp.MustCompile("system(.*)backup.report.tar.gz uploaded to azure container"), string(out))
 			break
 		}
 	}
@@ -804,6 +808,7 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 		if strings.Contains(pod.Name, "standalone-backup-gcp") {
 			found = true
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
+			log.Printf("Printing backup logs %v\n", string(out))
 			assert.NoError(t, err, "error while getting gcp backup pod logs")
 			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
 			assert.Contains(t, string(out), "Backup Completed for database system !!")
@@ -811,8 +816,6 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("No inconsistencies found !! No Inconsistency report generated."), string(out))
-			//assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.report.tar.gz uploaded to GCS bucket"), string(out))
-			//assert.Regexp(t, regexp.MustCompile("system(.*)backup.report.tar.gz uploaded to GCS bucket"), string(out))
 			assert.NotContains(t, string(out), "Deleting file")
 			break
 		}
@@ -896,14 +899,16 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t *testing.T, standalone
 		if strings.Contains(pod.Name, "gcp-workload") {
 			found = true
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
+			log.Printf("backup logs %v\n", string(out))
 			assert.NoError(t, err, "error while getting gcp workload backup pod logs")
 			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
 			assert.Contains(t, string(out), "Backup Completed for database system !!")
 			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to GCS bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.report.tar.gz uploaded to GCS bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("system(.*)backup.report.tar.gz uploaded to GCS bucket"), string(out))
+			assert.Regexp(t, regexp.MustCompile("No inconsistencies found !! No Inconsistency report generated."), string(out))
+			//assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.report.tar.gz uploaded to GCS bucket"), string(out))
+			//assert.Regexp(t, regexp.MustCompile("system(.*)backup.report.tar.gz uploaded to GCS bucket"), string(out))
 			assert.NotContains(t, string(out), "Deleting file")
 			break
 		}
