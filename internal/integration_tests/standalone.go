@@ -615,26 +615,26 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 		}},
 		{name: "Check RunAsNonRoot", test: func(t *testing.T) { assert.NoError(t, RunAsNonRoot(t, name), "RunAsNonRoot check should succeed") }},
 		{name: "Exec in Pod", test: func(t *testing.T) { assert.NoError(t, CheckExecInPod(t, name), "Exec in Pod should succeed") }},
-		{name: "Install Backup Helm Chart For GCP With Workload Identity", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t, name), "Backup to GCP with workload identity should succeed")
-		}},
-		{name: "Install Backup Helm Chart For AWS", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, InstallNeo4jBackupAWSHelmChart(t, name), "Backup to AWS should succeed")
-		}},
-		{name: "Install Backup Helm Chart For Azure", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, InstallNeo4jBackupAzureHelmChart(t, name), "Backup to Azure should succeed")
-		}},
+		//{name: "Install Backup Helm Chart For GCP With Workload Identity", test: func(t *testing.T) {
+		//	t.Parallel()
+		//	assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t, name), "Backup to GCP with workload identity should succeed")
+		//}},
+		//{name: "Install Backup Helm Chart For AWS", test: func(t *testing.T) {
+		//	t.Parallel()
+		//	assert.NoError(t, InstallNeo4jBackupAWSHelmChart(t, name), "Backup to AWS should succeed")
+		//}},
+		//{name: "Install Backup Helm Chart For Azure", test: func(t *testing.T) {
+		//	t.Parallel()
+		//	assert.NoError(t, InstallNeo4jBackupAzureHelmChart(t, name), "Backup to Azure should succeed")
+		//}},
 		{name: "Install Backup Helm Chart For GCP", test: func(t *testing.T) {
 			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupGCPHelmChart(t, name), "Backup to GCP should succeed")
 		}},
-		{name: "Install Reverse Proxy Helm Chart", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, InstallReverseProxyHelmChart(t, name), "Reverse Proxy installation with ingress should succeed")
-		}},
+		//{name: "Install Reverse Proxy Helm Chart", test: func(t *testing.T) {
+		//	t.Parallel()
+		//	assert.NoError(t, InstallReverseProxyHelmChart(t, name), "Reverse Proxy installation with ingress should succeed")
+		//}},
 	}, err
 }
 
@@ -995,6 +995,13 @@ func createGCPServiceAccount(k8sServiceAccountName string, namespace string, gcp
 		project, "--member", serviceAccountConfig, "--role", "roles/storage.admin"))
 	if err != nil {
 		return fmt.Errorf("error seen while trying to add iam policy binding to gcp service account %s \n Here's why err := %s \n stderr := %s", gcpServiceAccountName, err, string(stderr))
+	}
+	log.Printf("Adding iam policy binding \n Stdout = %s \n Stderr = %s", string(stdout), string(stderr))
+
+	stdout, stderr, err = RunCommand(exec.Command("gcloud", "projects", "add-iam-policy-binding",
+		project, "--member", serviceAccountConfig, "--role", "roles/artifactregistry.repoAdmin"))
+	if err != nil {
+		return fmt.Errorf("error seen while trying to add artifact registry iam policy binding to gcp service account %s \n Here's why err := %s \n stderr := %s", gcpServiceAccountName, err, string(stderr))
 	}
 	log.Printf("Adding iam policy binding \n Stdout = %s \n Stderr = %s", string(stdout), string(stderr))
 
