@@ -635,6 +635,9 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 			t.Parallel()
 			assert.NoError(t, InstallReverseProxyHelmChart(t, name), "Reverse Proxy installation with ingress should succeed")
 		}},
+		{name: "Install Backup Helm Chart For GCP With Inconsistencies", test: func(t *testing.T) {
+			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithInconsistencies(t, name), "Backup to GCP should succeed along with upload of inconsistencies report")
+		}},
 	}, err
 }
 
@@ -816,6 +819,77 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("No inconsistencies found !! No Inconsistency report generated."), string(out))
+			assert.NotContains(t, string(out), "Deleting file")
+			break
+		}
+	}
+	assert.Equal(t, true, found, "no gcp backup pod found")
+	return nil
+}
+
+func InstallNeo4jBackupGCPHelmChartWithInconsistencies(t *testing.T, standaloneReleaseName model.ReleaseName) error {
+
+	if model.Neo4jEdition == "community" {
+		t.Skip()
+		return nil
+	}
+
+	err := introduceInconsistency(t, standaloneReleaseName)
+	if !assert.NoError(t, err) {
+		return err
+	}
+
+	backupReleaseName := model.NewReleaseName("standalone-backup-gcp-incon-" + TestRunIdentifier)
+	namespace := string(standaloneReleaseName.Namespace())
+
+	t.Cleanup(func() {
+		_ = runAll(t, "helm", [][]string{
+			{"uninstall", backupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
+		}, false)
+	})
+
+	bucketName := model.BucketName
+	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.Backup = model.Backup{
+		BucketName:               bucketName,
+		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", standaloneReleaseName.String()),
+		DatabaseNamespace:        string(standaloneReleaseName.Namespace()),
+		Database:                 "neo4j,system",
+		CloudProvider:            "gcp",
+		SecretName:               "gcpcred",
+		SecretKeyName:            "credentials",
+		Verbose:                  true,
+		Type:                     "FULL",
+		KeepBackupFiles:          true,
+	}
+	helmValues.ConsistencyCheck.Database = "neo4j,system"
+
+	_, err = helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
+	assert.NoError(t, err)
+
+	time.Sleep(2 * time.Minute)
+	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
+	assert.NoError(t, err, "cannot retrieve gcp backup cronjob")
+	assert.Equal(t, cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule, fmt.Sprintf("gcp cronjob schedule %s not matching with the schedule defined in values.yaml %s", cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule))
+
+	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
+	assert.NoError(t, err, "error while retrieving pod list during gcp backup operation")
+
+	var found bool
+	for _, pod := range pods.Items {
+		if strings.Contains(pod.Name, "standalone-backup-gcp-incon-") {
+			found = true
+			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
+			assert.NoError(t, err, "error while getting gcp backup pod logs")
+			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
+			assert.Contains(t, string(out), "Backup Completed for database system !!")
+			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
+			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"), string(out))
+			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to GCS bucket"), string(out))
+			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.report.tar.gz uploaded to GCS bucket"), string(out))
+			assert.Regexp(t, regexp.MustCompile("Inconsistencies found for neo4j database"), string(out))
+			assert.Regexp(t, regexp.MustCompile("No inconsistencies found for system databse !! No Inconsistency report generated."), string(out))
 			assert.NotContains(t, string(out), "Deleting file")
 			break
 		}
@@ -1022,6 +1096,43 @@ func createGCPServiceAccount(k8sServiceAccountName string, namespace string, gcp
 	// sleep for few seconds to allow the settings be applied...immediate helm install after this step leads to failure
 	time.Sleep(60 * time.Second)
 	mutex.Unlock()
+	return nil
+}
+
+// introduceInconsistency corrupts a neo4j database relationship store file to introduce inconsistency
+func introduceInconsistency(t *testing.T, releaseName model.ReleaseName) error {
+
+	err := createMoviesDataSet(t, releaseName)
+	if !assert.NoError(t, err) {
+		return err
+	}
+
+	err = stopDatabase(t, releaseName, "neo4j")
+	if !assert.NoError(t, err) {
+		return err
+	}
+
+	// corrupting the database
+	// echo “” > /var/lib/neo4j/data/databases/neo4j/neostore.relationshipstore.db
+	cmd := []string{
+		"bash",
+		"-c",
+		"echo '' > /var/lib/neo4j/data/databases/neo4j/neostore.relationshipstore.db",
+	}
+	stdout, stderr, err := ExecInPod(releaseName, cmd, "")
+	if err != nil {
+		return fmt.Errorf("error seen while executing command `echo “” > /var/lib/neo4j/data/databases/neo4j/neostore.relationshipstore.db' ,\n err :- %v", err)
+	}
+	if len(stderr) != 0 {
+		return fmt.Errorf("found something in stderr while introducing inconsistency %v\n", stderr)
+	}
+	log.Printf("stdout of echo command for introducing inconsistency %s\n", stdout)
+
+	err = startDatabase(t, releaseName, "neo4j")
+	if !assert.NoError(t, err) {
+		return err
+	}
+
 	return nil
 }
 
