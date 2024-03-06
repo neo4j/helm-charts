@@ -52,7 +52,7 @@ func PerformConsistencyCheck(backupFileName string, database string) (string, er
 	var me *exec.ExitError
 	if errors.As(err, &me) {
 		log.Printf("Inconsistencies found for %s database. Exit code was %d\n", database, me.ExitCode())
-		log.Printf("Consistency Check Completed !!")
+		log.Printf("Consistency Check Completed !! \n Output := %v", string(output))
 
 		tarFileName := fmt.Sprintf("/backups/%s.report.tar.gz", backupFileName)
 		directoryName := fmt.Sprintf("/backups/%s.report", backupFileName)
