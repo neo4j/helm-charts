@@ -615,6 +615,9 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 		}},
 		{name: "Check RunAsNonRoot", test: func(t *testing.T) { assert.NoError(t, RunAsNonRoot(t, name), "RunAsNonRoot check should succeed") }},
 		{name: "Exec in Pod", test: func(t *testing.T) { assert.NoError(t, CheckExecInPod(t, name), "Exec in Pod should succeed") }},
+		{name: "Install Backup Helm Chart For GCP With Inconsistencies", test: func(t *testing.T) {
+			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithInconsistencies(t, name), "Backup to GCP should succeed along with upload of inconsistencies report")
+		}},
 		{name: "Install Backup Helm Chart For GCP With Workload Identity", test: func(t *testing.T) {
 			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t, name), "Backup to GCP with workload identity should succeed")
@@ -888,6 +891,21 @@ func InstallNeo4jBackupGCPHelmChartWithInconsistencies(t *testing.T, standaloneR
 		}
 	}
 	assert.Equal(t, true, found, "no gcp backup pod found")
+
+	cmd := []string{
+		"bash",
+		"-c",
+		"mv /tmp/neostore.relationshipstore.db /var/lib/neo4j/data/databases/neo4j/neostore.relationshipstore.db",
+	}
+	stdout, stderr, err := ExecInPod(standaloneReleaseName, cmd, "")
+	if err != nil {
+		return fmt.Errorf("error seen while executing command `mv /tmp/neostore.relationshipstore.db /var/lib/neo4j/data/databases/neo4j/neostore.relationshipstore.db' ,\n err :- %v", err)
+	}
+	if !assert.Equal(t, stderr, "") {
+		return fmt.Errorf("stderr is not empty while reverting inconsistency%v\n", stderr)
+	}
+	log.Printf(stdout)
+
 	return nil
 }
 
@@ -1108,7 +1126,7 @@ func introduceInconsistency(t *testing.T, releaseName model.ReleaseName) error {
 	cmd := []string{
 		"bash",
 		"-c",
-		"echo '' > /var/lib/neo4j/data/databases/neo4j/neostore.relationshipstore.db",
+		"cp /var/lib/neo4j/data/databases/neo4j/neostore.relationshipstore.db /tmp/neostore.relationshipstore.db && echo '' > /var/lib/neo4j/data/databases/neo4j/neostore.relationshipstore.db",
 	}
 	stdout, stderr, err := ExecInPod(releaseName, cmd, "")
 	if err != nil {
