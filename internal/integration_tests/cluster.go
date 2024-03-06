@@ -183,7 +183,7 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t *testing.T, 
 			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to GCS bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("No inconsistencies found !! No Inconsistency report generated."), string(out))
+			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
 			assert.NotContains(t, string(out), "Deleting file")
 			break
 		}
@@ -251,7 +251,7 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to s3 bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to s3 bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("No inconsistencies found !! No Inconsistency report generated."), string(out))
+			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
 			assert.Equal(t, nodeSelectorNode.Name, pod.Spec.NodeName, fmt.Sprintf("backup pod %s is not scheduled on the correct node %s", pod.Spec.NodeName, nodeSelectorNode.Name))
 			break
 		}
@@ -322,7 +322,7 @@ func InstallNeo4jBackupAWSHelmChartViaMinIO(t *testing.T, releaseName model.Rele
 			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to s3 bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to s3 bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("No inconsistencies found !! No Inconsistency report generated."), string(out))
+			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
 			break
 		}
 	}

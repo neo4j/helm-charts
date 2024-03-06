@@ -882,7 +882,7 @@ func InstallNeo4jBackupGCPHelmChartWithInconsistencies(t *testing.T, standaloneR
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.report.tar.gz uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("Inconsistencies found for neo4j database"), string(out))
-			assert.Regexp(t, regexp.MustCompile("No inconsistencies found for system databse !! No Inconsistency report generated."), string(out))
+			assert.Regexp(t, regexp.MustCompile("No inconsistencies found for system database !! No Inconsistency report generated."), string(out))
 			assert.NotContains(t, string(out), "Deleting file")
 			break
 		}
