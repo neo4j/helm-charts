@@ -37,7 +37,7 @@ func TestInstallStandaloneOnGCloudK8s(t *testing.T) {
 	runSubTests(t, subTests)
 	runSubTests(t, []SubTest{
 		{name: "Install Backup Helm Chart For GCP With Inconsistencies", test: func(t *testing.T) {
-			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithInconsistencies(t, name), "Backup to GCP should succeed along with upload of inconsistencies report")
+			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithInconsistencies(t, releaseName), "Backup to GCP should succeed along with upload of inconsistencies report")
 		}},
 	})
 }
