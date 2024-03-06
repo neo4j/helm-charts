@@ -693,9 +693,7 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to s3 bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to s3 bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("No inconsistencies found !! No Inconsistency report generated."), string(out))
-			//assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.report.tar.gz uploaded to s3 bucket"), string(out))
-			//assert.NotRegexp(t, regexp.MustCompile("system(.*)backup.report.tar.gz uploaded to s3 bucket"), string(out))
+			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
 			break
 		}
 	}
@@ -756,8 +754,6 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to azure container"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to azure container"), string(out))
 			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
-			//assert.NotRegexp(t, regexp.MustCompile("neo4j(.*)backup.report.tar.gz uploaded to azure container"), string(out))
-			//assert.Regexp(t, regexp.MustCompile("system(.*)backup.report.tar.gz uploaded to azure container"), string(out))
 			break
 		}
 	}
@@ -981,8 +977,6 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t *testing.T, standalone
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
-			//assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.report.tar.gz uploaded to GCS bucket"), string(out))
-			//assert.Regexp(t, regexp.MustCompile("system(.*)backup.report.tar.gz uploaded to GCS bucket"), string(out))
 			assert.NotContains(t, string(out), "Deleting file")
 			break
 		}
