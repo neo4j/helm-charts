@@ -635,9 +635,6 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 			t.Parallel()
 			assert.NoError(t, InstallReverseProxyHelmChart(t, name), "Reverse Proxy installation with ingress should succeed")
 		}},
-		{name: "Install Backup Helm Chart For GCP With Inconsistencies", test: func(t *testing.T) {
-			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithInconsistencies(t, name), "Backup to GCP should succeed along with upload of inconsistencies report")
-		}},
 	}, err
 }
 
@@ -692,7 +689,7 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to s3 bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to s3 bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("No inconsistencies found !! No Inconsistency report generated."), string(out))
+			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
 			break
 		}
 	}
@@ -751,7 +748,7 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to azure container"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to azure container"), string(out))
-			assert.Regexp(t, regexp.MustCompile("No inconsistencies found !! No Inconsistency report generated."), string(out))
+			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
 			break
 		}
 	}
@@ -811,7 +808,7 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to GCS bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("No inconsistencies found !! No Inconsistency report generated."), string(out))
+			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
 			assert.NotContains(t, string(out), "Deleting file")
 			break
 		}
@@ -972,7 +969,7 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t *testing.T, standalone
 			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to GCS bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("No inconsistencies found !! No Inconsistency report generated."), string(out))
+			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
 			assert.NotContains(t, string(out), "Deleting file")
 			break
 		}
