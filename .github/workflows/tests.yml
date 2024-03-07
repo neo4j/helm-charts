@@ -53,17 +53,38 @@ jobs:
 
       - name: Authenticate Service Account
         id: serviceAccount
-        run: |
-          echo "CLOUDSDK_CONTAINER_CLUSTER=ghactions-${CURRENT_DATE}" >> $GITHUB_ENV
-          echo "CLOUDSDK_CONTAINER_CLUSTER=ghactions-${CURRENT_DATE}" >> $GITHUB_OUTPUT
+        run: |          
           ./bin/gcloud/auth
 
       - name: Create GKE Cluster
         run: |
-          export NUM_NODES=20
+          export CLOUDSDK_CONTAINER_CLUSTER=ghactions-${CURRENT_DATE}
           ./bin/gcloud/create_cluster
     outputs:
-      CLOUDSDK_CONTAINER_CLUSTER: ${{ steps.serviceAccount.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+      CLOUDSDK_CONTAINER_CLUSTER: "ghactions-${{ env.CURRENT_DATE }}"
+
+  gke-setup-redhat:
+    name: Setup GKE for Red Hat
+    runs-on: ubuntu-latest
+    needs:
+      - current-date
+    env:
+      CURRENT_DATE: ${{ needs.current-date.outputs.CURRENT_DATE }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate Service Account
+        id: serviceAccount
+        run: |                    
+          ./bin/gcloud/auth
+
+      - name: Create GKE Cluster
+        run: |
+          export CLOUDSDK_CONTAINER_CLUSTER=ghactions-redhat-${CURRENT_DATE}
+          ./bin/gcloud/create_cluster
+    outputs:
+      CLOUDSDK_CONTAINER_CLUSTER_REDHAT: "ghactions-redhat-${{ env.CURRENT_DATE }}"
 
   build-reverseproxy-backup:
     name: Build Reverse Proxy and Backup Docker Image
@@ -243,13 +264,13 @@ jobs:
   run-enterprise-tests-redhat:
     name: Execute enterprise tests for Red Hat
     needs:
-      - gke-setup
+      - gke-setup-redhat
       - build-reverseproxy-backup
       - current-date
     runs-on: ubuntu-latest
     env:
       NEO4J_EDITION: "enterprise"
-      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
     container:
       image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
       credentials:
@@ -267,7 +288,7 @@ jobs:
       - id: 'get-credentials'
         uses: 'google-github-actions/get-gke-credentials@v2'
         with:
-          cluster_name: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+          cluster_name: ${{ env.CLOUDSDK_CONTAINER_CLUSTER }}
           location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
 
       - name: 'Set up Cloud SDK'
@@ -296,13 +317,13 @@ jobs:
   run-community-tests-redhat:
     name: Execute community tests for Red Hat
     needs:
-      - gke-setup
+      - gke-setup-redhat
       - build-reverseproxy-backup
       - current-date
     runs-on: ubuntu-latest
     env:
       NEO4J_EDITION: "community"
-      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
       NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
     container:
       image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
@@ -321,7 +342,7 @@ jobs:
       - id: 'get-credentials'
         uses: 'google-github-actions/get-gke-credentials@v2'
         with:
-          cluster_name: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+          cluster_name: ${{ env.CLOUDSDK_CONTAINER_CLUSTER }}
           location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
 
       - name: 'Set up Cloud SDK'
@@ -355,9 +376,36 @@ jobs:
     needs:
       - run-enterprise-tests
       - run-community-tests
+      - gke-setup
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - id: 'gcloud-auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
+
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+        with:
+          version: '>= 363.0.0'
+
+      - name: Delete GKE Cluster
+        run: |
+          ./bin/gcloud/delete_cluster
+
+  gke-delete-redhat:
+    name: Delete GKE Cluster
+    runs-on: ubuntu-latest
+    if: always()
+    env:
+      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
+    needs:
       - run-enterprise-tests-redhat
       - run-community-tests-redhat
-      - gke-setup
+      - gke-setup-redhat
     steps:
 
       - name: Checkout
