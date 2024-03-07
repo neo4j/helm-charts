@@ -892,19 +892,8 @@ func InstallNeo4jBackupGCPHelmChartWithInconsistencies(t *testing.T, standaloneR
 	}
 	assert.Equal(t, true, found, "no gcp backup pod found")
 
-	cmd := []string{
-		"bash",
-		"-c",
-		"mv /tmp/neostore.relationshipstore.db /var/lib/neo4j/data/databases/neo4j/neostore.relationshipstore.db",
-	}
-	stdout, stderr, err := ExecInPod(standaloneReleaseName, cmd, "")
-	if err != nil {
-		return fmt.Errorf("error seen while executing command `mv /tmp/neostore.relationshipstore.db /var/lib/neo4j/data/databases/neo4j/neostore.relationshipstore.db' ,\n err :- %v", err)
-	}
-	if !assert.Equal(t, stderr, "") {
-		return fmt.Errorf("stderr is not empty while reverting inconsistency%v\n", stderr)
-	}
-	log.Printf(stdout)
+	err = revertInconsistency(standaloneReleaseName)
+	assert.NoError(t, err, "error seen while reverting inconsistency")
 
 	return nil
 }
@@ -1142,6 +1131,25 @@ func introduceInconsistency(t *testing.T, releaseName model.ReleaseName) error {
 		return err
 	}
 
+	return nil
+}
+
+// revertInconsistency replaces the corrupted file
+func revertInconsistency(releaseName model.ReleaseName) error {
+
+	cmd := []string{
+		"bash",
+		"-c",
+		"mv /tmp/neostore.relationshipstore.db /var/lib/neo4j/data/databases/neo4j/neostore.relationshipstore.db",
+	}
+	stdout, stderr, err := ExecInPod(releaseName, cmd, "")
+	if err != nil {
+		return fmt.Errorf("error seen while executing command `mv /tmp/neostore.relationshipstore.db /var/lib/neo4j/data/databases/neo4j/neostore.relationshipstore.db' ,\n err :- %v", err)
+	}
+	if strings.TrimSpace(stderr) != "" {
+		return fmt.Errorf("stderr is not empty while reverting inconsistency%v\n", stderr)
+	}
+	log.Printf("stdout while reverting inconsistency %s \n", stdout)
 	return nil
 }
 
