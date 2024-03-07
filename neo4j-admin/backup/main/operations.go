@@ -118,7 +118,6 @@ func backupOperations() ([]string, []string, error) {
 			if len(reportArchiveName) != 0 {
 				consistencyCheckReports = append(consistencyCheckReports, reportArchiveName)
 			}
-
 		}
 	}
 
