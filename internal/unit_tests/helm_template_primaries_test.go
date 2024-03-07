@@ -741,7 +741,7 @@ func TestNeo4jStatefulSetAnnotations(t *testing.T) {
 	}))
 }
 
-// TestNeo4jPodPriorityClassName checks for Neo4j PriorityClassName
+// TestNeo4jPodPriorityClassName checks for Neo4j PriorityClassNamePrefix
 // error should be thrown since we are not creating priorityClass in the cluster in advance
 func TestNeo4jPodPriorityClassName(t *testing.T) {
 	t.Parallel()
@@ -774,7 +774,7 @@ func TestNeo4jPodPriorityClassName(t *testing.T) {
 	}))
 }
 
-// TestNeo4jPodPriorityClassNameWithLookupDisabled checks for Neo4j PriorityClassName with disableLookups flag set to true
+// TestNeo4jPodPriorityClassNameWithLookupDisabled checks for Neo4j PriorityClassNamePrefix with disableLookups flag set to true
 func TestNeo4jPodPriorityClassNameWithLookupDisabled(t *testing.T) {
 	t.Parallel()
 

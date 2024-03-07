@@ -400,10 +400,11 @@ func createNamespace(t *testing.T, releaseName model.ReleaseName) (Closeable, er
 // createPriorityClass create priority class to test the priorityClassName feature
 func createPriorityClass(t *testing.T, releaseName model.ReleaseName) (Closeable, error) {
 	//kubectl create priorityclass high-priority --value=1000 --description="high priority -n <namespace>"
-	err := run(t, "kubectl", "create", "priorityclass", "high-priority", "--value=1000", "--description=\"high priority\"", "-n", string(releaseName.Namespace()))
+	priorityClassName := fmt.Sprintf("%s-%s", model.PriorityClassNamePrefix, releaseName.Namespace())
+	err := run(t, "kubectl", "create", "priorityclass", priorityClassName, "--value=1000", "--description=\"high priority\"", "-n", string(releaseName.Namespace()))
 	return func() error {
 		return runAll(t, "kubectl",
-			[][]string{{"delete", "priorityClass", "high-priority", "--force", "--grace-period=0"}},
+			[][]string{{"delete", "priorityClass", priorityClassName, "--force", "--grace-period=0"}},
 			false)
 	}, err
 }

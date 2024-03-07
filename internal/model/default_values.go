@@ -17,9 +17,11 @@ var ImagePullSecretUsername,
 	ImagePullSecretCustomImageName,
 	ImagePullSecretEmail string
 
-var NodeSelectorArgs, ImagePullSecretArgs, PriorityClassNameArgs []string
-
-var NodeSelectorLabel = "testLabel=1"
+var ImagePullSecretArgs []string
+var NodeSelectorArgs func(namespace string) []string
+var NodeSelectorLabel = func(namespace string) string {
+	return fmt.Sprintf("testLabel=%s-1", namespace)
+}
 var DefaultNeo4jName = "test-cluster"
 var DefaultNeo4jChartName = "neo4j"
 var DefaultNeo4jBackupChartName = "neo4j-admin"
@@ -100,12 +102,8 @@ func init() {
 		"--set", fmt.Sprintf("image.imageCredentials[0].password=%s", ImagePullSecretPass),
 		"--set", fmt.Sprintf("image.imageCredentials[0].email=%s", ImagePullSecretEmail),
 	}
-	NodeSelectorArgs = []string{
-		"--set", fmt.Sprintf("nodeSelector.%s", NodeSelectorLabel),
-	}
-
-	PriorityClassNameArgs = []string{
-		"--set", fmt.Sprintf("podSpec.priorityClassName=%s", PriorityClassName),
+	NodeSelectorArgs = func(namespace string) []string {
+		return []string{"--set", fmt.Sprintf("nodeSelector.%s", NodeSelectorLabel(namespace))}
 	}
 }
 
@@ -114,7 +112,7 @@ const cpuRequests = "500m"
 const memoryRequests = "2Gi"
 const cpuLimits = "1500m"
 const memoryLimits = "2Gi"
-const PriorityClassName = "high-priority"
+const PriorityClassNamePrefix = "high-priority"
 const MOVIES_CYPHER = `
 CREATE (TheMatrix:Movie {title:'The Matrix', released:1999, tagline:'Welcome to the Real World'})
 CREATE (Keanu:Person {name:'Keanu Reeves', born:1964})

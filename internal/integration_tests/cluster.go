@@ -22,7 +22,7 @@ import (
 )
 
 // labelNodes labels all the node with testLabel=<number>
-func labelNodes(t *testing.T) error {
+func labelNodes(t *testing.T, namespace string) error {
 
 	var errors *multierror.Error
 	nodesList, err := getNodesList()
@@ -31,7 +31,12 @@ func labelNodes(t *testing.T) error {
 	}
 
 	for index, node := range nodesList.Items {
-		labelName := fmt.Sprintf("testLabel=%d", index+1)
+		// if label already exists on node do not add same label.
+		// label might exists since we are executing tests parallel for redhat and debian distribution
+		if _, present := node.ObjectMeta.Labels["testLabel"]; present {
+			continue
+		}
+		labelName := fmt.Sprintf("testLabel=%s-%d", namespace, index+1)
 		err = run(t, "kubectl", "label", "nodes", node.ObjectMeta.Name, labelName)
 		if err != nil {
 			errors = multierror.Append(errors, err)
@@ -85,7 +90,7 @@ func clusterTests(clusterRelease model.ReleaseName) ([]SubTest, error) {
 			t.Parallel()
 			assert.NoError(t, imagePullSecretTests(t, clusterRelease), "Perform ImagePullSecret Tests")
 		}},
-		{name: "Check PriorityClassName", test: func(t *testing.T) {
+		{name: "Check PriorityClassNamePrefix", test: func(t *testing.T) {
 			t.Parallel()
 			assert.NoError(t, checkPriorityClassName(t, clusterRelease), "priorityClassName should match")
 		}},
@@ -363,10 +368,11 @@ func imagePullSecretTests(t *testing.T, name model.ReleaseName) error {
 
 // nodeSelectorTests runs tests related to nodeSelector feature
 func nodeSelectorTests(name model.ReleaseName) []SubTest {
+	namespace := string(name.Namespace())
 	return []SubTest{
-		{name: fmt.Sprintf("Check cluster core 1 is assigned with label %s", model.NodeSelectorLabel), test: func(t *testing.T) {
+		{name: fmt.Sprintf("Check cluster core 1 is assigned with label %s", model.NodeSelectorLabel(namespace)), test: func(t *testing.T) {
 			t.Parallel()
-			assert.NoError(t, checkNodeSelectorLabel(t, name, model.NodeSelectorLabel), fmt.Sprintf("Core-1 Pod should be deployed on node with label %s", model.NodeSelectorLabel))
+			assert.NoError(t, checkNodeSelectorLabel(t, name, model.NodeSelectorLabel(namespace)), fmt.Sprintf("Core-1 Pod should be deployed on node with label %s", model.NodeSelectorLabel(namespace)))
 		}},
 	}
 }
@@ -385,14 +391,15 @@ func databaseCreationTests(t *testing.T, loadBalancerName model.ReleaseName, dat
 // checkPriorityClassName checks the priorityClassName is set to the pod or not
 func checkPriorityClassName(t *testing.T, releaseName model.ReleaseName) error {
 
+	priorityClassName := fmt.Sprintf("%s-%s", model.PriorityClassNamePrefix, releaseName.Namespace())
 	pods, err := getAllPods(releaseName.Namespace())
 	if !assert.NoError(t, err) {
 		return err
 	}
 	for _, pod := range pods.Items {
 		if strings.Contains(pod.Name, "core-2") {
-			if !assert.Equal(t, model.PriorityClassName, pod.Spec.PriorityClassName) {
-				return fmt.Errorf("priorityClassName %s not matching with %s", pod.Spec.PriorityClassName, model.PriorityClassName)
+			if !assert.Equal(t, priorityClassName, pod.Spec.PriorityClassName) {
+				return fmt.Errorf("priorityClassName %s not matching with %s", pod.Spec.PriorityClassName, priorityClassName)
 			}
 			break
 		}
