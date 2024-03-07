@@ -41,7 +41,7 @@ jobs:
       CURRENT_DATE: ${{ steps.currentDate.outputs.CURRENT_DATE }}
 
   gke-setup:
-    name: Setup GKE
+    name: Debian GKE Creation
     runs-on: ubuntu-latest
     needs:
       - current-date
@@ -64,7 +64,7 @@ jobs:
       CLOUDSDK_CONTAINER_CLUSTER: "ghactions-${{ env.CURRENT_DATE }}"
 
   gke-setup-redhat:
-    name: Setup GKE for Red Hat
+    name: RedHat GKE Creation
     runs-on: ubuntu-latest
     needs:
       - current-date
@@ -87,7 +87,7 @@ jobs:
       CLOUDSDK_CONTAINER_CLUSTER_REDHAT: "ghactions-redhat-${{ env.CURRENT_DATE }}"
 
   build-reverseproxy-backup:
-    name: Build Reverse Proxy and Backup Docker Image
+    name: ReverseProxy and Backup Docker Image build
     runs-on: ubuntu-latest
     needs:
       - current-date
@@ -155,7 +155,7 @@ jobs:
 #
 #
   run-enterprise-tests:
-    name: Execute enterprise tests
+    name: Debian Enterprise tests
     needs:
       - gke-setup
       - build-reverseproxy-backup
@@ -208,7 +208,7 @@ jobs:
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
 
   run-community-tests:
-    name: Execute community tests
+    name: Debian Community Tests
     needs:
       - gke-setup
       - build-reverseproxy-backup
@@ -262,7 +262,7 @@ jobs:
 
 
   run-enterprise-tests-redhat:
-    name: Execute enterprise tests for Red Hat
+    name: RedHat Enterprise Tests
     needs:
       - gke-setup-redhat
       - build-reverseproxy-backup
@@ -315,7 +315,7 @@ jobs:
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
 
   run-community-tests-redhat:
-    name: Execute community tests for Red Hat
+    name: RedHat Community Tests
     needs:
       - gke-setup-redhat
       - build-reverseproxy-backup
@@ -368,7 +368,7 @@ jobs:
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
 
   gke-delete:
-    name: Delete GKE Cluster
+    name: Debian GKE Cluster Deletion
     runs-on: ubuntu-latest
     if: always()
     env:
@@ -397,7 +397,7 @@ jobs:
           ./bin/gcloud/delete_cluster
 
   gke-delete-redhat:
-    name: Delete GKE Cluster
+    name: RedHat GKE Cluster Deletion
     runs-on: ubuntu-latest
     if: always()
     env:
