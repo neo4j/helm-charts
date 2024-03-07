@@ -399,8 +399,8 @@ func createNamespace(t *testing.T, releaseName model.ReleaseName) (Closeable, er
 
 // createPriorityClass create priority class to test the priorityClassName feature
 func createPriorityClass(t *testing.T, releaseName model.ReleaseName) (Closeable, error) {
-	//kubectl create priorityclass high-priority --value=1000 --description="high priority -n <namespace>"
-	priorityClassName := fmt.Sprintf("%s-%s", model.PriorityClassNamePrefix, releaseName.Namespace())
+	//kubectl create priorityclass high-priority-<namespace> --value=1000 --description="high priority -n <namespace>"
+	priorityClassName := model.PriorityClassName(string(releaseName.Namespace()))
 	err := run(t, "kubectl", "create", "priorityclass", priorityClassName, "--value=1000", "--description=\"high priority\"", "-n", string(releaseName.Namespace()))
 	return func() error {
 		return runAll(t, "kubectl",

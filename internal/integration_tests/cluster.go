@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-// labelNodes labels all the node with testLabel=<number>
+// labelNodes labels all the node with testLabel=namespace-<number>
 func labelNodes(t *testing.T, namespace string) error {
 
 	var errors *multierror.Error
@@ -219,7 +219,7 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 	helmValues.Backup = model.Backup{
 		BucketName:               bucketName,
 		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", releaseName.String()),
-		DatabaseNamespace:        string(releaseName.Namespace()),
+		DatabaseNamespace:        namespace,
 		Database:                 "neo4j,system",
 		CloudProvider:            "aws",
 		SecretName:               "awscred",
@@ -228,7 +228,7 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 		Type:                     "FULL",
 	}
 	helmValues.NodeSelector = map[string]string{
-		"testLabel": "5",
+		"testLabel": fmt.Sprintf("%s-5", namespace),
 	}
 	helmValues.ConsistencyCheck.Database = "neo4j"
 	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
@@ -239,7 +239,7 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 	assert.NoError(t, err, "cannot retrieve aws backup cronjob")
 	assert.Equal(t, cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule, fmt.Sprintf("aws cronjob schedule %s not matching with the schedule defined in values.yaml %s", cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule))
 
-	nodeSelectorNode, err := getNodeWithLabel("testLabel=5")
+	nodeSelectorNode, err := getNodeWithLabel(fmt.Sprintf("testLabel=%s-5", namespace))
 	assert.NoError(t, err)
 
 	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
@@ -391,11 +391,11 @@ func databaseCreationTests(t *testing.T, loadBalancerName model.ReleaseName, dat
 // checkPriorityClassName checks the priorityClassName is set to the pod or not
 func checkPriorityClassName(t *testing.T, releaseName model.ReleaseName) error {
 
-	priorityClassName := fmt.Sprintf("%s-%s", model.PriorityClassNamePrefix, releaseName.Namespace())
 	pods, err := getAllPods(releaseName.Namespace())
 	if !assert.NoError(t, err) {
 		return err
 	}
+	priorityClassName := model.PriorityClassName(string(releaseName.Namespace()))
 	for _, pod := range pods.Items {
 		if strings.Contains(pod.Name, "core-2") {
 			if !assert.Equal(t, priorityClassName, pod.Spec.PriorityClassName) {

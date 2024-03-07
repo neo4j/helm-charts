@@ -18,9 +18,15 @@ var ImagePullSecretUsername,
 	ImagePullSecretEmail string
 
 var ImagePullSecretArgs []string
-var NodeSelectorArgs func(namespace string) []string
+var (
+	PriorityClassNameArgs func(namespace string) []string
+	NodeSelectorArgs      func(namespace string) []string
+)
 var NodeSelectorLabel = func(namespace string) string {
 	return fmt.Sprintf("testLabel=%s-1", namespace)
+}
+var PriorityClassName = func(namespace string) string {
+	return fmt.Sprintf("high-priority-%s", namespace)
 }
 var DefaultNeo4jName = "test-cluster"
 var DefaultNeo4jChartName = "neo4j"
@@ -105,6 +111,12 @@ func init() {
 	NodeSelectorArgs = func(namespace string) []string {
 		return []string{"--set", fmt.Sprintf("nodeSelector.%s", NodeSelectorLabel(namespace))}
 	}
+
+	PriorityClassNameArgs = func(namespace string) []string {
+		return []string{
+			"--set", fmt.Sprintf("podSpec.priorityClassName=%s", PriorityClassName(namespace)),
+		}
+	}
 }
 
 const StorageSize = "10Gi"
@@ -112,7 +124,6 @@ const cpuRequests = "500m"
 const memoryRequests = "2Gi"
 const cpuLimits = "1500m"
 const memoryLimits = "2Gi"
-const PriorityClassNamePrefix = "high-priority"
 const MOVIES_CYPHER = `
 CREATE (TheMatrix:Movie {title:'The Matrix', released:1999, tagline:'Welcome to the Real World'})
 CREATE (Keanu:Person {name:'Keanu Reeves', born:1964})
