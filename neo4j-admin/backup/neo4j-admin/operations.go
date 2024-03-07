@@ -1,6 +1,7 @@
 package neo4j_admin
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os/exec"
@@ -43,19 +44,25 @@ func PerformConsistencyCheck(backupFileName string, database string) (string, er
 	flags := getConsistencyCheckCommandFlags(backupFileName, database)
 	log.Printf("Printing consistency check flags %v", flags)
 	output, err := exec.Command("neo4j-admin", flags...).CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("Consistency Check Failed for database %s!! \n output = %s \n err = %v", database, string(output), err)
+	if err == nil {
+		log.Printf("No inconsistencies found for %s database !! No Inconsistency report generated.", database)
+		return "", nil
 	}
-	log.Printf("Consistency Check Completed. Report Name %s !!", string(output))
 
-	tarFileName := fmt.Sprintf("/backups/%s.report.tar.gz", backupFileName)
-	directoryName := fmt.Sprintf("/backups/%s.report", backupFileName)
-	log.Printf("tarfileName %s directoryName %s", tarFileName, directoryName)
-	output, err = exec.Command("tar", "-czvf", tarFileName, directoryName, "--absolute-names").CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("Unable to create a tar archive of consistency check report for database %s !! \n output = %s \n err = %v", database, string(output), err)
+	var me *exec.ExitError
+	if errors.As(err, &me) {
+		log.Printf("Inconsistencies found for %s database. Exit code was %d\n", database, me.ExitCode())
+		log.Printf("Consistency Check Completed !!")
+
+		tarFileName := fmt.Sprintf("/backups/%s.report.tar.gz", backupFileName)
+		directoryName := fmt.Sprintf("/backups/%s.report", backupFileName)
+		log.Printf("tarfileName %s directoryName %s", tarFileName, directoryName)
+		_, err = exec.Command("tar", "-czvf", tarFileName, directoryName, "--absolute-names").CombinedOutput()
+		if err != nil {
+			return "", fmt.Errorf("Unable to create a tar archive of consistency check report for database %s !! \n output = %s \n err = %v", database, string(output), err)
+		}
+		log.Printf("Consistency Check Report tar archive created for database %s at %s !!", database, tarFileName)
+		return fmt.Sprintf("%s.report.tar.gz", backupFileName), nil
 	}
-	log.Printf("Consistency Check Report tar archive created for database %s at %s !!", database, tarFileName)
-
-	return fmt.Sprintf("%s.report.tar.gz", backupFileName), nil
+	return "", fmt.Errorf("Consistency Check Failed for database %s!! \n output = %s \n err = %v", database, string(output), err)
 }
