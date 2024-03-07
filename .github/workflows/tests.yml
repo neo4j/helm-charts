@@ -60,6 +60,7 @@ jobs:
 
       - name: Create GKE Cluster
         run: |
+          export NUM_NODES=20
           ./bin/gcloud/create_cluster
     outputs:
       CLOUDSDK_CONTAINER_CLUSTER: ${{ steps.serviceAccount.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
