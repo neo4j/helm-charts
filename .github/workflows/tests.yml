@@ -449,7 +449,7 @@ jobs:
 
       - name: Perform Version Updates
         run: |
-          export NEO4J_VERSION="5.18.0"
+          export NEO4J_VERSION="5.18.0" 
           ./bin/gcloud/version_updates          
 
   packaging:
