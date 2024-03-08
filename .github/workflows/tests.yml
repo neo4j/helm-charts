@@ -447,6 +447,7 @@ jobs:
         with:
           fetch-depth: '0'
           fetch-tags: true
+          token: ${{ secrets.GH_TOKEN }}
 
       - name: Perform Version Updates
         run: |
@@ -472,6 +473,7 @@ jobs:
         with:
           fetch-depth: '0'
           fetch-tags: true
+          token: ${{ secrets.GH_TOKEN }}
 
       - name: GPG Key Signing
         run: |
