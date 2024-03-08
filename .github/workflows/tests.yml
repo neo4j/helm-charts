@@ -40,99 +40,99 @@ jobs:
     outputs:
       CURRENT_DATE: ${{ steps.currentDate.outputs.CURRENT_DATE }}
 
-  gke-setup:
-    name: Debian GKE Creation
-    runs-on: ubuntu-latest
-    needs:
-      - current-date
-    env:
-      CURRENT_DATE: ${{ needs.current-date.outputs.CURRENT_DATE }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Authenticate Service Account
-        id: serviceAccount
-        run: |          
-          ./bin/gcloud/auth
-
-      - name: Create GKE Cluster
-        run: |
-          export CLOUDSDK_CONTAINER_CLUSTER=ghactions-${CURRENT_DATE}
-          ./bin/gcloud/create_cluster
-    outputs:
-      CLOUDSDK_CONTAINER_CLUSTER: "ghactions-${{ env.CURRENT_DATE }}"
-
-  gke-setup-redhat:
-    name: RedHat GKE Creation
-    runs-on: ubuntu-latest
-    needs:
-      - current-date
-    env:
-      CURRENT_DATE: ${{ needs.current-date.outputs.CURRENT_DATE }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Authenticate Service Account
-        id: serviceAccount
-        run: |                    
-          ./bin/gcloud/auth
-
-      - name: Create GKE Cluster
-        run: |
-          export CLOUDSDK_CONTAINER_CLUSTER=ghactions-redhat-${CURRENT_DATE}
-          ./bin/gcloud/create_cluster
-    outputs:
-      CLOUDSDK_CONTAINER_CLUSTER_REDHAT: "ghactions-redhat-${{ env.CURRENT_DATE }}"
-
-  build-reverseproxy-backup:
-    name: ReverseProxy and Backup Docker Image build
-    runs-on: ubuntu-latest
-    needs:
-      - current-date
-    env:
-      CURRENT_DATE: ${{ needs.current-date.outputs.CURRENT_DATE }}
-    steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          registry: europe-west2-docker.pkg.dev
-          username: _json_key
-          password: ${{ secrets.GCLOUD_SERVICE_KEY }}
-
-      - name: Build and push reverse proxy image
-        uses: docker/build-push-action@v5
-        with:
-          context: "{{defaultContext}}:neo4j-reverse-proxy"
-          push: true
-          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ env.CURRENT_DATE }}"
-          provenance: false
-
-      - name: Build and push backup image
-        uses: docker/build-push-action@v5
-        with:
-          context: "{{defaultContext}}:neo4j-admin"
-          push: true
-          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ env.CURRENT_DATE }}"
-          provenance: false
-          build-args: |
-            IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-dev
-            DISTRIBUTION=debian
-
-      - name: Build and push red hat backup image
-        uses: docker/build-push-action@v5
-        with:
-          context: "{{defaultContext}}:neo4j-admin"
-          push: true
-          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ env.CURRENT_DATE }}"
-          provenance: false
-          build-args: |
-            IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-dev-ubi9
-            DISTRIBUTION=redhat
+#  gke-setup:
+#    name: Debian GKE Creation
+#    runs-on: ubuntu-latest
+#    needs:
+#      - current-date
+#    env:
+#      CURRENT_DATE: ${{ needs.current-date.outputs.CURRENT_DATE }}
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - name: Authenticate Service Account
+#        id: serviceAccount
+#        run: |
+#          ./bin/gcloud/auth
+#
+#      - name: Create GKE Cluster
+#        run: |
+#          export CLOUDSDK_CONTAINER_CLUSTER=ghactions-${CURRENT_DATE}
+#          ./bin/gcloud/create_cluster
+#    outputs:
+#      CLOUDSDK_CONTAINER_CLUSTER: "ghactions-${{ env.CURRENT_DATE }}"
+#
+#  gke-setup-redhat:
+#    name: RedHat GKE Creation
+#    runs-on: ubuntu-latest
+#    needs:
+#      - current-date
+#    env:
+#      CURRENT_DATE: ${{ needs.current-date.outputs.CURRENT_DATE }}
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - name: Authenticate Service Account
+#        id: serviceAccount
+#        run: |
+#          ./bin/gcloud/auth
+#
+#      - name: Create GKE Cluster
+#        run: |
+#          export CLOUDSDK_CONTAINER_CLUSTER=ghactions-redhat-${CURRENT_DATE}
+#          ./bin/gcloud/create_cluster
+#    outputs:
+#      CLOUDSDK_CONTAINER_CLUSTER_REDHAT: "ghactions-redhat-${{ env.CURRENT_DATE }}"
+#
+#  build-reverseproxy-backup:
+#    name: ReverseProxy and Backup Docker Image build
+#    runs-on: ubuntu-latest
+#    needs:
+#      - current-date
+#    env:
+#      CURRENT_DATE: ${{ needs.current-date.outputs.CURRENT_DATE }}
+#    steps:
+#      - name: Set up Docker Buildx
+#        uses: docker/setup-buildx-action@v3
+#
+#      - name: Login to Docker Hub
+#        uses: docker/login-action@v3
+#        with:
+#          registry: europe-west2-docker.pkg.dev
+#          username: _json_key
+#          password: ${{ secrets.GCLOUD_SERVICE_KEY }}
+#
+#      - name: Build and push reverse proxy image
+#        uses: docker/build-push-action@v5
+#        with:
+#          context: "{{defaultContext}}:neo4j-reverse-proxy"
+#          push: true
+#          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ env.CURRENT_DATE }}"
+#          provenance: false
+#
+#      - name: Build and push backup image
+#        uses: docker/build-push-action@v5
+#        with:
+#          context: "{{defaultContext}}:neo4j-admin"
+#          push: true
+#          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ env.CURRENT_DATE }}"
+#          provenance: false
+#          build-args: |
+#            IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-dev
+#            DISTRIBUTION=debian
+#
+#      - name: Build and push red hat backup image
+#        uses: docker/build-push-action@v5
+#        with:
+#          context: "{{defaultContext}}:neo4j-admin"
+#          push: true
+#          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ env.CURRENT_DATE }}"
+#          provenance: false
+#          build-args: |
+#            IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-dev-ubi9
+#            DISTRIBUTION=redhat
 
 #  update-ecr-pw:
 #    runs-on: ubuntu-latest
@@ -154,284 +154,284 @@ jobs:
 #          gh secret set ECR_PW --body "$ECR_PW"
 #
 #
-  run-enterprise-tests:
-    name: Debian Enterprise tests
-    needs:
-      - gke-setup
-      - build-reverseproxy-backup
-      - current-date
-    runs-on: ubuntu-latest
-    env:
-      NEO4J_EDITION: "enterprise"
-      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
-    container:
-      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
-      credentials:
-        username: _json_key
-        password: ${{ secrets.GCLOUD_SERVICE_KEY }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - id: 'gcloud-auth'
-        uses: 'google-github-actions/auth@v2'
-        with:
-          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
-
-      - id: 'get-credentials'
-        uses: 'google-github-actions/get-gke-credentials@v2'
-        with:
-          cluster_name: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
-          location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
-
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
-        with:
-          version: '>= 363.0.0'
-
-      - name: Set up gotestfmt
-        run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
-
-      - name: Run Enterprise Integration and Unit tests
-        run: |
-          mkdir -p .kube
-          cat ${KUBECONFIG} > .kube/config
-          CURRENT_DIRECTORY=$(pwd)
-          export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
-          echo "printing kubeconfig path $KUBECONFIG"
-          export IPS_PASS=$(gcloud auth print-access-token)
-          export NEO4J_DOCKER_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-dev"
-          export NEO4J_EDITION=enterprise
-          export NEO4J_REVERSE_PROXY_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
-          export NEO4J_DOCKER_BACKUP_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ needs.current-date.outputs.CURRENT_DATE }}"
-          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-
-  run-community-tests:
-    name: Debian Community Tests
-    needs:
-      - gke-setup
-      - build-reverseproxy-backup
-      - current-date
-    runs-on: ubuntu-latest
-    env:
-      NEO4J_EDITION: "community"
-      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
-      NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
-    container:
-      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
-      credentials:
-        username: _json_key
-        password: ${{ secrets.GCLOUD_SERVICE_KEY }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - id: 'gcloud-auth'
-        uses: 'google-github-actions/auth@v2'
-        with:
-          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
-
-      - id: 'get-credentials'
-        uses: 'google-github-actions/get-gke-credentials@v2'
-        with:
-          cluster_name: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
-          location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
-
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
-        with:
-          version: '>= 363.0.0'
-
-      - name: Set up gotestfmt
-        run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
-
-      - name: Run Community Integration and Unit tests
-        run: |
-          mkdir -p .kube
-          cat ${KUBECONFIG} > .kube/config
-          CURRENT_DIRECTORY=$(pwd)
-          export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
-          echo "printing kubeconfig path $KUBECONFIG"
-          export IPS_PASS=$(gcloud auth print-access-token)
-          export NEO4J_DOCKER_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:community-dev"
-          export NEO4J_REVERSE_PROXY_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
-          export NEO4J_DOCKER_BACKUP_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ needs.current-date.outputs.CURRENT_DATE }}"
-          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-
-
-  run-enterprise-tests-redhat:
-    name: RedHat Enterprise Tests
-    needs:
-      - gke-setup-redhat
-      - build-reverseproxy-backup
-      - current-date
-    runs-on: ubuntu-latest
-    env:
-      NEO4J_EDITION: "enterprise"
-      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
-    container:
-      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
-      credentials:
-        username: _json_key
-        password: ${{ secrets.GCLOUD_SERVICE_KEY }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - id: 'gcloud-auth'
-        uses: 'google-github-actions/auth@v2'
-        with:
-          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
-
-      - id: 'get-credentials'
-        uses: 'google-github-actions/get-gke-credentials@v2'
-        with:
-          cluster_name: ${{ env.CLOUDSDK_CONTAINER_CLUSTER }}
-          location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
-
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
-        with:
-          version: '>= 363.0.0'
-
-      - name: Set up gotestfmt
-        run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
-
-      - name: Run Enterprise Integration and Unit tests for Red Hat
-        run: |
-          mkdir -p .kube
-          cat ${KUBECONFIG} > .kube/config
-          CURRENT_DIRECTORY=$(pwd)
-          export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
-          echo "printing kubeconfig path $KUBECONFIG"
-          export IPS_PASS=$(gcloud auth print-access-token)
-          export NEO4J_DOCKER_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-dev-ubi9"
-          export NEO4J_EDITION=enterprise
-          export NEO4J_REVERSE_PROXY_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
-          export NEO4J_DOCKER_BACKUP_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ needs.current-date.outputs.CURRENT_DATE }}"
-          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-
-  run-community-tests-redhat:
-    name: RedHat Community Tests
-    needs:
-      - gke-setup-redhat
-      - build-reverseproxy-backup
-      - current-date
-    runs-on: ubuntu-latest
-    env:
-      NEO4J_EDITION: "community"
-      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
-      NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
-    container:
-      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
-      credentials:
-        username: _json_key
-        password: ${{ secrets.GCLOUD_SERVICE_KEY }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - id: 'gcloud-auth'
-        uses: 'google-github-actions/auth@v2'
-        with:
-          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
-
-      - id: 'get-credentials'
-        uses: 'google-github-actions/get-gke-credentials@v2'
-        with:
-          cluster_name: ${{ env.CLOUDSDK_CONTAINER_CLUSTER }}
-          location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
-
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
-        with:
-          version: '>= 363.0.0'
-
-      - name: Set up gotestfmt
-        run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
-
-      - name: Run Community Integration and Unit tests for Red Hat
-        run: |
-          mkdir -p .kube
-          cat ${KUBECONFIG} > .kube/config
-          CURRENT_DIRECTORY=$(pwd)
-          export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
-          echo "printing kubeconfig path $KUBECONFIG"
-          export IPS_PASS=$(gcloud auth print-access-token)
-          export NEO4J_DOCKER_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:community-dev-ubi9"
-          export NEO4J_REVERSE_PROXY_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
-          export NEO4J_DOCKER_BACKUP_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ needs.current-date.outputs.CURRENT_DATE }}"
-          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-
-  gke-delete:
-    name: Debian GKE Cluster Deletion
-    runs-on: ubuntu-latest
-    if: always()
-    env:
-      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
-    needs:
-      - run-enterprise-tests
-      - run-community-tests
-      - gke-setup
-    steps:
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - id: 'gcloud-auth'
-        uses: 'google-github-actions/auth@v2'
-        with:
-          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
-
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
-        with:
-          version: '>= 363.0.0'
-
-      - name: Delete GKE Cluster
-        run: |
-          ./bin/gcloud/delete_cluster
-
-  gke-delete-redhat:
-    name: RedHat GKE Cluster Deletion
-    runs-on: ubuntu-latest
-    if: always()
-    env:
-      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
-    needs:
-      - run-enterprise-tests-redhat
-      - run-community-tests-redhat
-      - gke-setup-redhat
-    steps:
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - id: 'gcloud-auth'
-        uses: 'google-github-actions/auth@v2'
-        with:
-          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
-
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
-        with:
-          version: '>= 363.0.0'
-
-      - name: Delete GKE Cluster
-        run: |
-          ./bin/gcloud/delete_cluster
+#  run-enterprise-tests:
+#    name: Debian Enterprise tests
+#    needs:
+#      - gke-setup
+#      - build-reverseproxy-backup
+#      - current-date
+#    runs-on: ubuntu-latest
+#    env:
+#      NEO4J_EDITION: "enterprise"
+#      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+#    container:
+#      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
+#      credentials:
+#        username: _json_key
+#        password: ${{ secrets.GCLOUD_SERVICE_KEY }}
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - id: 'gcloud-auth'
+#        uses: 'google-github-actions/auth@v2'
+#        with:
+#          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
+#
+#      - id: 'get-credentials'
+#        uses: 'google-github-actions/get-gke-credentials@v2'
+#        with:
+#          cluster_name: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+#          location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
+#
+#      - name: 'Set up Cloud SDK'
+#        uses: 'google-github-actions/setup-gcloud@v2'
+#        with:
+#          version: '>= 363.0.0'
+#
+#      - name: Set up gotestfmt
+#        run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
+#
+#      - name: Run Enterprise Integration and Unit tests
+#        run: |
+#          mkdir -p .kube
+#          cat ${KUBECONFIG} > .kube/config
+#          CURRENT_DIRECTORY=$(pwd)
+#          export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
+#          echo "printing kubeconfig path $KUBECONFIG"
+#          export IPS_PASS=$(gcloud auth print-access-token)
+#          export NEO4J_DOCKER_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-dev"
+#          export NEO4J_EDITION=enterprise
+#          export NEO4J_REVERSE_PROXY_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
+#          export NEO4J_DOCKER_BACKUP_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ needs.current-date.outputs.CURRENT_DATE }}"
+#          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
+#          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
+#
+#  run-community-tests:
+#    name: Debian Community Tests
+#    needs:
+#      - gke-setup
+#      - build-reverseproxy-backup
+#      - current-date
+#    runs-on: ubuntu-latest
+#    env:
+#      NEO4J_EDITION: "community"
+#      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+#      NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
+#    container:
+#      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
+#      credentials:
+#        username: _json_key
+#        password: ${{ secrets.GCLOUD_SERVICE_KEY }}
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - id: 'gcloud-auth'
+#        uses: 'google-github-actions/auth@v2'
+#        with:
+#          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
+#
+#      - id: 'get-credentials'
+#        uses: 'google-github-actions/get-gke-credentials@v2'
+#        with:
+#          cluster_name: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+#          location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
+#
+#      - name: 'Set up Cloud SDK'
+#        uses: 'google-github-actions/setup-gcloud@v2'
+#        with:
+#          version: '>= 363.0.0'
+#
+#      - name: Set up gotestfmt
+#        run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
+#
+#      - name: Run Community Integration and Unit tests
+#        run: |
+#          mkdir -p .kube
+#          cat ${KUBECONFIG} > .kube/config
+#          CURRENT_DIRECTORY=$(pwd)
+#          export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
+#          echo "printing kubeconfig path $KUBECONFIG"
+#          export IPS_PASS=$(gcloud auth print-access-token)
+#          export NEO4J_DOCKER_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:community-dev"
+#          export NEO4J_REVERSE_PROXY_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
+#          export NEO4J_DOCKER_BACKUP_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ needs.current-date.outputs.CURRENT_DATE }}"
+#          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
+#          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
+#
+#
+#  run-enterprise-tests-redhat:
+#    name: RedHat Enterprise Tests
+#    needs:
+#      - gke-setup-redhat
+#      - build-reverseproxy-backup
+#      - current-date
+#    runs-on: ubuntu-latest
+#    env:
+#      NEO4J_EDITION: "enterprise"
+#      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
+#    container:
+#      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
+#      credentials:
+#        username: _json_key
+#        password: ${{ secrets.GCLOUD_SERVICE_KEY }}
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - id: 'gcloud-auth'
+#        uses: 'google-github-actions/auth@v2'
+#        with:
+#          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
+#
+#      - id: 'get-credentials'
+#        uses: 'google-github-actions/get-gke-credentials@v2'
+#        with:
+#          cluster_name: ${{ env.CLOUDSDK_CONTAINER_CLUSTER }}
+#          location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
+#
+#      - name: 'Set up Cloud SDK'
+#        uses: 'google-github-actions/setup-gcloud@v2'
+#        with:
+#          version: '>= 363.0.0'
+#
+#      - name: Set up gotestfmt
+#        run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
+#
+#      - name: Run Enterprise Integration and Unit tests for Red Hat
+#        run: |
+#          mkdir -p .kube
+#          cat ${KUBECONFIG} > .kube/config
+#          CURRENT_DIRECTORY=$(pwd)
+#          export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
+#          echo "printing kubeconfig path $KUBECONFIG"
+#          export IPS_PASS=$(gcloud auth print-access-token)
+#          export NEO4J_DOCKER_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-dev-ubi9"
+#          export NEO4J_EDITION=enterprise
+#          export NEO4J_REVERSE_PROXY_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
+#          export NEO4J_DOCKER_BACKUP_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ needs.current-date.outputs.CURRENT_DATE }}"
+#          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
+#          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
+#
+#  run-community-tests-redhat:
+#    name: RedHat Community Tests
+#    needs:
+#      - gke-setup-redhat
+#      - build-reverseproxy-backup
+#      - current-date
+#    runs-on: ubuntu-latest
+#    env:
+#      NEO4J_EDITION: "community"
+#      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
+#      NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
+#    container:
+#      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
+#      credentials:
+#        username: _json_key
+#        password: ${{ secrets.GCLOUD_SERVICE_KEY }}
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - id: 'gcloud-auth'
+#        uses: 'google-github-actions/auth@v2'
+#        with:
+#          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
+#
+#      - id: 'get-credentials'
+#        uses: 'google-github-actions/get-gke-credentials@v2'
+#        with:
+#          cluster_name: ${{ env.CLOUDSDK_CONTAINER_CLUSTER }}
+#          location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
+#
+#      - name: 'Set up Cloud SDK'
+#        uses: 'google-github-actions/setup-gcloud@v2'
+#        with:
+#          version: '>= 363.0.0'
+#
+#      - name: Set up gotestfmt
+#        run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
+#
+#      - name: Run Community Integration and Unit tests for Red Hat
+#        run: |
+#          mkdir -p .kube
+#          cat ${KUBECONFIG} > .kube/config
+#          CURRENT_DIRECTORY=$(pwd)
+#          export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
+#          echo "printing kubeconfig path $KUBECONFIG"
+#          export IPS_PASS=$(gcloud auth print-access-token)
+#          export NEO4J_DOCKER_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:community-dev-ubi9"
+#          export NEO4J_REVERSE_PROXY_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
+#          export NEO4J_DOCKER_BACKUP_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ needs.current-date.outputs.CURRENT_DATE }}"
+#          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
+#          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
+#
+#  gke-delete:
+#    name: Debian GKE Cluster Deletion
+#    runs-on: ubuntu-latest
+#    if: always()
+#    env:
+#      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+#    needs:
+#      - run-enterprise-tests
+#      - run-community-tests
+#      - gke-setup
+#    steps:
+#
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - id: 'gcloud-auth'
+#        uses: 'google-github-actions/auth@v2'
+#        with:
+#          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
+#
+#      - name: 'Set up Cloud SDK'
+#        uses: 'google-github-actions/setup-gcloud@v2'
+#        with:
+#          version: '>= 363.0.0'
+#
+#      - name: Delete GKE Cluster
+#        run: |
+#          ./bin/gcloud/delete_cluster
+#
+#  gke-delete-redhat:
+#    name: RedHat GKE Cluster Deletion
+#    runs-on: ubuntu-latest
+#    if: always()
+#    env:
+#      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
+#    needs:
+#      - run-enterprise-tests-redhat
+#      - run-community-tests-redhat
+#      - gke-setup-redhat
+#    steps:
+#
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - id: 'gcloud-auth'
+#        uses: 'google-github-actions/auth@v2'
+#        with:
+#          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
+#
+#      - name: 'Set up Cloud SDK'
+#        uses: 'google-github-actions/setup-gcloud@v2'
+#        with:
+#          version: '>= 363.0.0'
+#
+#      - name: Delete GKE Cluster
+#        run: |
+#          ./bin/gcloud/delete_cluster
 
   repo-updates:
     name: Repo Updates
-    needs:
-      - run-community-tests
-      - run-community-tests-redhat
-      - run-enterprise-tests
-      - run-enterprise-tests-redhat
+#    needs:
+#      - run-community-tests
+#      - run-community-tests-redhat
+#      - run-enterprise-tests
+#      - run-enterprise-tests-redhat
 #    if: ${{ github.ref == 'refs/heads/dev' && success() }}
     if: ${{ success() }}
     runs-on: ubuntu-latest
@@ -449,6 +449,7 @@ jobs:
 
       - name: Perform Version Updates
         run: |
+          export NEO4J_VERSION="5.18.0"
           ./bin/gcloud/version_updates          
 
   packaging:
