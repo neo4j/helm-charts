@@ -31,11 +31,6 @@ func labelNodes(t *testing.T, namespace string) error {
 	}
 
 	for index, node := range nodesList.Items {
-		// if label already exists on node do not add same label.
-		// label might exists since we are executing tests parallel for redhat and debian distribution
-		if _, present := node.ObjectMeta.Labels["testLabel"]; present {
-			continue
-		}
 		labelName := fmt.Sprintf("testLabel=%s-%d", namespace, index+1)
 		err = run(t, "kubectl", "label", "nodes", node.ObjectMeta.Name, labelName)
 		if err != nil {
