@@ -432,8 +432,7 @@ jobs:
 #      - run-community-tests-redhat
 #      - run-enterprise-tests
 #      - run-enterprise-tests-redhat
-#    if: ${{ github.ref == 'refs/heads/dev' && success() }}
-    if: ${{ success() }}
+    if: ${{ github.ref == 'refs/heads/dev' && success() }}
     runs-on: ubuntu-latest
     container:
       image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
@@ -480,17 +479,17 @@ jobs:
 
       - name: GPG Key Signing
         run: |
-          export AWS_ACCESS_KEY_ID={{ secrets.AWS_ACCESS_KEY_ID_GPG }}
-          export AWS_SECRET_ACCESS_KEY={{ secrets.AWS_SECRET_ACCESS_KEY_GPG }}
-          export ROLE_ARN_GPG={{ secrets.ROLE_ARN_GPG }}
-          export SECRET_ID_GPG={{ secrets.SECRET_ID_GPG }}          
+          export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_GPG }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_GPG }}
+          export ROLE_ARN_GPG=${{ secrets.ROLE_ARN_GPG }}
+          export SECRET_ID_GPG=${{ secrets.SECRET_ID_GPG }}          
           ./bin/gcloud/gpg_signing          
 
       - name: package and upload the charts
         run: |
-          export AWS_ACCESS_KEY_ID={{ secrets.AWS_ACCESS_KEY_ID_HELM }}
-          export AWS_SECRET_ACCESS_KEY={{ secrets.AWS_SECRET_ACCESS_KEY_HELM }}
+          export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_HELM }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_HELM }}
           export S3_SUB_FOLDER="neo4j-experimental"
-          export PACKAGE_SIGNING_KEY={{ secrets.PACKAGE_SIGNING_KEY }}
-          export PACKAGE_SIGNING_PASSPHRASE={{ secrets.PACKAGE_SIGNING_PASSPHRASE }}
+          export PACKAGE_SIGNING_KEY=${{ secrets.PACKAGE_SIGNING_KEY }}
+          export PACKAGE_SIGNING_PASSPHRASE=${{ secrets.PACKAGE_SIGNING_PASSPHRASE }}
           ./bin/gcloud/package_upload
