@@ -458,8 +458,8 @@ jobs:
 
   packaging:
     name: Packaging
-    needs:
-      - repo-updates
+#    needs:
+#      - repo-updates
     #    if: ${{ github.ref == 'refs/heads/dev' && success() }}
     if: ${{ success() }}
     runs-on: ubuntu-latest
