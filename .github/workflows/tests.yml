@@ -448,6 +448,7 @@ jobs:
           fetch-depth: '0'
           fetch-tags: true
           token: ${{ secrets.GH_TOKEN }}
+          ref: ${{ github.head_ref }}
 
       - name: Perform Version Updates
         run: |
