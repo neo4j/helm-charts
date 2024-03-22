@@ -436,6 +436,8 @@ statefulset:
     annotations:
 #      imageregistry: "https://hub.docker.com/"
 #      demo: alpha
+  podManagementPolicy: "Parallel"
+  replicas: 1
 
 # additional environment variables for the Neo4j Container
 env: {}

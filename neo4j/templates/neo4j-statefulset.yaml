@@ -32,8 +32,8 @@ metadata:
   {{- end }}
 spec:
   serviceName: "{{ include "neo4j.fullname" . }}"
-  podManagementPolicy: "Parallel" # This setting means that the StatefulSet controller doesn't block applying changes until the existing Pod is READY.
-  replicas: 1
+  podManagementPolicy: "{{ include "neo4j.podManagementPolicy" . }}" # This setting means that the StatefulSet controller doesn't block applying changes until the existing Pod is READY.
+  replicas: {{ template "neo4j.replicas" . }}
   selector:
     matchLabels:
       app: "{{ template "neo4j.name" . }}"
