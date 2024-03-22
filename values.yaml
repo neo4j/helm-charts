@@ -1,0 +1,138 @@
+apoc_config:
+  apoc.import.file.enabled: "true"
+  apoc.import.file.use.neo4j.config: "true"
+  apoc.ttl.enabled: "true"
+  apoc.ttl.limit: "100000"
+  apoc.ttl.schedule: "120"
+config:
+  db.lock.acquisition.timeout: 0s
+  db.logs.query.parameter_logging_enabled: "false"
+  db.logs.query.threshold: 200ms
+  db.transaction.bookmark_ready_timeout: 180s
+  db.transaction.timeout: 2m
+  
+  # dbms.cluster.minimum_initial_system_primaries_count: "2"
+  # internal.db.cluster.raft.minimum_voting_members: "2"
+  # initial.dbms.default_primaries_count: "2"
+  # initial.dbms.default_secondaries_count: "0"
+  dbms.routing.default_router: SERVER
+  dbms.routing.enabled: "true"
+  dbms.routing.load_balancing.plugin: server_policies
+  dbms.routing.reads_on_primaries_enabled: "true"
+  dbms.security.auth_enabled: "false"
+  dbms.security.procedures.unrestricted: apoc.*
+  initial.dbms.automatically_enable_free_servers: "true"
+
+  initial.server.mode_constraint: PRIMARY
+  initial.server.tags: us,PRIMARY
+  server.bolt.advertised_address: $(bash -c 'echo ${SERVICE_NEO4J}')
+  server.cluster.system_database_mode: PRIMARY
+  server.config.strict_validation.enabled: "false"
+  server.directories.plugins: /var/lib/neo4j/labs
+  server.memory.heap.initial_size: 2gb
+  server.memory.heap.max_size: 2gb
+  server.memory.pagecache.size: 2gb
+  server.metrics.prometheus.enabled: "true"
+  server.metrics.prometheus.endpoint: 0.0.0.0:2004
+env:
+  NEO4J_PLUGINS: '["apoc"]'
+jvm:
+  additionalJvmArguments: []
+  useNeo4jDefaultJvmArguments: true
+logInitialPassword: true
+neo4j:
+  acceptLicenseAgreement: "yes"
+  edition: enterprise
+  labels:
+    project: provision-neo4j-cluster-k8s
+    role: primary
+  minimumClusterSize: 3
+  name: query-engine-002
+  offlineMaintenanceModeEnabled: false
+  resources:
+    cpu: 2000m
+    memory: 8Gi
+podDisruptionBudget:
+  enabled: true
+  maxUnavailable: "1"
+podSpec:
+  annotations: {}
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: performanceprofile
+          operator: In
+          values:
+          - memory_optimized
+  podAntiAffinity: true
+  terminationGracePeriodSeconds: "120"
+  tolerations:
+  - effect: NoSchedule
+    key: performanceprofile
+    operator: Equal
+    value: memory_optimized
+serviceMonitor:
+  enabled: true
+  labels:
+    release: prometheus
+services:
+  admin:
+    annotations: {}
+    enabled: true
+    spec:
+      type: ClusterIP
+  default:
+    annotations: {}
+  internals:
+    annotations:
+      newrelic.io/path: /metrics
+      newrelic.io/port: "2004"
+      newrelic.io/scrape: "true"
+    enabled: true
+  neo4j:
+    enabled: false
+statefulset:
+  replicas: "3"
+volumes:
+  backups:
+    disableSubPathExpr: false
+    labels: {}
+    mode: share
+    share:
+      name: data
+  data:
+    disableSubPathExpr: false
+    dynamic:
+      accessModes:
+      - ReadWriteOnce
+      requests:
+        storage: 1000Gi
+      storageClassName: query-engine
+    labels:
+      project: provision-neo4j-cluster-k8s
+    mode: dynamic
+  import:
+    disableSubPathExpr: false
+    labels: {}
+    mode: share
+    share:
+      name: data
+  licenses:
+    disableSubPathExpr: false
+    labels: {}
+    mode: share
+    share:
+      name: data
+  logs:
+    disableSubPathExpr: false
+    labels: {}
+    mode: share
+    share:
+      name: data
+  metrics:
+    disableSubPathExpr: false
+    labels: {}
+    mode: share
+    share:
+      name: data

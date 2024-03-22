@@ -378,10 +378,10 @@ topologySpreadConstraints:
 {{- end -}}
 
 {{- define "neo4j.replicas" -}}
-    {{- .Values.statefulset.replicas | int | default 1 -}}
+    {{- $.Values.statefulset.replicas | int | default 1 -}}
 {{- end -}}
 
 {{- define "neo4j.podManagementPolicy" -}}
 {{/* Options: OrderedReady, Parallel - Note: The Parallel setting means that the StatefulSet controller doesn't block applying changes until the existing Pod is READY. */}}
-    {{- .Values.statefulset.podManagementPolicy | default "Parallel" -}}
+    {{- $.Values.statefulset.podManagementPolicy | default "Parallel" -}}
 {{- end -}}
