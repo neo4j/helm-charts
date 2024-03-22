@@ -10,11 +10,6 @@ config:
   db.logs.query.threshold: 200ms
   db.transaction.bookmark_ready_timeout: 180s
   db.transaction.timeout: 2m
-  
-  # dbms.cluster.minimum_initial_system_primaries_count: "2"
-  # internal.db.cluster.raft.minimum_voting_members: "2"
-  # initial.dbms.default_primaries_count: "2"
-  # initial.dbms.default_secondaries_count: "0"
   dbms.routing.default_router: SERVER
   dbms.routing.enabled: "true"
   dbms.routing.load_balancing.plugin: server_policies
@@ -22,10 +17,8 @@ config:
   dbms.security.auth_enabled: "false"
   dbms.security.procedures.unrestricted: apoc.*
   initial.dbms.automatically_enable_free_servers: "true"
-
   initial.server.mode_constraint: PRIMARY
   initial.server.tags: us,PRIMARY
-  server.bolt.advertised_address: $(bash -c 'echo ${SERVICE_NEO4J}')
   server.cluster.system_database_mode: PRIMARY
   server.config.strict_validation.enabled: "false"
   server.directories.plugins: /var/lib/neo4j/labs
@@ -94,6 +87,7 @@ services:
     enabled: false
 statefulset:
   replicas: "3"
+  podManagementPolicy: "Parallel"
 volumes:
   backups:
     disableSubPathExpr: false

@@ -110,6 +110,10 @@ spec:
               value: "{{ include "neo4j.fullname" . }}-internals.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}"
             - name: SERVICE_NEO4J
               value: "{{ include "neo4j.fullname" . }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}"
+            - name: SERVICE_BASE_FQDN
+              value: "{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}"
+            - name: NAMESPACE
+              value: "{{ .Release.Namespace }}"    
           ports:
             {{- if $httpEnabled }}
             - containerPort: 7474
