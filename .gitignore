@@ -7,3 +7,4 @@ devenv.local
 *.test
 .backup_linux
 .vscode/settings.json
+scripts/
