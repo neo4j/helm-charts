@@ -9,7 +9,7 @@ import (
 
 // getBackupCommandFlags returns a slice of string containing all the flags to be passed with the neo4j-admin backup command
 func getBackupCommandFlags(address string) []string {
-	databases := strings.ReplaceAll(os.Getenv("DATABASE"), ",", " ")
+	database := os.Getenv("DATABASE")
 	flags := []string{"database", "backup"}
 	flags = append(flags, fmt.Sprintf("--from=%s", address))
 	flags = append(flags, fmt.Sprintf("--include-metadata=%s", os.Getenv("INCLUDE_METADATA")))
@@ -24,8 +24,10 @@ func getBackupCommandFlags(address string) []string {
 	if os.Getenv("VERBOSE") == "true" {
 		flags = append(flags, "--verbose")
 	}
-	flags = append(flags, databases)
-
+	// "neo4j,system,test1" --> 'neo4j' 'system' 'test1'
+	for _, db := range strings.Split(database, ",") {
+		flags = append(flags, fmt.Sprintf("'%s' ", db))
+	}
 	return flags
 }
 
