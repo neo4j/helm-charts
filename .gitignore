@@ -6,3 +6,4 @@ devenv.local
 .DS_Store
 *.test
 .backup_linux
+.vscode/settings.json
