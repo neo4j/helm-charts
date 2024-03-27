@@ -46,7 +46,7 @@ func PerformBackup(address string) ([]string, error) {
 // PerformConsistencyCheck performs the consistency check on the backup taken and returns the generated report tar name
 func PerformConsistencyCheck(database string) (string, error) {
 	timeStamp := time.Now().Format("2006-01-02T15-04-05")
-	fileName := fmt.Sprintf("%s-%s", database, timeStamp)
+	fileName := fmt.Sprintf("%s-%s.backup", database, timeStamp)
 	flags := getConsistencyCheckCommandFlags(fileName, database)
 	log.Printf("Printing consistency check flags %v", flags)
 	output, err := exec.Command("neo4j-admin", flags...).CombinedOutput()

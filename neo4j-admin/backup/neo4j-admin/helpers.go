@@ -26,7 +26,7 @@ func getBackupCommandFlags(address string) []string {
 	}
 	// "neo4j,system,test1" --> 'neo4j' 'system' 'test1'
 	for _, db := range strings.Split(database, ",") {
-		flags = append(flags, fmt.Sprintf("'%s' ", db))
+		flags = append(flags, fmt.Sprintf("%s", db))
 	}
 	return flags
 }
@@ -75,7 +75,8 @@ func retrieveBackupFileNames(cmdOutput string) ([]string, error) {
 	}
 	var backupFileNames []string
 	for _, match := range matches {
-		backupFileNames = append(backupFileNames, strings.Replace(match[1], "'", "", -1))
+		name := strings.Replace(match[1], "'", "", -1)
+		backupFileNames = append(backupFileNames, fmt.Sprintf("%s.backup", name))
 	}
 	return backupFileNames, nil
 }

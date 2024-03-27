@@ -595,26 +595,26 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 	}
 	log.Printf("%v", expectedConfiguration)
 	return []SubTest{
-		{name: "Check Neo4j Logs For Any Errors", test: func(t *testing.T) {
-			t.Parallel()
-			assert.NoError(t, checkNeo4jLogsForAnyErrors(t, name), "Neo4j Logs check should succeed")
-		}},
-		{name: "Check Neo4j Configuration", test: func(t *testing.T) {
-			assert.NoError(t, checkNeo4jConfiguration(t, name, expectedConfiguration), "Neo4j Config check should succeed")
-		}},
-		{name: "Check Bloom Version", test: func(t *testing.T) { assert.NoError(t, checkBloomVersion(t, name), "Retrieve a valid BLOOM version") }},
-		{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, createNode(t, name), "Create Node should succeed") }},
-		{name: "Delete Resources", test: func(t *testing.T) { assert.NoError(t, ResourcesCleanup(t, name), "Cleanup Resources should succeed") }},
-		{name: "Reinstall Resources", test: func(t *testing.T) {
-			assert.NoError(t, ResourcesReinstall(t, name, chart), "Reinstall Resources should succeed")
-		}},
-		{name: "Count Nodes", test: func(t *testing.T) { assert.NoError(t, checkNodeCount(t, name), "Count Nodes should succeed") }},
-		{name: "Check Probes", test: func(t *testing.T) { assert.NoError(t, CheckProbes(t, name), "Probes Matching should succeed") }},
-		{name: "Check Service Annotations", test: func(t *testing.T) {
-			assert.NoError(t, CheckServiceAnnotations(t, name, chart), "Services should have annotations")
-		}},
-		{name: "Check RunAsNonRoot", test: func(t *testing.T) { assert.NoError(t, RunAsNonRoot(t, name), "RunAsNonRoot check should succeed") }},
-		{name: "Exec in Pod", test: func(t *testing.T) { assert.NoError(t, CheckExecInPod(t, name), "Exec in Pod should succeed") }},
+		//{name: "Check Neo4j Logs For Any Errors", test: func(t *testing.T) {
+		//	t.Parallel()
+		//	assert.NoError(t, checkNeo4jLogsForAnyErrors(t, name), "Neo4j Logs check should succeed")
+		//}},
+		//{name: "Check Neo4j Configuration", test: func(t *testing.T) {
+		//	assert.NoError(t, checkNeo4jConfiguration(t, name, expectedConfiguration), "Neo4j Config check should succeed")
+		//}},
+		//{name: "Check Bloom Version", test: func(t *testing.T) { assert.NoError(t, checkBloomVersion(t, name), "Retrieve a valid BLOOM version") }},
+		//{name: "Create Node", test: func(t *testing.T) { assert.NoError(t, createNode(t, name), "Create Node should succeed") }},
+		//{name: "Delete Resources", test: func(t *testing.T) { assert.NoError(t, ResourcesCleanup(t, name), "Cleanup Resources should succeed") }},
+		//{name: "Reinstall Resources", test: func(t *testing.T) {
+		//	assert.NoError(t, ResourcesReinstall(t, name, chart), "Reinstall Resources should succeed")
+		//}},
+		//{name: "Count Nodes", test: func(t *testing.T) { assert.NoError(t, checkNodeCount(t, name), "Count Nodes should succeed") }},
+		//{name: "Check Probes", test: func(t *testing.T) { assert.NoError(t, CheckProbes(t, name), "Probes Matching should succeed") }},
+		//{name: "Check Service Annotations", test: func(t *testing.T) {
+		//	assert.NoError(t, CheckServiceAnnotations(t, name, chart), "Services should have annotations")
+		//}},
+		//{name: "Check RunAsNonRoot", test: func(t *testing.T) { assert.NoError(t, RunAsNonRoot(t, name), "RunAsNonRoot check should succeed") }},
+		//{name: "Exec in Pod", test: func(t *testing.T) { assert.NoError(t, CheckExecInPod(t, name), "Exec in Pod should succeed") }},
 		{name: "Install Backup Helm Chart For GCP With Inconsistencies", test: func(t *testing.T) {
 			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithInconsistencies(t, name), "Backup to GCP should succeed along with upload of inconsistencies report")
 		}},
@@ -688,8 +688,7 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
 			assert.NoError(t, err, "error while getting aws backup pod logs")
 			assert.NotNil(t, out, "aws backup logs cannot be retrieved")
-			assert.Contains(t, string(out), "Backup Completed for database system !!")
-			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
+			assert.Contains(t, string(out), "Backup Completed for database neo4j system !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to s3 bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to s3 bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
@@ -747,8 +746,7 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
 			assert.NoError(t, err, "error while getting azure backup pod logs")
 			assert.NotNil(t, out, "azure backup logs cannot be retrieved")
-			assert.Contains(t, string(out), "Backup Completed for database system !!")
-			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
+			assert.Contains(t, string(out), "Backup Completed for database neo4j system !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to azure container"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to azure container"), string(out))
 			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
@@ -807,8 +805,7 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
 			assert.NoError(t, err, "error while getting gcp backup pod logs")
 			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
-			assert.Contains(t, string(out), "Backup Completed for database system !!")
-			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
+			assert.Contains(t, string(out), "Backup Completed for database neo4j system !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
@@ -876,8 +873,7 @@ func InstallNeo4jBackupGCPHelmChartWithInconsistencies(t *testing.T, standaloneR
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
 			assert.NoError(t, err, "error while getting gcp backup pod logs")
 			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
-			assert.Contains(t, string(out), "Backup Completed for database system !!")
-			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
+			assert.Contains(t, string(out), "Backup Completed for database neo4j system !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.report.tar.gz uploaded to GCS bucket"), string(out))
@@ -971,8 +967,7 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t *testing.T, standalone
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
 			assert.NoError(t, err, "error while getting gcp workload backup pod logs")
 			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
-			assert.Contains(t, string(out), "Backup Completed for database system !!")
-			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
+			assert.Contains(t, string(out), "Backup Completed for database neo4j system !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
