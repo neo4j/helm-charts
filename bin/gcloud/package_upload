@@ -8,10 +8,12 @@ set -o pipefail -o errtrace -o errexit -o nounset
 shopt -s inherit_errexit
 [[ -n "${TRACE:-}" ]] && set -o xtrace
 
+echo "home $HOME"
 PACKAGE_SIGNING_KEYRING_DIR="$HOME/.gnupg"
 mkdir -p ${PACKAGE_SIGNING_KEYRING_DIR}
 PACKAGE_SIGNING_KEYRING=${PACKAGE_SIGNING_KEYRING_DIR}/secring.gpg
-
+echo "current directory"
+pwd
 # Local env vars
 #
 BUILD_OUT_DIR="tmp/new-packages/"
