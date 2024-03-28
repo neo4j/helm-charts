@@ -36,5 +36,5 @@ fi
 
 git commit -m "Updating version to ${NEO4J_VERSION}"
 git push
-git tag -m "Tagging ${NEO4J_VERSION}" -a ${NEO4J_VERSION}
-git push --tags
+#git tag -m "Tagging ${NEO4J_VERSION}" -a ${NEO4J_VERSION}
+#git push --tags
