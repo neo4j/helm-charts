@@ -36,12 +36,12 @@ func run(t *testing.T, command string, args ...string) error {
 func createDisk(t *testing.T, zone Zone, project Project, releaseName model.ReleaseName) (model.PersistentDiskName, Closeable, error) {
 	diskName := releaseName.DiskName()
 	err := run(t, "gcloud", "compute", "disks", "create", "--size", model.StorageSize, "--type", "pd-ssd", string(diskName), "--zone="+string(zone), "--project="+string(project))
-	return model.PersistentDiskName(diskName), func() error { return deleteDisk(t, zone, project, string(diskName)) }, err
+	return diskName, func() error { return deleteDisk(t, zone, project, string(diskName)) }, err
 }
 
 func deleteDisk(t *testing.T, zone Zone, project Project, diskName string) error {
 	delete := func() error {
-		return run(t, "gcloud", "compute", "disks", "delete", diskName, "--zone="+string(zone), "--project="+string(project))
+		return run(t, "gcloud", "compute", "disks", "delete", diskName, "--quiet", "--zone="+string(zone), "--project="+string(project))
 	}
 	err := delete()
 	if err != nil {

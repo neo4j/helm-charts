@@ -399,11 +399,12 @@ func createNamespace(t *testing.T, releaseName model.ReleaseName) (Closeable, er
 
 // createPriorityClass create priority class to test the priorityClassName feature
 func createPriorityClass(t *testing.T, releaseName model.ReleaseName) (Closeable, error) {
-	//kubectl create priorityclass high-priority --value=1000 --description="high priority -n <namespace>"
-	err := run(t, "kubectl", "create", "priorityclass", "high-priority", "--value=1000", "--description=\"high priority\"", "-n", string(releaseName.Namespace()))
+	//kubectl create priorityclass high-priority-<namespace> --value=1000 --description="high priority -n <namespace>"
+	priorityClassName := model.PriorityClassName(string(releaseName.Namespace()))
+	err := run(t, "kubectl", "create", "priorityclass", priorityClassName, "--value=1000", "--description=\"high priority\"", "-n", string(releaseName.Namespace()))
 	return func() error {
 		return runAll(t, "kubectl",
-			[][]string{{"delete", "priorityClass", "high-priority", "--force", "--grace-period=0"}},
+			[][]string{{"delete", "priorityClass", priorityClassName, "--force", "--grace-period=0"}},
 			false)
 	}, err
 }
@@ -896,9 +897,10 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t *testing.T, standalone
 		return nil
 	}
 	shortName := standaloneReleaseName.ShortName()
+	currentUnixTime := time.Now().Unix()
 	backupReleaseName := model.NewReleaseName(fmt.Sprintf("%s-gcp-workload-%s", shortName, TestRunIdentifier))
-	gcpServiceAccountName := fmt.Sprintf("%s-%s", gcpServiceAccountNamePrefix, shortName)
-	k8sServiceAccountName := fmt.Sprintf("%s-%s", k8sServiceAccountNamePrefix, shortName)
+	gcpServiceAccountName := fmt.Sprintf("%s-%d", gcpServiceAccountNamePrefix, currentUnixTime)
+	k8sServiceAccountName := fmt.Sprintf("%s-%d", k8sServiceAccountNamePrefix, currentUnixTime)
 	namespace := string(standaloneReleaseName.Namespace())
 
 	t.Cleanup(func() {
@@ -1063,6 +1065,13 @@ func createGCPServiceAccount(k8sServiceAccountName string, namespace string, gcp
 		project, "--member", serviceAccountConfig, "--role", "roles/storage.admin"))
 	if err != nil {
 		return fmt.Errorf("error seen while trying to add iam policy binding to gcp service account %s \n Here's why err := %s \n stderr := %s", gcpServiceAccountName, err, string(stderr))
+	}
+	log.Printf("Adding iam policy binding \n Stdout = %s \n Stderr = %s", string(stdout), string(stderr))
+
+	stdout, stderr, err = RunCommand(exec.Command("gcloud", "projects", "add-iam-policy-binding",
+		project, "--member", serviceAccountConfig, "--role", "roles/artifactregistry.repoAdmin"))
+	if err != nil {
+		return fmt.Errorf("error seen while trying to add artifact registry iam policy binding to gcp service account %s \n Here's why err := %s \n stderr := %s", gcpServiceAccountName, err, string(stderr))
 	}
 	log.Printf("Adding iam policy binding \n Stdout = %s \n Stderr = %s", string(stdout), string(stderr))
 

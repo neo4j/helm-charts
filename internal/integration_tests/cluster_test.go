@@ -23,8 +23,9 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 			closeables = append([]Closeable{closeable}, closeables...)
 		}
 	}
-
-	err := labelNodes(t)
+	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
+	namespace := string(clusterReleaseName.Namespace())
+	err := labelNodes(t, namespace)
 	addCloseable(func() error {
 		return removeLabelFromNodes(t)
 	})
@@ -32,15 +33,14 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 		return
 	}
 
-	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
 	defaultHelmArgs := []string{}
 	defaultHelmArgs = append(defaultHelmArgs, model.DefaultNeo4jNameArg...)
 	headlessService := clusterHeadLessService{model.NewHeadlessServiceReleaseName(clusterReleaseName), defaultHelmArgs}
 	defaultHelmArgs = append(defaultHelmArgs, model.DefaultClusterSizeArg...)
 	defaultHelmArgs = append(defaultHelmArgs, model.LdapArgs...)
 	core1HelmArgs := append(defaultHelmArgs, model.ImagePullSecretArgs...)
-	core1HelmArgs = append(core1HelmArgs, model.NodeSelectorArgs...)
-	core2HelmArgs := append(defaultHelmArgs, model.PriorityClassNameArgs...)
+	core1HelmArgs = append(core1HelmArgs, model.NodeSelectorArgs(namespace)...)
+	core2HelmArgs := append(defaultHelmArgs, model.PriorityClassNameArgs(namespace)...)
 	core1 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 1), core1HelmArgs}
 	core2 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 2), core2HelmArgs}
 	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3), defaultHelmArgs}

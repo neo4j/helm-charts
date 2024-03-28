@@ -60,7 +60,10 @@ func TestReverseProxyIngressWhenTLSEnabled(t *testing.T) {
 
 	helmValues := model.DefaultNeo4jReverseProxyValues
 	secretName := "demo-secret"
-	helmValues.ReverseProxy.Ingress.TLS.Config[0].SecretName = secretName
+	config := model.Config{
+		SecretName: "demo-secret",
+	}
+	helmValues.ReverseProxy.Ingress.TLS.Config = []model.Config{config}
 	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
 	assert.NoError(t, err, "error seen while testing tls enabled with reverse proxy helm chart")
 	ingressList := manifests.OfType(&v1.Ingress{})
@@ -86,7 +89,10 @@ func TestReverseProxyIngressEmptySecretName(t *testing.T) {
 	t.Parallel()
 
 	helmValues := model.DefaultNeo4jReverseProxyValues
-	helmValues.ReverseProxy.Ingress.TLS.Config[0].SecretName = "   "
+	config := model.Config{
+		SecretName: "  ",
+	}
+	helmValues.ReverseProxy.Ingress.TLS.Config = []model.Config{config}
 	_, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
 	assert.Error(t, err, "no error found")
 	assert.Contains(t, err.Error(), "Empty secretName for tls config")
@@ -99,7 +105,7 @@ func TestReverseProxyIngressHostName(t *testing.T) {
 	helmValues := model.DefaultNeo4jReverseProxyValues
 	helmValues.ReverseProxy.Ingress.Host = "demo.com"
 	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
-	assert.NoError(t, err, "error seen while testing ingress hostname with reverse proxy helm chart")
+	assert.NoError(t, err, fmt.Errorf("error seen while testing ingress hostname with reverse proxy helm chart \n %v \n helm values %v", err, helmValues))
 	ingressList := manifests.OfType(&v1.Ingress{})
 	assert.Len(t, ingressList, 1, fmt.Sprintf("number of ingress should be 1 , not equal with %d", len(ingressList)))
 	ingressHostName := ingressList[0].(*v1.Ingress).Spec.Rules[0].Host

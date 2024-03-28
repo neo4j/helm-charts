@@ -31,9 +31,9 @@ go test -c ./internal/unit_tests/
 go test -c ./internal/integration_tests/
 
 if [[ "${GO_TEST_FORMAT:-}" == "json" ]]; then
-  go tool test2json -t ./unit_tests.test -test.v --test.count ${GO_TEST_COUNT:-1} --test.timeout "${GO_TEST_TIMEOUT:-10m}" "$@" | tee output/go-unit-test.json
-  go tool test2json -t ./integration_tests.test -test.v --test.count ${GO_TEST_COUNT:-1} --test.timeout "${GO_TEST_TIMEOUT:-10m}" "$@" | tee output/go-integration-test.json
+  go tool test2json -t ./unit_tests.test -test.v --test.count ${GO_TEST_COUNT:-1} --test.timeout "${GO_TEST_TIMEOUT:-10m}" "$@" | tee output/go-unit-test.json | gotestfmt
+  go tool test2json -t ./integration_tests.test -test.v --test.count ${GO_TEST_COUNT:-1} --test.timeout "${GO_TEST_TIMEOUT:-10m}" "$@" | tee output/go-integration-test.json | gotestfmt
 else
-  ./unit_tests.test -test.v --test.count ${GO_TEST_COUNT:-1} --test.timeout "${GO_TEST_TIMEOUT:-10m}" "$@" | tee output/go-unit-test.log
-  ./integration_tests.test -test.v --test.count ${GO_TEST_COUNT:-1} --test.timeout "${GO_TEST_TIMEOUT:-10m}" "$@" | tee output/go-integration-test.log
+  ./unit_tests.test -test.v --test.count ${GO_TEST_COUNT:-1} --test.timeout "${GO_TEST_TIMEOUT:-10m}" "$@" | tee output/go-unit-test.log | gotestfmt
+  ./integration_tests.test -test.v --test.count ${GO_TEST_COUNT:-1} --test.timeout "${GO_TEST_TIMEOUT:-10m}" "$@" | tee output/go-integration-test.log | gotestfmt
 fi

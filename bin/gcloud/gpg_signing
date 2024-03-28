@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+ROLE_ARN_GPG="${ROLE_ARN_GPG:?ROLE_ARN_GPG is required}"
+SECRET_ID_GPG="${SECRET_ID_GPG:?SECRET_ID_GPG is required}"
+
+#mkdir -p /root/.aws
+mkdir -p $HOME/.aws
+
+echo "[profile secrets]
+region = eu-west-1
+output = json
+role_arn = ${ROLE_ARN_GPG}
+credential_source = Environment" | tee $HOME/.aws/config
+#credential_source = Environment" | tee /root/.aws/config
+
+# fetch the key
+aws --profile secrets secretsmanager get-secret-value --secret-id ${SECRET_ID_GPG} | jq --raw-output '.SecretString' | jq --raw-output '.privateKey' | base64 --decode > signing-key.asc
+
+# stick it in a sandbox
+mkdir signingkeysandbox
+chmod 700 signingkeysandbox
+gpg --homedir signingkeysandbox --batch --import signing-key.asc || true
+#gpg --homedir signingkeysandbox --list-secret-keys
+# cleanup
+rm signing-key.asc

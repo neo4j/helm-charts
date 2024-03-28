@@ -12,6 +12,7 @@ shopt -s inherit_errexit
 CLOUDSDK_CORE_PROJECT="${CLOUDSDK_CORE_PROJECT:?CLOUDSDK_CORE_PROJECT is required}"
 CLOUDSDK_CONTAINER_CLUSTER="${CLOUDSDK_CONTAINER_CLUSTER:?CLOUDSDK_CONTAINER_CLUSTER is required}"
 CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
+#KUBECONFIG="${KUBECONFIG:?KUBECONFIG is required}"
 
 # Parameters
 NODE_MACHINE="e2-standard-4"
@@ -27,8 +28,14 @@ gcloud container clusters create "${CLOUDSDK_CONTAINER_CLUSTER}" \
      --num-nodes="${NUM_NODES}" \
      --workload-pool="${CLOUDSDK_CORE_PROJECT}.svc.id.goog" \
      --preemptible --machine-type="${NODE_MACHINE}" --image-type="COS_CONTAINERD" \
-     --disk-type="pd-ssd" --disk-size="10" \
+     --disk-type="pd-ssd" --disk-size="40" \
      --max-pods-per-node=30 --enable-ip-alias \
      --enable-shielded-nodes --metadata=disable-legacy-endpoints=true --no-enable-basic-auth
 
-gcloud-configure-kubectl
+
+# Configure kubectl
+gcloud container clusters get-credentials "${CLOUDSDK_CONTAINER_CLUSTER}"
+
+echo "kubectl configured for $(kubectl config current-context)"
+
+
