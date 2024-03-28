@@ -23,7 +23,7 @@ aws --profile secrets secretsmanager get-secret-value --secret-id ${SECRET_ID_GP
 mkdir signingkeysandbox
 chmod 700 signingkeysandbox
 gpg --homedir signingkeysandbox --batch --import signing-key.asc || true
-gpg --homedir signingkeysandbox --list-secret-keys
+#gpg --homedir signingkeysandbox --list-secret-keys
 
 # cleanup
 rm signing-key.asc
