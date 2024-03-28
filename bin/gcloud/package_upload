@@ -57,7 +57,6 @@ mv *.tgz.prov ${BUILD_OUT_DIR}
 
 # Pull existing packages from s3
 #
-echo "Access key ${AWS_ACCESS_KEY_ID}"
 mkdir -p ${S3_LOCAL_SYNC_DIR}
 aws s3 sync s3://helm.neo4j.com/${S3_UPLOAD_TO_SUB_FOLDER} ${S3_LOCAL_SYNC_DIR}
 cp ${BUILD_OUT_DIR}/* ${S3_LOCAL_SYNC_DIR} || echo "nothing to upload in ./packages/"
