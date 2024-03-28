@@ -689,9 +689,7 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
 			assert.NoError(t, err, "error while getting aws backup pod logs")
 			assert.NotNil(t, out, "aws backup logs cannot be retrieved")
-			log.Printf("backup logs %v\n", string(out))
-			assert.Contains(t, string(out), "Backup Completed for database system !!")
-			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
+			assert.Contains(t, string(out), "Backup Completed for database neo4j system !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to s3 bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to s3 bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
@@ -749,9 +747,7 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
 			assert.NoError(t, err, "error while getting azure backup pod logs")
 			assert.NotNil(t, out, "azure backup logs cannot be retrieved")
-			log.Printf("backup logs %v\n", string(out))
-			assert.Contains(t, string(out), "Backup Completed for database system !!")
-			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
+			assert.Contains(t, string(out), "Backup Completed for database neo4j system !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to azure container"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to azure container"), string(out))
 			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
@@ -808,11 +804,9 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 		if strings.Contains(pod.Name, "standalone-backup-gcp") {
 			found = true
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
-			log.Printf("Printing backup logs %v\n", string(out))
 			assert.NoError(t, err, "error while getting gcp backup pod logs")
 			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
-			assert.Contains(t, string(out), "Backup Completed for database system !!")
-			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
+			assert.Contains(t, string(out), "Backup Completed for database neo4j system !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
@@ -880,8 +874,7 @@ func InstallNeo4jBackupGCPHelmChartWithInconsistencies(t *testing.T, standaloneR
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
 			assert.NoError(t, err, "error while getting gcp backup pod logs")
 			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
-			assert.Contains(t, string(out), "Backup Completed for database system !!")
-			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
+			assert.Contains(t, string(out), "Backup Completed for database neo4j system !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.report.tar.gz uploaded to GCS bucket"), string(out))
@@ -895,7 +888,6 @@ func InstallNeo4jBackupGCPHelmChartWithInconsistencies(t *testing.T, standaloneR
 
 	err = revertInconsistency(standaloneReleaseName)
 	assert.NoError(t, err, "error seen while reverting inconsistency")
-
 	return nil
 }
 
@@ -975,11 +967,9 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t *testing.T, standalone
 		if strings.Contains(pod.Name, "gcp-workload") {
 			found = true
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
-			log.Printf("backup logs %v\n", string(out))
 			assert.NoError(t, err, "error while getting gcp workload backup pod logs")
 			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
-			assert.Contains(t, string(out), "Backup Completed for database system !!")
-			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
+			assert.Contains(t, string(out), "Backup Completed for database neo4j system !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))

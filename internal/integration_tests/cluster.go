@@ -85,7 +85,7 @@ func clusterTests(clusterRelease model.ReleaseName) ([]SubTest, error) {
 			t.Parallel()
 			assert.NoError(t, imagePullSecretTests(t, clusterRelease), "Perform ImagePullSecret Tests")
 		}},
-		{name: "Check PriorityClassNamePrefix", test: func(t *testing.T) {
+		{name: "Check PriorityClassName", test: func(t *testing.T) {
 			t.Parallel()
 			assert.NoError(t, checkPriorityClassName(t, clusterRelease), "priorityClassName should match")
 		}},
@@ -180,8 +180,7 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t *testing.T, 
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
 			assert.NoError(t, err, "error while getting gcp workload backup pod logs")
 			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
-			assert.Contains(t, string(out), "Backup Completed for database system !!")
-			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
+			assert.Contains(t, string(out), "Backup Completed for database neo4j system !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
@@ -248,9 +247,7 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
 			assert.NoError(t, err, "error while getting aws backup pod logs")
 			assert.NotNil(t, out, "aws backup logs cannot be retrieved")
-			log.Printf("backup logs %v\n", string(out))
-			assert.Contains(t, string(out), "Backup Completed for database system !!")
-			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
+			assert.Contains(t, string(out), "Backup Completed for database neo4j system !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to s3 bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to s3 bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
@@ -320,9 +317,7 @@ func InstallNeo4jBackupAWSHelmChartViaMinIO(t *testing.T, releaseName model.Rele
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
 			assert.NoError(t, err, "error while getting aws backup pod logs")
 			assert.NotNil(t, out, "aws backup logs cannot be retrieved")
-			log.Printf("backup logs %v\n", string(out))
-			assert.Contains(t, string(out), "Backup Completed for database system !!")
-			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
+			assert.Contains(t, string(out), "Backup Completed for database neo4j system !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to s3 bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to s3 bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
