@@ -168,6 +168,11 @@ data:
   server.directories.import: "/import"
   {{- end }}
 
+  {{- if .Values.volumes.plugins }}
+  # Logging
+  server.directories.plugins: "/plugins"
+  {{- end }}
+
   # Use more reliable defaults SSL / TLS settings for K8s
   dbms.ssl.policy.bolt.client_auth: "NONE"
   dbms.ssl.policy.https.client_auth: "NONE"
