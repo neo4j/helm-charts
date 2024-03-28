@@ -26,6 +26,7 @@ mkdir signingkeysandbox
 chmod 700 signingkeysandbox
 gpg --homedir signingkeysandbox --batch --import signing-key.asc || true
 #gpg --homedir signingkeysandbox --list-secret-keys
-
+pwd
+ls -lst
 # cleanup
 rm signing-key.asc

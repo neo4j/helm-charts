@@ -25,8 +25,8 @@ S3_CACHE_CONTROL_MAX_AGE_SECONDS="${S3_CACHE_CONTROL_MAX_AGE_SECONDS:-300}"
 #PACKAGE_SIGNING_KEYRING="${PACKAGE_SIGNING_KEYRING:?PACKAGE_SIGNING_KEYRING is required}"
 PACKAGE_SIGNING_KEY="${PACKAGE_SIGNING_KEY:?PACKAGE_SIGNING_KEY is required}"
 PACKAGE_SIGNING_PASSPHRASE="${PACKAGE_SIGNING_PASSPHRASE:?PACKAGE_SIGNING_PASSPHRASE is required}"
-gpg --no-default-keyring --homedir /origGPG/.gnupg --export -o ${PACKAGE_SIGNING_KEYRING_DIR}/pubring.gpg ${PACKAGE_SIGNING_KEY}
-gpg --no-default-keyring --homedir /origGPG/.gnupg --export-secret-keys -o ${PACKAGE_SIGNING_KEYRING} ${PACKAGE_SIGNING_KEY}
+gpg --no-default-keyring --homedir signingkeysandbox/.gnupg --export -o ${PACKAGE_SIGNING_KEYRING_DIR}/pubring.gpg ${PACKAGE_SIGNING_KEY}
+gpg --no-default-keyring --homedir signingkeysandbox/.gnupg --export-secret-keys -o ${PACKAGE_SIGNING_KEYRING} ${PACKAGE_SIGNING_KEY}
 
 
 if [ ${S3_UPLOAD_TO_SUB_FOLDER} == "neo4j" ]; then
