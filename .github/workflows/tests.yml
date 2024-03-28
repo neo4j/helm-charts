@@ -460,7 +460,7 @@ jobs:
     name: Packaging
     needs:
       - repo-updates
-    if: ${{ github.ref == 'refs/heads/dev' && success() }}
+#    if: ${{ github.ref == 'refs/heads/dev' && success() }}
     runs-on: ubuntu-latest
     container:
       image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
@@ -498,7 +498,7 @@ jobs:
     name: Update index.yaml
     needs:
       - packaging
-    if: ${{ github.ref == 'refs/heads/dev' && success() }}
+#    if: ${{ github.ref == 'refs/heads/dev' && success() }}
     runs-on: ubuntu-latest
     container:
       image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
