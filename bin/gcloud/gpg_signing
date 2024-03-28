@@ -8,6 +8,9 @@ shopt -s inherit_errexit
 ROLE_ARN_GPG="${ROLE_ARN_GPG:?ROLE_ARN_GPG is required}"
 SECRET_ID_GPG="${SECRET_ID_GPG:?SECRET_ID_GPG is required}"
 
+echo "home is $HOME"
+ls -lst
+ls -lst /
 mkdir -p /root/.aws
 
 echo "[profile secrets]
