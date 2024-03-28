@@ -536,5 +536,7 @@ jobs:
 
       - name: GPG Key Signing
         run: |          
-          export NEO4JVERSION="5.18.0"          
+          export NEO4JVERSION="5.18.0"
+          git config --global user.email harshit.singhvi@neo4j.com
+          git config --global user.name "Harshit Singhvi"
           ./bin/gcloud/index_yaml_update
