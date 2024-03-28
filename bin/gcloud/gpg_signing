@@ -8,18 +8,17 @@ shopt -s inherit_errexit
 ROLE_ARN_GPG="${ROLE_ARN_GPG:?ROLE_ARN_GPG is required}"
 SECRET_ID_GPG="${SECRET_ID_GPG:?SECRET_ID_GPG is required}"
 
-mkdir -p /root/.aws
+#mkdir -p /root/.aws
+mkdir -p $HOME/.aws
 
 echo "[profile secrets]
 region = eu-west-1
 output = json
 role_arn = ${ROLE_ARN_GPG}
-credential_source = Environment" | tee /root/.aws/config
+credential_source = Environment" | tee $HOME/.aws/config
+#credential_source = Environment" | tee /root/.aws/config
 
-ls -lat /root/.aws
 aws --version
-ls -lat $HOME/
-ls -lat $HOME/.aws
 echo ${AWS_CONFIG_FILE}
 
 # fetch the key
