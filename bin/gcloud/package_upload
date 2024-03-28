@@ -12,8 +12,10 @@ echo "home $HOME"
 PACKAGE_SIGNING_KEYRING_DIR="$HOME/.gnupg"
 mkdir -p ${PACKAGE_SIGNING_KEYRING_DIR}
 PACKAGE_SIGNING_KEYRING=${PACKAGE_SIGNING_KEYRING_DIR}/secring.gpg
-echo "current directory"
-pwd
+
+echo "PACKAGE_SIGNING_KEYRING_DIR ${PACKAGE_SIGNING_KEYRING_DIR} \n PACKAGE_SIGNING_KEYRING ${PACKAGE_SIGNING_KEYRING}"
+ls -lat ${PACKAGE_SIGNING_KEYRING_DIR}
+
 # Local env vars
 #
 BUILD_OUT_DIR="tmp/new-packages/"
@@ -31,7 +33,7 @@ echo "creating pubruing.gpg"
 gpg --no-default-keyring --homedir signingkeysandbox/.gnupg --export -o ${PACKAGE_SIGNING_KEYRING_DIR}/pubring.gpg ${PACKAGE_SIGNING_KEY}
 echo "creating secring.gpg"
 gpg --no-default-keyring --homedir signingkeysandbox/.gnupg --export-secret-keys -o ${PACKAGE_SIGNING_KEYRING} ${PACKAGE_SIGNING_KEY}
-
+ls -lat ${PACKAGE_SIGNING_KEYRING_DIR}
 
 if [ ${S3_UPLOAD_TO_SUB_FOLDER} == "neo4j" ]; then
     CHART_VERSION=$(helm show chart ./neo4j| grep -E "version:(.*)" | awk -F ": " '{print $2}')
