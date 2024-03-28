@@ -432,7 +432,7 @@ jobs:
 #      - run-community-tests-redhat
 #      - run-enterprise-tests
 #      - run-enterprise-tests-redhat
-    if: ${{ github.ref == 'refs/heads/dev' && success() }}
+#    if: ${{ github.ref == 'refs/heads/dev' && success() }}
     runs-on: ubuntu-latest
     container:
       image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
@@ -447,7 +447,7 @@ jobs:
           fetch-depth: '0'
           fetch-tags: true
           token: ${{ secrets.GH_TOKEN }}
-          ref: ${{ github.head_ref }}
+          ref: ghactions-demo
 
       - name: Perform Version Updates
         run: |
@@ -458,10 +458,9 @@ jobs:
 
   packaging:
     name: Packaging
-#    needs:
-#      - repo-updates
-    #    if: ${{ github.ref == 'refs/heads/dev' && success() }}
-    if: ${{ success() }}
+    needs:
+      - repo-updates
+    if: ${{ github.ref == 'refs/heads/dev' && success() }}
     runs-on: ubuntu-latest
     container:
       image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
@@ -494,3 +493,29 @@ jobs:
           export PACKAGE_SIGNING_KEY=${{ secrets.PACKAGE_SIGNING_KEY }}
           export PACKAGE_SIGNING_PASSPHRASE=${{ secrets.PACKAGE_SIGNING_PASSPHRASE }}
           ./bin/gcloud/package_upload
+
+  update-index-yaml:
+    name: Update index.yaml
+    needs:
+      - packaging
+    if: ${{ github.ref == 'refs/heads/dev' && success() }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
+      options: --user 1001
+      credentials:
+        username: _json_key
+        password: ${{ secrets.GCLOUD_SERVICE_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+          fetch-tags: true
+          token: ${{ secrets.GH_TOKEN }}
+          ref: ghactions-demo
+
+      - name: GPG Key Signing
+        run: |          
+          export NEO4JVERSION="5.18.0"          
+          ./bin/gcloud/index_yaml_update

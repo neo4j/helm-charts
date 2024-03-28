@@ -12,13 +12,13 @@ echo "CURRENT_VERSION ${CURRENT_VERSION} NEO4J_VERSION ${NEO4J_VERSION}"
 if [[ ${CURRENT_VERSION} != ${NEO4J_VERSION} ]]
 then
 	sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j/Chart.yaml"
-    sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-headless-service/Chart.yaml"
-    sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-persistent-volume/Chart.yaml"
-    sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-admin/Chart.yaml"
-    sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-admin/values.yaml"
-    sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-reverse-proxy/Chart.yaml"
-    sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-reverse-proxy/values.yaml"
-    sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-loadbalancer/Chart.yaml"
+  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-headless-service/Chart.yaml"
+  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-persistent-volume/Chart.yaml"
+  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-admin/Chart.yaml"
+  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-admin/values.yaml"
+  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-reverse-proxy/Chart.yaml"
+  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-reverse-proxy/values.yaml"
+  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-loadbalancer/Chart.yaml"
 
 	HELM_CHARTS_LIST=("neo4j" "neo4j-headless-service" "neo4j-persistent-volume" "neo4j-admin" "neo4j-reverse-proxy" "neo4j-loadbalancer")
 	for chart in "${HELM_CHARTS_LIST[@]}"

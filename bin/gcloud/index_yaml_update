@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+NEO4JVERSION="${NEO4JVERSION:?NEO4JVERSION is required}"
+echo "sleeping for 100 seconds"
+sleep 100
+helm repo add neo4j https://helm.neo4j.com/neo4j-experimental
+helm repo update
+if [[ "${NEO4JVERSION}" == 5.* ]]
+then
+	echo "Pulling 5.x helm charts"
+	helm pull neo4j/neo4j --version "${NEO4JVERSION}"
+  helm pull neo4j/neo4j-admin --version "${NEO4JVERSION}"
+	helm pull neo4j/neo4j-headless-service --version "${NEO4JVERSION}"
+	helm pull neo4j/neo4j-persistent-volume --version "${NEO4JVERSION}"
+  helm pull neo4j/neo4j-reverse-proxy --version "${NEO4JVERSION}"
+  helm pull neo4j/neo4j-loadbalancer --version "${NEO4JVERSION}"
+else
+	echo "Pulling 4.x helm charts"
+	helm pull neo4j/neo4j-standalone --version "${NEO4JVERSION}"
+	helm pull neo4j/neo4j-cluster-headless-service --version "${NEO4JVERSION}"
+	helm pull neo4j/neo4j-cluster-core --version "${NEO4JVERSION}"
+	helm pull neo4j/neo4j-cluster-read-replica --version "${NEO4JVERSION}"
+	helm pull neo4j/neo4j-cluster-loadbalancer --version "${NEO4JVERSION}"
+fi
+
+helm repo index . --merge index.yaml --url https://github.com/neo4j/helm-charts/releases/download/"${NEO4JVERSION}"
+
+git add index.yaml
+git commit -m "Updating index.yaml with ${NEO4JVERSION} entries"
+git push
