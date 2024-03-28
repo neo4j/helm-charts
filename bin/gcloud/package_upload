@@ -8,7 +8,7 @@ set -o pipefail -o errtrace -o errexit -o nounset
 shopt -s inherit_errexit
 [[ -n "${TRACE:-}" ]] && set -o xtrace
 
-PACKAGE_SIGNING_KEYRING_DIR=/root/.gnupg
+PACKAGE_SIGNING_KEYRING_DIR="$HOME/.gnupg"
 mkdir -p ${PACKAGE_SIGNING_KEYRING_DIR}
 PACKAGE_SIGNING_KEYRING=${PACKAGE_SIGNING_KEYRING_DIR}/secring.gpg
 
