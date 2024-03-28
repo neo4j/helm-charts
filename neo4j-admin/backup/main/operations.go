@@ -101,27 +101,28 @@ func backupOperations() ([]string, []string, error) {
 	consistencyCheckDBs := strings.Split(os.Getenv("CONSISTENCY_CHECK_DATABASE"), ",")
 	consistencyCheckEnabled := os.Getenv("CONSISTENCY_CHECK_ENABLE")
 
-	var fileNames, consistencyCheckReports []string
-	for _, database := range databases {
-		fileName, err := neo4jAdmin.PerformBackup(address, database)
-		if err != nil {
-			return nil, nil, err
-		}
-		log.Printf("Backup File Name is %s", fileName)
-		fileNames = append(fileNames, fileName)
+	var consistencyCheckReports []string
+	backupFileNames, err := neo4jAdmin.PerformBackup(address)
+	if err != nil {
+		return nil, nil, err
+	}
+	log.Printf("Backup File Name(s) %v", backupFileNames)
 
-		if slices.Contains(consistencyCheckDBs, database) && consistencyCheckEnabled == "true" {
-			reportArchiveName, err := neo4jAdmin.PerformConsistencyCheck(fileName, database)
-			if err != nil {
-				return nil, nil, err
-			}
-			if len(reportArchiveName) != 0 {
-				consistencyCheckReports = append(consistencyCheckReports, reportArchiveName)
+	if consistencyCheckEnabled == "true" {
+		for _, consistencyCheckDB := range consistencyCheckDBs {
+			if slices.Contains(databases, consistencyCheckDB) || slices.Contains(databases, "*") {
+				reportArchiveName, err := neo4jAdmin.PerformConsistencyCheck(consistencyCheckDB)
+				if err != nil {
+					return nil, nil, err
+				}
+				if len(reportArchiveName) != 0 {
+					consistencyCheckReports = append(consistencyCheckReports, reportArchiveName)
+				}
 			}
 		}
 	}
 
-	return fileNames, consistencyCheckReports, nil
+	return backupFileNames, consistencyCheckReports, nil
 }
 
 // startupOperations includes the following
@@ -139,6 +140,12 @@ func startupOperations() {
 	os.Setenv("LOCATION", "/backups")
 }
 
+func handleError(err error) {
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+}
+
 // generateAddress returns the backup address in the format <hostip:port> or <standalone-admin.default.svc.cluster.local:port>
 func generateAddress() (string, error) {
 	if ip := os.Getenv("DATABASE_SERVICE_IP"); len(ip) > 0 {
@@ -152,12 +159,6 @@ func generateAddress() (string, error) {
 		return address, nil
 	}
 	return "", fmt.Errorf("cannot generate address. Invalid DATABASE_SERVICE_IP = %s or DATABASE_SERVICE_NAME = %s", os.Getenv("DATABASE_SERVICE_IP"), os.Getenv("DATABASE_SERVICE_NAME"))
-}
-
-func handleError(err error) {
-	if err != nil {
-		log.Fatal(err.Error())
-	}
 }
 
 func deleteBackupFiles(backupFileNames, consistencyCheckReports []string) error {
