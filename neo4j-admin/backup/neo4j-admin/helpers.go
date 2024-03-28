@@ -24,7 +24,6 @@ func getBackupCommandFlags(address string) []string {
 	if os.Getenv("VERBOSE") == "true" {
 		flags = append(flags, "--verbose")
 	}
-	// "neo4j,system,test1" --> 'neo4j' 'system' 'test1'
 	for _, db := range strings.Split(database, ",") {
 		flags = append(flags, fmt.Sprintf("%s", db))
 	}
