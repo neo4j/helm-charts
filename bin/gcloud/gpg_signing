@@ -8,9 +8,6 @@ shopt -s inherit_errexit
 ROLE_ARN_GPG="${ROLE_ARN_GPG:?ROLE_ARN_GPG is required}"
 SECRET_ID_GPG="${SECRET_ID_GPG:?SECRET_ID_GPG is required}"
 
-echo "home is $HOME"
-ls -lst
-ls -lst /
 mkdir -p /root/.aws
 
 echo "[profile secrets]
@@ -18,6 +15,12 @@ region = eu-west-1
 output = json
 role_arn = ${ROLE_ARN_GPG}
 credential_source = Environment" | tee /root/.aws/config
+
+ls -lat /root/.aws
+aws --version
+ls -lat $HOME/
+ls -lat $HOME/.aws
+echo ${AWS_CONFIG_FILE}
 
 # fetch the key
 aws --profile secrets secretsmanager get-secret-value --secret-id ${SECRET_ID_GPG} | jq --raw-output '.SecretString' | jq --raw-output '.privateKey' | base64 --decode > signing-key.asc
