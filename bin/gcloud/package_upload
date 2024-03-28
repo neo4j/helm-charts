@@ -27,7 +27,9 @@ S3_CACHE_CONTROL_MAX_AGE_SECONDS="${S3_CACHE_CONTROL_MAX_AGE_SECONDS:-300}"
 #PACKAGE_SIGNING_KEYRING="${PACKAGE_SIGNING_KEYRING:?PACKAGE_SIGNING_KEYRING is required}"
 PACKAGE_SIGNING_KEY="${PACKAGE_SIGNING_KEY:?PACKAGE_SIGNING_KEY is required}"
 PACKAGE_SIGNING_PASSPHRASE="${PACKAGE_SIGNING_PASSPHRASE:?PACKAGE_SIGNING_PASSPHRASE is required}"
+echo "creating pubruing.gpg"
 gpg --no-default-keyring --homedir signingkeysandbox/.gnupg --export -o ${PACKAGE_SIGNING_KEYRING_DIR}/pubring.gpg ${PACKAGE_SIGNING_KEY}
+echo "creating secring.gpg"
 gpg --no-default-keyring --homedir signingkeysandbox/.gnupg --export-secret-keys -o ${PACKAGE_SIGNING_KEYRING} ${PACKAGE_SIGNING_KEY}
 
 
