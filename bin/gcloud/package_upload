@@ -13,9 +13,6 @@ PACKAGE_SIGNING_KEYRING_DIR="$HOME/.gnupg"
 mkdir -p ${PACKAGE_SIGNING_KEYRING_DIR}
 PACKAGE_SIGNING_KEYRING=${PACKAGE_SIGNING_KEYRING_DIR}/secring.gpg
 
-echo "PACKAGE_SIGNING_KEYRING_DIR ${PACKAGE_SIGNING_KEYRING_DIR} \n PACKAGE_SIGNING_KEYRING ${PACKAGE_SIGNING_KEYRING}"
-ls -lat ${PACKAGE_SIGNING_KEYRING_DIR}
-
 # Local env vars
 #
 BUILD_OUT_DIR="tmp/new-packages/"
@@ -29,11 +26,10 @@ S3_CACHE_CONTROL_MAX_AGE_SECONDS="${S3_CACHE_CONTROL_MAX_AGE_SECONDS:-300}"
 #PACKAGE_SIGNING_KEYRING="${PACKAGE_SIGNING_KEYRING:?PACKAGE_SIGNING_KEYRING is required}"
 PACKAGE_SIGNING_KEY="${PACKAGE_SIGNING_KEY:?PACKAGE_SIGNING_KEY is required}"
 PACKAGE_SIGNING_PASSPHRASE="${PACKAGE_SIGNING_PASSPHRASE:?PACKAGE_SIGNING_PASSPHRASE is required}"
-echo "creating pubruing.gpg"
 gpg --no-default-keyring --homedir signingkeysandbox --export -o ${PACKAGE_SIGNING_KEYRING_DIR}/pubring.gpg ${PACKAGE_SIGNING_KEY}
-echo "creating secring.gpg"
 gpg --no-default-keyring --homedir signingkeysandbox --export-secret-keys -o ${PACKAGE_SIGNING_KEYRING} ${PACKAGE_SIGNING_KEY}
-ls -lat ${PACKAGE_SIGNING_KEYRING_DIR}
+echo "Deleting sandbox"
+rm -rf signingkeysandbox
 
 if [ ${S3_UPLOAD_TO_SUB_FOLDER} == "neo4j" ]; then
     CHART_VERSION=$(helm show chart ./neo4j| grep -E "version:(.*)" | awk -F ": " '{print $2}')
@@ -61,6 +57,7 @@ mv *.tgz.prov ${BUILD_OUT_DIR}
 
 # Pull existing packages from s3
 #
+echo "Access key ${AWS_ACCESS_KEY_ID}"
 mkdir -p ${S3_LOCAL_SYNC_DIR}
 aws s3 sync s3://helm.neo4j.com/${S3_UPLOAD_TO_SUB_FOLDER} ${S3_LOCAL_SYNC_DIR}
 cp ${BUILD_OUT_DIR}/* ${S3_LOCAL_SYNC_DIR} || echo "nothing to upload in ./packages/"
