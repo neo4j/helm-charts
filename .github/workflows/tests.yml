@@ -425,8 +425,8 @@ jobs:
 #        run: |
 #          ./bin/gcloud/delete_cluster
 
-  repo-updates:
-    name: Repo Updates
+  packaging:
+    name: Updating versions and creating helm packages
 #    needs:
 #      - run-community-tests
 #      - run-community-tests-redhat
@@ -454,27 +454,7 @@ jobs:
           export NEO4J_VERSION="5.18.0"
           git config --global user.email harshit.singhvi@neo4j.com
           git config --global user.name "Harshit Singhvi"
-          ./bin/gcloud/version_updates          
-
-  packaging:
-    name: Packaging
-    needs:
-      - repo-updates
-#    if: ${{ github.ref == 'refs/heads/dev' && success() }}
-    runs-on: ubuntu-latest
-    container:
-      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
-      options: --user 1001
-      credentials:
-        username: _json_key
-        password: ${{ secrets.GCLOUD_SERVICE_KEY }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: '0'
-          fetch-tags: true
-          token: ${{ secrets.GH_TOKEN }}
+          ./bin/gcloud/version_updates
 
       - name: GPG Key Signing
         run: |
@@ -492,7 +472,46 @@ jobs:
           export S3_SUB_FOLDER="neo4j-experimental"
           export PACKAGE_SIGNING_KEY=${{ secrets.PACKAGE_SIGNING_KEY }}
           export PACKAGE_SIGNING_PASSPHRASE=${{ secrets.PACKAGE_SIGNING_PASSPHRASE }}
-          ./bin/gcloud/package_upload
+          ./bin/gcloud/package_upload          
+
+#  packaging:
+#    name: Packaging
+#    needs:
+#      - repo-updates
+##    if: ${{ github.ref == 'refs/heads/dev' && success() }}
+#    runs-on: ubuntu-latest
+#    container:
+#      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
+#      options: --user 1001
+#      credentials:
+#        username: _json_key
+#        password: ${{ secrets.GCLOUD_SERVICE_KEY }}
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#        with:
+#          fetch-depth: '0'
+#          fetch-tags: true
+#          token: ${{ secrets.GH_TOKEN }}
+#          ref: ghactions-demo
+#
+#      - name: GPG Key Signing
+#        run: |
+#          export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_GPG }}
+#          export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_GPG }}
+#          export ROLE_ARN_GPG=${{ secrets.ROLE_ARN_GPG }}
+#          export SECRET_ID_GPG=${{ secrets.SECRET_ID_GPG }}
+#          ./bin/gcloud/gpg_signing
+#
+#      - name: package and upload the charts
+#        run: |
+#          export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_HELM }}
+#          export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_HELM }}
+#          export AWS_REGION="us-east-1"
+#          export S3_SUB_FOLDER="neo4j-experimental"
+#          export PACKAGE_SIGNING_KEY=${{ secrets.PACKAGE_SIGNING_KEY }}
+#          export PACKAGE_SIGNING_PASSPHRASE=${{ secrets.PACKAGE_SIGNING_PASSPHRASE }}
+#          ./bin/gcloud/package_upload
 
   update-index-yaml:
     name: Update index.yaml
