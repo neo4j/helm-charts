@@ -465,7 +465,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
-      options: --user 1001
+      options: --user root
       credentials:
         username: _json_key
         password: ${{ secrets.GCLOUD_SERVICE_KEY }}
