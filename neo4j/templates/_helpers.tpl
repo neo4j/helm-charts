@@ -376,3 +376,7 @@ topologySpreadConstraints:
 {{ toYaml $.Values.podSpec.topologySpreadConstraints }}
     {{- end }}
 {{- end -}}
+
+{{- define "neo4j.replicas" -}}
+    {{- $.Values.statefulset.replicas | int | default 1 -}}
+{{- end -}}
