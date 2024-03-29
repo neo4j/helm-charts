@@ -434,6 +434,9 @@ jobs:
 #      - run-enterprise-tests-redhat
 #    if: ${{ github.ref == 'refs/heads/dev' && success() }}
     runs-on: ubuntu-latest
+    env:
+      NEO4J_VERSION: ${{ vars.NEO4J_VERSION }}
+      HELM_REPO_NAME: ${{ vars.HELM_REPO_NAME }}
     container:
       image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
       options: --user 1001
@@ -450,8 +453,7 @@ jobs:
           ref: ghactions-demo
 
       - name: Perform Version Updates
-        run: |
-          export NEO4J_VERSION="5.18.0"
+        run: |          
           git config --global user.email harshit.singhvi@neo4j.com
           git config --global user.name "Harshit Singhvi"
           ./bin/gcloud/version_updates
@@ -468,15 +470,13 @@ jobs:
         run: |
           export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_HELM }}
           export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_HELM }}
-          export AWS_REGION="us-east-1"
-          export S3_SUB_FOLDER="neo4j-experimental"
+          export AWS_REGION="us-east-1"          
           export PACKAGE_SIGNING_KEY=${{ secrets.PACKAGE_SIGNING_KEY }}
           export PACKAGE_SIGNING_PASSPHRASE=${{ secrets.PACKAGE_SIGNING_PASSPHRASE }}
           ./bin/gcloud/package_upload          
 
       - name: update index.yaml
-        run: |
-          export NEO4JVERSION="5.18.0"
+        run: |          
           ./bin/gcloud/index_yaml_update
 
 #  packaging:

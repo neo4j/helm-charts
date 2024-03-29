@@ -8,7 +8,8 @@ set -o pipefail -o errtrace -o errexit -o nounset
 shopt -s inherit_errexit
 [[ -n "${TRACE:-}" ]] && set -o xtrace
 
-echo "home $HOME"
+# neo4j or neo4j-experimental
+S3_UPLOAD_TO_SUB_FOLDER="${HELM_REPO_NAME:?HELM_REPO_NAME is required}"
 PACKAGE_SIGNING_KEYRING_DIR="$HOME/.gnupg"
 mkdir -p ${PACKAGE_SIGNING_KEYRING_DIR}
 PACKAGE_SIGNING_KEYRING=${PACKAGE_SIGNING_KEYRING_DIR}/secring.gpg
@@ -17,7 +18,6 @@ PACKAGE_SIGNING_KEYRING=${PACKAGE_SIGNING_KEYRING_DIR}/secring.gpg
 #
 BUILD_OUT_DIR="tmp/new-packages/"
 S3_LOCAL_SYNC_DIR="tmp/release-packages"
-S3_UPLOAD_TO_SUB_FOLDER="${S3_SUB_FOLDER:-neo4j}"
 S3_CACHE_CONTROL_MAX_AGE_SECONDS="${S3_CACHE_CONTROL_MAX_AGE_SECONDS:-300}"
 
 # Required env vars
