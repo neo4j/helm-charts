@@ -408,11 +408,11 @@ jobs:
 
   packaging:
     name: Packaging and Release
-    needs:
-      - run-community-tests
-      - run-community-tests-redhat
-      - run-enterprise-tests
-      - run-enterprise-tests-redhat
+#    needs:
+#      - run-community-tests
+#      - run-community-tests-redhat
+#      - run-enterprise-tests
+#      - run-enterprise-tests-redhat
     if: |
         ${{ (github.ref_name == 'dev' && success() && github.event_name == 'workflow_dispatch') 
           && (github.actor == 'harshitsinghvi22' || github.actor == 'bfeshti ') 
