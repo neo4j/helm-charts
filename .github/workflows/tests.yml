@@ -407,13 +407,16 @@ jobs:
           ./bin/gcloud/delete_cluster
 
   packaging:
-    name: Updating versions and uploading helm packages
+    name: Packaging and Release
     needs:
       - run-community-tests
       - run-community-tests-redhat
       - run-enterprise-tests
       - run-enterprise-tests-redhat
-    if: (${{ github.ref_name == 'dev' && success() && github.event_name == 'workflow_dispatch' }} && ${{ github.actor == 'harshitsinghvi22' || github.actor == 'bfeshti ' }})
+    if: |
+        ${{ (github.ref_name == 'dev' && success() && github.event_name == 'workflow_dispatch') 
+          && (github.actor == 'harshitsinghvi22' || github.actor == 'bfeshti ') 
+        }}
     runs-on: ubuntu-latest
     env:
       NEO4J_VERSION: ${{ vars.NEO4J_VERSION }}
