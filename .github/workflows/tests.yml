@@ -426,7 +426,7 @@ jobs:
 #          ./bin/gcloud/delete_cluster
 
   packaging:
-    name: Updating versions and creating helm packages
+    name: Updating versions and uploading helm packages
 #    needs:
 #      - run-community-tests
 #      - run-community-tests-redhat
@@ -451,7 +451,7 @@ jobs:
 
       - name: Perform Version Updates
         run: |
-          export NEO4J_VERSION="5.17.0"
+          export NEO4J_VERSION="5.18.0"
           git config --global user.email harshit.singhvi@neo4j.com
           git config --global user.name "Harshit Singhvi"
           ./bin/gcloud/version_updates
