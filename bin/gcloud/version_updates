@@ -31,7 +31,7 @@ then
 	done
 else
 	echo "Neo4j version is same !!"
-    exit 1
+  exit 1
 fi
 
 git commit -m "Updating version to ${NEO4J_VERSION}"
