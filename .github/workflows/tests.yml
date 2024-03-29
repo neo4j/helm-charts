@@ -414,10 +414,7 @@ jobs:
 #      - run-enterprise-tests
 #      - run-enterprise-tests-redhat
     runs-on: ubuntu-latest
-    if: |
-      ${{ (github.ref_name == 'dev' && success() && github.event_name == 'workflow_dispatch') 
-        && (github.actor == 'harshitsinghvi22' || github.actor == 'bfeshti ') 
-      }}
+    if: ${{ github.ref_name == 'dev' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'harshitsinghvi22' || github.actor == 'bfeshti ') }}
     env:
       NEO4J_VERSION: ${{ vars.NEO4J_VERSION }}
       HELM_REPO_NAME: ${{ vars.HELM_REPO_NAME }}
