@@ -55,7 +55,7 @@ var (
 )
 
 func init() {
-	os.Setenv("KUBECONFIG", ".kube/config")
+	//os.Setenv("KUBECONFIG", ".kube/config")
 	// gets kubeconfig from env variable
 	Config, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	CheckError(err)
