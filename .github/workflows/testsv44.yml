@@ -150,12 +150,12 @@ jobs:
           export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
           echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)
+          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
+          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
 #          export NEO4J_DOCKER_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-v4.4"
 #          export NEO4J_EDITION=enterprise
 #          export NEO4J_REVERSE_PROXY_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}-v4.4"
 #          export NEO4J_DOCKER_BACKUP_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ needs.current-date.outputs.CURRENT_DATE }}-v4.4"
-          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
 
   run-community-tests:
     name: Debian Community Tests
@@ -206,11 +206,12 @@ jobs:
           export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
           echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)
+          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
+          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
 #          export NEO4J_DOCKER_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:community-dev"
 #          export NEO4J_REVERSE_PROXY_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
 #          export NEO4J_DOCKER_BACKUP_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ needs.current-date.outputs.CURRENT_DATE }}"
-          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
+
 
 
 
