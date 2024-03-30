@@ -42,6 +42,9 @@ var DefaultEnterpriseSizeArgs = []string{"--set", "neo4j.edition=enterprise", "-
 func init() {
 	setWorkingDir()
 	//os.Setenv("KUBECONFIG", ".kube/config")
+	if _, present := os.LookupEnv("KUBECONFIG"); !present {
+		log.Panic("Please set KUBECONFIG variable")
+	}
 	ImagePullSecretUsername = env.GetString("IPS_USERNAME", "")
 	if ImagePullSecretUsername == "" {
 		log.Panic("Please set IPS_USERNAME env variable !!")
