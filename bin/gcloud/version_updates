@@ -31,6 +31,7 @@ then
   	  echo "Performing helm dep update and helm package on ${chart} chart !!"
   	  ##perform helm dependency updates
   	  helm dependency update "${chart}"
+  	  git add "${chart}/*"
   	done
 else
 	echo "Neo4j version is same !!"
