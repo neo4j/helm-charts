@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# make bash play nicely
+#
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+NEO4J_VERSION="${NEO4J_VERSION:?NEO4J_VERSION is required}"
+CURRENT_VERSION=$(cat neo4j/Chart.yaml | grep "appVersion" | awk -F ": " '{print $2}')
+echo "CURRENT_VERSION ${CURRENT_VERSION} NEO4J_VERSION ${NEO4J_VERSION}"
+
+if [[ ${CURRENT_VERSION} != ${NEO4J_VERSION} ]]
+then
+  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-shared-templates/Chart.yaml"
+  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-standalone/Chart.yaml"
+  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-admin/Chart.yaml"
+  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-admin/values.yaml"
+  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-cluster-core/Chart.yaml"
+  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-cluster-loadbalancer/Chart.yaml"
+  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-cluster-headless-service/Chart.yaml"
+  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-cluster-read-replica/Chart.yaml"
+  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-docker-desktop-pv/Chart.yaml"
+  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-gcloud-pv/Chart.yaml"
+  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-reverse-proxy/Chart.yaml"
+  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-reverse-proxy/values.yaml"
+
+  	HELM_CHARTS_LIST=("neo4j-admin" "neo4j-reverse-proxy" "neo4j-standalone" "neo4j-cluster-core" "neo4j-cluster-read-replica" "neo4j-cluster-headless-service" "neo4j-cluster-loadbalancer" "neo4j-gcloud-pv" "neo4j-docker-desktop-pv")
+  	for chart in "${HELM_CHARTS_LIST[@]}"
+  	do
+  	  echo "Performing helm dep update and helm package on ${chart} chart !!"
+  	  ##perform helm dependency updates
+  	  helm dependency update "${chart}"
+  	done
+else
+	echo "Neo4j version is same !!"
+  exit 1
+fi
+
+git commit -m "Updating version to ${NEO4J_VERSION}"
+git push
+#git tag -m "Tagging ${NEO4J_VERSION}" -a ${NEO4J_VERSION}
+#git push --tags
