@@ -60,7 +60,10 @@ func TestReverseProxyIngressWhenTLSEnabled(t *testing.T) {
 
 	helmValues := model.DefaultNeo4jReverseProxyValues
 	secretName := "demo-secret"
-	helmValues.ReverseProxy.Ingress.TLS.Config[0].SecretName = secretName
+	config := model.Config{
+		SecretName: "demo-secret",
+	}
+	helmValues.ReverseProxy.Ingress.TLS.Config = []model.Config{config}
 	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
 	assert.NoError(t, err, "error seen while testing tls enabled with reverse proxy helm chart")
 	ingressList := manifests.OfType(&v1.Ingress{})
@@ -86,7 +89,10 @@ func TestReverseProxyIngressEmptySecretName(t *testing.T) {
 	t.Parallel()
 
 	helmValues := model.DefaultNeo4jReverseProxyValues
-	helmValues.ReverseProxy.Ingress.TLS.Config[0].SecretName = "   "
+	config := model.Config{
+		SecretName: "  ",
+	}
+	helmValues.ReverseProxy.Ingress.TLS.Config = []model.Config{config}
 	_, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
 	assert.Error(t, err, "no error found")
 	assert.Contains(t, err.Error(), "Empty secretName for tls config")
