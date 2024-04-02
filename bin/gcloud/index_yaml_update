@@ -19,6 +19,8 @@ helm pull neo4j/neo4j-cluster-headless-service --version "${NEO4J_VERSION}"
 helm pull neo4j/neo4j-cluster-core --version "${NEO4J_VERSION}"
 helm pull neo4j/neo4j-cluster-read-replica --version "${NEO4J_VERSION}"
 helm pull neo4j/neo4j-cluster-loadbalancer --version "${NEO4J_VERSION}"
+helm pull neo4j/neo4j-reverse-proxy --version "${NEO4J_VERSION}"
+helm pull neo4j/neo4j-admin --version "${NEO4J_VERSION}"
 
 helm repo index . --merge index.yaml --url https://github.com/neo4j/helm-charts/releases/download/"${NEO4J_VERSION}"
 
