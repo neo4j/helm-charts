@@ -191,11 +191,6 @@ jobs:
           export IPS_PASS=$(gcloud auth print-access-token)
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-#          export NEO4J_DOCKER_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-dev"
-#          export NEO4J_EDITION=enterprise
-#          export NEO4J_REVERSE_PROXY_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
-#          export NEO4J_DOCKER_BACKUP_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ needs.current-date.outputs.CURRENT_DATE }}"
-
 
   run-community-tests:
     name: Debian Community Tests
@@ -248,10 +243,6 @@ jobs:
           export IPS_PASS=$(gcloud auth print-access-token)
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-#          export NEO4J_DOCKER_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:community-dev"
-#          export NEO4J_REVERSE_PROXY_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
-#          export NEO4J_DOCKER_BACKUP_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ needs.current-date.outputs.CURRENT_DATE }}"
-
 
   run-enterprise-tests-redhat:
     name: RedHat Enterprise Tests
@@ -304,11 +295,6 @@ jobs:
           export IPS_PASS=$(gcloud auth print-access-token)
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-#          export NEO4J_DOCKER_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-dev-ubi9"
-#          export NEO4J_EDITION=enterprise
-#          export NEO4J_REVERSE_PROXY_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
-#          export NEO4J_DOCKER_BACKUP_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ needs.current-date.outputs.CURRENT_DATE }}"
-
 
   run-community-tests-redhat:
     name: RedHat Community Tests
@@ -361,10 +347,6 @@ jobs:
           export IPS_PASS=$(gcloud auth print-access-token)
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-#          export NEO4J_DOCKER_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:community-dev-ubi9"
-#          export NEO4J_REVERSE_PROXY_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
-#          export NEO4J_DOCKER_BACKUP_IMG="${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ needs.current-date.outputs.CURRENT_DATE }}"
-
 
   gke-delete:
     name: Debian GKE Cluster Deletion
