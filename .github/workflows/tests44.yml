@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       NEO4J_VERSION:
-        description: 'Neo4j version to be released'
+        description: 'Neo4j version v4.4.x to be released'
         required: true
         type: string
   pull_request:
