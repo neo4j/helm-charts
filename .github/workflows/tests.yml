@@ -1,4 +1,4 @@
-name: Execute Tests for v4.4
+name: Execute Tests for v4.4 feature branch
 
 on:
   workflow_dispatch:
