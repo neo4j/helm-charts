@@ -21,7 +21,6 @@ helm pull neo4j/neo4j-persistent-volume --version "${NEO4J_VERSION}"
 helm pull neo4j/neo4j-reverse-proxy --version "${NEO4J_VERSION}"
 helm pull neo4j/neo4j-loadbalancer --version "${NEO4J_VERSION}"
 
-
 helm repo index . --merge index.yaml --url https://github.com/neo4j/helm-charts/releases/download/"${NEO4J_VERSION}"
 
 git add index.yaml
