@@ -11,7 +11,6 @@ import (
 // TestBackupInstallationWithNoValues checks backup helm chart installation with no values
 func TestBackupInstallationWithNoValues(t *testing.T) {
 	t.Parallel()
-
 	helmValues := model.DefaultNeo4jBackupValues
 	helmValues.DisableLookups = true
 
