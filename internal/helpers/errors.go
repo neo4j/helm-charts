@@ -8,5 +8,6 @@ func CombineErrors(firstOrNil error, second error) error {
 	} else {
 		firstOrNil = multierror.Append(firstOrNil, second)
 	}
+	
 	return firstOrNil
 }
