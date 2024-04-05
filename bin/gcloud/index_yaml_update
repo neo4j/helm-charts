@@ -25,7 +25,5 @@ helm pull neo4j/neo4j-admin --version "${NEO4J_VERSION}"
 helm repo index . --merge index.yaml --url https://github.com/neo4j/helm-charts/releases/download/"${NEO4J_VERSION}"
 
 git add index.yaml
-git commit -m "Updating index.yaml with ${NEO4J_VERSION} entries and updating version to ${NEO4J_VERSION}"
+git commit -m "Updating index.yaml with ${NEO4J_VERSION} entries"
 git push
-git tag -m "Tagging ${NEO4J_VERSION}" -a ${NEO4J_VERSION}
-git push --tags
