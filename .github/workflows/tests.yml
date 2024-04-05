@@ -491,7 +491,6 @@ jobs:
 
       - name: Build and push red hat backup image
         uses: docker/build-push-action@v5
-        if: ${{ inputs.RELEASE }}
         with:
           context: "{{defaultContext}}:neo4j-admin"
           push: true
@@ -509,7 +508,7 @@ jobs:
       - run-enterprise-tests
       - run-enterprise-tests-redhat
     runs-on: ubuntu-latest
-    if: ${{ github.ref_name == 'dev' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'harshitsinghvi22' || github.actor == 'bfeshti ') }}
+    if: ${{ inputs.RELEASE && github.ref_name == 'dev' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'harshitsinghvi22' || github.actor == 'bfeshti ') }}
     env:
       NEO4J_VERSION: ${{ inputs.NEO4J_VERSION }}
       HELM_REPO_NAME: ${{ vars.HELM_REPO_NAME }}
