@@ -7,6 +7,10 @@ on:
         description: 'Neo4j v4.4.x version to be released'
         required: true
         type: string
+      RELEASE:
+        description: 'Release (True) or execute only tests (False)'
+        type: boolean
+        default: false
   pull_request:
     branches:
       - 4.4
@@ -92,14 +96,26 @@ jobs:
 
       - name: Build and push backup image
         uses: docker/build-push-action@v5
+        if: ${{ !inputs.RELEASE }}
+        with:
+          context: "{{defaultContext}}:neo4j-admin"
+          push: true
+          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ env.CURRENT_DATE }}-v4.4"
+          provenance: false
+          build-args: |            
+            IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-v4.4
+            DISTRIBUTION=debian
+
+      - name: Build and push backup image
+        uses: docker/build-push-action@v5
+        if: ${{ inputs.RELEASE }}
         with:
           context: "{{defaultContext}}:neo4j-admin"
           push: true
           tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ env.CURRENT_DATE }}-v4.4"
           provenance: false
           build-args: |
-            IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-v4.4
-            IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-v4.4
+            IMAGE=neo4j:${{ inputs.NEO4J_VERSION }}-enterprise
             DISTRIBUTION=debian
 
   run-enterprise-tests:
@@ -151,6 +167,10 @@ jobs:
           export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
           echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)
+          if [[ ${{ inputs.RELEASE }} ]]; then
+            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}-enterprise"
+          fi
+          echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
 
@@ -203,6 +223,10 @@ jobs:
           export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
           echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)
+          if [[ ${{ inputs.RELEASE }} ]]; then
+            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}"
+          fi
+          echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
 
@@ -235,6 +259,41 @@ jobs:
         run: |
           ./bin/gcloud/delete_cluster
 
+  build-reverseproxy-backup-release-image:
+    name: ReverseProxy and Backup Docker Image build
+    needs:
+      - run-community-tests
+      - run-enterprise-tests
+    runs-on: ubuntu-latest
+    if: ${{ inputs.RELEASE && github.ref_name == '4.4' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'harshitsinghvi22' || github.actor == 'bfeshti ') }}
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push reverse proxy image
+        uses: docker/build-push-action@v5
+        with:
+          context: "{{defaultContext}}:neo4j-reverse-proxy"
+          push: true
+          tags: "neo4j/helm-charts-reverse-proxy:${{ inputs.NEO4J_VERSION }}"
+          provenance: false
+
+      - name: Build and push backup image
+        uses: docker/build-push-action@v5
+        with:
+          context: "{{defaultContext}}:neo4j-admin"
+          push: true
+          tags: "neo4j/helm-charts-backup:${{ inputs.NEO4J_VERSION }}"
+          provenance: false
+          build-args: |
+            IMAGE=neo4j:${{ inputs.NEO4J_VERSION }}-enterprise
+            DISTRIBUTION=debian
 
   packaging:
     name: Packaging and Release
@@ -242,7 +301,7 @@ jobs:
       - run-community-tests
       - run-enterprise-tests
     runs-on: ubuntu-latest
-    if: ${{ github.ref_name == '4.4' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'harshitsinghvi22' || github.actor == 'bfeshti ') }}
+    if: ${{ inputs.RELEASE && github.ref_name == '4.4' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'harshitsinghvi22' || github.actor == 'bfeshti ') }}
     env:
       NEO4J_VERSION: ${{ inputs.NEO4J_VERSION }}
       HELM_REPO_NAME: ${{ vars.HELM_REPO_NAME }}
@@ -286,3 +345,20 @@ jobs:
           git checkout dev
           git pull
           ./bin/gcloud/index_yaml_update
+
+      - name: Release Notes
+        uses: softprops/action-gh-release@v2
+        with:
+          name: v${{ inputs.NEO4J_VERSION }}
+          tag_name: ${{ inputs.NEO4J_VERSION }}
+          token: ${{ secrets.GH_TOKEN }}
+          body: "- Updated to Neo4j ${{ inputs.NEO4J_VERSION }} as the new baseline"
+          make_latest: false
+          files: |
+            neo4j-standalone-${{ inputs.NEO4J_VERSION }}.tgz
+            neo4j-cluster-core-${{ inputs.NEO4J_VERSION }}.tgz
+            neo4j-cluster-read-replica-${{ inputs.NEO4J_VERSION }}.tgz
+            neo4j-cluster-headless-service-${{ inputs.NEO4J_VERSION }}.tgz
+            neo4j-admin-${{ inputs.NEO4J_VERSION }}.tgz
+            neo4j-reverse-proxy-${{ inputs.NEO4J_VERSION }}.tgz
+            neo4j-cluster-loadbalancer-${{ inputs.NEO4J_VERSION }}.tgz
