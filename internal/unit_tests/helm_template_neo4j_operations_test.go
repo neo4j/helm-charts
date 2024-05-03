@@ -19,6 +19,7 @@ func TestNeo4jOperationsEnableServer(t *testing.T) {
 	operations := model.Operations{
 		EnableServer: true,
 		Image:        "demo:123",
+		Protocol:     "neo4j",
 	}
 	helmValues.Neo4J.Operations = operations
 
@@ -34,7 +35,7 @@ func TestNeo4jOperationsEnableServer(t *testing.T) {
 	assert.NotNil(t, operationsPod, "operations pod not found")
 	assert.Equal(t, operationsPod.Spec.RestartPolicy, v1.RestartPolicyNever)
 	assert.Len(t, operationsPod.Spec.Containers, 1)
-	assert.Len(t, operationsPod.Spec.Containers[0].Env, 3)
+	assert.Len(t, operationsPod.Spec.Containers[0].Env, 4)
 	for _, envVar := range operationsPod.Spec.Containers[0].Env {
 		assert.Contains(t, []string{"RELEASE_NAME", "NAMESPACE", "SECRETNAME"}, envVar.Name)
 		switch envVar.Name {
@@ -46,6 +47,9 @@ func TestNeo4jOperationsEnableServer(t *testing.T) {
 			continue
 		case "SECRETNAME":
 			assert.Equal(t, envVar.Value, fmt.Sprintf("%s-auth", helmValues.Neo4J.Name))
+			continue
+		case "PROTOCOL":
+			assert.Equal(t, envVar.Value, "neo4j")
 			continue
 		default:
 			break
