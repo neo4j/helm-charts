@@ -27,11 +27,11 @@ neo4j:
   # until at least this many members have discovered each other. The default is 1 (standalone)
 #  minimumClusterSize: 1
 #
-#  operations:
-#      enableServer: true
-#      image: "gcr.io/neo4j-helm/harshit:operations39"
-#      protocol: "neo4j"
-#      labels: {}
+  operations:
+      enableServer: false
+      image: ""
+      protocol: ""
+      labels: {}
 
   # set edition: "enterprise" to use Neo4j Enterprise Edition
   #
