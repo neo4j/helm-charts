@@ -169,6 +169,10 @@ func getSpecificPod(namespace model.Namespace, podName string) (*coreV1.Pod, err
 	return Clientset.CoreV1().Pods(string(namespace)).Get(context.TODO(), podName, v1.GetOptions{})
 }
 
+func getPodsWithSpecificLabel(namespace model.Namespace, label string) (*coreV1.PodList, error) {
+	return Clientset.CoreV1().Pods(string(namespace)).List(context.TODO(), v1.ListOptions{LabelSelector: label})
+}
+
 func getNodesList() (*coreV1.NodeList, error) {
 	return Clientset.CoreV1().Nodes().List(context.TODO(), v1.ListOptions{})
 }

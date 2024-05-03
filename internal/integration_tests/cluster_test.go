@@ -41,9 +41,10 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	core1HelmArgs := append(defaultHelmArgs, model.ImagePullSecretArgs...)
 	core1HelmArgs = append(core1HelmArgs, model.NodeSelectorArgs(namespace)...)
 	core2HelmArgs := append(defaultHelmArgs, model.PriorityClassNameArgs(namespace)...)
+	core3HelmArgs := append(defaultHelmArgs, model.EnableServerArgs()...)
 	core1 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 1), core1HelmArgs}
 	core2 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 2), core2HelmArgs}
-	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3), defaultHelmArgs}
+	core3 := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 3), core3HelmArgs}
 	cores := []clusterCore{core1, core2, core3}
 
 	t.Cleanup(clusterTestCleanup(t, clusterReleaseName, core1, core2, core3, true))
@@ -172,14 +173,17 @@ func clusterTestCleanup(t *testing.T, clusterReleaseName model.ReleaseName, core
 			{"delete", "pvc", fmt.Sprintf("%s-pvc", core1.name.String()), "--namespace", string(clusterReleaseName.Namespace()), "--ignore-not-found"},
 			{"delete", "pvc", fmt.Sprintf("%s-pvc", core2.name.String()), "--namespace", string(clusterReleaseName.Namespace()), "--ignore-not-found"},
 			{"delete", "pvc", fmt.Sprintf("%s-pvc", core3.name.String()), "--namespace", string(clusterReleaseName.Namespace()), "--ignore-not-found"},
+			//{"delete", "pvc", fmt.Sprintf("%s-pvc", core4.name.String()), "--namespace", string(clusterReleaseName.Namespace()), "--ignore-not-found"},
 			{"delete", "pv", fmt.Sprintf("%s-pv", core1.name.String()), "--ignore-not-found"},
 			{"delete", "pv", fmt.Sprintf("%s-pv", core2.name.String()), "--ignore-not-found"},
 			{"delete", "pv", fmt.Sprintf("%s-pv", core3.name.String()), "--ignore-not-found"},
+			//{"delete", "pv", fmt.Sprintf("%s-pv", core4.name.String()), "--ignore-not-found"},
 		}, false)
 		_ = runAll(t, "gcloud", [][]string{
 			{"compute", "disks", "delete", fmt.Sprintf("neo4j-data-disk-%s", core1.name), "--zone=" + string(gcloud.CurrentZone()), "--project=" + string(gcloud.CurrentProject())},
 			{"compute", "disks", "delete", fmt.Sprintf("neo4j-data-disk-%s", core2.name), "--zone=" + string(gcloud.CurrentZone()), "--project=" + string(gcloud.CurrentProject())},
 			{"compute", "disks", "delete", fmt.Sprintf("neo4j-data-disk-%s", core3.name), "--zone=" + string(gcloud.CurrentZone()), "--project=" + string(gcloud.CurrentProject())},
+			//{"compute", "disks", "delete", fmt.Sprintf("neo4j-data-disk-%s", core4.name), "--zone=" + string(gcloud.CurrentZone()), "--project=" + string(gcloud.CurrentProject())},
 		}, false)
 		_ = runAll(t, "kubectl", [][]string{
 			{"delete", "namespace", string(clusterReleaseName.Namespace()), "--ignore-not-found", "--force", "--grace-period=0"},

@@ -18,7 +18,7 @@ neo4j:
   password: ""
 
   # Existing secret to use for initial database password
-  passwordFromSecret: ""
+#  passwordFromSecret: ""
 
   # Neo4j Edition to use (community|enterprise)
   edition: "community"
@@ -26,6 +26,12 @@ neo4j:
   # Minimum number of machines initially required to form a clustered database. The StatefulSet will not reach the ready state
   # until at least this many members have discovered each other. The default is 1 (standalone)
 #  minimumClusterSize: 1
+#
+#  operations:
+#      enableServer: true
+#      image: "gcr.io/neo4j-helm/harshit:operations39"
+#      protocol: "neo4j"
+#      labels: {}
 
   # set edition: "enterprise" to use Neo4j Enterprise Edition
   #
@@ -527,6 +533,16 @@ podSpec:
 
   # additional runtime containers for the Neo4j pod
   containers: [ ]
+#    - name: "hello-world"
+#      image: "gcr.io/neo4j-helm/harshit:operations39"
+#      imagePullPolicy: "Always"
+#      env:
+#      - name: RELEASE_NAME
+#        value: "core-6"
+#      - name: SECRETNAME
+#        value: "demo-auth"
+#      - name: NAMESPACE
+#        value: "default"
 
 # print the neo4j user password set during install to the `helm install` log
 logInitialPassword: true

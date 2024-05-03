@@ -33,6 +33,13 @@ type HelmValues struct {
 	Analytics                Analytics           `yaml:"analytics"`
 }
 
+type Operations struct {
+	EnableServer bool              `yaml:"enableServer"`
+	Image        string            `yaml:"image"`
+	Protocol     string            `yaml:"protocol"`
+	Labels       map[string]string `yaml:"labels"`
+}
+
 type Analytics struct {
 	Enabled bool `yaml:"enabled"`
 	Type    Type `yaml:"type"`
@@ -110,6 +117,7 @@ type Neo4J struct {
 	OfflineMaintenanceModeEnabled bool        `yaml:"offlineMaintenanceModeEnabled,omitempty"`
 	Resources                     Resources   `yaml:"resources,omitempty"`
 	Labels                        interface{} `yaml:"labels,omitempty"`
+	Operations                    Operations  `yaml:"operations,omitempty"`
 }
 type Requests struct {
 	Storage string `yaml:"storage,omitempty"`

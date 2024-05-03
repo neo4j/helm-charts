@@ -66,7 +66,7 @@ func removeLabelFromNodes(t *testing.T) error {
 func clusterTests(clusterRelease model.ReleaseName) ([]SubTest, error) {
 
 	subTests := []SubTest{
-		{name: "Install Backup Helm Chart For AWS", test: func(t *testing.T) {
+		{name: "Install Backup Helm Chart For AWS With NodeSelector", test: func(t *testing.T) {
 			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupAWSHelmChartWithNodeSelector(t, clusterRelease), "Backup to AWS should succeed")
 		}},
@@ -77,6 +77,10 @@ func clusterTests(clusterRelease model.ReleaseName) ([]SubTest, error) {
 		{name: "Check Cluster Core Logs Format", test: func(t *testing.T) {
 			t.Parallel()
 			assert.NoError(t, CheckLogsFormat(t, clusterRelease), "Cluster core logs format should be in JSON")
+		}},
+		{name: "Check Neo4j Operations Pod for enabling server", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, CheckNeo4jOperationsPod(t, clusterRelease), "Neo4j Operations Pod should get executed")
 		}},
 		{name: "ImagePullSecret tests", test: func(t *testing.T) {
 			t.Parallel()
@@ -344,6 +348,53 @@ func CheckLogsFormat(t *testing.T, releaseName model.ReleaseName) error {
 	return nil
 }
 
+// CheckNeo4jOperationsPod checks whether the neo4j operations pod is executed or not
+func CheckNeo4jOperationsPod(t *testing.T, releaseName model.ReleaseName) error {
+
+	fetchPods := func() (*v1.PodList, error) {
+		pods, err := getPodsWithSpecificLabel(releaseName.Namespace(), "app=neo4j-operations")
+		if err != nil {
+			return &v1.PodList{}, fmt.Errorf("error seen while fetching list of pods \n %v", err)
+		}
+		if len(pods.Items) == 0 {
+			return &v1.PodList{}, fmt.Errorf("no pods found")
+		}
+		if len(pods.Items) > 1 {
+			return &v1.PodList{}, fmt.Errorf("more than one operations pod found")
+		}
+		return pods, nil
+	}
+
+	pods, err := fetchPods()
+	if err != nil {
+		return err
+	}
+	pod := pods.Items[0]
+	for pod.Status.Phase == v1.PodRunning {
+		t.Logf("operations pod in running state..Waiting for it to be completed")
+		time.Sleep(30 * time.Second)
+		pods, err = fetchPods()
+		if err != nil {
+			return err
+		}
+		pod = pods.Items[0]
+	}
+	if pod.Status.Phase != v1.PodSucceeded {
+		return fmt.Errorf("pod phase %v is not succeeded", pod.Status.Phase)
+	}
+
+	out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", string(releaseName.Namespace())).CombinedOutput()
+	if err != nil {
+		t.Logf("error while fetching operations pod logs")
+		return err
+	}
+	stringOutput := strings.ToLower(string(out))
+	if !strings.Contains(stringOutput, "server is already enabled") {
+		return fmt.Errorf("operations pod does not contain valid logs \n logs := %s", string(out))
+	}
+	return nil
+}
+
 // imagePullSecretTests runs tests related to imagePullSecret feature
 func imagePullSecretTests(t *testing.T, name model.ReleaseName) error {
 	t.Run("Check cluster core has imagePullSecret image", func(t *testing.T) {
@@ -529,7 +580,7 @@ func checkLoadBalancerService(t *testing.T, name model.ReleaseName, expectedEndP
 
 // checkPods checks for the number of pods which should be 5 (3 cluster core + 2 read replica)
 func checkPods(t *testing.T, name model.ReleaseName) error {
-	pods, err := getAllPods(name.Namespace())
+	pods, err := getPodsWithSpecificLabel(name.Namespace(), "helm.neo4j.com/clustering=true")
 	if !assert.NoError(t, err) {
 		return err
 	}

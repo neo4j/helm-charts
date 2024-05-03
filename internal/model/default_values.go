@@ -20,6 +20,7 @@ var ImagePullSecretUsername,
 var ImagePullSecretArgs []string
 var (
 	PriorityClassNameArgs func(namespace string) []string
+	EnableServerArgs      func() []string
 	NodeSelectorArgs      func(namespace string) []string
 )
 var NodeSelectorLabel = func(namespace string) string {
@@ -102,6 +103,11 @@ func init() {
 		log.Panic("Please set GCP_SERVICE_ACCOUNT_CRED env variable !!. This environment variable holds the json credentials of GCP service account")
 	}
 
+	_, present = os.LookupEnv("NEO4J_OPERATIONS_IMG")
+	if !present {
+		log.Panic("Please set NEO4J_OPERATIONS_IMG env variable !!.")
+	}
+
 	ImagePullSecretArgs = []string{
 		"--set", fmt.Sprintf("image.customImage=%s", ImagePullSecretCustomImageName),
 		"--set", "image.imagePullSecrets[0]=demo",
@@ -120,6 +126,14 @@ func init() {
 			"--set", fmt.Sprintf("podSpec.priorityClassName=%s", PriorityClassName(namespace)),
 		}
 	}
+	EnableServerArgs = func() []string {
+		return []string{
+			"--set", "neo4j.operations.enableServer=true",
+			"--set", fmt.Sprintf("neo4j.operations.image=%s", os.Getenv("NEO4J_OPERATIONS_IMG")),
+			"--set", "neo4j.operations.protocol=neo4j+ssc",
+		}
+	}
+
 }
 
 const StorageSize = "10Gi"
