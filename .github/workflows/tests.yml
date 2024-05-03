@@ -12,8 +12,10 @@ on:
         default: false
   pull_request:
     paths:
-      - bin/gcloud/*
+      - bin/*
       - internal/*
+      - neo4j*
+      - build/*
     branches:
       - dev
 
