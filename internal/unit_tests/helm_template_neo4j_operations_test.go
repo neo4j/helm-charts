@@ -37,7 +37,7 @@ func TestNeo4jOperationsEnableServer(t *testing.T) {
 	assert.Len(t, operationsPod.Spec.Containers, 1)
 	assert.Len(t, operationsPod.Spec.Containers[0].Env, 4)
 	for _, envVar := range operationsPod.Spec.Containers[0].Env {
-		assert.Contains(t, []string{"RELEASE_NAME", "NAMESPACE", "SECRETNAME"}, envVar.Name)
+		assert.Contains(t, []string{"RELEASE_NAME", "NAMESPACE", "SECRETNAME", "PROTOCOL"}, envVar.Name)
 		switch envVar.Name {
 		case "RELEASE_NAME":
 			assert.Equal(t, envVar.Value, model.DefaultHelmTemplateReleaseName.String())
