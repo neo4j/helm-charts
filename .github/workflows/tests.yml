@@ -194,6 +194,7 @@ jobs:
       NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
       NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ needs.current-date.outputs.CURRENT_DATE }}"
       NEO4J_OPERATIONS_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ needs.current-date.outputs.CURRENT_DATE }}"
+      ISRELEASE: ${{ inputs.RELEASE }}
     container:
       image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
       credentials:
@@ -229,7 +230,7 @@ jobs:
           CURRENT_DIRECTORY=$(pwd)
           export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"          
           export IPS_PASS=$(gcloud auth print-access-token)
-          if [[ ${{ inputs.RELEASE }} ]]; then
+          if [[ ${ISRELEASE:=false} ]]; then
             export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}-enterprise"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
@@ -251,6 +252,7 @@ jobs:
       NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:community-dev"
       NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ needs.current-date.outputs.CURRENT_DATE }}"
       NEO4J_OPERATIONS_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ needs.current-date.outputs.CURRENT_DATE }}"
+      ISRELEASE: ${{ inputs.RELEASE }}
     container:
       image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
       credentials:
@@ -286,7 +288,7 @@ jobs:
           CURRENT_DIRECTORY=$(pwd)
           export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"          
           export IPS_PASS=$(gcloud auth print-access-token)
-          if [[ ${{ inputs.RELEASE }} ]]; then
+          if [[ ${ISRELEASE:=false} ]]; then
             export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
@@ -308,6 +310,7 @@ jobs:
       NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
       NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ needs.current-date.outputs.CURRENT_DATE }}"
       NEO4J_OPERATIONS_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ needs.current-date.outputs.CURRENT_DATE }}"
+      ISRELEASE: ${{ inputs.RELEASE }}
     container:
       image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
       credentials:
@@ -343,8 +346,8 @@ jobs:
           CURRENT_DIRECTORY=$(pwd)
           export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
           echo "printing kubeconfig path $KUBECONFIG"
-          export IPS_PASS=$(gcloud auth print-access-token)
-          if [[ ${{ inputs.RELEASE }} ]]; then
+          export IPS_PASS=$(gcloud auth print-access-token)          
+          if [[ ${ISRELEASE:=false} ]]; then
             export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}-enterprise-ubi9"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
@@ -365,6 +368,7 @@ jobs:
       NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
       NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ needs.current-date.outputs.CURRENT_DATE }}"
       NEO4J_OPERATIONS_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ needs.current-date.outputs.CURRENT_DATE }}"
+      ISRELEASE: ${{ inputs.RELEASE }}
     container:
       image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
       credentials:
@@ -401,7 +405,7 @@ jobs:
           export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
           echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)
-          if [[ ${{ inputs.RELEASE }} ]]; then
+          if [[ ${ISRELEASE:=false} ]]; then
             export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}-ubi9"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
