@@ -20,6 +20,9 @@ func TestNeo4jOperationsEnableServer(t *testing.T) {
 		EnableServer: true,
 		Image:        "demo:123",
 		Protocol:     "neo4j",
+		Labels: map[string]string{
+			"testkey": "demo",
+		},
 	}
 	helmValues.Neo4J.Operations = operations
 
@@ -55,6 +58,7 @@ func TestNeo4jOperationsEnableServer(t *testing.T) {
 			break
 		}
 	}
+	assert.Contains(t, operationsPod.ObjectMeta.Labels, "testkey")
 
 	operationsRole := manifest.OfTypeWithName(
 		&v12.Role{},

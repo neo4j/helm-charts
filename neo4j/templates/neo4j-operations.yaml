@@ -7,7 +7,7 @@ metadata:
   name: {{ include "neo4j.fullname" . }}-operations
   labels:
     app: "neo4j-operations"
-    {{- include "neo4j.labels" $.Values.neo4j.operations.label | indent 4 }}
+    {{- include "neo4j.labels" $.Values.neo4j.operations | indent 4 }}
 spec:
   restartPolicy: Never
   serviceAccountName: "{{ if kindIs "string" $.Values.podSpec.serviceAccountName | and $.Values.podSpec.serviceAccountName }}{{ $.Values.podSpec.serviceAccountName }}{{ else }}{{ include "neo4j.fullname" . }}{{ end }}"

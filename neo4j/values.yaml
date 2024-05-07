@@ -27,10 +27,20 @@ neo4j:
   # until at least this many members have discovered each other. The default is 1 (standalone)
 #  minimumClusterSize: 1
 #
+
+  # (Clustering only feature)
+  # Neo4j operations allows you to enable servers (part of cluster) which are added outside the minimumClusterSize
+  # When the enableServer flag is set to true , an operations pod is created which performs the following functions
+    # fetch neo4j creds from the k8s secret (provided by user or created via helm chart)
+    # Use the cluster ip created as part of the respective release to connect to Neo4j via Go Driver
+    # Execute the ENABLE SERVER query and enable the server
+  # The operations pod ends successfully if the server is enabled, or it was already enabled
   operations:
       enableServer: false
       image: ""
-      protocol: ""
+      # protocol can be "neo4j or "neo4j+ssc" or "neo4j+s". Default set to neo4j
+      # Note: Do not specify bolt protocol here...it will FAIL.
+      protocol: "neo4j"
       labels: {}
 
   # set edition: "enterprise" to use Neo4j Enterprise Edition

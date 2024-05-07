@@ -501,6 +501,14 @@ jobs:
           tags: "neo4j/helm-charts-reverse-proxy:${{ inputs.NEO4J_VERSION }}"
           provenance: false
 
+      - name: Build and push operations image
+        uses: docker/build-push-action@v5
+        with:
+          context: "{{defaultContext}}:neo4j/neo4j-operations"
+          push: true
+          tags: "neo4j/neo4j-operations:${{ inputs.NEO4J_VERSION }}"
+          provenance: false
+
       - name: Build and push backup image
         uses: docker/build-push-action@v5
         with:
