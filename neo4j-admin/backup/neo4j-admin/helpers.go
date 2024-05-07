@@ -69,7 +69,7 @@ func getConsistencyCheckCommandFlags(fileName string, database string) []string 
 func retrieveBackupFileNames(cmdOutput string) ([]string, error) {
 	re := regexp.MustCompile(`Finished artifact creation (.*).backup`)
 	matches := re.FindAllStringSubmatch(cmdOutput, -1)
-	if !(len(matches) > 1) {
+	if len(matches) == 0 {
 		return nil, fmt.Errorf("regex failed !! cannot retrieve backup file name \n %v", matches)
 	}
 	var backupFileNames []string

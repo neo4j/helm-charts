@@ -779,7 +779,7 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 		BucketName:               bucketName,
 		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", standaloneReleaseName.String()),
 		DatabaseNamespace:        string(standaloneReleaseName.Namespace()),
-		Database:                 "neo4j,system",
+		Database:                 "neo4j",
 		CloudProvider:            "gcp",
 		SecretName:               "gcpcred",
 		SecretKeyName:            "credentials",
@@ -806,9 +806,8 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
 			assert.NoError(t, err, "error while getting gcp backup pod logs")
 			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
-			assert.Contains(t, string(out), "Backup Completed for database neo4j system !!")
+			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to GCS bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
 			assert.NotContains(t, string(out), "Deleting file")
 			break
