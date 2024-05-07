@@ -11,11 +11,6 @@ on:
         type: boolean
         default: false
   pull_request:
-    paths:
-      - bin/*
-      - internal/*
-      - neo4j*
-      - build/*
     branches:
       - dev
 
