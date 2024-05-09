@@ -12,6 +12,8 @@ echo "CURRENT_VERSION ${CURRENT_VERSION} NEO4J_VERSION ${NEO4J_VERSION}"
 if [[ ${CURRENT_VERSION} != ${NEO4J_VERSION} ]]
 then
 	sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j/Chart.yaml"
+	# this update is for updating neo4j-operations image tag value which is same as the neo4j version being released
+	sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j/values.yaml"
   sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-headless-service/Chart.yaml"
   sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-persistent-volume/Chart.yaml"
   sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-admin/Chart.yaml"

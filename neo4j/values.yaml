@@ -37,7 +37,7 @@ neo4j:
   # The operations pod ends successfully if the server is enabled, or it was already enabled
   operations:
       enableServer: false
-      image: ""
+      image: "neo4j/helm-charts-operations:5.19.0"
       # protocol can be "neo4j or "neo4j+ssc" or "neo4j+s". Default set to neo4j
       # Note: Do not specify bolt protocol here...it will FAIL.
       protocol: "neo4j"
