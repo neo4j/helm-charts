@@ -1,4 +1,4 @@
-FROM golang:1.21-alpine
+FROM golang:1.22-alpine
 RUN apk --no-cache add curl \
     && addgroup --gid 7474 --system neo4j \
     && adduser --uid 7474 --system --no-create-home --home "/go" --ingroup neo4j neo4j
