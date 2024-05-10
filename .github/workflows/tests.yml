@@ -13,10 +13,6 @@ on:
   pull_request:
     paths-ignore:
       - build/*
-    paths:
-      - internal/*
-      - neo4j*
-      - bin/*
     branches:
       - dev
 
