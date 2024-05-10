@@ -850,7 +850,7 @@ func createMinioBucket(accessKey string, secretKey string, endpoint string) erro
 }
 
 func printStdOutStdErr(stdOut []byte, stderr []byte, command []string) {
-	log.Printf("Command = %v \n", command)
-	log.Printf("stdout = %s \n", string(stdOut))
-	log.Printf("stderr = %s \n", string(stderr))
+	log.Println("Command = ", command)
+	log.Println("stdout = ", string(stdOut))
+	log.Println("stderr = ", string(stderr))
 }
