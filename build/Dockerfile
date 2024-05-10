@@ -30,6 +30,7 @@ RUN apt-get update && apt-get install -y \
   && echo "${VERSION} and ${NUMBER}" \
   && curl -qL "https://github.com/minio/operator/releases/download/${VERSION}/kubectl-minio_${NUMBER}_linux_amd64" --create-dirs -o /root/minio-binaries/kubectl-minio \
   && chmod +x /root/minio-binaries/kubectl-minio \
+    && export PATH=$PATH:/root/minio-binaries \
     && kubectl minio version
 
 
