@@ -12,7 +12,11 @@ on:
         default: false
   pull_request:
     paths-ignore:
-      - build/Dockerfile
+      - build/*
+    paths:
+      - internal/*
+      - neo4j*
+      - bin/*
     branches:
       - dev
 
