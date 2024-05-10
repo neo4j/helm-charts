@@ -23,11 +23,14 @@ RUN apt-get update && apt-get install -y \
   && rm -rf /tmp/* \
   && curl -q https://dl.min.io/client/mc/release/linux-amd64/mc --create-dirs -o /root/minio-binaries/mc \
   && chmod +x /root/minio-binaries/mc \
-  && export VERSION=$(curl -q "https://api.github.com/repos/minio/operator/releases/latest" | jq -r '.|.tag_name') \
-  && export NUMBER=$(echo ${VERSION} | sed 's/v//g') \
+#  && export VERSION=$(curl -q "https://api.github.com/repos/minio/operator/releases/latest" | jq -r '.|.tag_name') \
+#  && export NUMBER=$(echo ${VERSION} | sed 's/v//g') \
+  && export VERSION="v5.0.14" \
+  && export NUMBER="5.0.14" \
   && echo "${VERSION} and ${NUMBER}" \
   && curl -qL "https://github.com/minio/operator/releases/download/${VERSION}/kubectl-minio_${NUMBER}_linux_amd64" --create-dirs -o /root/minio-binaries/kubectl-minio \
-  && chmod +x /root/minio-binaries/kubectl-minio
+  && chmod +x /root/minio-binaries/kubectl-minio \
+    && kubectl minio version
 
 
 ENV USE_GKE_GCLOUD_AUTH_PLUGIN True
