@@ -37,7 +37,7 @@ func checkCoreManifestHasPodMatchingSelector(t *testing.T, manifest *model.K8sRe
 	}
 }
 
-// TestClusterCoreInternalPorts checks if the internals services for cluster core contains the expected ports
+// TestNeo4jInternalPorts checks if the internals services for cluster core contains the expected ports
 func TestNeo4jInternalPorts(t *testing.T) {
 	t.Parallel()
 
@@ -68,6 +68,7 @@ func TestNeo4jInternalPorts(t *testing.T) {
 	}
 
 	internalService := neo4jManifest.OfTypeWithName(&v1.Service{}, neo4j.InternalServiceName()).(*v1.Service)
+	assert.Equal(t, internalService.Spec.Type, v1.ServiceTypeClusterIP)
 
 	checkPortsMatchExpected(t, expectedPorts, internalService)
 }

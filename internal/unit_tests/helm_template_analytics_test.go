@@ -152,7 +152,7 @@ func TestAnalyticsConfigWhenDisabled(t *testing.T) {
 	}))
 }
 
-// TestServiceAccountCreationWhenAnalyticsEnabled checks the k8s service creation when analytics is enabled
+// TestInternalServiceCreationWhenAnalyticsEnabled checks the k8s service creation when analytics is enabled
 func TestInternalServiceCreationWhenAnalyticsEnabled(t *testing.T) {
 
 	t.Parallel()
@@ -181,6 +181,7 @@ func TestInternalServiceCreationWhenAnalyticsEnabled(t *testing.T) {
 				for _, port := range ports {
 					targetPorts = append(targetPorts, port.TargetPort.StrVal)
 				}
+				assert.Equal(t, svc.Spec.Type, v1.ServiceTypeClusterIP)
 				assert.Contains(t, targetPorts, "7688", "missing 7688 port")
 				assert.Contains(t, targetPorts, "5000", "missing 5000 port")
 				assert.Contains(t, targetPorts, "6000", "missing 6000 port")
