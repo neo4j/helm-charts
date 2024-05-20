@@ -288,7 +288,7 @@ jobs:
           #inputs.RELEASE does not hold value when workflow_dispatch is not called
           ISRELEASE=${{ inputs.RELEASE }}
           if [[ ${#ISRELEASE} != 0 ]]; then            
-            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}-enterprise"
+            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
           echo "printing kubeconfig path $KUBECONFIG"
@@ -407,7 +407,7 @@ jobs:
           #inputs.RELEASE does not hold value when workflow_dispatch is not called
           ISRELEASE=${{ inputs.RELEASE }}
           if [[ ${#ISRELEASE} != 0 ]]; then            
-            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}-enterprise"
+            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
