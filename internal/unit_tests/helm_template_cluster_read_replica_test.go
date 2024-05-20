@@ -64,7 +64,7 @@ func TestReadReplicaInternalPorts(t *testing.T) {
 	}
 
 	internalService := readReplicaManifest.OfTypeWithName(&v1.Service{}, readReplica.InternalServiceName()).(*v1.Service)
-
+	assert.Equal(t, internalService.Spec.Type, v1.ServiceTypeClusterIP)
 	checkPortsMatchExpected(t, expectedPorts, internalService)
 }
 
