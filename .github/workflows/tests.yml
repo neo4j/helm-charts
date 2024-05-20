@@ -167,7 +167,9 @@ jobs:
           export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
           echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)
-          if [[ ${{ inputs.RELEASE }} ]]; then
+          #inputs.RELEASE does not hold value when workflow_dispatch is not called
+          ISRELEASE=${{ inputs.RELEASE }}
+          if [[ ${#ISRELEASE} != 0 ]]; then            
             export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}-enterprise"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
@@ -223,7 +225,9 @@ jobs:
           export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
           echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)
-          if [[ ${{ inputs.RELEASE }} ]]; then
+          #inputs.RELEASE does not hold value when workflow_dispatch is not called
+          ISRELEASE=${{ inputs.RELEASE }}
+          if [[ ${#ISRELEASE} != 0 ]]; then            
             export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
