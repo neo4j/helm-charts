@@ -91,38 +91,43 @@ func onPrem() {
 
 }
 
+// backupOperations returns backupFileNames , consistencyCheckReports and error
+// performs aggregate backup is aggregate backup is enabled
 func backupOperations() ([]string, []string, error) {
 
-	address, err := generateAddress()
-	if err != nil {
-		return nil, nil, err
-	}
-	databases := strings.Split(os.Getenv("DATABASE"), ",")
-	consistencyCheckDBs := strings.Split(os.Getenv("CONSISTENCY_CHECK_DATABASE"), ",")
-	consistencyCheckEnabled := os.Getenv("CONSISTENCY_CHECK_ENABLE")
+	if aggregateEnabled := os.Getenv("AGGREGATE_BACKUP_ENABLED"); aggregateEnabled == "true" {
 
-	var consistencyCheckReports []string
-	backupFileNames, err := neo4jAdmin.PerformBackup(address)
-	if err != nil {
-		return nil, nil, err
-	}
-	log.Printf("Backup File Name(s) %v", backupFileNames)
+		address, err := generateAddress()
+		if err != nil {
+			return nil, nil, err
+		}
+		databases := strings.Split(os.Getenv("DATABASE"), ",")
+		consistencyCheckDBs := strings.Split(os.Getenv("CONSISTENCY_CHECK_DATABASE"), ",")
+		consistencyCheckEnabled := os.Getenv("CONSISTENCY_CHECK_ENABLE")
 
-	if consistencyCheckEnabled == "true" {
-		for _, consistencyCheckDB := range consistencyCheckDBs {
-			if slices.Contains(databases, consistencyCheckDB) || slices.Contains(databases, "*") {
-				reportArchiveName, err := neo4jAdmin.PerformConsistencyCheck(consistencyCheckDB)
-				if err != nil {
-					return nil, nil, err
-				}
-				if len(reportArchiveName) != 0 {
-					consistencyCheckReports = append(consistencyCheckReports, reportArchiveName)
+		var consistencyCheckReports []string
+		backupFileNames, err := neo4jAdmin.PerformBackup(address)
+		if err != nil {
+			return nil, nil, err
+		}
+		log.Printf("Backup File Name(s) %v", backupFileNames)
+
+		if consistencyCheckEnabled == "true" {
+			for _, consistencyCheckDB := range consistencyCheckDBs {
+				if slices.Contains(databases, consistencyCheckDB) || slices.Contains(databases, "*") {
+					reportArchiveName, err := neo4jAdmin.PerformConsistencyCheck(consistencyCheckDB)
+					if err != nil {
+						return nil, nil, err
+					}
+					if len(reportArchiveName) != 0 {
+						consistencyCheckReports = append(consistencyCheckReports, reportArchiveName)
+					}
 				}
 			}
 		}
+		return backupFileNames, consistencyCheckReports, nil
 	}
 
-	return backupFileNames, consistencyCheckReports, nil
 }
 
 // startupOperations includes the following

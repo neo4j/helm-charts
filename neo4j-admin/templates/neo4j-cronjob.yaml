@@ -100,6 +100,18 @@ spec:
                   value: "{{ .Values.consistencyCheck.threads | default "" | trim }}"
                 - name: CONSISTENCY_CHECK_VERBOSE
                   value: "{{ .Values.consistencyCheck.verbose | default true }}"
+                - name: AGGREGATE_BACKUP_ENABLED
+                  value: "{{ .Values.aggregate_backup.enabled | default false }}"
+                - name: AGGREGATE_BACKUP_VERBOSE
+                  value: "{{ .Values.aggregate_backup.verbose | default true }}"
+                - name: AGGREGATE_BACKUP_KEEPOLDBACKUP
+                  value: "{{ .Values.aggregate_backup.keepOldBackup | default false }}"
+                - name: AGGREGATE_BACKUP_PARALLEL_RECOVERY
+                  value: "{{ .Values.aggregate_backup.parallelRecovery | default false }}"
+                - name: AGGREGATE_BACKUP_FROM_PATH
+                  value: "{{ .Values.aggregate_backup.fromPath | default "/backups" | trim | quote }}"
+                - name: AGGREGATE_BACKUP_DATABASE
+                  value: "{{ .Values.aggregate_backup.fromPath | default "*" | trim | quote }}"
               volumeMounts:
                 {{- if .Values.backup.secretName }}
                 - name: credentials

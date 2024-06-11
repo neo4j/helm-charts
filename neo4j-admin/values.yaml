@@ -67,8 +67,6 @@ backup:
   # the /backups mount can point to a persitentVolume based on the definition set in tempVolume
   cloudProvider: ""
 
-
-
   # name of the kubernetes secret containing the respective cloud provider credentials
   # Ensure you have read,write access to the mentioned bucket
   # For AWS :
@@ -108,6 +106,18 @@ backup:
   parallelRecovery: false
   verbose: true
   heapSize: ""
+
+# https://neo4j.com/docs/operations-manual/current/backup-restore/aggregate/
+aggregate_backup:
+  enabled: false
+  verbose: true
+  keepOldBackup: false
+  parallelRecovery: false
+  # Only AWS S3 or local mount paths are supported
+  # For S3 provide the complete path , Ex: s3://bucket1/bucket2
+  fromPath: ""
+  # database name to aggregate. Can contain * and ? for globbing.
+  database: ""
 
 #Below are all neo4j-admin database check flags / options
 #To know more about the flags read here : https://neo4j.com/docs/operations-manual/current/tools/neo4j-admin/consistency-checker/

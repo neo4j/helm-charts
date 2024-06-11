@@ -72,3 +72,19 @@ func PerformConsistencyCheck(database string) (string, error) {
 	}
 	return "", fmt.Errorf("Consistency Check Failed for database %s!! \n output = %s \n err = %v", database, string(output), err)
 }
+
+func PerformAggregateBackup() ([]string, error) {
+	flags := getAggregateBackupCommandFlags()
+	database := os.Getenv("AGGREGATE_BACKUP_DATABASE")
+	log.Printf("Printing aggregate backup flags %v", flags)
+	output, err := exec.Command("neo4j-admin", flags...).CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("Aggregate Backup Failed for database %s !! output = %s \n err = %v", database, string(output), err)
+	}
+	log.Printf("Aggregate Backup Completed for database %s !!", database)
+	backupFileNames, err := retrieveBackupFileNames(string(output))
+	if err != nil {
+		return nil, err
+	}
+	return backupFileNames, nil
+}

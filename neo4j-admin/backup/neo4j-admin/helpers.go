@@ -30,6 +30,23 @@ func getBackupCommandFlags(address string) []string {
 	return flags
 }
 
+// getAggregateBackupCommandFlags returns a slice of string containing all the flags to be passed with the neo4j-admin aggregate backup command
+func getAggregateBackupCommandFlags() []string {
+	database := os.Getenv("AGGREGATE_BACKUP_DATABASE")
+	flags := []string{"database", "aggregate-backup"}
+	flags = append(flags, fmt.Sprintf("--from-path=%s", os.Getenv("AGGREGATE_BACKUP_FROM_PATH")))
+	flags = append(flags, fmt.Sprintf("--keep-old-backup=%s", os.Getenv("AGGREGATE_BACKUP_KEEPOLDBACKUP")))
+	flags = append(flags, fmt.Sprintf("--parallel-recovery=%s", os.Getenv("AGGREGATE_BACKUP_PARALLEL_RECOVERY")))
+	flags = append(flags, fmt.Sprintf("--from-path=%s", os.Getenv("AGGREGATE_BACKUP_FROM_PATH")))
+
+	//flags = append(flags, "--expand-commands")
+	if os.Getenv("VERBOSE") == "true" {
+		flags = append(flags, "--verbose")
+	}
+	flags = append(flags, database)
+	return flags
+}
+
 // getConsistencyCheckCommandFlags returns a slice of string containing all the flags to be passed with the neo4j-admin consistency check command
 //
 //	enable: true
