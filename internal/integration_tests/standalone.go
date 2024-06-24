@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	. "github.com/neo4j/helm-charts/internal/helpers"
 	"github.com/neo4j/helm-charts/internal/integration_tests/gcloud"
 	"github.com/neo4j/helm-charts/internal/model"
@@ -1252,6 +1253,30 @@ func deleteAWSBucket(accessKey string, secretKey string, region string, bucketNa
 
 	// Create an S3 client
 	client := s3.NewFromConfig(cfg)
+
+	paginator := s3.NewListObjectsV2Paginator(client, &s3.ListObjectsV2Input{
+		Bucket: &bucketName,
+	})
+
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(context.TODO())
+		if err != nil {
+			return fmt.Errorf("failed to list objects: %v", err)
+		}
+
+		var objectIds []types.ObjectIdentifier
+		for _, object := range page.Contents {
+			objectIds = append(objectIds, types.ObjectIdentifier{Key: object.Key})
+		}
+
+		_, err = client.DeleteObjects(context.TODO(), &s3.DeleteObjectsInput{
+			Bucket: &bucketName,
+			Delete: &types.Delete{Objects: objectIds},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to delete objects: %v", err)
+		}
+	}
 
 	// Delete the bucket
 	_, err = client.DeleteBucket(context.TODO(), &s3.DeleteBucketInput{
