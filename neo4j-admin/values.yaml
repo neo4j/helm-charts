@@ -160,11 +160,11 @@ securityContext:
 # default ephemeral storage of backup container
 resources:
   requests:
-    ephemeralStorage: "1Gi"
+    ephemeralStorage: "4Gi"
     cpu: ""
     memory: ""
   limits:
-    ephemeralStorage: "2Gi"
+    ephemeralStorage: "5Gi"
     cpu: ""
     memory: ""
 
