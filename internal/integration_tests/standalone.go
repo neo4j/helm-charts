@@ -620,29 +620,29 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 		}},
 		{name: "Check RunAsNonRoot", test: func(t *testing.T) { assert.NoError(t, RunAsNonRoot(t, name), "RunAsNonRoot check should succeed") }},
 		{name: "Exec in Pod", test: func(t *testing.T) { assert.NoError(t, CheckExecInPod(t, name), "Exec in Pod should succeed") }},
-		//{name: "Install Backup Helm Chart For GCP With Inconsistencies", test: func(t *testing.T) {
-		//	assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithInconsistencies(t, name), "Backup to GCP should succeed along with upload of inconsistencies report")
-		//}},
-		//{name: "Install Backup Helm Chart For GCP With Workload Identity", test: func(t *testing.T) {
-		//	t.Parallel()
-		//	assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t, name), "Backup to GCP with workload identity should succeed")
-		//}},
+		{name: "Install Backup Helm Chart For GCP With Inconsistencies", test: func(t *testing.T) {
+			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithInconsistencies(t, name), "Backup to GCP should succeed along with upload of inconsistencies report")
+		}},
+		{name: "Install Backup Helm Chart For GCP With Workload Identity", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t, name), "Backup to GCP with workload identity should succeed")
+		}},
 		{name: "Install Backup Helm Chart For AWS", test: func(t *testing.T) {
 			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupAWSHelmChart(t, name), "Backup to AWS should succeed")
 		}},
-		//{name: "Install Backup Helm Chart For Azure", test: func(t *testing.T) {
-		//	t.Parallel()
-		//	assert.NoError(t, InstallNeo4jBackupAzureHelmChart(t, name), "Backup to Azure should succeed")
-		//}},
-		//{name: "Install Backup Helm Chart For GCP", test: func(t *testing.T) {
-		//	t.Parallel()
-		//	assert.NoError(t, InstallNeo4jBackupGCPHelmChart(t, name), "Backup to GCP should succeed")
-		//}},
-		//{name: "Install Reverse Proxy Helm Chart", test: func(t *testing.T) {
-		//	t.Parallel()
-		//	assert.NoError(t, InstallReverseProxyHelmChart(t, name), "Reverse Proxy installation with ingress should succeed")
-		//}},
+		{name: "Install Backup Helm Chart For Azure", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, InstallNeo4jBackupAzureHelmChart(t, name), "Backup to Azure should succeed")
+		}},
+		{name: "Install Backup Helm Chart For GCP", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, InstallNeo4jBackupGCPHelmChart(t, name), "Backup to GCP should succeed")
+		}},
+		{name: "Install Reverse Proxy Helm Chart", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, InstallReverseProxyHelmChart(t, name), "Reverse Proxy installation with ingress should succeed")
+		}},
 	}, err
 }
 
@@ -1233,6 +1233,7 @@ func createAWSBucket(accessKey string, secretKey string, region string, bucketNa
 		log.Printf("Error creating bucket: %v\n", err)
 		return err
 	}
+	log.Printf("AWS bucket %s created", bucketName)
 	return nil
 }
 
@@ -1252,7 +1253,7 @@ func deleteAWSBucket(accessKey string, secretKey string, region string, bucketNa
 	// Create an S3 client
 	client := s3.NewFromConfig(cfg)
 
-	// Create the bucket
+	// Delete the bucket
 	_, err = client.DeleteBucket(context.TODO(), &s3.DeleteBucketInput{
 		Bucket: aws.String(bucketName),
 	})
@@ -1261,5 +1262,6 @@ func deleteAWSBucket(accessKey string, secretKey string, region string, bucketNa
 		log.Printf("Error deleting bucket: %v\n", err)
 		return err
 	}
+	log.Printf("AWS bucket %s deleted", bucketName)
 	return nil
 }
