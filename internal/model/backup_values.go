@@ -65,27 +65,37 @@ type Neo4jBackupNeo4j struct {
 }
 
 type Backup struct {
-	BucketName               string `yaml:"bucketName,omitempty"`
-	DatabaseAdminServiceName string `yaml:"databaseAdminServiceName,omitempty"`
-	DatabaseAdminServiceIP   string `yaml:"databaseAdminServiceIP,omitempty"`
-	DatabaseNamespace        string `yaml:"databaseNamespace,omitempty" default:"default"`
-	DatabaseBackupPort       string `yaml:"databaseBackupPort,omitempty" default:"6362"`
-	DatabaseClusterDomain    string `yaml:"databaseClusterDomain,omitempty" default:"cluster.local"`
-	Database                 string `yaml:"database,omitempty"`
-	AzureStorageAccountName  string `yaml:"azureStorageAccountName,omitempty"`
-	CloudProvider            string `yaml:"cloudProvider,omitempty"`
-	MinioEndpoint            string `yaml:"minioEndpoint,omitempty"`
-	SecretName               string `yaml:"secretName,omitempty"`
-	SecretKeyName            string `yaml:"secretKeyName,omitempty"`
-	PageCache                string `yaml:"pageCache,omitempty"`
-	HeapSize                 string `yaml:"heapSize,omitempty"`
-	FallbackToFull           bool   `yaml:"fallbackToFull" default:"true"`
-	IncludeMetadata          string `yaml:"includeMetadata,omitempty"`
-	Type                     string `yaml:"type,omitempty"`
-	KeepFailed               bool   `yaml:"keepFailed" default:"false"`
-	ParallelRecovery         bool   `yaml:"parallelRecovery" default:"false"`
-	KeepBackupFiles          bool   `yaml:"keepBackupFiles" default:"true"`
-	Verbose                  bool   `yaml:"verbose" default:"true"`
+	BucketName               string          `yaml:"bucketName,omitempty"`
+	DatabaseAdminServiceName string          `yaml:"databaseAdminServiceName,omitempty"`
+	DatabaseAdminServiceIP   string          `yaml:"databaseAdminServiceIP,omitempty"`
+	DatabaseNamespace        string          `yaml:"databaseNamespace,omitempty" default:"default"`
+	DatabaseBackupPort       string          `yaml:"databaseBackupPort,omitempty" default:"6362"`
+	DatabaseClusterDomain    string          `yaml:"databaseClusterDomain,omitempty" default:"cluster.local"`
+	Database                 string          `yaml:"database,omitempty"`
+	AzureStorageAccountName  string          `yaml:"azureStorageAccountName,omitempty"`
+	CloudProvider            string          `yaml:"cloudProvider,omitempty"`
+	MinioEndpoint            string          `yaml:"minioEndpoint,omitempty"`
+	SecretName               string          `yaml:"secretName,omitempty"`
+	SecretKeyName            string          `yaml:"secretKeyName,omitempty"`
+	PageCache                string          `yaml:"pageCache,omitempty"`
+	HeapSize                 string          `yaml:"heapSize,omitempty"`
+	FallbackToFull           bool            `yaml:"fallbackToFull" default:"true"`
+	IncludeMetadata          string          `yaml:"includeMetadata,omitempty"`
+	Type                     string          `yaml:"type,omitempty"`
+	KeepFailed               bool            `yaml:"keepFailed" default:"false"`
+	ParallelRecovery         bool            `yaml:"parallelRecovery" default:"false"`
+	KeepBackupFiles          bool            `yaml:"keepBackupFiles" default:"true"`
+	Verbose                  bool            `yaml:"verbose" default:"true"`
+	AggregateBackup          AggregateBackup `yaml:"aggregate,omitempty"`
+}
+
+type AggregateBackup struct {
+	Enabled          bool   `yaml:"enabled" default:"false"`
+	Verbose          bool   `yaml:"verbose" default:"true"`
+	KeepOldBackup    bool   `yaml:"keepOldBackup" default:"false"`
+	ParallelRecovery bool   `yaml:"parallelRecovery" default:"false"`
+	FromPath         string `yaml:"fromPath"`
+	Database         string `yaml:"database"`
 }
 
 type ConsistencyCheck struct {

@@ -7,7 +7,7 @@
             {{- $secretExists := $secret | all }}
 
             {{- if (not $secretExists) -}}
-                {{ fail (printf "Secret %s configured in 'backup.secretname' not found" .Values.backup.secretName) }}
+                {{ fail (printf "Secret %s configured in 'backup.secretName' not found" .Values.backup.secretName) }}
              {{- else if not (hasKey $secret.data .Values.backup.secretKeyName) -}}
                 {{ fail (printf "Secret %s must contain key %s" .Values.backup.secretName .Values.backup.secretKeyName) }}
             {{- end -}}
@@ -48,25 +48,29 @@
 
 {{/* checks if serviceAccountName is provided or not  when secretName is missing */}}
 {{- define "neo4j.backup.checkBucketName" -}}
-    {{- if .Values.backup.cloudProvider -}}
-        {{- if empty .Values.backup.bucketName -}}
-            {{ fail (printf "Empty bucketName. Please set bucketName via --set backup.bucketName") }}
+    {{- if or (kindIs "invalid" .Values.backup.aggregate) (not .Values.backup.aggregate.enabled) -}}
+        {{- if .Values.backup.cloudProvider -}}
+            {{- if empty .Values.backup.bucketName -}}
+                {{ fail (printf "Empty bucketName. Please set bucketName via --set backup.bucketName") }}
+            {{- end -}}
         {{- end -}}
     {{- end -}}
 {{- end -}}
 
 {{- define "neo4j.backup.checkDatabaseIPAndServiceName" -}}
 
-    {{- if and (kindIs "invalid" .Values.backup.databaseAdminServiceName) (kindIs "invalid" .Values.backup.databaseAdminServiceIP) -}}
-        {{- fail (printf "Missing fields. Please set databaseAdminServiceName via --set backup.databaseAdminServiceName or databaseAdminServiceIP via --set backup.databaseAdminServiceIP")}}
-    {{- end -}}
+    {{- if or (kindIs "invalid" .Values.backup.aggregate) (not .Values.backup.aggregate.enabled) -}}
+        {{- if and (kindIs "invalid" .Values.backup.databaseAdminServiceName) (kindIs "invalid" .Values.backup.databaseAdminServiceIP) -}}
+            {{- fail (printf "Missing fields. Please set databaseAdminServiceName via --set backup.databaseAdminServiceName or databaseAdminServiceIP via --set backup.databaseAdminServiceIP")}}
+        {{- end -}}
 
-    {{- if and (empty (.Values.backup.databaseAdminServiceName | trim)) (empty (.Values.backup.databaseAdminServiceIP | trim)) -}}
-        {{- fail (printf "Empty fields. Please set databaseAdminServiceName via --set backup.databaseAdminServiceName or databaseAdminServiceIP via --set backup.databaseAdminServiceIP")}}
-    {{- end -}}
+        {{- if and (empty (.Values.backup.databaseAdminServiceName | trim)) (empty (.Values.backup.databaseAdminServiceIP | trim)) -}}
+            {{- fail (printf "Empty fields. Please set databaseAdminServiceName via --set backup.databaseAdminServiceName or databaseAdminServiceIP via --set backup.databaseAdminServiceIP")}}
+        {{- end -}}
 
-        {{- if and (.Values.backup.databaseAdminServiceName | trim) (.Values.backup.databaseAdminServiceIP | trim) -}}
-        {{- fail (printf "Please set databaseAdminServiceName via --set backup.databaseAdminServiceName or databaseAdminServiceIP via --set backup.databaseAdminServiceIP. Cannot use both")}}
+            {{- if and (.Values.backup.databaseAdminServiceName | trim) (.Values.backup.databaseAdminServiceIP | trim) -}}
+            {{- fail (printf "Please set databaseAdminServiceName via --set backup.databaseAdminServiceName or databaseAdminServiceIP via --set backup.databaseAdminServiceIP. Cannot use both")}}
+        {{- end -}}
     {{- end -}}
 
 {{- end -}}

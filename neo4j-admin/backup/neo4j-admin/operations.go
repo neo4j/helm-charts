@@ -31,6 +31,8 @@ func PerformBackup(address string) ([]string, error) {
 	databases := strings.ReplaceAll(os.Getenv("DATABASE"), ",", " ")
 	flags := getBackupCommandFlags(address)
 	log.Printf("Printing backup flags %v", flags)
+	dir, _ := os.Getwd()
+	log.Println("current directory", dir)
 	output, err := exec.Command("neo4j-admin", flags...).CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("Backup Failed for database %s !! output = %s \n err = %v", databases, string(output), err)
@@ -73,18 +75,25 @@ func PerformConsistencyCheck(database string) (string, error) {
 	return "", fmt.Errorf("Consistency Check Failed for database %s!! \n output = %s \n err = %v", database, string(output), err)
 }
 
-func PerformAggregateBackup() ([]string, error) {
+// PerformAggregateBackup triggers the neo4j-admin aggregate backup command
+func PerformAggregateBackup() error {
 	flags := getAggregateBackupCommandFlags()
 	database := os.Getenv("AGGREGATE_BACKUP_DATABASE")
-	log.Printf("Printing aggregate backup flags %v", flags)
+	log.Println("Printing aggregate backup flags %v", flags)
+	dir, _ := os.Getwd()
+	log.Println("current directory", dir)
 	output, err := exec.Command("neo4j-admin", flags...).CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("Aggregate Backup Failed for database %s !! output = %s \n err = %v", database, string(output), err)
+		return fmt.Errorf("Aggregate Backup Failed for database %s !! output = %s \n err = %v", database, string(output), err)
 	}
 	log.Printf("Aggregate Backup Completed for database %s !!", database)
-	backupFileNames, err := retrieveBackupFileNames(string(output))
-	if err != nil {
-		return nil, err
+	if !strings.Contains(string(output), "no need to aggregate") {
+		backupFileNames, err := retrieveAggregatedBackupFileNames(string(output))
+		if err != nil {
+			return err
+		}
+		log.Printf("%s", backupFileNames)
 	}
-	return backupFileNames, nil
+	log.Printf(string(output))
+	return nil
 }

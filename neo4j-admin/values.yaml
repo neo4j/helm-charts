@@ -64,7 +64,7 @@ backup:
   database: ""
   # cloudProvider can be either gcp, aws, or azure
   # if cloudProvider is empty then the backup will be done to the /backups mount.
-  # the /backups mount can point to a persitentVolume based on the definition set in tempVolume
+  # the /backups mount can point to a persistentVolume based on the definition set in tempVolume
   cloudProvider: ""
 
   # name of the kubernetes secret containing the respective cloud provider credentials
@@ -107,17 +107,17 @@ backup:
   verbose: true
   heapSize: ""
 
-# https://neo4j.com/docs/operations-manual/current/backup-restore/aggregate/
-aggregate_backup:
-  enabled: false
-  verbose: true
-  keepOldBackup: false
-  parallelRecovery: false
-  # Only AWS S3 or local mount paths are supported
-  # For S3 provide the complete path , Ex: s3://bucket1/bucket2
-  fromPath: ""
-  # database name to aggregate. Can contain * and ? for globbing.
-  database: ""
+  # https://neo4j.com/docs/operations-manual/current/backup-restore/aggregate/
+  aggregate:
+    enabled: false
+    verbose: true
+    keepOldBackup: false
+    parallelRecovery: false
+    # Only AWS S3 or local mount paths are supported
+    # For S3 provide the complete path , Ex: s3://bucket1/bucket2
+    fromPath: ""
+    # database name to aggregate. Can contain * and ? for globbing.
+    database: ""
 
 #Below are all neo4j-admin database check flags / options
 #To know more about the flags read here : https://neo4j.com/docs/operations-manual/current/tools/neo4j-admin/consistency-checker/
@@ -160,11 +160,11 @@ securityContext:
 # default ephemeral storage of backup container
 resources:
   requests:
-    ephemeralStorage: "4Gi"
+    ephemeralStorage: "1Gi"
     cpu: ""
     memory: ""
   limits:
-    ephemeralStorage: "5Gi"
+    ephemeralStorage: "2Gi"
     cpu: ""
     memory: ""
 

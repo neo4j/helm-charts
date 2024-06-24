@@ -7,7 +7,9 @@ import (
 
 func main() {
 
-	startupOperations()
+	if aggregateEnabled := os.Getenv("AGGREGATE_BACKUP_ENABLED"); aggregateEnabled != "true" {
+		startupOperations()
+	}
 
 	cloudProvider := os.Getenv("CLOUD_PROVIDER")
 	switch cloudProvider {

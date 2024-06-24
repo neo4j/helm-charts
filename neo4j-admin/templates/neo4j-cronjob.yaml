@@ -11,7 +11,11 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
     app.kubernetes.io/instance: {{ include "neo4j.fullname" . | quote }}
+    {{- if and (not (kindIs "invalid" .Values.backup.aggregate)) .Values.backup.aggregate.enabled }}
+    app.kubernetes.io/component: aggregate-backup
+    {{- else }}
     app.kubernetes.io/component: backup
+    {{- end }}
     {{- include "neo4j.labels" $.Values.neo4j.labels | indent 4 }}
 spec:
   schedule: {{ $.Values.neo4j.jobSchedule | default "* * * * *" | quote }}
@@ -101,17 +105,17 @@ spec:
                 - name: CONSISTENCY_CHECK_VERBOSE
                   value: "{{ .Values.consistencyCheck.verbose | default true }}"
                 - name: AGGREGATE_BACKUP_ENABLED
-                  value: "{{ .Values.aggregate_backup.enabled | default false }}"
+                  value: "{{ .Values.backup.aggregate.enabled | default false }}"
                 - name: AGGREGATE_BACKUP_VERBOSE
-                  value: "{{ .Values.aggregate_backup.verbose | default true }}"
+                  value: "{{ .Values.backup.aggregate.verbose | default true }}"
                 - name: AGGREGATE_BACKUP_KEEPOLDBACKUP
-                  value: "{{ .Values.aggregate_backup.keepOldBackup | default false }}"
+                  value: "{{ .Values.backup.aggregate.keepOldBackup | default false }}"
                 - name: AGGREGATE_BACKUP_PARALLEL_RECOVERY
-                  value: "{{ .Values.aggregate_backup.parallelRecovery | default false }}"
+                  value: "{{ .Values.backup.aggregate.parallelRecovery | default false }}"
                 - name: AGGREGATE_BACKUP_FROM_PATH
-                  value: "{{ .Values.aggregate_backup.fromPath | default "/backups" | trim | quote }}"
+                  value: "{{ .Values.backup.aggregate.fromPath | default "/backups" | trim }}"
                 - name: AGGREGATE_BACKUP_DATABASE
-                  value: "{{ .Values.aggregate_backup.fromPath | default "*" | trim | quote }}"
+                  value: "{{ .Values.backup.aggregate.database | default "*" | trim  }}"
               volumeMounts:
                 {{- if .Values.backup.secretName }}
                 - name: credentials

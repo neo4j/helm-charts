@@ -37,13 +37,14 @@ func getAggregateBackupCommandFlags() []string {
 	flags = append(flags, fmt.Sprintf("--from-path=%s", os.Getenv("AGGREGATE_BACKUP_FROM_PATH")))
 	flags = append(flags, fmt.Sprintf("--keep-old-backup=%s", os.Getenv("AGGREGATE_BACKUP_KEEPOLDBACKUP")))
 	flags = append(flags, fmt.Sprintf("--parallel-recovery=%s", os.Getenv("AGGREGATE_BACKUP_PARALLEL_RECOVERY")))
-	flags = append(flags, fmt.Sprintf("--from-path=%s", os.Getenv("AGGREGATE_BACKUP_FROM_PATH")))
 
 	//flags = append(flags, "--expand-commands")
 	if os.Getenv("VERBOSE") == "true" {
 		flags = append(flags, "--verbose")
 	}
-	flags = append(flags, database)
+	for _, db := range strings.Split(database, ",") {
+		flags = append(flags, fmt.Sprintf("%s", db))
+	}
 	return flags
 }
 
@@ -95,4 +96,15 @@ func retrieveBackupFileNames(cmdOutput string) ([]string, error) {
 		backupFileNames = append(backupFileNames, fmt.Sprintf("%s.backup", name))
 	}
 	return backupFileNames, nil
+}
+
+// retrieveAggregatedBackupFileNames takes the output of aggregate backup command and returns the list of succesfully backup chain statements
+// Ex: Successfully aggregated backup chain of database 'neo4j2', new artifact: '/var/lib/neo4j/bin/backup/neo4j2-2024-06-13T12-43-43.backup'.
+func retrieveAggregatedBackupFileNames(cmdOutput string) ([]string, error) {
+	re := regexp.MustCompile(`Successfully aggregated backup chain(.*)`)
+	matches := re.FindAllString(cmdOutput, -1)
+	if len(matches) == 0 {
+		return nil, fmt.Errorf("regex failed !! cannot retrieve aggregated backup file name \n %v \n %s", matches, cmdOutput)
+	}
+	return matches, nil
 }

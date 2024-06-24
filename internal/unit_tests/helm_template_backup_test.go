@@ -213,7 +213,7 @@ func TestBackupInvalidSecretName(t *testing.T) {
 
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
 	_, err := helmClient.Install(t, "demo", "demo-ns", helmValues)
-	assert.Contains(t, err.Error(), fmt.Sprintf("Secret %s configured in 'backup.secretname' not found", helmValues.Backup.SecretName))
+	assert.Contains(t, err.Error(), fmt.Sprintf("Secret %s configured in 'backup.secretName' not found", helmValues.Backup.SecretName))
 }
 
 // TestBackupEmptyServiceNameAndIPFields checks backup helm chart installation with empty service name and ip fields
@@ -387,5 +387,46 @@ func TestOnPremScenario(t *testing.T) {
 
 	_, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
 	assert.NoError(t, err, "error seen while performing backup on onprem")
+
+}
+
+// TestAggregateEnabledWithServiceAccount checks for any errors when aggregate backup is performed with service account
+func TestAggregateEnabledWithServiceAccount(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = ""
+	helmValues.Backup.AggregateBackup.Enabled = true
+	helmValues.Backup.AggregateBackup.FromPath = "s3://demo-bucket"
+	helmValues.ServiceAccountName = "demo"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while performing aggregate backup using serviceaccount")
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
+	envVariables := cronjobs[0].(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env
+	var found bool
+	for _, variable := range envVariables {
+		if variable.Name == "AGGREGATE_BACKUP_FROM_PATH" {
+			found = true
+			assert.Equal(t, variable.Value, helmValues.Backup.AggregateBackup.FromPath)
+			break
+		}
+	}
+	assert.Equal(t, found, true)
+
+}
+
+// TestAggregateEnabledWithoutServiceAccount checks for any errors when aggregate backup is performed without service account
+func TestAggregateEnabledWithoutServiceAccount(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.Backup.AggregateBackup.Enabled = true
+
+	_, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while performing aggregate backup without using serviceaccount")
 
 }

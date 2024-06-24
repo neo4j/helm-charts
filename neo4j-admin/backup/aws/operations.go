@@ -135,6 +135,30 @@ func (a *awsClient) UploadLargeObject(fileName string, location string, bucketNa
 	return err
 }
 
+// GenerateEnvVariablesFromCredentials sets AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+// This is required in the case when aggregate backup is to be performed but service account (role based creds) is not used
+func (a *awsClient) GenerateEnvVariablesFromCredentials() error {
+	creds, err := a.cfg.Credentials.Retrieve(context.TODO())
+	if err != nil {
+		return err
+	}
+	log.Printf("creds %v", creds)
+	err = os.Setenv("AWS_ACCESS_KEY_ID", creds.AccessKeyID)
+	if err != nil {
+		return err
+	}
+	err = os.Setenv("AWS_SECRET_ACCESS_KEY", creds.SecretAccessKey)
+	if err != nil {
+		return err
+	}
+	err = os.Setenv("AWS_REGION", a.cfg.Region)
+	if err != nil {
+		return err
+	}
+	log.Println("aws env variables", os.Getenv("AWS_REGION"), os.Getenv("AWS_SECRET_ACCESS_KEY"), os.Getenv("AWS_ACCESS_KEY_ID"))
+	return nil
+}
+
 func generateKeyName(bucketName string, fileName string) string {
 	keyName := fileName
 	// if bucketName is demo/test/test2 , fileName is demo.backup

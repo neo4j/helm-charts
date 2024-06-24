@@ -36,6 +36,7 @@ func NewAwsClient(credentialPath string) (*awsClient, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error while creating aws client \n %v", err)
 		}
+
 	}
 
 	return &awsClient{
