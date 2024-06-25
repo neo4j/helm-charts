@@ -108,6 +108,8 @@ backup:
   heapSize: ""
 
   # https://neo4j.com/docs/operations-manual/current/backup-restore/aggregate/
+  # Performs aggregate backup. If enabled, NORMAL BACKUP WILL NOT BE DONE only aggregate backup
+  # fromPath supports only s3 or local mount. For s3 , please set cloudProvider to aws and use either serviceAccount or creds
   aggregate:
     enabled: false
     verbose: true
