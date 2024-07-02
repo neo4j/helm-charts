@@ -142,11 +142,7 @@ metadata:
   {{- end }}
 spec:
   publishNotReadyAddresses: true
-{{/*  {{- if $replicaEnabled }}*/}}
-{{/*  clusterIP: None*/}}
-{{/*  {{- else }}*/}}
   type: "{{ .spec.type | required "The 'type' field is required in service.internals.spec" }}"
-{{/*  {{- end }}*/}}
   {{- with omit .spec "type" }}{{ include "neo4j.services.extraSpec" . | nindent 2 }}{{ end }}
   selector:
     app: "{{ template "neo4j.appName" $ }}"
@@ -174,18 +170,7 @@ spec:
       targetPort: 7473
       name: tcp-https
     {{- end }}
-    {{- if $replicaEnabled }}
-    #enable the ports 7688 , 6000 only for Read Replicas
-    - protocol: TCP
-      port: 7688
-      targetPort: 7688
-      name: tcp-boltrouting
-    - protocol: TCP
-      port: 6000
-      targetPort: 6000
-      name: tcp-tx
-    {{- end }}
-    {{- if and (not $replicaEnabled ) $clusterEnabled }}
+    {{- if $clusterEnabled }}
     #enable the ports for non Read Replicas
     - protocol: TCP
       port: 7688

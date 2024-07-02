@@ -54,6 +54,8 @@ func TestReadReplicaInternalPorts(t *testing.T) {
 		7474: 7474,
 		7688: 7688,
 		6000: 6000,
+		5000: 5000,
+		7000: 7000,
 	}
 
 	readReplica := model.NewReleaseName("foo")

@@ -175,10 +175,10 @@ var DefaultNeo4jBackupValues = Neo4jBackupValues{
 	},
 	Resources: Neo4jBackupResources{
 		Requests: Neo4jBackupRequests{
-			EphemeralStorage: "4Gi",
+			EphemeralStorage: "1Gi",
 		},
 		Limits: Neo4jBackupLimits{
-			EphemeralStorage: "4Gi",
+			EphemeralStorage: "2Gi",
 		},
 	},
 	SecurityContext: SecurityContext{
