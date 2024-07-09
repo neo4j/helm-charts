@@ -1458,6 +1458,8 @@ func TestContainerSecurityContext(t *testing.T) {
 		if !assert.Equal(t, *containerSecurityContext.RunAsGroup, int64(7474), fmt.Sprintf("runAsGroup current value %d does not match with %s", *containerSecurityContext.RunAsGroup, "7474")) {
 			return
 		}
+		assert.Equal(t, len(containerSecurityContext.Capabilities.Drop), 1)
+		assert.Equal(t, containerSecurityContext.Capabilities.Drop, []v1.Capability{"ALL"})
 	})
 }
 

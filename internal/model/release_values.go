@@ -250,12 +250,18 @@ type Services struct {
 }
 
 type SecurityContext struct {
-	RunAsNonRoot        bool   `yaml:"runAsNonRoot,omitempty"`
-	RunAsUser           int    `yaml:"runAsUser,omitempty"`
-	RunAsGroup          int    `yaml:"runAsGroup,omitempty"`
-	FsGroup             int    `yaml:"fsGroup,omitempty"`
-	FsGroupChangePolicy string `yaml:"fsGroupChangePolicy,omitempty"`
+	RunAsNonRoot        bool         `yaml:"runAsNonRoot,omitempty"`
+	RunAsUser           int          `yaml:"runAsUser,omitempty"`
+	RunAsGroup          int          `yaml:"runAsGroup,omitempty"`
+	FsGroup             int          `yaml:"fsGroup,omitempty"`
+	FsGroupChangePolicy string       `yaml:"fsGroupChangePolicy,omitempty"`
+	Capabilities        Capabilities `yaml:"capabilities,omitempty"`
 }
+
+type Capabilities struct {
+	Drop []string `yaml:"drop,omitempty"`
+}
+
 type ReadinessProbe struct {
 	FailureThreshold int `yaml:"failureThreshold,omitempty"`
 	TimeoutSeconds   int `yaml:"timeoutSeconds,omitempty"`
