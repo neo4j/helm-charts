@@ -660,6 +660,7 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 		_ = runAll(t, "helm", [][]string{
 			{"uninstall", backupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
 		}, false)
+		_ = deleteAWSBucket(os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"), "us-east-1", backupBucketName)
 	})
 
 	err := createAWSBucket(os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"), "us-east-1", backupBucketName)
@@ -748,10 +749,7 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 		}
 	}
 	assert.Equal(t, true, found, "no aggregate backup pod found")
-	err = deleteAWSBucket(os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"), "us-east-1", backupBucketName)
-	if err != nil {
-		return err
-	}
+
 	return nil
 }
 
@@ -1161,11 +1159,11 @@ func introduceInconsistency(t *testing.T, releaseName model.ReleaseName) error {
 	cmd := []string{
 		"bash",
 		"-c",
-		"cp /var/lib/neo4j/data/databases/neo4j/neostore.relationshipstore.db /tmp/neostore.relationshipstore.db && echo '' > /var/lib/neo4j/data/databases/neo4j/neostore.relationshipstore.db",
+		"cp /var/lib/neo4j/data/databases/neo4j/block.relationship.xd.db /tmp/block.relationship.xd.db && echo '' > /var/lib/neo4j/data/databases/neo4j/block.relationship.xd.db",
 	}
 	stdout, stderr, err := ExecInPod(releaseName, cmd, "")
 	if err != nil {
-		return fmt.Errorf("error seen while executing command `echo “” > /var/lib/neo4j/data/databases/neo4j/neostore.relationshipstore.db' ,\n err :- %v", err)
+		return fmt.Errorf("error seen while executing command `echo \"\" > /var/lib/neo4j/data/databases/neo4j/block.relationship.xd.db' ,\n err :- %v", err)
 	}
 	if len(stderr) != 0 {
 		return fmt.Errorf("found something in stderr while introducing inconsistency %v\n", stderr)
@@ -1186,11 +1184,11 @@ func revertInconsistency(releaseName model.ReleaseName) error {
 	cmd := []string{
 		"bash",
 		"-c",
-		"mv /tmp/neostore.relationshipstore.db /var/lib/neo4j/data/databases/neo4j/neostore.relationshipstore.db",
+		"mv /tmp/block.relationship.xd.db /var/lib/neo4j/data/databases/neo4j/block.relationship.xd.db",
 	}
 	stdout, stderr, err := ExecInPod(releaseName, cmd, "")
 	if err != nil {
-		return fmt.Errorf("error seen while executing command `mv /tmp/neostore.relationshipstore.db /var/lib/neo4j/data/databases/neo4j/neostore.relationshipstore.db' ,\n err :- %v", err)
+		return fmt.Errorf("error seen while executing command `mv /tmp/block.relationship.xd.db /var/lib/neo4j/data/databases/neo4j/block.relationship.xd.db' ,\n err :- %v", err)
 	}
 	if strings.TrimSpace(stderr) != "" {
 		return fmt.Errorf("stderr is not empty while reverting inconsistency%v\n", stderr)
