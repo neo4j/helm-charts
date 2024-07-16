@@ -1159,11 +1159,11 @@ func introduceInconsistency(t *testing.T, releaseName model.ReleaseName) error {
 	cmd := []string{
 		"bash",
 		"-c",
-		"cp /var/lib/neo4j/data/databases/neo4j/block.relationship.xd.db /tmp/block.relationship.xd.db && echo '' > /var/lib/neo4j/data/databases/neo4j/block.relationship.xd.db",
+		"cp /var/lib/neo4j/data/databases/neo4j/neostore.relationshipstore.db /tmp/neostore.relationshipstore.db && echo '' > /var/lib/neo4j/data/databases/neo4j/neostore.relationshipstore.db",
 	}
 	stdout, stderr, err := ExecInPod(releaseName, cmd, "")
 	if err != nil {
-		return fmt.Errorf("error seen while executing command `echo \"\" > /var/lib/neo4j/data/databases/neo4j/block.relationship.xd.db' ,\n err :- %v", err)
+		return fmt.Errorf("error seen while executing command `echo \"\" > /var/lib/neo4j/data/databases/neo4j/neostore.relationshipstore.db' ,\n err :- %v", err)
 	}
 	if len(stderr) != 0 {
 		return fmt.Errorf("found something in stderr while introducing inconsistency %v\n", stderr)
@@ -1184,11 +1184,11 @@ func revertInconsistency(releaseName model.ReleaseName) error {
 	cmd := []string{
 		"bash",
 		"-c",
-		"mv /tmp/block.relationship.xd.db /var/lib/neo4j/data/databases/neo4j/block.relationship.xd.db",
+		"mv /tmp/neostore.relationshipstore.db /var/lib/neo4j/data/databases/neo4j/neostore.relationshipstore.db",
 	}
 	stdout, stderr, err := ExecInPod(releaseName, cmd, "")
 	if err != nil {
-		return fmt.Errorf("error seen while executing command `mv /tmp/block.relationship.xd.db /var/lib/neo4j/data/databases/neo4j/block.relationship.xd.db' ,\n err :- %v", err)
+		return fmt.Errorf("error seen while executing command `mv /tmp/neostore.relationshipstore.db /var/lib/neo4j/data/databases/neo4j/neostore.relationshipstore.db' ,\n err :- %v", err)
 	}
 	if strings.TrimSpace(stderr) != "" {
 		return fmt.Errorf("stderr is not empty while reverting inconsistency%v\n", stderr)
