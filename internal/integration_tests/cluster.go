@@ -277,7 +277,7 @@ func InstallNeo4jBackupAWSHelmChartViaS3(t *testing.T, releaseName model.Release
 
 	namespace := "default"
 	backupReleaseName := model.NewReleaseName("cluster-backup-aws-s3" + TestRunIdentifier)
-	secretName := "miniocred"
+	secretName := "awscred"
 
 	t.Cleanup(func() {
 		_ = runAll(t, "helm", [][]string{
@@ -357,7 +357,7 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 		DatabaseNamespace:        string(releaseName.Namespace()),
 		Database:                 "neo4j,system",
 		CloudProvider:            "aws",
-		SecretName:               secretName,
+		SecretName:               "awscred",
 		SecretKeyName:            "credentials",
 		S3Endpoint:               "https://localhost:9000",
 		S3EndpointTLS:            true,
