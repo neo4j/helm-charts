@@ -76,7 +76,10 @@ type Backup struct {
 	Database                 string          `yaml:"database,omitempty"`
 	AzureStorageAccountName  string          `yaml:"azureStorageAccountName,omitempty"`
 	CloudProvider            string          `yaml:"cloudProvider,omitempty"`
-	MinioEndpoint            string          `yaml:"minioEndpoint,omitempty"`
+	S3Endpoint               string          `yaml:"s3Endpoint,omitempty"`
+	S3EndpointTLS            bool            `yaml:"s3EndpointTLS,omitempty" default:"false"`
+	S3CACert                 string          `yaml:"s3CACert,omitempty"`
+	S3SkipVerify             bool            `yaml:"s3SkipVerify,omitempty" default:"false"`
 	SecretName               string          `yaml:"secretName,omitempty"`
 	SecretKeyName            string          `yaml:"secretKeyName,omitempty"`
 	PageCache                string          `yaml:"pageCache,omitempty"`
