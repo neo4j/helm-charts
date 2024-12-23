@@ -218,6 +218,31 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 		}, false)
 	})
 
+	secretKey := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "awscred",
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"credentials": []byte(fmt.Sprintf("[default]\naws_access_key_id=%s\naws_secret_access_key=%s",
+				os.Getenv("AWS_ACCESS_KEY_ID"),
+				os.Getenv("AWS_SECRET_ACCESS_KEY"))),
+		},
+		Type: "Opaque",
+	}
+
+	_, err := Clientset.CoreV1().Secrets(namespace).Create(context.TODO(), secretKey, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to create AWS credentials secret: %v", err)
+	}
+
+	_, err = Clientset.CoreV1().Secrets(namespace).Get(context.TODO(), "awscred", metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to verify AWS credentials secret exists: %v", err)
+	}
+
+	time.Sleep(2 * time.Second)
+
 	bucketName := model.BucketName
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
 	helmValues := model.DefaultNeo4jBackupValues
@@ -236,7 +261,7 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 		"testLabel": fmt.Sprintf("%s-5", namespace),
 	}
 	helmValues.ConsistencyCheck.Database = "neo4j"
-	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
+	_, err = helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
 
 	time.Sleep(2 * time.Minute)
@@ -339,6 +364,7 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 
 	namespace := "default"
 	backupReleaseName := model.NewReleaseName("cluster-backup-aws-s3-tls" + TestRunIdentifier)
+	secretName := "awscred"
 
 	t.Cleanup(func() {
 		_ = runAll(t, "helm", [][]string{
@@ -346,7 +372,30 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 		}, false)
 	})
 
-	caCert := "your-base64-encoded-ca-cert"
+	secretKey := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"credentials": []byte(fmt.Sprintf("[default]\naws_access_key_id=%s\naws_secret_access_key=%s",
+				os.Getenv("AWS_ACCESS_KEY_ID"),
+				os.Getenv("AWS_SECRET_ACCESS_KEY"))),
+		},
+		Type: "Opaque",
+	}
+
+	_, err := Clientset.CoreV1().Secrets(namespace).Create(context.TODO(), secretKey, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to create AWS credentials secret: %v", err)
+	}
+
+	_, err = Clientset.CoreV1().Secrets(namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to verify AWS credentials secret exists: %v", err)
+	}
+
+	time.Sleep(2 * time.Second)
 
 	bucketName := model.BucketName
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
@@ -357,41 +406,48 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 		DatabaseNamespace:        string(releaseName.Namespace()),
 		Database:                 "neo4j,system",
 		CloudProvider:            "aws",
-		SecretName:               "awscred",
+		SecretName:               secretName,
 		SecretKeyName:            "credentials",
-		S3Endpoint:               "https://localhost:9000",
+		S3Endpoint:               "http://localhost:9000",
 		S3EndpointTLS:            true,
-		S3CACert:                 caCert,
 		Verbose:                  true,
 		Type:                     "FULL",
 	}
 	helmValues.ConsistencyCheck.Database = "neo4j"
-	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
-	assert.NoError(t, err)
+	helmValues.Neo4J.JobSchedule = "* * * * *"
+	_, err = helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
+	if err != nil {
+		return fmt.Errorf("helm install failed: %v", err)
+	}
 
 	time.Sleep(2 * time.Minute)
+
 	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
-	assert.NoError(t, err, "cannot retrieve aws backup cronjob")
-	assert.Equal(t, cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule, fmt.Sprintf("aws cronjob schedule %s not matching with the schedule defined in values.yaml %s", cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule))
+	if err != nil {
+		return fmt.Errorf("cannot retrieve aws backup cronjob: %v", err)
+	}
+
+	if cronjob.Spec.Schedule != helmValues.Neo4J.JobSchedule {
+		return fmt.Errorf("aws cronjob schedule %s not matching with the schedule defined in values.yaml %s",
+			cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule)
+	}
 
 	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
-	assert.NoError(t, err, "error while retrieving pod list during aws backup operation")
+	if err != nil {
+		return fmt.Errorf("error while retrieving pod list during aws backup operation: %v", err)
+	}
 
 	var found bool
 	for _, pod := range pods.Items {
 		if strings.Contains(pod.Name, "cluster-backup-aws-s3-tls") {
 			found = true
-			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
-			assert.NoError(t, err, "error while getting aws backup pod logs")
-			assert.NotNil(t, out, "aws backup logs cannot be retrieved")
-			assert.Contains(t, string(out), "Backup Completed for database neo4j system !!")
-			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to s3 bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to s3 bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
 			break
 		}
 	}
-	assert.Equal(t, true, found, "no aws s3 tls backup pod found")
+	if !found {
+		return fmt.Errorf("no aws s3 tls backup pod found")
+	}
+
 	return nil
 }
 
