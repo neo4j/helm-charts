@@ -2,15 +2,20 @@ package aws
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/base64"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"strings"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	smithyendpoints "github.com/aws/smithy-go/endpoints"
 	"github.com/neo4j/helm-charts/neo4j-admin/backup/common"
-	"log"
-	"os"
-	"strings"
 )
 
 type resolverV2 struct{}
@@ -170,12 +175,44 @@ func generateKeyName(bucketName string, fileName string) string {
 
 func (a *awsClient) getS3Client() *s3.Client {
 	client := s3.NewFromConfig(*a.cfg)
-	// if minio endpoint is provided add the endpoint resolver
-	if value := os.Getenv("ENDPOINT"); strings.TrimSpace(value) != "" {
+	if value := os.Getenv("S3_ENDPOINT"); strings.TrimSpace(value) != "" {
+		useTLS := strings.ToLower(os.Getenv("S3_ENDPOINT_TLS")) == "true"
+		skipVerify := strings.ToLower(os.Getenv("S3_SKIP_VERIFY")) == "true"
+
+		var httpClient *http.Client
+		if useTLS {
+			tlsConfig := &tls.Config{
+				InsecureSkipVerify: skipVerify,
+			}
+
+			if caCert := os.Getenv("S3_CA_CERT"); strings.TrimSpace(caCert) != "" {
+				caCertPool := x509.NewCertPool()
+				certData, err := base64.StdEncoding.DecodeString(caCert)
+				if err != nil {
+					log.Printf("Warning: Failed to decode CA certificate: %v", err)
+				} else {
+					if !caCertPool.AppendCertsFromPEM(certData) {
+						log.Printf("Warning: Failed to append CA certificate")
+					} else {
+						tlsConfig.RootCAs = caCertPool
+					}
+				}
+			}
+
+			httpClient = &http.Client{
+				Transport: &http.Transport{
+					TLSClientConfig: tlsConfig,
+				},
+			}
+		}
+
 		client = s3.NewFromConfig(*a.cfg, func(options *s3.Options) {
 			options.BaseEndpoint = aws.String(value)
-			options.EndpointResolverV2 = &resolverV2{}
 			options.UsePathStyle = true
+
+			if httpClient != nil {
+				options.HTTPClient = httpClient
+			}
 		})
 	}
 	return client
