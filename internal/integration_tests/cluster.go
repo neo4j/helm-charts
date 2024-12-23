@@ -254,6 +254,9 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 		CloudProvider:            "aws",
 		SecretName:               "awscred",
 		SecretKeyName:            "credentials",
+		S3Endpoint:               "http://localhost:9000",
+		S3EndpointTLS:            false,
+		S3Region:                 "us-east-1",
 		Verbose:                  true,
 		Type:                     "FULL",
 	}
@@ -323,6 +326,7 @@ func InstallNeo4jBackupAWSHelmChartViaS3(t *testing.T, releaseName model.Release
 		SecretKeyName:            "credentials",
 		S3Endpoint:               "http://localhost:9000",
 		S3EndpointTLS:            false,
+		S3Region:                 "us-east-1",
 		Verbose:                  true,
 		Type:                     "FULL",
 	}
@@ -410,6 +414,7 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 		SecretKeyName:            "credentials",
 		S3Endpoint:               "http://localhost:9000",
 		S3EndpointTLS:            true,
+		S3Region:                 "us-east-1",
 		Verbose:                  true,
 		Type:                     "FULL",
 	}

@@ -92,6 +92,7 @@ type Backup struct {
 	KeepBackupFiles          bool            `yaml:"keepBackupFiles" default:"true"`
 	Verbose                  bool            `yaml:"verbose" default:"true"`
 	AggregateBackup          AggregateBackup `yaml:"aggregate,omitempty"`
+	S3Region                 string          `json:"s3Region,omitempty"`
 }
 
 type AggregateBackup struct {
