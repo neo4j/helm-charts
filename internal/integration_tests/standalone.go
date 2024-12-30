@@ -673,7 +673,7 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 		_ = deleteAWSBucket(os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"), "us-east-1", backupBucketName)
 	})
 
-	secretName := "aws-backup-secret"
+	secretName := "awscred"
 	secretKey := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
