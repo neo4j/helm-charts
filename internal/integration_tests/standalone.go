@@ -673,6 +673,10 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 		_ = deleteAWSBucket(os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"), "us-east-1", backupBucketName)
 	})
 
+	_ = runAll(t, "kubectl", [][]string{
+		{"delete", "secret", "awscred", "--namespace", namespace, "--ignore-not-found"},
+	}, false)
+
 	secretKey := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "awscred",
@@ -691,12 +695,17 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 		return fmt.Errorf("failed to create AWS credentials secret: %v", err)
 	}
 
-	_, err = Clientset.CoreV1().Secrets(namespace).Get(context.TODO(), "awscred", metav1.GetOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to verify AWS credentials secret exists: %v", err)
+	maxRetries := 10
+	for i := 0; i < maxRetries; i++ {
+		_, err := Clientset.CoreV1().Secrets(namespace).Get(context.TODO(), "awscred", metav1.GetOptions{})
+		if err == nil {
+			break
+		}
+		if i == maxRetries-1 {
+			return fmt.Errorf("failed to verify AWS credentials secret exists after %d retries: %v", maxRetries, err)
+		}
+		time.Sleep(2 * time.Second)
 	}
-
-	time.Sleep(2 * time.Second)
 
 	err = createAWSBucket(os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"), "us-east-1", backupBucketName)
 	if err != nil {
