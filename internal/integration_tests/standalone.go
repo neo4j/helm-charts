@@ -673,13 +673,10 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 		_ = deleteAWSBucket(os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"), "us-east-1", backupBucketName)
 	})
 
-	_ = runAll(t, "kubectl", [][]string{
-		{"delete", "secret", "awscred", "--namespace", namespace, "--ignore-not-found"},
-	}, false)
-
+	secretName := "aws-backup-secret"
 	secretKey := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "awscred",
+			Name:      secretName,
 			Namespace: namespace,
 		},
 		Data: map[string][]byte{
@@ -690,14 +687,18 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 		Type: "Opaque",
 	}
 
+	_ = runAll(t, "kubectl", [][]string{
+		{"delete", "secret", secretName, "--namespace", namespace, "--ignore-not-found"},
+	}, false)
+
 	_, err := Clientset.CoreV1().Secrets(namespace).Create(context.TODO(), secretKey, metav1.CreateOptions{})
-	if err != nil && !strings.Contains(err.Error(), "already exists") {
+	if err != nil {
 		return fmt.Errorf("failed to create AWS credentials secret: %v", err)
 	}
 
 	maxRetries := 10
 	for i := 0; i < maxRetries; i++ {
-		_, err := Clientset.CoreV1().Secrets(namespace).Get(context.TODO(), "awscred", metav1.GetOptions{})
+		_, err := Clientset.CoreV1().Secrets(namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
 		if err == nil {
 			break
 		}
@@ -720,7 +721,7 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 		DatabaseNamespace:        string(standaloneReleaseName.Namespace()),
 		Database:                 "neo4j,system",
 		CloudProvider:            "aws",
-		SecretName:               "awscred",
+		SecretName:               secretName,
 		SecretKeyName:            "credentials",
 		Verbose:                  true,
 		KeepBackupFiles:          true,
@@ -730,7 +731,7 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 
 	_, err = helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	if err != nil {
-		secret, getErr := Clientset.CoreV1().Secrets(namespace).Get(context.TODO(), "awscred", metav1.GetOptions{})
+		secret, getErr := Clientset.CoreV1().Secrets(namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
 		if getErr != nil {
 			t.Logf("Debug: Failed to get secret after helm error: %v", getErr)
 		} else {
