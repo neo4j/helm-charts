@@ -308,6 +308,10 @@ func InstallNeo4jBackupAWSHelmChartViaS3(t *testing.T, releaseName model.Release
 	secretName := "awscred"
 
 	t.Cleanup(func() {
+		_ = runAll(t, "kubectl", [][]string{
+			{"delete", "secret", secretName, "--namespace", namespace, "--ignore-not-found"},
+		}, false)
+
 		_ = runAll(t, "helm", [][]string{
 			{"uninstall", backupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
 		}, false)
@@ -380,12 +384,15 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 	secretName := "awscred"
 
 	t.Cleanup(func() {
+		_ = runAll(t, "kubectl", [][]string{
+			{"delete", "secret", secretName, "--namespace", namespace, "--ignore-not-found"},
+		}, false)
+
 		_ = runAll(t, "helm", [][]string{
 			{"uninstall", backupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
 		}, false)
 	})
 
-	// Create AWS credentials secret
 	secretKey := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
@@ -400,7 +407,7 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 	}
 
 	_, err := Clientset.CoreV1().Secrets(namespace).Create(context.TODO(), secretKey, metav1.CreateOptions{})
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "already exists") {
 		return fmt.Errorf("failed to create AWS credentials secret: %v", err)
 	}
 
