@@ -687,7 +687,7 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 	}
 
 	_, err := Clientset.CoreV1().Secrets(namespace).Create(context.TODO(), secretKey, metav1.CreateOptions{})
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "already exists") {
 		return fmt.Errorf("failed to create AWS credentials secret: %v", err)
 	}
 
