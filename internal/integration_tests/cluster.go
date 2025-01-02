@@ -223,6 +223,8 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 		{"delete", "secret", "awscred", "--namespace", namespace, "--ignore-not-found"},
 	}, false)
 
+	time.Sleep(2 * time.Second)
+
 	secretKey := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "awscred",
@@ -259,8 +261,6 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 		CloudProvider:            "aws",
 		SecretName:               "awscred",
 		SecretKeyName:            "credentials",
-		S3Endpoint:               "http://localhost:9000",
-		S3EndpointTLS:            false,
 		S3Region:                 "us-east-1",
 		Verbose:                  true,
 		Type:                     "FULL",
