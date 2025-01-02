@@ -219,6 +219,10 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 		}, false)
 	})
 
+	_ = runAll(t, "kubectl", [][]string{
+		{"delete", "secret", "awscred", "--namespace", namespace, "--ignore-not-found"},
+	}, false)
+
 	secretKey := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "awscred",
@@ -318,6 +322,33 @@ func InstallNeo4jBackupAWSHelmChartViaS3(t *testing.T, releaseName model.Release
 		}, false)
 	})
 
+	secretKey := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"credentials": []byte(fmt.Sprintf("[default]\naws_access_key_id=%s\naws_secret_access_key=%s",
+				os.Getenv("AWS_ACCESS_KEY_ID"),
+				os.Getenv("AWS_SECRET_ACCESS_KEY"))),
+		},
+		Type: "Opaque",
+	}
+
+	_ = runAll(t, "kubectl", [][]string{
+		{"delete", "secret", secretName, "--namespace", namespace, "--ignore-not-found"},
+	}, false)
+
+	_, err := Clientset.CoreV1().Secrets(namespace).Create(context.TODO(), secretKey, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to create AWS credentials secret: %v", err)
+	}
+
+	_, err = Clientset.CoreV1().Secrets(namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to verify AWS credentials secret exists: %v", err)
+	}
+
 	bucketName := model.BucketName
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
 	helmValues := model.DefaultNeo4jBackupValues
@@ -337,7 +368,7 @@ func InstallNeo4jBackupAWSHelmChartViaS3(t *testing.T, releaseName model.Release
 	}
 	helmValues.ConsistencyCheck.Database = "neo4j"
 	helmValues.Neo4J.JobSchedule = "* * * * *"
-	var err error
+
 	_, err = helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	if err != nil {
 		return fmt.Errorf("helm install failed: %v", err)
