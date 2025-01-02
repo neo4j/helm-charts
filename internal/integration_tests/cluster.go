@@ -229,7 +229,7 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 			Namespace: namespace,
 		},
 		Data: map[string][]byte{
-			"credentials": []byte(fmt.Sprintf("[default]\naws_access_key_id=%s\naws_secret_access_key=%s",
+			"credentials": []byte(fmt.Sprintf("[default]\nregion = us-east-1\naws_access_key_id=%s\naws_secret_access_key=%s",
 				os.Getenv("AWS_ACCESS_KEY_ID"),
 				os.Getenv("AWS_SECRET_ACCESS_KEY"))),
 		},
