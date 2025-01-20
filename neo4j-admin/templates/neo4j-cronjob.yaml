@@ -84,8 +84,14 @@ spec:
                   value: "{{ .Values.backup.verbose | default true }}"
                 - name: AZURE_STORAGE_ACCOUNT_NAME
                   value: "{{ .Values.backup.azureStorageAccountName | default "" }}"
-                - name: ENDPOINT
-                  value: "{{ .Values.backup.minioEndpoint | default "" }}"
+                - name: S3_ENDPOINT
+                  value: "{{ .Values.backup.s3Endpoint | default .Values.backup.minioEndpoint | default "" }}"
+                - name: S3_ENDPOINT_TLS
+                  value: "{{ .Values.backup.s3EndpointTLS | default false }}"
+                - name: S3_CA_CERT
+                  value: "{{ .Values.backup.s3CACert | default "" }}"
+                - name: S3_SKIP_VERIFY
+                  value: "{{ .Values.backup.s3SkipVerify | default false }}"
                 - name: CONSISTENCY_CHECK_ENABLE
                   value: "{{ .Values.consistencyCheck.enable | default false }}"
                 - name: CONSISTENCY_CHECK_INDEXES
