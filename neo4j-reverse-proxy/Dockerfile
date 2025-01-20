@@ -7,7 +7,7 @@ COPY reverse-proxy/main.go main.go
 RUN go mod download && go mod verify \
     && go build -v -o reverseproxy_linux main.go
 
-FROM alpine:3.20.3 AS run
+FROM alpine:3.21.2 AS run
 RUN addgroup --gid 7474 --system neo4j \
     && adduser --uid 7474 --system --no-create-home neo4j
 WORKDIR /reverse-proxy
