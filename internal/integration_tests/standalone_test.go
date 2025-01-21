@@ -55,7 +55,7 @@ func standaloneCleanup(t *testing.T, releaseName model.ReleaseName) func() {
 			}
 
 			_ = runAll(t, "helm", [][]string{
-				{"uninstall", releaseName.String(), "--cascade=foreground", "--wait", "--timeout", "3m", "--namespace", namespace},
+				{"uninstall", releaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
 			}, false)
 
 			time.Sleep(10 * time.Second)

@@ -102,6 +102,7 @@ type AggregateBackup struct {
 	ParallelRecovery bool   `yaml:"parallelRecovery" default:"false"`
 	FromPath         string `yaml:"fromPath"`
 	Database         string `yaml:"database"`
+	TempDir          string `yaml:"tempDir"`
 }
 
 type ConsistencyCheck struct {

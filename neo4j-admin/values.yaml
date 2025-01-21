@@ -130,6 +130,9 @@ backup:
     fromPath: ""
     # database name to aggregate. Can contain * and ? for globbing.
     database: ""
+    # Optional temporary directory for aggregation process
+    # If not specified, will use the backup directory
+    tempDir: ""
 
 #Below are all neo4j-admin database check flags / options
 #To know more about the flags read here : https://neo4j.com/docs/operations-manual/current/tools/neo4j-admin/consistency-checker/
