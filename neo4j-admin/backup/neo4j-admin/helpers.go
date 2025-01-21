@@ -47,9 +47,9 @@ func getAggregateBackupCommandFlags() []string {
 	// Check for specific aggregate backup temp dir first
 	if aggregateTempDir := os.Getenv("AGGREGATE_BACKUP_TEMP_DIR"); aggregateTempDir != "" {
 		flags = append(flags, fmt.Sprintf("--temp-dir=%s", aggregateTempDir))
-	} else if backupDir := os.Getenv("BACKUP_DIR"); backupDir != "" {
-		// Fall back to using the backup directory if available
-		aggregateTempDir := filepath.Join(backupDir, "aggregate-temp")
+	} else {
+		// Fall back to using the backup directory
+		aggregateTempDir := filepath.Join("/backups", "aggregate-temp")
 		flags = append(flags, fmt.Sprintf("--temp-dir=%s", aggregateTempDir))
 	}
 
