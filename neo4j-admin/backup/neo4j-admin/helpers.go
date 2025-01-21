@@ -3,6 +3,7 @@ package neo4j_admin
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -42,6 +43,16 @@ func getBackupCommandFlags(address string) []string {
 func getAggregateBackupCommandFlags() []string {
 	database := os.Getenv("AGGREGATE_BACKUP_DATABASE")
 	flags := []string{"database", "aggregate-backup"}
+
+	// Check for specific aggregate backup temp dir first
+	if aggregateTempDir := os.Getenv("AGGREGATE_BACKUP_TEMP_DIR"); aggregateTempDir != "" {
+		flags = append(flags, fmt.Sprintf("--temp-dir=%s", aggregateTempDir))
+	} else if backupDir := os.Getenv("BACKUP_DIR"); backupDir != "" {
+		// Fall back to using the backup directory if available
+		aggregateTempDir := filepath.Join(backupDir, "aggregate-temp")
+		flags = append(flags, fmt.Sprintf("--temp-dir=%s", aggregateTempDir))
+	}
+
 	flags = append(flags, fmt.Sprintf("--from-path=%s", os.Getenv("AGGREGATE_BACKUP_FROM_PATH")))
 	flags = append(flags, fmt.Sprintf("--keep-old-backup=%s", os.Getenv("AGGREGATE_BACKUP_KEEPOLDBACKUP")))
 	flags = append(flags, fmt.Sprintf("--parallel-recovery=%s", os.Getenv("AGGREGATE_BACKUP_PARALLEL_RECOVERY")))
