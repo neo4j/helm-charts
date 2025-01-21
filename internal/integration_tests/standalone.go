@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"math/big"
 	"os"
 	"os/exec"
@@ -657,6 +658,22 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 	}, err
 }
 
+func waitForServiceAccountCreation(projectID, serviceAccountEmail string, maxRetries int) error {
+	for i := 0; i < maxRetries; i++ {
+		cmd := exec.Command("gcloud", "iam", "service-accounts", "describe",
+			serviceAccountEmail,
+			"--project", projectID)
+
+		if err := cmd.Run(); err == nil {
+			return nil
+		}
+
+		time.Sleep(time.Duration(math.Pow(2, float64(i))) * time.Second)
+	}
+	return fmt.Errorf("service account %s was not created after %d retries",
+		serviceAccountEmail, maxRetries)
+}
+
 func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.ReleaseName) error {
 	if model.Neo4jEdition == "community" {
 		t.Skip()
@@ -1108,6 +1125,10 @@ func createGCPServiceAccount(k8sServiceAccountName string, namespace string, gcp
 	log.Printf("serviceAccountConfig %s serviceAccountEmail %s", serviceAccountConfig, serviceAccountEmail)
 	log.Printf("GCP service account creation done \n Stdout = %s \n Stderr = %s", string(stdout), string(stderr))
 	time.Sleep(10 * time.Second)
+
+	if err := waitForServiceAccountCreation(project, serviceAccountEmail, 5); err != nil {
+		return fmt.Errorf("failed waiting for service account creation: %v", err)
+	}
 
 	stdout, stderr, err = RunCommand(exec.Command("gcloud", "projects", "add-iam-policy-binding",
 		project, "--member", serviceAccountConfig, "--role", "roles/storage.admin"))
