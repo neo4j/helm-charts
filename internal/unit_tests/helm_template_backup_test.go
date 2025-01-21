@@ -322,7 +322,7 @@ func TestNeo4jBackupPodAffinity(t *testing.T) {
 	helmValues.Backup.CloudProvider = "aws"
 	helmValues.Backup.BucketName = "demo2"
 	helmValues.Backup.Database = "neo4j1"
-
+	helmValues.Backup.AggregateBackup = model.AggregateBackup{}
 	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
 	assert.NoError(t, err, "error seen while performing helm template on backup helm chart with affinity")
 	cronjobs := manifests.OfType(&batchv1.CronJob{})
@@ -497,4 +497,36 @@ func TestBackupMultipleEndpoints(t *testing.T) {
 		Name:  "DATABASE_BACKUP_ENDPOINTS",
 		Value: backupEndpoints,
 	}, "backup endpoints not set correctly in cronjob")
+}
+
+// TestAggregateBackupWithTempDir checks for tempDir in the aggregate backup
+func TestAggregateBackupWithTempDir(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = ""
+	helmValues.Backup.AggregateBackup = model.AggregateBackup{
+		Enabled:  true,
+		FromPath: "s3://demo-bucket",
+		TempDir:  "/custom/temp/dir",
+	}
+	helmValues.ServiceAccountName = "demo"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while performing aggregate backup with tempDir")
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
+
+	envVariables := cronjobs[0].(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env
+	var found bool
+	for _, variable := range envVariables {
+		if variable.Name == "AGGREGATE_BACKUP_TEMP_DIR" {
+			found = true
+			assert.Equal(t, variable.Value, helmValues.Backup.AggregateBackup.TempDir)
+			break
+		}
+	}
+	assert.Equal(t, found, true)
 }
