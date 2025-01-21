@@ -78,6 +78,9 @@ func clusterTests(clusterRelease model.ReleaseName) ([]SubTest, error) {
 			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupAWSHelmChartViaS3TLS(t, clusterRelease), "Backup to AWS using S3 with TLS should succeed")
 		}},
+		{name: "Install Backup Helm Chart For AWS Using S3 with Custom Aggregate Tempdir", test: func(t *testing.T) {
+			assert.NoError(t, InstallNeo4jBackupAWSHelmChartViaS3WithCustomTempdir(t, clusterRelease), "Backup to AWS using S3 with custom aggregate tempdir should succeed")
+		}},
 		{name: "Check Cluster Core Logs Format", test: func(t *testing.T) {
 			t.Parallel()
 			assert.NoError(t, CheckLogsFormat(t, clusterRelease), "Cluster core logs format should be in JSON")
@@ -500,6 +503,94 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 	}
 	if !found {
 		return fmt.Errorf("no aws s3 tls backup pod found")
+	}
+
+	return nil
+}
+
+// InstallNeo4jBackupAWSHelmChartViaS3WithCustomTempdir installs backup cronjob using S3 with a custom aggregate backup tempdir
+func InstallNeo4jBackupAWSHelmChartViaS3WithCustomTempdir(t *testing.T, releaseName model.ReleaseName) error {
+	if model.Neo4jEdition == "community" {
+		t.Skip()
+		return nil
+	}
+
+	backupReleaseName := model.NewReleaseName(fmt.Sprintf("%s-backup-aws-s3-custom-tempdir", releaseName.String()))
+	namespace := string(releaseName.Namespace())
+	secretName := "miniocred"
+	customTempDir := "/tmp/custom-aggregate-temp"
+
+	// Add cleanup
+	t.Cleanup(func() {
+		_ = runAll(t, "helm", [][]string{
+			{"uninstall", backupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
+		}, false)
+	})
+
+	bucketName := model.BucketName
+	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.Backup = model.Backup{
+		BucketName:               bucketName,
+		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", releaseName.String()),
+		DatabaseNamespace:        string(releaseName.Namespace()),
+		Database:                 "neo4j,system",
+		CloudProvider:            "aws",
+		SecretName:               secretName,
+		SecretKeyName:            "credentials",
+		S3Endpoint:               "s3.amazonaws.com",
+		Verbose:                  true,
+		Type:                     "FULL",
+		AggregateBackup: model.AggregateBackup{
+			Enabled: true,
+			TempDir: customTempDir,
+		},
+	}
+	helmValues.ConsistencyCheck.Database = "neo4j"
+	helmValues.Neo4J.JobSchedule = "* * * * *"
+
+	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
+	if err != nil {
+		return fmt.Errorf("helm install failed: %v", err)
+	}
+
+	time.Sleep(2 * time.Minute)
+
+	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("cannot retrieve aws backup cronjob: %v", err)
+	}
+
+	if cronjob.Spec.Schedule != helmValues.Neo4J.JobSchedule {
+		return fmt.Errorf("aws cronjob schedule %s not matching with the schedule defined in values.yaml %s",
+			cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule)
+	}
+
+	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error while retrieving pod list during aws backup operation: %v", err)
+	}
+
+	var found bool
+	for _, pod := range pods.Items {
+		if strings.Contains(pod.Name, backupReleaseName.String()) {
+			found = true
+			// Verify that the backup job used the custom tempdir
+			for _, container := range pod.Spec.Containers {
+				for _, env := range container.Env {
+					if env.Name == "AGGREGATE_BACKUP_TEMP_DIR" {
+						if env.Value != customTempDir {
+							return fmt.Errorf("expected AGGREGATE_BACKUP_TEMP_DIR to be %s but got %s", customTempDir, env.Value)
+						}
+					}
+				}
+			}
+			break
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("no backup pod found")
 	}
 
 	return nil
