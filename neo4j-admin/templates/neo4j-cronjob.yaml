@@ -125,7 +125,7 @@ spec:
                 - name: DATABASE_BACKUP_ENDPOINTS
                   value: {{ .Values.backup.databaseBackupEndpoints | trim }}
                 - name: AGGREGATE_BACKUP_TEMP_DIR
-                  value: {{ $.Values.backup.aggregateBackup.tempDir | default "" | quote }}
+                  value: {{ .Values.backup.aggregate.tempDir | default "" | quote }}
               volumeMounts:
                 {{- if .Values.backup.secretName }}
                 - name: credentials
