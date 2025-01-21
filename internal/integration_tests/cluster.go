@@ -78,8 +78,8 @@ func clusterTests(clusterRelease model.ReleaseName) ([]SubTest, error) {
 			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupAWSHelmChartViaS3TLS(t, clusterRelease), "Backup to AWS using S3 with TLS should succeed")
 		}},
-		{name: "Install Backup Helm Chart For AWS Using S3 with Custom Aggregate Tempdir", test: func(t *testing.T) {
-			assert.NoError(t, InstallNeo4jBackupAWSHelmChartViaS3WithCustomTempdir(t, clusterRelease), "Backup to AWS using S3 with custom aggregate tempdir should succeed")
+		{name: "Install Backup Helm Chart For AWS Using Custom Aggregate Tempdir", test: func(t *testing.T) {
+			assert.NoError(t, InstallBackupViaTempDir(t, clusterRelease), "Backup with custom aggregate tempdir should succeed")
 		}},
 		{name: "Check Cluster Core Logs Format", test: func(t *testing.T) {
 			t.Parallel()
@@ -508,14 +508,14 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 	return nil
 }
 
-// InstallNeo4jBackupAWSHelmChartViaS3WithCustomTempdir installs backup cronjob using S3 with a custom aggregate backup tempdir
-func InstallNeo4jBackupAWSHelmChartViaS3WithCustomTempdir(t *testing.T, releaseName model.ReleaseName) error {
+// InstallBackupViaTempDir installs backup cronjob with a custom aggregate backup tempdir
+func InstallBackupViaTempDir(t *testing.T, releaseName model.ReleaseName) error {
 	if model.Neo4jEdition == "community" {
 		t.Skip()
 		return nil
 	}
 
-	backupReleaseName := model.NewReleaseName(fmt.Sprintf("%s-backup-aws-s3-custom-tempdir", releaseName.String()))
+	backupReleaseName := model.NewReleaseName(fmt.Sprintf("%s-backup-s3-tmp", releaseName.String()))
 	namespace := string(releaseName.Namespace())
 	secretName := "miniocred"
 	customTempDir := "/tmp/custom-aggregate-temp"
