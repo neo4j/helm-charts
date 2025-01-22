@@ -79,6 +79,7 @@ func clusterTests(clusterRelease model.ReleaseName) ([]SubTest, error) {
 			assert.NoError(t, InstallNeo4jBackupAWSHelmChartViaS3TLS(t, clusterRelease), "Backup to AWS using S3 with TLS should succeed")
 		}},
 		{name: "Install Backup Helm Chart For AWS Using Custom Aggregate Tempdir", test: func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, InstallBackupViaTempDir(t, clusterRelease), "Backup with custom aggregate tempdir should succeed")
 		}},
 		{name: "Check Cluster Core Logs Format", test: func(t *testing.T) {

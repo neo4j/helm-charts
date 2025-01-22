@@ -1350,3 +1350,60 @@ func InstallNeo4jBackupWithFileCleanup(t *testing.T, standaloneReleaseName model
 	_, err = helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	return err
 }
+
+func TestProbeConfigurations(t *testing.T) {
+	name := model.NewReleaseName("neo4j-probes")
+
+	testCases := []struct {
+		name   string
+		values model.HelmValues
+	}{
+		{
+			name: "HTTP Probe",
+			values: func() model.HelmValues {
+				v := model.DefaultEnterpriseValues
+				v.ReadinessProbe = model.ReadinessProbe{
+					HTTPGet: &model.HTTPGetAction{
+						Path: "/ready",
+						Port: 7474,
+					},
+					FailureThreshold: 30,
+					TimeoutSeconds:   15,
+					PeriodSeconds:    10,
+				}
+				return v
+			}(),
+		},
+		{
+			name: "TCP Socket Probe",
+			values: func() model.HelmValues {
+				v := model.DefaultEnterpriseValues
+				v.ReadinessProbe = model.ReadinessProbe{
+					TCPSocket: &model.TCPSocketAction{
+						Port: 7687,
+					},
+					FailureThreshold: 20,
+					TimeoutSeconds:   10,
+					PeriodSeconds:    5,
+				}
+				return v
+			}(),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := model.InstallNeo4jHelmChart(t, name, tc.values)
+			assert.NoError(t, err)
+			defer model.UninstallChart(t, name)
+
+			// Wait for pod to be ready
+			err = waitForNeo4jPod(t, name)
+			assert.NoError(t, err)
+
+			// Check probe configuration
+			err = CheckProbes(t, name)
+			assert.NoError(t, err)
+		})
+	}
+}
