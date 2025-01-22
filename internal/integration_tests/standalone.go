@@ -1352,7 +1352,8 @@ func InstallNeo4jBackupWithFileCleanup(t *testing.T, standaloneReleaseName model
 }
 
 func TestProbeConfigurations(t *testing.T) {
-	name := model.NewReleaseName("neo4j-probes")
+	releaseName := model.NewReleaseName("neo4j-probes")
+	chart := model.Neo4jHelmChartCommunityAndEnterprise
 
 	testCases := []struct {
 		name   string
@@ -1393,16 +1394,16 @@ func TestProbeConfigurations(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := model.InstallNeo4jHelmChart(t, name, tc.values)
+			closeable, err := installNeo4j(t, releaseName, chart)
 			assert.NoError(t, err)
-			defer model.UninstallChart(t, name)
+			t.Cleanup(func() { _ = closeable() })
 
-			// Wait for pod to be ready
-			err = waitForNeo4jPod(t, name)
+			err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()),
+				"wait", "--for=condition=ready", "pod", releaseName.PodName(),
+				"--timeout=300s")
 			assert.NoError(t, err)
 
-			// Check probe configuration
-			err = CheckProbes(t, name)
+			err = CheckProbes(t, releaseName)
 			assert.NoError(t, err)
 		})
 	}
