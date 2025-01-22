@@ -155,26 +155,13 @@ spec:
             {{- if $offlineMaintenanceEnabled  }}
             {{- include "neo4j.maintenanceVolumeMounts" .Values.volumes | indent 12 }}
             {{- end }}
-          readinessProbe:
-            tcpSocket:
-              port: 7687
-            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
-            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
-            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          {{- include "neo4j.readinessProbe" .Values.readinessProbe | nindent 10 }}  
+          
           {{- if $offlineMaintenanceEnabled }}
           # liveness and startup probes are disabled in offlineMaintenanceMode
           {{- else }}
-          livenessProbe:
-            tcpSocket:
-              port: 7687
-            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
-            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
-            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
-          startupProbe:
-            tcpSocket:
-              port: 7687
-            failureThreshold: {{ .Values.startupProbe.failureThreshold }}
-            periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+          {{- include "neo4j.livenessProbe" .Values.livenessProbe | nindent 10 }}
+          {{- include "neo4j.startupProbe" .Values.startupProbe | nindent 10 }}
           {{- end }}
         {{- with .Values.podSpec.containers }}
         # Extra "sidecar" containers

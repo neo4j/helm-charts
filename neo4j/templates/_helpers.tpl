@@ -376,3 +376,113 @@ topologySpreadConstraints:
 {{ toYaml $.Values.podSpec.topologySpreadConstraints }}
     {{- end }}
 {{- end -}}
+
+{{- define "neo4j.readinessProbe" -}}
+# Allow user to override the readinessProbe settings for advanced use cases
+# See: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#probe-v1-core
+readinessProbe:
+  # Allow overriding the probe action
+  {{- if .exec }}
+  exec: 
+  {{- toYaml .exec | nindent 4 }}  
+  {{- else if .grpc }}
+  grpc: 
+  {{- toYaml .grpc | nindent 4 }}
+  {{- else if .httpGet }}
+  httpGet: {{ toYaml .httpGet | nindent 4 }}
+  {{- else if .tcpSocket }}
+  tcpSocket:
+  {{- toYaml .tcpSocket | nindent 4 }}
+  {{- end }}
+  {{- if .initialDelaySeconds }}
+  initialDelaySeconds: {{ .initialDelaySeconds }}
+  {{- end }}
+  {{- if .terminationGracePeriodSeconds }}
+  terminationGracePeriodSeconds: {{ .terminationGracePeriodSeconds }}
+  {{- end }}
+  {{- if .successThreshold }}
+  successThreshold: {{ .successThreshold }}
+  {{- end }}
+  # If no probe action is set, default to using tcpSocket probe to check port 7687 to check if bolt connections can be made
+  {{- if not (or .exec .grpc .httpGet .tcpSocket) }}
+  tcpSocket:
+    port: 7687
+  {{- end }}
+  failureThreshold: {{ .failureThreshold | default 20 }}
+  timeoutSeconds: {{ .timeoutSeconds | default 10 }}
+  periodSeconds: {{ .periodSeconds | default 5 }}
+{{- end -}}
+
+{{- define "neo4j.livenessProbe" -}}
+# Allow user to override the livenessProbe settings for advanced use cases
+# See: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#probe-v1-core
+livenessProbe:
+  # Allow overriding the probe action
+  {{- if .exec }}
+  exec: 
+  {{- toYaml .exec | nindent 4 }}  
+  {{- else if .grpc }}
+  grpc: 
+  {{- toYaml .grpc | nindent 4 }}
+  {{- else if .httpGet }}
+  httpGet: {{ toYaml .httpGet | nindent 4 }}
+  {{- else if .tcpSocket }}
+  tcpSocket:
+  {{- toYaml .tcpSocket | nindent 4 }}
+  {{- end }}
+  {{- if .initialDelaySeconds }}
+  initialDelaySeconds: {{ .initialDelaySeconds }}
+  {{- end }}
+  {{- if .terminationGracePeriodSeconds }}
+  terminationGracePeriodSeconds: {{ .terminationGracePeriodSeconds }}
+  {{- end }}
+  {{- if .successThreshold }}
+  successThreshold: {{ .successThreshold }}
+  {{- end }}
+  # If no probe action is set, default to using tcpSocket probe to check port 7687 to check if bolt connections can be made
+  {{- if not (or .exec .grpc .httpGet .tcpSocket) }}
+  tcpSocket:
+    port: 7687
+  {{- end }}
+  failureThreshold: {{ .failureThreshold | default 40 }}
+  timeoutSeconds: {{ .timeoutSeconds | default 10}}
+  periodSeconds: {{ .periodSeconds | default 5 }}
+{{- end -}}
+
+{{- define "neo4j.startupProbe" -}}
+# Allow user to override the startupProbe settings for advanced use cases
+# See: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#probe-v1-core
+startupProbe:
+  # Allow overriding the probe action
+  {{- if .exec }}
+  exec: 
+  {{- toYaml .exec | nindent 4 }}  
+  {{- else if .grpc }}
+  grpc: 
+  {{- toYaml .grpc | nindent 4 }}
+  {{- else if .httpGet }}
+  httpGet: {{ toYaml .httpGet | nindent 4 }}
+  {{- else if .tcpSocket }}
+  tcpSocket:
+  {{- toYaml .tcpSocket | nindent 4 }}
+  {{- end }}
+  {{- if .initialDelaySeconds }}
+  initialDelaySeconds: {{ .initialDelaySeconds }}
+  {{- end }}
+  {{- if .timeoutSeconds }}
+  timeoutSeconds: {{ .timeoutSeconds }}
+  {{- end }}
+  {{- if .terminationGracePeriodSeconds }}
+  terminationGracePeriodSeconds: {{ .terminationGracePeriodSeconds }}
+  {{- end }}
+  {{- if .successThreshold }}
+  successThreshold: {{ .successThreshold }}
+  {{- end }}
+  {{- if not (or .exec .grpc .httpGet .tcpSocket) }}
+  # If no probe action is set, default to using tcpSocket probe to check port 7687 to check if bolt connections can be made
+  tcpSocket:
+    port: 7687
+  {{- end }}
+  failureThreshold: {{ .failureThreshold | default 1000 }}
+  periodSeconds: {{ .periodSeconds | default 5 }}
+{{- end -}}

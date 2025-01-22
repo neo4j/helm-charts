@@ -371,6 +371,8 @@ containerSecurityContext:
 # Because Neo4j uses Java these values are large to distinguish between long Garbage Collection pauses (which don't require a restart) and an actual failure.
 # These values should mark Neo4j as not ready after at most 5 minutes of problems (20 attempts * max 15 seconds between probes)
 readinessProbe:
+  tcpSocket:
+    port: 7687
   failureThreshold: 20
   timeoutSeconds: 10
   periodSeconds: 5
@@ -379,6 +381,8 @@ readinessProbe:
 # Because Neo4j uses Java these values are large to distinguish between long Garbage Collection pauses (which don't require a restart) and an actual failure.
 # These values should trigger a restart after at most 10 minutes of problems (40 attempts * max 15 seconds between probes)
 livenessProbe:
+  tcpSocket:
+    port: 7687
   failureThreshold: 40
   timeoutSeconds: 10
   periodSeconds: 5
@@ -388,6 +392,8 @@ livenessProbe:
 # When restoring Neo4j from a backup it's important that startup probe gives time for Neo4j to recover and/or upgrade store files
 # When using Neo4j clusters it's important that startup probe give the Neo4j cluster time to form
 startupProbe:
+  tcpSocket:
+    port: 7687
   failureThreshold: 1000
   periodSeconds: 5
 
