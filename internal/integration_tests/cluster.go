@@ -79,6 +79,7 @@ func clusterTests(clusterRelease model.ReleaseName) ([]SubTest, error) {
 			assert.NoError(t, InstallNeo4jBackupAWSHelmChartViaS3TLS(t, clusterRelease), "Backup to AWS using S3 with TLS should succeed")
 		}},
 		{name: "Install Backup Helm Chart For AWS Using Custom Aggregate Tempdir", test: func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, InstallBackupViaTempDir(t, clusterRelease), "Backup with custom aggregate tempdir should succeed")
 		}},
 		{name: "Check Cluster Core Logs Format", test: func(t *testing.T) {
@@ -1081,4 +1082,67 @@ func TestBackupMultipleEndpointsE2E(t *testing.T) {
 		}
 	}
 	assert.True(t, found, "no backup pod found")
+}
+
+func TestClusterProbeConfigurations(t *testing.T) {
+	if model.Neo4jEdition != "enterprise" {
+		t.Skip()
+		return
+	}
+
+	clusterReleaseName := model.NewReleaseName("cluster-probes")
+	chart := model.Neo4jHelmChartCommunityAndEnterprise
+
+	testCases := []struct {
+		name   string
+		values model.HelmValues
+	}{
+		{
+			name: "HTTP Probe",
+			values: func() model.HelmValues {
+				v := model.DefaultEnterpriseValues
+				v.ReadinessProbe = model.ReadinessProbe{
+					HTTPGet: &model.HTTPGetAction{
+						Path: "/ready",
+						Port: 7474,
+					},
+					FailureThreshold: 30,
+					TimeoutSeconds:   15,
+					PeriodSeconds:    10,
+				}
+				return v
+			}(),
+		},
+		{
+			name: "TCP Socket Probe",
+			values: func() model.HelmValues {
+				v := model.DefaultEnterpriseValues
+				v.ReadinessProbe = model.ReadinessProbe{
+					TCPSocket: &model.TCPSocketAction{
+						Port: 7687,
+					},
+					FailureThreshold: 20,
+					TimeoutSeconds:   10,
+					PeriodSeconds:    5,
+				}
+				return v
+			}(),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			closeable, err := installNeo4j(t, clusterReleaseName, chart)
+			assert.NoError(t, err)
+			t.Cleanup(func() { _ = closeable() })
+
+			err = run(t, "kubectl", "--namespace", string(clusterReleaseName.Namespace()),
+				"wait", "--for=condition=ready", "pod", clusterReleaseName.PodName(),
+				"--timeout=300s")
+			assert.NoError(t, err)
+
+			err = CheckProbes(t, clusterReleaseName)
+			assert.NoError(t, err)
+		})
+	}
 }
