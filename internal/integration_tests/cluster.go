@@ -1,8 +1,16 @@
 package integration_tests
 
 import (
+	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
+	"math/big"
 	"os"
 	"os/exec"
 	"regexp"
@@ -420,10 +428,12 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 	namespace := "default"
 	backupReleaseName := model.NewReleaseName("cluster-backup-aws-s3-tls" + TestRunIdentifier)
 	secretName := "awscred"
+	caCertSecretName := "s3-ca-cert"
 
 	t.Cleanup(func() {
 		_ = runAll(t, "kubectl", [][]string{
 			{"delete", "secret", secretName, "--namespace", namespace, "--ignore-not-found"},
+			{"delete", "secret", caCertSecretName, "--namespace", namespace, "--ignore-not-found"},
 		}, false)
 
 		_ = runAll(t, "helm", [][]string{
@@ -454,6 +464,55 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 		return fmt.Errorf("failed to verify AWS credentials secret exists: %v", err)
 	}
 
+	// Create CA certificate secret
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return fmt.Errorf("failed to generate private key: %v", err)
+	}
+
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName: "s3.amazonaws.com",
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(24 * time.Hour),
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+		DNSNames:              []string{"s3.amazonaws.com"},
+	}
+
+	derBytes, err := x509.CreateCertificate(rand.Reader, template, template, &priv.PublicKey, priv)
+	if err != nil {
+		return fmt.Errorf("failed to create certificate: %v", err)
+	}
+
+	certPEM := new(bytes.Buffer)
+	pem.Encode(certPEM, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+
+	caCertSecret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      caCertSecretName,
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"ca.crt": certPEM.Bytes(),
+		},
+		Type: "Opaque",
+	}
+
+	_, err = Clientset.CoreV1().Secrets(namespace).Create(context.TODO(), caCertSecret, metav1.CreateOptions{})
+	if err != nil && !strings.Contains(err.Error(), "already exists") {
+		return fmt.Errorf("failed to create CA certificate secret: %v", err)
+	}
+
+	_, err = Clientset.CoreV1().Secrets(namespace).Get(context.TODO(), caCertSecretName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to verify CA certificate secret exists: %v", err)
+	}
+
 	time.Sleep(2 * time.Second)
 
 	bucketName := model.BucketName
@@ -467,8 +526,9 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 		CloudProvider:            "aws",
 		SecretName:               secretName,
 		SecretKeyName:            "credentials",
-		S3Endpoint:               "http://localhost:9000",
-		S3EndpointTLS:            true,
+		S3Endpoint:               "https://s3.amazonaws.com",
+		S3CASecretName:           caCertSecretName,
+		S3CASecretKey:            "ca.crt",
 		S3Region:                 "us-east-1",
 		Verbose:                  true,
 		Type:                     "FULL",
@@ -501,6 +561,29 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 	for _, pod := range pods.Items {
 		if strings.Contains(pod.Name, "cluster-backup-aws-s3-tls") {
 			found = true
+			// Verify that the CA certificate is mounted
+			for _, container := range pod.Spec.Containers {
+				for _, volumeMount := range container.VolumeMounts {
+					if volumeMount.Name == "s3-ca-cert" {
+						if volumeMount.MountPath != "/s3-ca-cert" {
+							return fmt.Errorf("expected CA certificate mount path to be /s3-ca-cert but got %s", volumeMount.MountPath)
+						}
+					}
+				}
+				// Verify that TLS is enabled
+				for _, env := range container.Env {
+					if env.Name == "S3_ENDPOINT_TLS" {
+						if env.Value != "true" {
+							return fmt.Errorf("expected S3_ENDPOINT_TLS to be true but got %s", env.Value)
+						}
+					}
+					if env.Name == "S3_CA_CERT_PATH" {
+						if env.Value != "/s3-ca-cert/ca.crt" {
+							return fmt.Errorf("expected S3_CA_CERT_PATH to be /s3-ca-cert/ca.crt but got %s", env.Value)
+						}
+					}
+				}
+			}
 			break
 		}
 	}
