@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/base64"
 	"fmt"
 	"log"
 	"net/http"
@@ -185,14 +184,14 @@ func (a *awsClient) getS3Client() *s3.Client {
 				InsecureSkipVerify: skipVerify,
 			}
 
-			if caCert := os.Getenv("S3_CA_CERT"); strings.TrimSpace(caCert) != "" {
+			if caCertPath := os.Getenv("S3_CA_CERT_PATH"); strings.TrimSpace(caCertPath) != "" {
 				caCertPool := x509.NewCertPool()
-				certData, err := base64.StdEncoding.DecodeString(caCert)
+				certData, err := os.ReadFile(caCertPath)
 				if err != nil {
-					log.Printf("Warning: Failed to decode CA certificate: %v", err)
+					log.Printf("Warning: Failed to read CA certificate from %s: %v", caCertPath, err)
 				} else {
 					if !caCertPool.AppendCertsFromPEM(certData) {
-						log.Printf("Warning: Failed to append CA certificate")
+						log.Printf("Warning: Failed to append CA certificate from %s", caCertPath)
 					} else {
 						tlsConfig.RootCAs = caCertPool
 					}
