@@ -10,7 +10,7 @@ shopt -s inherit_errexit
 CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
 RESOURCE_PREFIX="${RESOURCE_PREFIX:-ghactions}"
 
-# Clean up any existing clusters with our prefix
+# Clean up any existing clusters 
 echo "Cleaning up any existing clusters..."
 CLUSTERS=$(gcloud container clusters list --format="get(name)" --filter="name ~ ^${RESOURCE_PREFIX}-.*")
 if [ -n "$CLUSTERS" ]; then
