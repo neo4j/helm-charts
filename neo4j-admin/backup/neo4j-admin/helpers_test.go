@@ -10,7 +10,6 @@ import (
 func TestGetAggregateBackupCommandFlags(t *testing.T) {
 	t.Parallel()
 
-	// Set up test environment
 	testCases := []struct {
 		name     string
 		env      map[string]string
@@ -71,11 +70,10 @@ func TestGetAggregateBackupCommandFlags(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc // capture range variable
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Clear any existing env vars
 			os.Unsetenv("AGGREGATE_BACKUP_DATABASE")
 			os.Unsetenv("AGGREGATE_BACKUP_TEMP_DIR")
 			os.Unsetenv("AGGREGATE_BACKUP_FROM_PATH")
@@ -83,12 +81,10 @@ func TestGetAggregateBackupCommandFlags(t *testing.T) {
 			os.Unsetenv("AGGREGATE_BACKUP_PARALLEL_RECOVERY")
 			os.Unsetenv("VERBOSE")
 
-			// Set test env vars
 			for k, v := range tc.env {
 				os.Setenv(k, v)
 			}
 
-			// Clean up after test
 			defer func() {
 				for k := range tc.env {
 					os.Unsetenv(k)

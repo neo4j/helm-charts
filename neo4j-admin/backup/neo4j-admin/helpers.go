@@ -47,8 +47,8 @@ func getBackupCommandFlags(address string) []string {
 	return flags
 }
 
-// getAggregateBackupCommandFlags returns a slice of string containing all the flags to be passed with the neo4j-admin aggregate backup command
-func getAggregateBackupCommandFlags() []string {
+// GetAggregateBackupCommandFlags returns a slice of string containing all the flags to be passed with the neo4j-admin aggregate backup command
+func GetAggregateBackupCommandFlags() []string {
 	database := os.Getenv("AGGREGATE_BACKUP_DATABASE")
 	flags := []string{"database", "aggregate-backup"}
 
