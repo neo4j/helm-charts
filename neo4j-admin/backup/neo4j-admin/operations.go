@@ -77,7 +77,7 @@ func PerformConsistencyCheck(database string) (string, error) {
 
 // PerformAggregateBackup triggers the neo4j-admin aggregate backup command
 func PerformAggregateBackup() error {
-	flags := getAggregateBackupCommandFlags()
+	flags := GetAggregateBackupCommandFlags()
 	database := os.Getenv("AGGREGATE_BACKUP_DATABASE")
 	log.Println("Printing aggregate backup flags %v", flags)
 	dir, _ := os.Getwd()
