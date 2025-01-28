@@ -4,6 +4,9 @@
 {{- template "neo4j.backup.checkBucketName" . -}}
 {{- template "neo4j.backup.checkServiceAccountName" . -}}
 {{- template "neo4j.checkNodeSelectorLabels" . -}}
+{{- if and .Values.backup.s3CASecretName (not .Values.backup.s3CASecretKey) }}
+{{- fail "If backup.s3CASecretName is specified, backup.s3CASecretKey must also be specified" }}
+{{- end }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -87,9 +90,9 @@ spec:
                 - name: S3_ENDPOINT
                   value: "{{ .Values.backup.s3Endpoint | default .Values.backup.minioEndpoint | default "" }}"
                 - name: S3_ENDPOINT_TLS
-                  value: "{{ .Values.backup.s3EndpointTLS | default false }}"
-                - name: S3_CA_CERT
-                  value: "{{ .Values.backup.s3CACert | default "" }}"
+                  value: "{{ if .Values.backup.s3CASecretName }}true{{ else }}{{ .Values.backup.s3EndpointTLS | default false }}{{ end }}"
+                - name: S3_CA_CERT_PATH
+                  value: "{{ if .Values.backup.s3CASecretName }}{{ printf "/s3-ca-cert/%s" .Values.backup.s3CASecretKey }}{{ end }}"
                 - name: S3_SKIP_VERIFY
                   value: "{{ .Values.backup.s3SkipVerify | default false }}"
                 - name: CONSISTENCY_CHECK_ENABLE
@@ -132,6 +135,11 @@ spec:
                   mountPath: /credentials
                   readOnly: true
                 {{- end }}
+                {{- if .Values.backup.s3CASecretName }}
+                - name: s3-ca-cert
+                  mountPath: /s3-ca-cert
+                  readOnly: true
+                {{- end }}
                 - name: "backup"
                   mountPath: "/backups"
               securityContext: {{ .Values.containerSecurityContext | toYaml | nindent 16 }}
@@ -143,6 +151,14 @@ spec:
                 items:
                   - key: "{{ .Values.backup.secretKeyName }}"
                     path: "{{ .Values.backup.secretKeyName }}"
+            {{- end }}
+            {{- if .Values.backup.s3CASecretName }}
+            - name: s3-ca-cert
+              secret:
+                secretName: "{{ .Values.backup.s3CASecretName }}"
+                items:
+                  - key: "{{ .Values.backup.s3CASecretKey }}"
+                    path: "{{ .Values.backup.s3CASecretKey }}"
             {{- end }}
             - name: "backup"
 {{- if $.Values.tempVolume }}

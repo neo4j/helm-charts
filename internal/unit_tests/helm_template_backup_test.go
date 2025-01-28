@@ -530,3 +530,75 @@ func TestAggregateBackupWithTempDir(t *testing.T) {
 	}
 	assert.Equal(t, found, true)
 }
+
+// TestBackupS3CASecretValidation checks that s3CASecretKey is required when s3CASecretName is provided
+func TestBackupS3CASecretValidation(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.Backup.SecretName = "demo"
+	helmValues.Backup.SecretKeyName = "demo1"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "demo2"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+	helmValues.Backup.S3CASecretName = "my-ca-cert"
+
+	_, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "If backup.s3CASecretName is specified, backup.s3CASecretKey must also be specified")
+}
+
+// TestBackupS3CASecretConfiguration checks the S3 CA certificate configuration
+func TestBackupS3CASecretConfiguration(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.Backup.SecretName = "demo"
+	helmValues.Backup.SecretKeyName = "demo1"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "demo2"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+	helmValues.Backup.S3CASecretName = "my-ca-cert"
+	helmValues.Backup.S3CASecretKey = "ca.crt"
+	helmValues.Backup.S3Endpoint = "s3.example.com"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err)
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1)
+	cronjob := cronjobs[0].(*batchv1.CronJob)
+
+	// Check that TLS is automatically enabled
+	var tlsEnabled bool
+	for _, env := range cronjob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env {
+		if env.Name == "S3_ENDPOINT_TLS" {
+			tlsEnabled = env.Value == "true"
+		}
+	}
+	assert.True(t, tlsEnabled, "S3_ENDPOINT_TLS should be true when s3CASecretName is provided")
+
+	var certMountFound bool
+	for _, volumeMount := range cronjob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].VolumeMounts {
+		if volumeMount.Name == "s3-ca-cert" {
+			certMountFound = true
+			assert.Equal(t, "/s3-ca-cert", volumeMount.MountPath)
+			assert.True(t, volumeMount.ReadOnly)
+		}
+	}
+	assert.True(t, certMountFound, "s3-ca-cert volume mount not found")
+
+	var certVolumeFound bool
+	for _, volume := range cronjob.Spec.JobTemplate.Spec.Template.Spec.Volumes {
+		if volume.Name == "s3-ca-cert" {
+			certVolumeFound = true
+			assert.Equal(t, "my-ca-cert", volume.Secret.SecretName)
+			assert.Len(t, volume.Secret.Items, 1)
+			assert.Equal(t, "ca.crt", volume.Secret.Items[0].Key)
+			assert.Equal(t, "ca.crt", volume.Secret.Items[0].Path)
+		}
+	}
+	assert.True(t, certVolumeFound, "s3-ca-cert volume not found")
+}

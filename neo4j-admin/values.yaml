@@ -62,10 +62,14 @@ backup:
   # For TLS endpoints (https), set s3EndpointTLS to true
   s3Endpoint: ""
   # Enable TLS for S3 endpoint (default: false)
+  # Note: This will be automatically set to true if s3CASecretName is provided
   s3EndpointTLS: false
-  # Optional: Base64-encoded CA certificate for S3 endpoint TLS verification
+  # Name of the Kubernetes secret containing the CA certificate for S3 endpoint TLS verification
   # Only needed for self-signed certificates or private CA
-  s3CACert: ""
+  # When provided, s3EndpointTLS will automatically be set to true
+  s3CASecretName: ""
+  # Key in the secret containing the CA certificate
+  s3CASecretKey: ""
   # Optional: Skip TLS verification (not recommended for production)
   s3SkipVerify: false
 
