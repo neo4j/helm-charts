@@ -8,7 +8,6 @@ shopt -s inherit_errexit
 
 # Required env vars
 CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
-CLOUDSDK_CONTAINER_CLUSTER="${CLOUDSDK_CONTAINER_CLUSTER:?CLOUDSDK_CONTAINER_CLUSTER is required}"
 RESOURCE_PREFIX="${RESOURCE_PREFIX:-ghactions}"
 
 # Clean up any existing clusters with our prefix
