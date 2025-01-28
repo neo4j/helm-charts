@@ -10,10 +10,19 @@ shopt -s inherit_errexit
 
 # Required env vars
 CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
-CLOUDSDK_CONTAINER_CLUSTER="${CLOUDSDK_CONTAINER_CLUSTER:?CLOUDSDK_CONTAINER_CLUSTER is required}"
+RESOURCE_PREFIX="${RESOURCE_PREFIX:-ghactions}"
 
-# delete the current Kubernetes cluster
-#
-gcloud container clusters delete --quiet --zone="${CLOUDSDK_COMPUTE_ZONE}" "${CLOUDSDK_CONTAINER_CLUSTER}"
+# If a specific cluster name is provided, use it; otherwise use the prefix pattern
+if [ -n "${CLOUDSDK_CONTAINER_CLUSTER:-}" ]; then
+    echo "Deleting specific cluster: ${CLOUDSDK_CONTAINER_CLUSTER}"
+    gcloud container clusters delete --quiet --zone="${CLOUDSDK_COMPUTE_ZONE}" "${CLOUDSDK_CONTAINER_CLUSTER}" || true
+else
+    echo "No specific cluster name provided. Looking for clusters with prefix: ${RESOURCE_PREFIX}"
+    gcloud container clusters list --format="get(name)" --filter="name ~ ^${RESOURCE_PREFIX}-.*" | while read -r cluster; do
+        if [ -n "$cluster" ]; then
+            echo "Deleting cluster: $cluster"
+            gcloud container clusters delete "$cluster" --zone="${CLOUDSDK_COMPUTE_ZONE}" --quiet || true
+        fi
+    done
+fi
 
-echo "This does not clean up any persistent disks that might have been created by this GKE cluster - those have to be cleaned up separately"
