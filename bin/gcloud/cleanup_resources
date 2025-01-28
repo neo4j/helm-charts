@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+# This script cleans up GCP resources that might be left over from previous test runs
+
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+# Required env vars
+CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
+CLOUDSDK_CONTAINER_CLUSTER="${CLOUDSDK_CONTAINER_CLUSTER:?CLOUDSDK_CONTAINER_CLUSTER is required}"
+RESOURCE_PREFIX="${RESOURCE_PREFIX:-ghactions}"
+
+# Clean up any existing clusters with our prefix
+echo "Cleaning up any existing clusters..."
+gcloud container clusters list --format="get(name)" --filter="name ~ ^${RESOURCE_PREFIX}-.*" | while read -r cluster; do
+  if [ -n "$cluster" ]; then
+    echo "Deleting cluster: $cluster"
+    gcloud container clusters delete "$cluster" --zone="${CLOUDSDK_COMPUTE_ZONE}" --quiet || true
+  fi
+done
+
+# Clean up any orphaned persistent disks
+echo "Cleaning up orphaned persistent disks..."
+gcloud compute disks list --filter="zone:${CLOUDSDK_COMPUTE_ZONE}" --format="get(name)" | while read -r disk; do
+  if [ -n "$disk" ]; then
+    echo "Deleting disk: $disk"
+    gcloud compute disks delete "$disk" --zone="${CLOUDSDK_COMPUTE_ZONE}" --quiet || true
+  fi
+done
+
+# Clean up any container images older than 24 hours
+echo "Cleaning up old container images..."
+CUTOFF_TIME=$(date -u -d "24 hours ago" +"%Y-%m-%dT%H:%M:%SZ")
+gcloud container images list --format="get(name)" | while read -r image; do
+  if [ -n "$image" ]; then
+    gcloud container images list-tags "$image" \
+      --filter="timestamp.datetime < '${CUTOFF_TIME}'" \
+      --format="get(digest)" | while read -r digest; do
+      if [ -n "$digest" ]; then
+        echo "Deleting image: $image@$digest"
+        gcloud container images delete --quiet "${image}@${digest}" || true
+      fi
+    done
+  fi
+done
+
+echo "Cleanup completed" 
