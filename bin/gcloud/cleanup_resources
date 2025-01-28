@@ -22,7 +22,7 @@ done
 # Clean up any orphaned persistent disks
 echo "Cleaning up orphaned persistent disks..."
 gcloud compute disks list \
-  --filter="zone:${CLOUDSDK_COMPUTE_ZONE} AND name ~ ^(${RESOURCE_PREFIX}-|neo4j-data-disk-${RESOURCE_PREFIX}-).*" \
+  --filter="zone=${CLOUDSDK_COMPUTE_ZONE} AND (name:${RESOURCE_PREFIX}-* OR name:neo4j-data-disk-${RESOURCE_PREFIX}-*)" \
   --format="get(name)" | while read -r disk; do
   if [ -n "$disk" ]; then
     echo "Deleting disk: $disk"
