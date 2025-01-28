@@ -57,7 +57,7 @@ jobs:
   cleanup:
     needs: check-pr
     if: needs.check-pr.outputs.should_run == 'true'
-    name: Cleanup Previous Resources
+    name: Cleanup Dangling Resources
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
