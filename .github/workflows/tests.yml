@@ -424,11 +424,8 @@ jobs:
     env:
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
     needs:
-      - run-enterprise-tests
-      - run-community-tests
       - gke-setup
     steps:
-
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -453,11 +450,8 @@ jobs:
     env:
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
     needs:
-      - run-enterprise-tests-redhat
-      - run-community-tests-redhat
       - gke-setup-redhat
     steps:
-
       - name: Checkout
         uses: actions/checkout@v4
 
