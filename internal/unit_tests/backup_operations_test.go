@@ -6,8 +6,6 @@ import (
 	"testing"
 
 	"github.com/neo4j/helm-charts/internal/backup"
-	"github.com/stretchr/testify/assert"
-)
 
 func TestDeleteBackupFiles(t *testing.T) {
 	t.Parallel()
@@ -57,3 +55,5 @@ func TestDeleteBackupFiles(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, len(testFiles), len(files), "Files should not be deleted when KEEP_BACKUP_FILES=true")
 }
+func TestGetAggregateBackupCommandFlags(t *testing.T) {
+	t.Parallel()
