@@ -2,16 +2,40 @@
 
 if [ -f ./devenv.local ]; then
     . ./devenv.local
+    # Cloud SDK variables
     export CLOUDSDK_CORE_PROJECT
     export CLOUDSDK_COMPUTE_ZONE
     export CLOUDSDK_COMPUTE_REGION
     export CLOUDSDK_CONTAINER_CLUSTER
-    export PACKAGE_SIGNING_KEY
-    export PACKAGE_SIGNING_KEYRING
+
+    # AWS credentials
+    export AWS_ACCESS_KEY_ID
+    export AWS_SECRET_ACCESS_KEY
+
+    # Azure storage
+    export AZURE_STORAGE_ACCOUNT_KEY
+    export AZURE_STORAGE_ACCOUNT_NAME
+
+    # Bloom license
+    export BLOOM_LICENSE
+
+    # GCP service account
+    export GCP_SERVICE_ACCOUNT_CRED
+
+    # IPS credentials
     export IPS_USERNAME
     export IPS_PASS
     export IPS_EMAIL
+
+    # Docker images
     export NEO4J_DOCKER_IMG
+    export NEO4J_DOCKER_BACKUP_IMG
+    export NEO4J_REVERSE_PROXY_IMG
+    export NEO4J_OPERATIONS_IMG
+
+    # Repository and registry settings
+    export ARTIFACT_REGISTRY_REPO_NAME
+    export HELM_REPO_NAME
 
 else
     echo "Couldn't find ./devenv.local."
