@@ -601,6 +601,100 @@ func installNeo4j(t *testing.T, releaseName model.ReleaseName, chart model.Neo4j
 	return AsCloseable(closeables), err
 }
 
+func TestBackupLogStreamingIntegration(t *testing.T, releaseName model.ReleaseName) error {
+	if model.Neo4jEdition == "community" {
+		t.Skip()
+		return nil
+	}
+
+	backupReleaseName := model.NewReleaseName("standalone-backup-logs-" + TestRunIdentifier)
+	namespace := string(releaseName.Namespace())
+
+	t.Cleanup(func() {
+		_ = runAll(t, "helm", [][]string{
+			{"uninstall", backupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
+		}, false)
+	})
+
+	// Install backup chart without cloud provider to use local volume
+	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.Backup = model.Backup{
+		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", releaseName.String()),
+		DatabaseNamespace:        namespace,
+		Database:                 "neo4j,system",
+		CloudProvider:            "",
+		Verbose:                  true,
+		Type:                     "FULL",
+		KeepBackupFiles:          true,
+	}
+	helmValues.Neo4J.JobSchedule = "* * * * *"
+
+	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
+	if err != nil {
+		return fmt.Errorf("helm install failed: %v", err)
+	}
+
+	// Wait for the cronjob to create a job
+	time.Sleep(1 * time.Minute)
+
+	// Get the job pod
+	pods, err := Clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("app.kubernetes.io/instance=%s", backupReleaseName.String()),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to list pods: %v", err)
+	}
+	if len(pods.Items) == 0 {
+		return fmt.Errorf("no backup job pods found")
+	}
+
+	// Get the pod logs
+	logs, err := Clientset.CoreV1().Pods(namespace).GetLogs(pods.Items[0].Name, &v1.PodLogOptions{}).Do(context.TODO()).Raw()
+	if err != nil {
+		return fmt.Errorf("failed to get pod logs: %v", err)
+	}
+
+	// Verify log content
+	logStr := string(logs)
+	expectedLogEntries := []string{
+		"Starting backup operation",
+		"Backup progress",
+		"Finished artifact creation",
+	}
+
+	for _, expectedLog := range expectedLogEntries {
+		if !strings.Contains(logStr, expectedLog) {
+			return fmt.Errorf("expected log entry '%s' not found in logs", expectedLog)
+		}
+	}
+
+	// Verify log timestamps are properly ordered
+	logLines := strings.Split(logStr, "\n")
+	var timestamps []time.Time
+	for _, line := range logLines {
+		if strings.Contains(line, "Backup progress") {
+			if ts, err := time.Parse("2006/01/02 15:04:05", line[:19]); err == nil {
+				timestamps = append(timestamps, ts)
+			}
+		}
+	}
+
+	if len(timestamps) < 2 {
+		return fmt.Errorf("expected at least 2 timestamped progress logs, got %d", len(timestamps))
+	}
+
+	// Verify timestamps are in order and have reasonable delays
+	for i := 1; i < len(timestamps); i++ {
+		diff := timestamps[i].Sub(timestamps[i-1])
+		if diff < 0 {
+			return fmt.Errorf("log timestamps are not in order: %v after %v", timestamps[i], timestamps[i-1])
+		}
+	}
+
+	return nil
+}
+
 func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubTest, error) {
 	expectedConfiguration, err := (&model.Neo4jConfiguration{}).PopulateFromFile(Neo4jConfFile)
 	if err != nil {
@@ -613,6 +707,7 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 			assert.NoError(t, checkNeo4jLogsForAnyErrors(t, name), "Neo4j Logs check should succeed")
 		}},
 		{name: "Check Neo4j Configuration", test: func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, checkNeo4jConfiguration(t, name, expectedConfiguration), "Neo4j Config check should succeed")
 		}},
 		{name: "Check Bloom Version", test: func(t *testing.T) { assert.NoError(t, checkBloomVersion(t, name), "Retrieve a valid BLOOM version") }},
@@ -655,7 +750,10 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupWithFileCleanup(t, name), "Backup with file cleanup should succeed")
 		}},
-	}, err
+		{name: "Check Backup Log Streaming", test: func(t *testing.T) {
+			assert.NoError(t, TestBackupLogStreamingIntegration(t, name), "Backup log streaming should work correctly")
+		}},
+	}, nil
 }
 
 func waitForServiceAccountCreation(projectID, serviceAccountEmail string, maxRetries int) error {
