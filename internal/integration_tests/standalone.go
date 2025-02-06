@@ -638,36 +638,30 @@ func TestBackupLogStreamingIntegration(t *testing.T, releaseName model.ReleaseNa
 	// Wait for backup job to complete
 	time.Sleep(2 * time.Minute)
 
-	// Get the backup pod
-	pods, err := Clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("app.kubernetes.io/instance=%s", backupReleaseName.String()),
-	})
+	// Get all pods in the namespace
+	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to list pods: %v", err)
-	}
-	if len(pods.Items) == 0 {
-		return fmt.Errorf("no backup job pods found")
+		return fmt.Errorf("error while retrieving pod list during backup operation: %v", err)
 	}
 
-	var backupPod *v1.Pod
+	var found bool
+	var logOutput string
 	for _, pod := range pods.Items {
-		if strings.Contains(pod.Name, backupReleaseName.String()) {
-			backupPod = &pod
+		if strings.Contains(pod.Name, "standalone-backup-logs") {
+			found = true
+			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
+			if err != nil {
+				return fmt.Errorf("error while getting backup pod logs: %v", err)
+			}
+			logOutput = string(out)
 			break
 		}
 	}
-	if backupPod == nil {
-		return fmt.Errorf("backup pod not found")
-	}
-
-	// Get the pod logs
-	logs, err := Clientset.CoreV1().Pods(namespace).GetLogs(backupPod.Name, &v1.PodLogOptions{}).Do(context.TODO()).Raw()
-	if err != nil {
-		return fmt.Errorf("failed to get pod logs: %v", err)
+	if !found {
+		return fmt.Errorf("no backup pod found")
 	}
 
 	// Verify log content
-	logStr := string(logs)
 	expectedLogEntries := []string{
 		"Starting backup operation",
 		"Backup progress",
@@ -675,13 +669,13 @@ func TestBackupLogStreamingIntegration(t *testing.T, releaseName model.ReleaseNa
 	}
 
 	for _, expectedLog := range expectedLogEntries {
-		if !strings.Contains(logStr, expectedLog) {
+		if !strings.Contains(logOutput, expectedLog) {
 			return fmt.Errorf("expected log entry '%s' not found in logs", expectedLog)
 		}
 	}
 
 	// Verify log timestamps are properly ordered
-	logLines := strings.Split(logStr, "\n")
+	logLines := strings.Split(logOutput, "\n")
 	var timestamps []time.Time
 	for _, line := range logLines {
 		if strings.Contains(line, "Backup progress") {
