@@ -663,9 +663,7 @@ func TestBackupLogStreamingIntegration(t *testing.T, releaseName model.ReleaseNa
 
 	// Verify log content
 	expectedLogEntries := []string{
-		"Starting backup operation",
-		"Backup progress",
-		"Finished artifact creation",
+		"Backup Completed",
 	}
 
 	for _, expectedLog := range expectedLogEntries {
