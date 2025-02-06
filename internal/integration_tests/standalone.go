@@ -635,64 +635,76 @@ func TestBackupLogStreamingIntegration(t *testing.T, releaseName model.ReleaseNa
 		return fmt.Errorf("helm install failed: %v", err)
 	}
 
-	// Wait for the cronjob to create a job
-	time.Sleep(1 * time.Minute)
+	// Wait for the backup pod to complete
+	timeout := time.After(3 * time.Minute)
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
 
-	// Get the job pod
-	pods, err := Clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("app.kubernetes.io/instance=%s", backupReleaseName.String()),
-	})
-	if err != nil {
-		return fmt.Errorf("failed to list pods: %v", err)
-	}
-	if len(pods.Items) == 0 {
-		return fmt.Errorf("no backup job pods found")
-	}
+	for {
+		select {
+		case <-timeout:
+			return fmt.Errorf("timed out waiting for backup pod to complete")
+		case <-ticker.C:
+			pods, err := Clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+				LabelSelector: fmt.Sprintf("helm.neo4j.com/job-name=%s", backupReleaseName.String()),
+			})
+			if err != nil {
+				continue
+			}
+			if len(pods.Items) == 0 {
+				continue
+			}
+			// Check if the pod has completed
+			for _, pod := range pods.Items {
+				if pod.Status.Phase == v1.PodSucceeded {
+					// Get the pod logs and continue with verification
+					logs, err := Clientset.CoreV1().Pods(namespace).GetLogs(pod.Name, &v1.PodLogOptions{}).Do(context.TODO()).Raw()
+					if err != nil {
+						return fmt.Errorf("failed to get pod logs: %v", err)
+					}
 
-	// Get the pod logs
-	logs, err := Clientset.CoreV1().Pods(namespace).GetLogs(pods.Items[0].Name, &v1.PodLogOptions{}).Do(context.TODO()).Raw()
-	if err != nil {
-		return fmt.Errorf("failed to get pod logs: %v", err)
-	}
+					// Verify log content
+					logStr := string(logs)
+					expectedLogEntries := []string{
+						"Starting backup operation",
+						"Backup progress",
+						"Finished artifact creation",
+					}
 
-	// Verify log content
-	logStr := string(logs)
-	expectedLogEntries := []string{
-		"Starting backup operation",
-		"Backup progress",
-		"Finished artifact creation",
-	}
+					for _, expectedLog := range expectedLogEntries {
+						if !strings.Contains(logStr, expectedLog) {
+							return fmt.Errorf("expected log entry '%s' not found in logs", expectedLog)
+						}
+					}
 
-	for _, expectedLog := range expectedLogEntries {
-		if !strings.Contains(logStr, expectedLog) {
-			return fmt.Errorf("expected log entry '%s' not found in logs", expectedLog)
-		}
-	}
+					// Verify log timestamps are properly ordered
+					logLines := strings.Split(logStr, "\n")
+					var timestamps []time.Time
+					for _, line := range logLines {
+						if strings.Contains(line, "Backup progress") {
+							if ts, err := time.Parse("2006/01/02 15:04:05", line[:19]); err == nil {
+								timestamps = append(timestamps, ts)
+							}
+						}
+					}
 
-	// Verify log timestamps are properly ordered
-	logLines := strings.Split(logStr, "\n")
-	var timestamps []time.Time
-	for _, line := range logLines {
-		if strings.Contains(line, "Backup progress") {
-			if ts, err := time.Parse("2006/01/02 15:04:05", line[:19]); err == nil {
-				timestamps = append(timestamps, ts)
+					if len(timestamps) < 2 {
+						return fmt.Errorf("expected at least 2 timestamped progress logs, got %d", len(timestamps))
+					}
+
+					// Verify timestamps are in order and have reasonable delays
+					for i := 1; i < len(timestamps); i++ {
+						diff := timestamps[i].Sub(timestamps[i-1])
+						if diff < 0 {
+							return fmt.Errorf("log timestamps are not in order: %v after %v", timestamps[i], timestamps[i-1])
+						}
+					}
+
+					return nil
+				}
 			}
 		}
 	}
-
-	if len(timestamps) < 2 {
-		return fmt.Errorf("expected at least 2 timestamped progress logs, got %d", len(timestamps))
-	}
-
-	// Verify timestamps are in order and have reasonable delays
-	for i := 1; i < len(timestamps); i++ {
-		diff := timestamps[i].Sub(timestamps[i-1])
-		if diff < 0 {
-			return fmt.Errorf("log timestamps are not in order: %v after %v", timestamps[i], timestamps[i-1])
-		}
-	}
-
-	return nil
 }
 
 func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubTest, error) {
