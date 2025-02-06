@@ -1,6 +1,7 @@
 package neo4j_admin
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"log"
@@ -27,18 +28,68 @@ func CheckDatabaseConnectivity(hostPort string) error {
 
 // PerformBackup performs the backup operation and returns the generated backup file name
 func PerformBackup(address string) ([]string, error) {
-
 	databases := strings.ReplaceAll(os.Getenv("DATABASE"), ",", " ")
 	flags := getBackupCommandFlags(address)
 	log.Printf("Printing backup flags %v", flags)
 	dir, _ := os.Getwd()
 	log.Println("current directory", dir)
-	output, err := exec.Command("neo4j-admin", flags...).CombinedOutput()
+
+	cmd := exec.Command("neo4j-admin", flags...)
+
+	// Create pipes for stdout and stderr
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, fmt.Errorf("Backup Failed for database %s !! output = %s \n err = %v", databases, string(output), err)
+		return nil, fmt.Errorf("Failed to create stdout pipe: %v", err)
 	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to create stderr pipe: %v", err)
+	}
+
+	// Start the command
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("Failed to start backup command: %v", err)
+	}
+
+	var outputBuffer strings.Builder
+
+	stdoutDone := make(chan bool)
+	stderrDone := make(chan bool)
+
+	// Start goroutine to read and stream stdout
+	go func() {
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			line := scanner.Text()
+			log.Println(line)
+			outputBuffer.WriteString(line + "\n")
+		}
+		stdoutDone <- true
+	}()
+
+	// Start goroutine to read and stream stderr
+	go func() {
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			line := scanner.Text()
+			log.Println(line)
+			outputBuffer.WriteString(line + "\n")
+		}
+		stderrDone <- true
+	}()
+
+	// Wait for both stdout and stderr to be fully read
+	<-stdoutDone
+	<-stderrDone
+
+	// Wait for the command to complete
+	err = cmd.Wait()
+	if err != nil {
+		return nil, fmt.Errorf("Backup Failed for database %s !! output = %s \n err = %v", databases, outputBuffer.String(), err)
+	}
+
 	log.Printf("Backup Completed for database %s !!", databases)
-	backupFileNames, err := retrieveBackupFileNames(string(output))
+	backupFileNames, err := retrieveBackupFileNames(outputBuffer.String())
 	if err != nil {
 		return nil, err
 	}
@@ -79,21 +130,73 @@ func PerformConsistencyCheck(database string) (string, error) {
 func PerformAggregateBackup() error {
 	flags := GetAggregateBackupCommandFlags()
 	database := os.Getenv("AGGREGATE_BACKUP_DATABASE")
-	log.Println("Printing aggregate backup flags %v", flags)
+	log.Printf("Printing aggregate backup flags %v", flags)
 	dir, _ := os.Getwd()
 	log.Println("current directory", dir)
-	output, err := exec.Command("neo4j-admin", flags...).CombinedOutput()
+
+	cmd := exec.Command("neo4j-admin", flags...)
+
+	// Create pipes for stdout and stderr
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("Aggregate Backup Failed for database %s !! output = %s \n err = %v", database, string(output), err)
+		return fmt.Errorf("Failed to create stdout pipe: %v", err)
 	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("Failed to create stderr pipe: %v", err)
+	}
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("Failed to start aggregate backup command: %v", err)
+	}
+
+	// Create a buffer to store the complete output for parsing later
+	var outputBuffer strings.Builder
+
+	// Create channels to signal when reading is done
+	stdoutDone := make(chan bool)
+	stderrDone := make(chan bool)
+
+	// Start goroutine to read and stream stdout
+	go func() {
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			line := scanner.Text()
+			log.Println(line)
+			outputBuffer.WriteString(line + "\n")
+		}
+		stdoutDone <- true
+	}()
+
+	// Start goroutine to read and stream stderr
+	go func() {
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			line := scanner.Text()
+			log.Println(line)
+			outputBuffer.WriteString(line + "\n")
+		}
+		stderrDone <- true
+	}()
+
+	// Wait for both stdout and stderr to be fully read
+	<-stdoutDone
+	<-stderrDone
+
+	// Wait for the command to complete
+	err = cmd.Wait()
+	if err != nil {
+		return fmt.Errorf("Aggregate Backup Failed for database %s !! output = %s \n err = %v", database, outputBuffer.String(), err)
+	}
+
 	log.Printf("Aggregate Backup Completed for database %s !!", database)
-	if !strings.Contains(string(output), "no need to aggregate") {
-		backupFileNames, err := retrieveAggregatedBackupFileNames(string(output))
+	if !strings.Contains(outputBuffer.String(), "no need to aggregate") {
+		backupFileNames, err := retrieveAggregatedBackupFileNames(outputBuffer.String())
 		if err != nil {
 			return err
 		}
 		log.Printf("%s", backupFileNames)
 	}
-	log.Printf(string(output))
+	log.Printf(outputBuffer.String())
 	return nil
 }
