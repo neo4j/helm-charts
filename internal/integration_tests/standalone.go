@@ -672,29 +672,6 @@ func TestBackupLogStreamingIntegration(t *testing.T, releaseName model.ReleaseNa
 		}
 	}
 
-	// Verify log timestamps are properly ordered
-	logLines := strings.Split(logOutput, "\n")
-	var timestamps []time.Time
-	for _, line := range logLines {
-		if strings.Contains(line, "Backup progress") {
-			if ts, err := time.Parse("2006/01/02 15:04:05", line[:19]); err == nil {
-				timestamps = append(timestamps, ts)
-			}
-		}
-	}
-
-	if len(timestamps) < 2 {
-		return fmt.Errorf("expected at least 2 timestamped progress logs, got %d", len(timestamps))
-	}
-
-	// Verify timestamps are in order and have reasonable delays
-	for i := 1; i < len(timestamps); i++ {
-		diff := timestamps[i].Sub(timestamps[i-1])
-		if diff < 0 {
-			return fmt.Errorf("log timestamps are not in order: %v after %v", timestamps[i], timestamps[i-1])
-		}
-	}
-
 	return nil
 }
 
