@@ -2562,3 +2562,59 @@ func TestCleanupJobPodAnnotations(t *testing.T) {
 		assert.Equal(t, "value", podAnnotations["custom.annotation/test"], "custom annotation should be present")
 	}))
 }
+
+// TestCleanupJobLabels checks if cleanup job has the correct labels
+func TestCleanupJobLabels(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		if edition != "enterprise" {
+			return
+		}
+
+		manifest, err := model.HelmTemplate(t, chart, []string{
+			"--set", "neo4j.name=" + model.DefaultNeo4jName,
+			"--set", "neo4j.minimumClusterSize=3",
+			"--set", "neo4j.edition=enterprise",
+			"--set", "neo4j.acceptLicenseAgreement=yes",
+			"--set", "services.neo4j.cleanup.enabled=true",
+			"--set", "volumes.data.mode=selector",
+		})
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		cleanupJob := manifest.OfTypeWithName(&batchv1.Job{}, fmt.Sprintf("%s-cleanup", model.DefaultHelmTemplateReleaseName))
+		if !assert.NotNil(t, cleanupJob, "cleanup job not found") {
+			return
+		}
+
+		// Check job labels
+		jobLabels := cleanupJob.(*batchv1.Job).ObjectMeta.Labels
+		assert.Equal(t, model.DefaultNeo4jName, jobLabels["app"], "incorrect app label")
+		assert.Equal(t, model.DefaultNeo4jName, jobLabels["helm.neo4j.com/neo4j.name"], "incorrect neo4j.name label")
+		assert.Equal(t, "true", jobLabels["helm.neo4j.com/clustering"], "incorrect clustering label")
+		assert.Equal(t, "cleanup", jobLabels["helm.neo4j.com/pod_category"], "incorrect pod_category label")
+		assert.Equal(t, model.DefaultHelmTemplateReleaseName.String(), jobLabels["helm.neo4j.com/instance"], "incorrect instance label")
+
+		// Check pod template labels
+		podLabels := cleanupJob.(*batchv1.Job).Spec.Template.ObjectMeta.Labels
+		assert.Equal(t, model.DefaultNeo4jName, podLabels["app"], "incorrect pod app label")
+		assert.Equal(t, model.DefaultNeo4jName, podLabels["helm.neo4j.com/neo4j.name"], "incorrect pod neo4j.name label")
+		assert.Equal(t, "true", podLabels["helm.neo4j.com/clustering"], "incorrect pod clustering label")
+		assert.Equal(t, "cleanup", podLabels["helm.neo4j.com/pod_category"], "incorrect pod pod_category label")
+		assert.Equal(t, model.DefaultHelmTemplateReleaseName.String(), podLabels["helm.neo4j.com/instance"], "incorrect pod instance label")
+
+		// Check service account labels
+		serviceAccount := manifest.OfTypeWithName(&v1.ServiceAccount{}, fmt.Sprintf("%s-cleanup", model.DefaultHelmTemplateReleaseName))
+		if !assert.NotNil(t, serviceAccount, "cleanup service account not found") {
+			return
+		}
+		saLabels := serviceAccount.GetLabels()
+		assert.Equal(t, model.DefaultNeo4jName, saLabels["app"], "incorrect service account app label")
+		assert.Equal(t, model.DefaultNeo4jName, saLabels["helm.neo4j.com/neo4j.name"], "incorrect service account neo4j.name label")
+		assert.Equal(t, "true", saLabels["helm.neo4j.com/clustering"], "incorrect service account clustering label")
+		assert.Equal(t, "cleanup", saLabels["helm.neo4j.com/pod_category"], "incorrect service account pod_category label")
+		assert.Equal(t, model.DefaultHelmTemplateReleaseName.String(), saLabels["helm.neo4j.com/instance"], "incorrect service account instance label")
+	}))
+}
