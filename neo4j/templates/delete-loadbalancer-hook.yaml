@@ -7,7 +7,11 @@ kind: Job
 metadata:
   name: "{{ include "neo4j.fullname" . }}-cleanup"
   labels:
-    app: "{{ include "neo4j.fullname" . }}-cleanup"
+    app: "{{ template "neo4j.name" . }}"
+    helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" . }}"
+    helm.neo4j.com/clustering: "{{ $clusterEnabled }}"
+    helm.neo4j.com/pod_category: "cleanup"
+    helm.neo4j.com/instance: "{{ include "neo4j.fullname" . }}"
     {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
   annotations:
     "helm.sh/hook": "pre-delete"
@@ -20,7 +24,11 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        app: "{{ include "neo4j.fullname" . }}-cleanup"
+        app: "{{ template "neo4j.name" . }}"
+        helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" . }}"
+        helm.neo4j.com/clustering: "{{ $clusterEnabled }}"
+        helm.neo4j.com/pod_category: "cleanup"
+        helm.neo4j.com/instance: "{{ include "neo4j.fullname" . }}"
     spec:
       serviceAccountName: "{{ include "neo4j.fullname" . }}-cleanup"
       containers:
@@ -40,7 +48,11 @@ kind: ServiceAccount
 metadata:
   name: "{{ include "neo4j.fullname" . }}-cleanup"
   labels:
-    app: "{{ template "neo4j.name" $ }}"
+    app: "{{ template "neo4j.name" . }}"
+    helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" . }}"
+    helm.neo4j.com/clustering: "{{ $clusterEnabled }}"
+    helm.neo4j.com/pod_category: "cleanup"
+    helm.neo4j.com/instance: "{{ include "neo4j.fullname" . }}"
     {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -48,7 +60,11 @@ kind: Role
 metadata:
   name: "{{ include "neo4j.fullname" . }}-cleanup"
   labels:
-    app: "{{ template "neo4j.name" $ }}"
+    app: "{{ template "neo4j.name" . }}"
+    helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" . }}"
+    helm.neo4j.com/clustering: "{{ $clusterEnabled }}"
+    helm.neo4j.com/pod_category: "cleanup"
+    helm.neo4j.com/instance: "{{ include "neo4j.fullname" . }}"
     {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
 rules:
   - apiGroups: [""] # "" indicates the core API group
@@ -60,7 +76,11 @@ kind: RoleBinding
 metadata:
   name: "{{ include "neo4j.fullname" . }}-cleanup"
   labels:
-    app: "{{ template "neo4j.name" $ }}"
+    app: "{{ template "neo4j.name" . }}"
+    helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" . }}"
+    helm.neo4j.com/clustering: "{{ $clusterEnabled }}"
+    helm.neo4j.com/pod_category: "cleanup"
+    helm.neo4j.com/instance: "{{ include "neo4j.fullname" . }}"
     {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
 subjects:
   - kind: ServiceAccount
