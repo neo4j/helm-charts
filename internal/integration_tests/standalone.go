@@ -403,10 +403,8 @@ func createNamespace(t *testing.T, releaseName model.ReleaseName) (Closeable, er
 	// Try to delete the namespace if it exists
 	_ = run(t, "kubectl", "delete", "ns", namespace, "--ignore-not-found=true")
 
-	// Wait a bit for the namespace to be fully deleted
 	time.Sleep(5 * time.Second)
 
-	// Create the namespace
 	err := run(t, "kubectl", "create", "ns", namespace)
 	return func() error {
 		return runAll(t, "kubectl", kCleanupCommands(releaseName.Namespace()), false)
