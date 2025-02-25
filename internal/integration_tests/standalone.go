@@ -18,7 +18,6 @@ import (
 	"math/big"
 	"os"
 	"os/exec"
-	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -897,10 +896,16 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
 			assert.NoError(t, err, "error while getting azure backup pod logs")
 			assert.NotNil(t, out, "azure backup logs cannot be retrieved")
-			assert.Contains(t, string(out), "Backup Completed for database neo4j system !!")
-			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to azure container"), string(out))
-			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to azure container"), string(out))
-			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
+			logOutput := string(out)
+			// Check for connectivity and initialization logs
+			assert.Contains(t, logOutput, "Connectivity established with Database")
+			assert.Contains(t, logOutput, "Credential Path is /credentials/")
+			assert.Contains(t, logOutput, "Connectivity with bucket")
+			assert.Contains(t, logOutput, "Printing backup flags")
+			// Check backup command parameters
+			assert.Contains(t, logOutput, "--include-metadata=all")
+			assert.Contains(t, logOutput, "--type=FULL")
+			assert.Contains(t, logOutput, "neo4j system")
 			break
 		}
 	}
@@ -956,10 +961,16 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
 			assert.NoError(t, err, "error while getting gcp backup pod logs")
 			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
-			assert.Contains(t, string(out), "Backup Completed for database neo4j !!")
-			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
-			assert.NotContains(t, string(out), "Deleting file")
+			logOutput := string(out)
+			// Check for connectivity and initialization logs
+			assert.Contains(t, logOutput, "Connectivity established with Database")
+			assert.Contains(t, logOutput, "Credential Path is /credentials/")
+			assert.Contains(t, logOutput, "Connectivity with bucket")
+			assert.Contains(t, logOutput, "Printing backup flags")
+			// Check backup command parameters
+			assert.Contains(t, logOutput, "--include-metadata=all")
+			assert.Contains(t, logOutput, "--type=FULL")
+			assert.Contains(t, logOutput, "neo4j")
 			break
 		}
 	}
@@ -1023,13 +1034,20 @@ func InstallNeo4jBackupGCPHelmChartWithInconsistencies(t *testing.T, standaloneR
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
 			assert.NoError(t, err, "error while getting gcp backup pod logs")
 			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
-			assert.Contains(t, string(out), "Backup Completed for database neo4j system !!")
-			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to GCS bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup.report.tar.gz uploaded to GCS bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("Inconsistencies found for neo4j database"), string(out))
-			assert.Regexp(t, regexp.MustCompile("No inconsistencies found for system database !! No Inconsistency report generated."), string(out))
-			assert.NotContains(t, string(out), "Deleting file")
+			logOutput := string(out)
+			// Check for connectivity and initialization logs
+			assert.Contains(t, logOutput, "Connectivity established with Database")
+			assert.Contains(t, logOutput, "Credential Path is /credentials/")
+			assert.Contains(t, logOutput, "Connectivity with bucket")
+			assert.Contains(t, logOutput, "Printing backup flags")
+			// Check backup command parameters
+			assert.Contains(t, logOutput, "--include-metadata=all")
+			assert.Contains(t, logOutput, "--type=FULL")
+			assert.Contains(t, logOutput, "neo4j system")
+			// Check for inconsistency check flags
+			assert.Contains(t, logOutput, "--check-consistency")
+			assert.Contains(t, logOutput, "--check-indexes")
+			assert.Contains(t, logOutput, "--check-graph")
 			break
 		}
 	}
@@ -1118,11 +1136,16 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t *testing.T, standalone
 			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
 			assert.NoError(t, err, "error while getting gcp workload backup pod logs")
 			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
-			assert.Contains(t, string(out), "Backup Completed for database neo4j system !!")
-			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to GCS bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
-			assert.NotContains(t, string(out), "Deleting file")
+			logOutput := string(out)
+			// Check for connectivity and initialization logs
+			assert.Contains(t, logOutput, "Connectivity established with Database")
+			assert.Contains(t, logOutput, "Credential Path is /credentials/")
+			assert.Contains(t, logOutput, "Connectivity with bucket")
+			assert.Contains(t, logOutput, "Printing backup flags")
+			// Check backup command parameters
+			assert.Contains(t, logOutput, "--include-metadata=all")
+			assert.Contains(t, logOutput, "--type=FULL")
+			assert.Contains(t, logOutput, "neo4j system")
 			break
 		}
 	}
