@@ -932,12 +932,14 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 			// Check for connectivity and initialization logs
 			requiredLogs := []string{
 				"Connectivity established with Database",
-				"Credential Path is /credentials/",
 				"Connectivity with bucket",
 				"Printing backup flags",
 				"--include-metadata=all",
 				"--type=FULL",
 				"neo4j system",
+				"Backup command completed",
+				"Backup Completed",
+				"uploaded to azure container",
 			}
 
 			for _, requiredLog := range requiredLogs {
@@ -1042,12 +1044,13 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 			// Check for connectivity and initialization logs
 			requiredLogs := []string{
 				"Connectivity established with Database",
-				"Credential Path is /credentials/",
 				"Connectivity with bucket",
 				"Printing backup flags",
 				"--include-metadata=all",
 				"--type=FULL",
 				"neo4j",
+				"Backup command completed",
+				"Backup Completed",
 			}
 
 			for _, requiredLog := range requiredLogs {
@@ -1159,7 +1162,6 @@ func InstallNeo4jBackupGCPHelmChartWithInconsistencies(t *testing.T, standaloneR
 			// Check for connectivity and initialization logs
 			requiredLogs := []string{
 				"Connectivity established with Database",
-				"Credential Path is /credentials/",
 				"Connectivity with bucket",
 				"Printing backup flags",
 				"--include-metadata=all",
@@ -1168,6 +1170,8 @@ func InstallNeo4jBackupGCPHelmChartWithInconsistencies(t *testing.T, standaloneR
 				"--check-consistency",
 				"--check-indexes",
 				"--check-graph",
+				"Backup command completed",
+				"Backup Completed",
 			}
 
 			for _, requiredLog := range requiredLogs {
