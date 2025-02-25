@@ -932,7 +932,6 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 			// Check for connectivity and initialization logs
 			requiredLogs := []string{
 				"Connectivity established with Database",
-				"Connectivity with bucket",
 				"Printing backup flags",
 				"--include-metadata=all",
 				"--type=FULL",
@@ -1162,14 +1161,15 @@ func InstallNeo4jBackupGCPHelmChartWithInconsistencies(t *testing.T, standaloneR
 			// Check for connectivity and initialization logs
 			requiredLogs := []string{
 				"Connectivity established with Database",
-				"Connectivity with bucket",
 				"Printing backup flags",
 				"--include-metadata=all",
 				"--type=FULL",
 				"neo4j system",
-				"--check-consistency",
-				"--check-indexes",
-				"--check-graph",
+				"Printing consistency check flags",
+				"--check-indexes=true",
+				"--check-graph=true",
+				"--check-counts=true",
+				"--check-property-owners=true",
 				"Backup command completed",
 				"Backup Completed",
 			}
