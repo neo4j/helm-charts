@@ -6,7 +6,7 @@ on:
       BASE_IMAGE_DEBIAN:
         description: 'Base image for Debian build (e.g. neo4j:enterprise-dev or neo4j:5.x.x-enterprise)'
         type: string
-        default: 'neo4j:enterprise-dev'
+        default: 'neo4j:5.26.3-enterprise'
       BASE_IMAGE_REDHAT:
         description: 'Base image for RedHat build (e.g. neo4j:enterprise-dev-ubi9 or neo4j:5.x.x-enterprise-ubi9)'
         type: string
@@ -23,10 +23,15 @@ on:
         description: 'Version tag for the image'
         type: string
         default: '5.26.3'
+      REGISTRY_PATH:
+        description: 'Registry path (e.g. neo4j-helm/helm-charts-tester-builds or neo4j-helm/helm-charts)'
+        type: string
+        default: 'neo4j-helm/helm-charts'
 
 env:
   GCLOUD_SERVICE_KEY: ${{ secrets.GCLOUD_SERVICE_KEY }}
   RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+  REGISTRY_URL: europe-west2-docker.pkg.dev/${{ inputs.REGISTRY_PATH }}
 
 jobs:
   build-backup-image:
@@ -53,8 +58,8 @@ jobs:
           context: "{{defaultContext}}:neo4j-admin"
           push: ${{ inputs.PUSH_TO_REGISTRY }}
           tags: |
-            ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/helm-charts-backup:${{ inputs.VERSION }}${{ inputs.TAG_SUFFIX }}
-            ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/helm-charts-backup:${{ env.RUN_ID }}${{ inputs.TAG_SUFFIX }}
+            ${{ env.REGISTRY_URL }}/helm-charts-backup:${{ inputs.VERSION }}${{ inputs.TAG_SUFFIX }}
+            ${{ env.REGISTRY_URL }}/helm-charts-backup:${{ env.RUN_ID }}${{ inputs.TAG_SUFFIX }}
           provenance: false
           build-args: |
             IMAGE=${{ inputs.BASE_IMAGE_DEBIAN }}
@@ -64,10 +69,10 @@ jobs:
         run: |
           echo "✅ Build completed!"
           echo "📦 Image tags:"
-          echo "   - ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/helm-charts-backup:${{ inputs.VERSION }}${{ inputs.TAG_SUFFIX }} (Primary version tag)"
-          echo "   - ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/helm-charts-backup:${{ env.RUN_ID }}${{ inputs.TAG_SUFFIX }} (Run ID tag)"
+          echo "   - ${{ env.REGISTRY_URL }}/helm-charts-backup:${{ inputs.VERSION }}${{ inputs.TAG_SUFFIX }} (Primary version tag)"
+          echo "   - ${{ env.REGISTRY_URL }}/helm-charts-backup:${{ env.RUN_ID }}${{ inputs.TAG_SUFFIX }} (Run ID tag)"
           if [[ "${{ inputs.PUSH_TO_REGISTRY }}" == "true" ]]; then
-            echo "🚀 Images have been pushed to the registry"
+            echo "🚀 Images have been pushed to the registry: ${{ env.REGISTRY_URL }}"
           else
             echo "ℹ️ Images were built locally only (not pushed to registry)"
           fi 
