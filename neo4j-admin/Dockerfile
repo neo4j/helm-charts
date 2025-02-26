@@ -22,7 +22,9 @@ RUN \
     else  \
       #for redhat
       microdnf update -y && microdnf install -y bash nc wget gnupg yum-utils unzip less && \
-      microdnf remove -y python* && microdnf clean all ;  \
+      # Safely remove python packages without affecting protected packages
+      microdnf remove -y python3 python3-pip python2 python2-pip --exclude=dnf,libdnf --nobest || true && \
+      microdnf clean all ;  \
     fi
 COPY --from=build /go/backup/backup_linux bin/backup
 ENV NEO4J_server_config_strict__validation_enabled=false
