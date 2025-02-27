@@ -521,75 +521,14 @@ jobs:
         run: |
           ./bin/gcloud/delete_cluster
 
-  build-docker-images-prod:
-    name: Build and Push Docker Images Prod
-    needs: [check-pr]
-    runs-on: ubuntu-latest
-    if: >
-      github.event_name != 'pull_request' &&
-      needs.check-pr.outputs.should_run == 'true' && 
-      needs.check-pr.outputs.is_pull_request == 'false' &&
-      github.ref_name == 'dev' && 
-      github.event_name == 'workflow_dispatch' && 
-      github.actor == 'bfeshti' && 
-      (github.event.inputs.WORKFLOW_MODE == 'docker_images_only' || github.event.inputs.WORKFLOW_MODE == 'package_release_only')
-    steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push reverse proxy image
-        uses: docker/build-push-action@v5
-        with:
-          context: "{{defaultContext}}:neo4j-reverse-proxy"
-          push: true
-          tags: "neo4j/helm-charts-reverse-proxy:${{ inputs.NEO4J_VERSION }}"
-          provenance: false
-
-      - name: Build and push operations image
-        uses: docker/build-push-action@v5
-        with:
-          context: "{{defaultContext}}:neo4j/neo4j-operations"
-          push: true
-          tags: "neo4j/helm-charts-operations:${{ inputs.NEO4J_VERSION }}"
-          provenance: false
-
-      - name: Build and push backup image
-        uses: docker/build-push-action@v5
-        with:
-          context: "{{defaultContext}}:neo4j-admin"
-          push: true
-          tags: "neo4j/helm-charts-backup:${{ inputs.NEO4J_VERSION }}"
-          provenance: false
-          build-args: |
-            IMAGE=neo4j:${{ inputs.NEO4J_VERSION }}-enterprise
-            DISTRIBUTION=debian
-
-      - name: Build and push red hat backup image
-        uses: docker/build-push-action@v5
-        with:
-          context: "{{defaultContext}}:neo4j-admin"
-          push: true
-          tags: "neo4j/helm-charts-backup:${{ inputs.NEO4J_VERSION }}-ubi9"
-          provenance: false
-          build-args: |
-            IMAGE=neo4j:${{ inputs.NEO4J_VERSION }}-enterprise-ubi9
-            DISTRIBUTION=redhat
-
   build-docker-images-prod-after-tests:
-    name: Build and Push Docker Images Prod (after tests)
+    name: Build and Push Docker Images Prod
     needs:
       - check-pr
       - run-community-tests
       - run-community-tests-redhat
       - run-enterprise-tests
       - run-enterprise-tests-redhat
-    runs-on: ubuntu-latest
     if: >
       github.event_name != 'pull_request' &&
       needs.check-pr.outputs.should_run == 'true' && 
@@ -597,11 +536,16 @@ jobs:
       github.ref_name == 'dev' && 
       github.event_name == 'workflow_dispatch' && 
       github.actor == 'bfeshti' && 
-      github.event.inputs.WORKFLOW_MODE == 'full_pipeline' &&
-      needs.run-community-tests.result == 'success' && 
-      needs.run-community-tests-redhat.result == 'success' && 
-      needs.run-enterprise-tests.result == 'success' && 
-      needs.run-enterprise-tests-redhat.result == 'success'
+      (
+        github.event.inputs.WORKFLOW_MODE == 'docker_images_only' || 
+        github.event.inputs.WORKFLOW_MODE == 'package_release_only' || 
+        (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' &&
+          needs.run-community-tests.result == 'success' && 
+          needs.run-community-tests-redhat.result == 'success' && 
+          needs.run-enterprise-tests.result == 'success' && 
+          needs.run-enterprise-tests-redhat.result == 'success')
+      )
+    runs-on: ubuntu-latest
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -654,7 +598,6 @@ jobs:
     name: Packaging and Release
     needs:
       - check-pr
-      - build-docker-images-prod
       - build-docker-images-prod-after-tests
     runs-on: ubuntu-latest
     if: >
@@ -663,10 +606,8 @@ jobs:
       needs.check-pr.outputs.is_pull_request == 'false' &&
       github.ref_name == 'dev' && 
       github.actor == 'bfeshti' && 
-      (
-        (github.event.inputs.WORKFLOW_MODE == 'package_release_only' && needs.build-docker-images-prod.result == 'success') ||
-        (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' && needs.build-docker-images-prod-after-tests.result == 'success')
-      )
+      (github.event.inputs.WORKFLOW_MODE == 'package_release_only' || github.event.inputs.WORKFLOW_MODE == 'full_pipeline') &&
+      needs.build-docker-images-prod-after-tests.result == 'success'
     env:
       NEO4J_VERSION: ${{ inputs.NEO4J_VERSION }}
       HELM_REPO_NAME: ${{ vars.HELM_REPO_NAME }}
