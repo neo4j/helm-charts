@@ -1,0 +1,83 @@
+name: Build and Push Docker Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      NEO4J_VERSION:
+        description: 'Neo4j version to tag the images'
+        type: string
+        required: true
+
+env:
+  GCLOUD_SERVICE_KEY: ${{ secrets.GCLOUD_SERVICE_KEY }}
+  CLOUDSDK_CORE_PROJECT: ${{ secrets.CLOUDSDK_CORE_PROJECT }}
+
+jobs:
+  check-user:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - id: check
+        run: |
+          if [[ "${{ github.actor }}" == "bfeshti" ]]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
+
+  build-docker-images:
+    name: Build and Push Docker Images
+    needs: [check-user]
+    runs-on: ubuntu-latest
+    if: ${{ needs.check-user.outputs.should_run == 'true' && github.ref_name == 'dev' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push reverse proxy image
+        uses: docker/build-push-action@v5
+        with:
+          context: "{{defaultContext}}:neo4j-reverse-proxy"
+          push: true
+          tags: "neo4j/helm-charts-reverse-proxy:${{ inputs.NEO4J_VERSION }}"
+          provenance: false
+
+      - name: Build and push operations image
+        uses: docker/build-push-action@v5
+        with:
+          context: "{{defaultContext}}:neo4j/neo4j-operations"
+          push: true
+          tags: "neo4j/helm-charts-operations:${{ inputs.NEO4J_VERSION }}"
+          provenance: false
+
+      - name: Build and push backup image
+        uses: docker/build-push-action@v5
+        with:
+          context: "{{defaultContext}}:neo4j-admin"
+          push: true
+          tags: "neo4j/helm-charts-backup:${{ inputs.NEO4J_VERSION }}"
+          provenance: false
+          build-args: |
+            IMAGE=neo4j:${{ inputs.NEO4J_VERSION }}-enterprise
+            DISTRIBUTION=debian
+
+      - name: Build and push red hat backup image
+        uses: docker/build-push-action@v5
+        with:
+          context: "{{defaultContext}}:neo4j-admin"
+          push: true
+          tags: "neo4j/helm-charts-backup:${{ inputs.NEO4J_VERSION }}-ubi9"
+          provenance: false
+          build-args: |
+            IMAGE=neo4j:${{ inputs.NEO4J_VERSION }}-enterprise-ubi9
+            DISTRIBUTION=redhat 
