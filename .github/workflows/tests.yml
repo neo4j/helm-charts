@@ -6,10 +6,16 @@ on:
       NEO4J_VERSION:
         description: 'Neo4j version to be released'
         type: string
-      RELEASE:
-        description: 'Release (True) or execute only tests (False)'
-        type: boolean
-        default: false
+      WORKFLOW_MODE:
+        description: 'Select which parts of the workflow to run'
+        type: choice
+        options:
+          - full_pipeline
+          - tests_only
+          - docker_images_only
+          - package_release_only
+        default: 'full_pipeline'
+        required: true
   pull_request:
     paths-ignore:
       - build/*
@@ -79,7 +85,7 @@ jobs:
   gke-setup:
     name: Debian GKE Creation
     needs: [cleanup, check-pr]
-    if: needs.check-pr.outputs.should_run == 'true'
+    if: needs.check-pr.outputs.should_run == 'true' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only')
     runs-on: ubuntu-latest
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
@@ -102,7 +108,7 @@ jobs:
   gke-setup-redhat:
     name: RedHat GKE Creation
     needs: [cleanup, check-pr]
-    if: needs.check-pr.outputs.should_run == 'true'
+    if: needs.check-pr.outputs.should_run == 'true' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only')
     runs-on: ubuntu-latest
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
@@ -125,7 +131,7 @@ jobs:
   build-reverseproxy-backup:
     name: ReverseProxy and Backup Docker Image build
     needs: [cleanup, check-pr]
-    if: needs.check-pr.outputs.should_run == 'true'
+    if: needs.check-pr.outputs.should_run == 'true' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only' || github.event.inputs.WORKFLOW_MODE == 'docker_images_only')
     runs-on: ubuntu-latest
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
@@ -156,9 +162,8 @@ jobs:
           tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ env.RUN_ID }}"
           provenance: false
 
-      - name: Build and push backup image
+      - name: Build and push backup image for tests
         uses: docker/build-push-action@v5
-        if: ${{ !inputs.RELEASE }}
         with:
           context: "{{defaultContext}}:neo4j-admin"
           push: true
@@ -168,9 +173,8 @@ jobs:
             IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-dev
             DISTRIBUTION=debian
 
-      - name: Build and push red hat backup image
+      - name: Build and push red hat backup image for tests
         uses: docker/build-push-action@v5
-        if: ${{ !inputs.RELEASE }}
         with:
           context: "{{defaultContext}}:neo4j-admin"
           push: true
@@ -180,34 +184,10 @@ jobs:
             IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-dev-ubi9
             DISTRIBUTION=redhat
 
-      - name: Build and push backup image
-        uses: docker/build-push-action@v5
-        if: ${{ inputs.RELEASE }}
-        with:
-          context: "{{defaultContext}}:neo4j-admin"
-          push: true
-          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ env.RUN_ID }}"
-          provenance: false
-          build-args: |
-            IMAGE=neo4j:${{ inputs.NEO4J_VERSION }}-enterprise
-            DISTRIBUTION=debian
-
-      - name: Build and push red hat backup image
-        uses: docker/build-push-action@v5
-        if: ${{ inputs.RELEASE }}
-        with:
-          context: "{{defaultContext}}:neo4j-admin"
-          push: true
-          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ env.RUN_ID }}"
-          provenance: false
-          build-args: |
-            IMAGE=neo4j:${{ inputs.NEO4J_VERSION }}-enterprise-ubi9
-            DISTRIBUTION=redhat
-
   run-enterprise-tests:
     name: Debian Enterprise tests
     needs: [gke-setup, build-reverseproxy-backup, check-pr]
-    if: needs.check-pr.outputs.should_run == 'true'
+    if: needs.check-pr.outputs.should_run == 'true' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only')
     runs-on: ubuntu-latest
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
@@ -250,22 +230,21 @@ jobs:
           mkdir -p .kube
           cat ${KUBECONFIG} > .kube/config
           CURRENT_DIRECTORY=$(pwd)
-          export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"          
+          export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
+          echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)
-          #inputs.RELEASE does not hold value when workflow_dispatch is not called
-          ISRELEASE=${{ inputs.RELEASE }}
-          if [[ ${#ISRELEASE} != 0 ]]; then            
+          # Check if NEO4J_VERSION is provided and we're in release mode
+          if [[ -n "${{ inputs.NEO4J_VERSION }}" && "${{ github.event.inputs.WORKFLOW_MODE }}" == "full_pipeline" ]]; then
             export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}-enterprise"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
-          echo "printing kubeconfig path $KUBECONFIG"
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
 
   run-community-tests:
     name: Debian Community Tests
     needs: [gke-setup, build-reverseproxy-backup, check-pr]
-    if: needs.check-pr.outputs.should_run == 'true'
+    if: needs.check-pr.outputs.should_run == 'true' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only')
     runs-on: ubuntu-latest
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
@@ -308,22 +287,21 @@ jobs:
           mkdir -p .kube
           cat ${KUBECONFIG} > .kube/config
           CURRENT_DIRECTORY=$(pwd)
-          export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"          
+          export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
+          echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)
-          #inputs.RELEASE does not hold value when workflow_dispatch is not called
-          ISRELEASE=${{ inputs.RELEASE }}
-          if [[ ${#ISRELEASE} != 0 ]]; then            
+          # Check if NEO4J_VERSION is provided and we're in release mode
+          if [[ -n "${{ inputs.NEO4J_VERSION }}" && "${{ github.event.inputs.WORKFLOW_MODE }}" == "full_pipeline" ]]; then
             export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
-          echo "printing kubeconfig path $KUBECONFIG"
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
 
   run-enterprise-tests-redhat:
     name: RedHat Enterprise Tests
     needs: [gke-setup-redhat, build-reverseproxy-backup, check-pr]
-    if: needs.check-pr.outputs.should_run == 'true'
+    if: needs.check-pr.outputs.should_run == 'true' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only')
     runs-on: ubuntu-latest
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
@@ -368,11 +346,10 @@ jobs:
           CURRENT_DIRECTORY=$(pwd)
           export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
           echo "printing kubeconfig path $KUBECONFIG"
-          export IPS_PASS=$(gcloud auth print-access-token)          
-          #inputs.RELEASE does not hold value when workflow_dispatch is not called
-          ISRELEASE=${{ inputs.RELEASE }}
-          if [[ ${#ISRELEASE} != 0 ]]; then            
-            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}-enterprise"
+          export IPS_PASS=$(gcloud auth print-access-token)
+          # Check if NEO4J_VERSION is provided and we're in release mode
+          if [[ -n "${{ inputs.NEO4J_VERSION }}" && "${{ github.event.inputs.WORKFLOW_MODE }}" == "full_pipeline" ]]; then
+            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}-enterprise-ubi9"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
@@ -381,7 +358,7 @@ jobs:
   run-community-tests-redhat:
     name: RedHat Community Tests
     needs: [gke-setup-redhat, build-reverseproxy-backup, check-pr]
-    if: needs.check-pr.outputs.should_run == 'true'
+    if: needs.check-pr.outputs.should_run == 'true' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only')
     runs-on: ubuntu-latest
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
@@ -427,10 +404,9 @@ jobs:
           export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
           echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)
-          #inputs.RELEASE does not hold value when workflow_dispatch is not called
-          ISRELEASE=${{ inputs.RELEASE }}
-          if [[ ${#ISRELEASE} != 0 ]]; then            
-            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}"
+          # Check if NEO4J_VERSION is provided and we're in release mode
+          if [[ -n "${{ inputs.NEO4J_VERSION }}" && "${{ github.event.inputs.WORKFLOW_MODE }}" == "full_pipeline" ]]; then
+            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}-ubi9"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
@@ -439,7 +415,7 @@ jobs:
   gke-delete:
     name: Debian GKE Cluster Deletion
     runs-on: ubuntu-latest
-    if: always() && needs.check-pr.outputs.should_run == 'true'
+    if: always() && needs.check-pr.outputs.should_run == 'true' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only')
     env:
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
     needs:
@@ -467,7 +443,7 @@ jobs:
   gke-delete-redhat:
     name: RedHat GKE Cluster Deletion
     runs-on: ubuntu-latest
-    if: always() && needs.check-pr.outputs.should_run == 'true'
+    if: always() && needs.check-pr.outputs.should_run == 'true' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only')
     env:
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
     needs:
@@ -494,9 +470,18 @@ jobs:
 
   build-reverseproxy-backup-release-image:
     name: ReverseProxy and Backup Docker Image build
-    needs: [run-community-tests, run-community-tests-redhat, run-enterprise-tests, run-enterprise-tests-redhat, check-pr]
+    needs: [check-pr]
     runs-on: ubuntu-latest
-    if: ${{ inputs.RELEASE && github.ref_name == 'dev' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'bfeshti') && needs.check-pr.outputs.should_run == 'true' }}
+    if: >
+      needs.check-pr.outputs.should_run == 'true' && 
+      github.ref_name == 'dev' && 
+      github.event_name == 'workflow_dispatch' && 
+      (github.actor == 'bfeshti') && 
+      (
+        (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' && needs.run-community-tests.result == 'success' && needs.run-community-tests-redhat.result == 'success' && needs.run-enterprise-tests.result == 'success' && needs.run-enterprise-tests-redhat.result == 'success') || 
+        github.event.inputs.WORKFLOW_MODE == 'docker_images_only' || 
+        github.event.inputs.WORKFLOW_MODE == 'package_release_only'
+      )
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -547,9 +532,17 @@ jobs:
 
   packaging:
     name: Packaging and Release
-    needs: [run-community-tests, run-community-tests-redhat, run-enterprise-tests, run-enterprise-tests-redhat, build-reverseproxy-backup-release-image, check-pr]
+    needs: [check-pr, build-reverseproxy-backup-release-image]
     runs-on: ubuntu-latest
-    if: ${{ inputs.RELEASE && github.ref_name == 'dev' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'bfeshti') && needs.check-pr.outputs.should_run == 'true' }}
+    if: >
+      needs.check-pr.outputs.should_run == 'true' && 
+      github.ref_name == 'dev' && 
+      github.event_name == 'workflow_dispatch' && 
+      (github.actor == 'bfeshti') && 
+      (
+        (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' && needs.run-community-tests.result == 'success' && needs.run-community-tests-redhat.result == 'success' && needs.run-enterprise-tests.result == 'success' && needs.run-enterprise-tests-redhat.result == 'success') || 
+        github.event.inputs.WORKFLOW_MODE == 'package_release_only'
+      )
     env:
       NEO4J_VERSION: ${{ inputs.NEO4J_VERSION }}
       HELM_REPO_NAME: ${{ vars.HELM_REPO_NAME }}
