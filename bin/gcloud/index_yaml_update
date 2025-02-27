@@ -54,20 +54,11 @@ helm pull neo4j/neo4j-persistent-volume --version "${HELM_COMPATIBLE_VERSION}"
 helm pull neo4j/neo4j-reverse-proxy --version "${HELM_COMPATIBLE_VERSION}"
 helm pull neo4j/neo4j-loadbalancer --version "${HELM_COMPATIBLE_VERSION}"
 
-# Rename the pulled files to use the original Neo4j version for GitHub releases
-if [[ "${NEO4J_VERSION}" != "${HELM_COMPATIBLE_VERSION}" ]]; then
-  echo "Renaming pulled files to use the original Neo4j version for GitHub releases"
-  for file in *.tgz; do
-    new_name=$(echo "$file" | sed "s/-${HELM_COMPATIBLE_VERSION}.tgz/-${NEO4J_VERSION}.tgz/")
-    mv "$file" "$new_name"
-  done
-fi
-
-# Use the original Neo4j version for GitHub releases
-helm repo index . --merge index.yaml --url https://github.com/neo4j/helm-charts/releases/download/"${NEO4J_VERSION}"
+# Use the Helm-compatible version for index.yaml (for Artifact Hub compatibility)
+helm repo index . --merge index.yaml --url https://github.com/neo4j/helm-charts/releases/download/"${HELM_COMPATIBLE_VERSION}"
 
 git add index.yaml
-git commit -m "Updating index.yaml with ${NEO4J_VERSION} entries and version to ${NEO4J_VERSION}"
+git commit -m "Updating index.yaml with ${HELM_COMPATIBLE_VERSION} entries and version to${HELM_COMPATIBLE_VERSION}"
 git push
-git tag -m "Tagging ${NEO4J_VERSION}" -a "${NEO4J_VERSION}"
+git tag -m "Tagging ${HELM_COMPATIBLE_VERSION}" -a "${HELM_COMPATIBLE_VERSION}"
 git push --tags

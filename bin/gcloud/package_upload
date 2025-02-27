@@ -48,6 +48,12 @@ convert_to_helm_compatible_version() {
 HELM_COMPATIBLE_VERSION=$(convert_to_helm_compatible_version "${NEO4J_VERSION}")
 echo "Original version: ${NEO4J_VERSION}, Helm-compatible version: ${HELM_COMPATIBLE_VERSION}"
 
+# Verify Chart.yaml versions before packaging
+echo "Verifying Chart.yaml versions before packaging:"
+echo "neo4j/Chart.yaml:"
+grep "version:" neo4j/Chart.yaml
+grep "appVersion:" neo4j/Chart.yaml
+
 # Local env vars
 #
 BUILD_OUT_DIR="tmp/new-packages/"
@@ -67,12 +73,14 @@ rm -rf signingkeysandbox
 
 if [ ${S3_UPLOAD_TO_SUB_FOLDER} == "neo4j" ]; then
     CHART_VERSION=$(helm show chart ./neo4j| grep -E "version:(.*)" | awk -F ": " '{print $2}')
+    echo "Chart version from helm show: ${CHART_VERSION}"
     tar -czvf "neo4j-helm-charts-${NEO4J_VERSION}.tgz" neo4j neo4j-persistent-volume neo4j-headless-service neo4j-docker-desktop-pv neo4j-admin neo4j-reverse-proxy neo4j-loadbalancer
     aws s3 cp --acl public-read "neo4j-helm-charts-${NEO4J_VERSION}.tgz" s3://dist.neo4j.org/helm/
     rm -f "neo4j-helm-charts-${NEO4J_VERSION}.tgz"
 fi
 
 # create the package!
+echo "Packaging charts with helm package..."
 echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
 echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-admin --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
 echo $PACKAGE_SIGNING_PASSPHRASE | helm package --sign ./neo4j-headless-service --key "${PACKAGE_SIGNING_KEY}" --keyring="${PACKAGE_SIGNING_KEYRING}" --passphrase-file -
@@ -87,6 +95,10 @@ mkdir -p ${BUILD_OUT_DIR}
 mv *.tgz ${BUILD_OUT_DIR}
 mv *.tgz.prov ${BUILD_OUT_DIR}
 
+# List the packaged files to verify their names
+echo "Packaged files:"
+ls -la ${BUILD_OUT_DIR}
+
 # Rename the packaged files to use the original Neo4j version for consistency in GitHub releases
 # This is needed because the chart version might be different from the Neo4j version
 if [[ "${NEO4J_VERSION}" != "${HELM_COMPATIBLE_VERSION}" ]]; then
@@ -94,10 +106,12 @@ if [[ "${NEO4J_VERSION}" != "${HELM_COMPATIBLE_VERSION}" ]]; then
   for file in ${BUILD_OUT_DIR}/*.tgz; do
     base_name=$(basename "$file" | sed "s/-${HELM_COMPATIBLE_VERSION}.tgz/-${NEO4J_VERSION}.tgz/")
     cp "$file" "${BUILD_OUT_DIR}/${base_name}"
+    echo "Renamed: $file -> ${BUILD_OUT_DIR}/${base_name}"
   done
   for file in ${BUILD_OUT_DIR}/*.tgz.prov; do
     base_name=$(basename "$file" | sed "s/-${HELM_COMPATIBLE_VERSION}.tgz.prov/-${NEO4J_VERSION}.tgz.prov/")
     cp "$file" "${BUILD_OUT_DIR}/${base_name}"
+    echo "Renamed: $file -> ${BUILD_OUT_DIR}/${base_name}"
   done
 fi
 
