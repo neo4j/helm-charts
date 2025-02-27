@@ -531,7 +531,7 @@ jobs:
       needs.check-pr.outputs.is_pull_request == 'false' &&
       github.ref_name == 'dev' && 
       github.event_name == 'workflow_dispatch' && 
-      (github.actor == 'bfeshti') && 
+      github.actor == 'bfeshti' && 
       (github.event.inputs.WORKFLOW_MODE == 'docker_images_only' || github.event.inputs.WORKFLOW_MODE == 'package_release_only')
     steps:
       - name: Set up Docker Buildx
@@ -591,12 +591,8 @@ jobs:
       needs.check-pr.outputs.is_pull_request == 'false' &&
       github.ref_name == 'dev' && 
       github.event_name == 'workflow_dispatch' && 
-      (github.actor == 'bfeshti') && 
-      github.event.inputs.WORKFLOW_MODE == 'full_pipeline' && 
-      needs.run-community-tests.result == 'success' && 
-      needs.run-community-tests-redhat.result == 'success' && 
-      needs.run-enterprise-tests.result == 'success' && 
-      needs.run-enterprise-tests-redhat.result == 'success'
+      github.actor == 'bfeshti' && 
+      github.event.inputs.WORKFLOW_MODE == 'full_pipeline'
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -647,18 +643,20 @@ jobs:
 
   packaging:
     name: Packaging and Release
-    needs: [check-pr, build-reverseproxy-backup-release-image, build-reverseproxy-backup-release-image-after-tests]
+    needs:
+      - check-pr
+      - build-reverseproxy-backup-release-image
+      - build-reverseproxy-backup-release-image-after-tests
     runs-on: ubuntu-latest
     if: >
-      github.event_name != 'pull_request' &&
+      github.event_name == 'workflow_dispatch' &&
       needs.check-pr.outputs.should_run == 'true' && 
       needs.check-pr.outputs.is_pull_request == 'false' &&
       github.ref_name == 'dev' && 
-      github.event_name == 'workflow_dispatch' && 
       github.actor == 'bfeshti' && 
       (
-        github.event.inputs.WORKFLOW_MODE == 'full_pipeline' ||
-        github.event.inputs.WORKFLOW_MODE == 'package_release_only'
+        (github.event.inputs.WORKFLOW_MODE == 'package_release_only' && needs.build-reverseproxy-backup-release-image.result == 'success') ||
+        (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' && needs.build-reverseproxy-backup-release-image-after-tests.result == 'success')
       )
     env:
       NEO4J_VERSION: ${{ inputs.NEO4J_VERSION }}
