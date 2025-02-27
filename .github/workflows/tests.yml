@@ -49,15 +49,19 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       should_run: ${{ steps.check.outputs.should_run }}
+      is_pull_request: ${{ steps.check.outputs.is_pull_request }}
     steps:
       - id: check
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.actor }}" == "bfeshti" ]]; then
             echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "is_pull_request=false" >> $GITHUB_OUTPUT
           elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.actor }}" == "bfeshti" ]]; then
             echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "is_pull_request=true" >> $GITHUB_OUTPUT
           else
             echo "should_run=false" >> $GITHUB_OUTPUT
+            echo "is_pull_request=false" >> $GITHUB_OUTPUT
           fi
 
   cleanup:
@@ -85,7 +89,12 @@ jobs:
   gke-setup:
     name: Debian GKE Creation
     needs: [cleanup, check-pr]
-    if: needs.check-pr.outputs.should_run == 'true' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only')
+    if: >
+      needs.check-pr.outputs.should_run == 'true' && 
+      (
+        (needs.check-pr.outputs.is_pull_request == 'true') || 
+        (needs.check-pr.outputs.is_pull_request == 'false' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only'))
+      )
     runs-on: ubuntu-latest
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
@@ -108,7 +117,12 @@ jobs:
   gke-setup-redhat:
     name: RedHat GKE Creation
     needs: [cleanup, check-pr]
-    if: needs.check-pr.outputs.should_run == 'true' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only')
+    if: >
+      needs.check-pr.outputs.should_run == 'true' && 
+      (
+        (needs.check-pr.outputs.is_pull_request == 'true') || 
+        (needs.check-pr.outputs.is_pull_request == 'false' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only'))
+      )
     runs-on: ubuntu-latest
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
@@ -131,7 +145,12 @@ jobs:
   build-reverseproxy-backup:
     name: ReverseProxy and Backup Docker Image build
     needs: [cleanup, check-pr]
-    if: needs.check-pr.outputs.should_run == 'true' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only' || github.event.inputs.WORKFLOW_MODE == 'docker_images_only')
+    if: >
+      needs.check-pr.outputs.should_run == 'true' && 
+      (
+        (needs.check-pr.outputs.is_pull_request == 'true') || 
+        (needs.check-pr.outputs.is_pull_request == 'false' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only' || github.event.inputs.WORKFLOW_MODE == 'docker_images_only'))
+      )
     runs-on: ubuntu-latest
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
@@ -187,7 +206,12 @@ jobs:
   run-enterprise-tests:
     name: Debian Enterprise tests
     needs: [gke-setup, build-reverseproxy-backup, check-pr]
-    if: needs.check-pr.outputs.should_run == 'true' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only')
+    if: >
+      needs.check-pr.outputs.should_run == 'true' && 
+      (
+        (needs.check-pr.outputs.is_pull_request == 'true') || 
+        (needs.check-pr.outputs.is_pull_request == 'false' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only'))
+      )
     runs-on: ubuntu-latest
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
@@ -244,7 +268,12 @@ jobs:
   run-community-tests:
     name: Debian Community Tests
     needs: [gke-setup, build-reverseproxy-backup, check-pr]
-    if: needs.check-pr.outputs.should_run == 'true' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only')
+    if: >
+      needs.check-pr.outputs.should_run == 'true' && 
+      (
+        (needs.check-pr.outputs.is_pull_request == 'true') || 
+        (needs.check-pr.outputs.is_pull_request == 'false' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only'))
+      )
     runs-on: ubuntu-latest
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
@@ -301,7 +330,12 @@ jobs:
   run-enterprise-tests-redhat:
     name: RedHat Enterprise Tests
     needs: [gke-setup-redhat, build-reverseproxy-backup, check-pr]
-    if: needs.check-pr.outputs.should_run == 'true' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only')
+    if: >
+      needs.check-pr.outputs.should_run == 'true' && 
+      (
+        (needs.check-pr.outputs.is_pull_request == 'true') || 
+        (needs.check-pr.outputs.is_pull_request == 'false' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only'))
+      )
     runs-on: ubuntu-latest
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
@@ -358,7 +392,12 @@ jobs:
   run-community-tests-redhat:
     name: RedHat Community Tests
     needs: [gke-setup-redhat, build-reverseproxy-backup, check-pr]
-    if: needs.check-pr.outputs.should_run == 'true' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only')
+    if: >
+      needs.check-pr.outputs.should_run == 'true' && 
+      (
+        (needs.check-pr.outputs.is_pull_request == 'true') || 
+        (needs.check-pr.outputs.is_pull_request == 'false' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only'))
+      )
     runs-on: ubuntu-latest
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
@@ -415,13 +454,20 @@ jobs:
   gke-delete:
     name: Debian GKE Cluster Deletion
     runs-on: ubuntu-latest
-    if: always() && needs.check-pr.outputs.should_run == 'true' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only')
+    if: >
+      always() && 
+      needs.check-pr.outputs.should_run == 'true' && 
+      (
+        (needs.check-pr.outputs.is_pull_request == 'true') || 
+        (needs.check-pr.outputs.is_pull_request == 'false' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only'))
+      )
     env:
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
     needs:
       - run-enterprise-tests
       - run-community-tests
       - gke-setup
+      - check-pr
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -443,13 +489,20 @@ jobs:
   gke-delete-redhat:
     name: RedHat GKE Cluster Deletion
     runs-on: ubuntu-latest
-    if: always() && needs.check-pr.outputs.should_run == 'true' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only')
+    if: >
+      always() && 
+      needs.check-pr.outputs.should_run == 'true' && 
+      (
+        (needs.check-pr.outputs.is_pull_request == 'true') || 
+        (needs.check-pr.outputs.is_pull_request == 'false' && (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' || github.event.inputs.WORKFLOW_MODE == 'tests_only'))
+      )
     env:
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
     needs:
       - run-enterprise-tests-redhat
       - run-community-tests-redhat
       - gke-setup-redhat
+      - check-pr
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -469,19 +522,79 @@ jobs:
           ./bin/gcloud/delete_cluster
 
   build-reverseproxy-backup-release-image:
-    name: ReverseProxy and Backup Docker Image build
+    name: ReverseProxy and Backup Docker Image build for Release
     needs: [check-pr]
     runs-on: ubuntu-latest
     if: >
       needs.check-pr.outputs.should_run == 'true' && 
+      needs.check-pr.outputs.is_pull_request == 'false' &&
       github.ref_name == 'dev' && 
       github.event_name == 'workflow_dispatch' && 
       (github.actor == 'bfeshti') && 
-      (
-        (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' && needs.run-community-tests.result == 'success' && needs.run-community-tests-redhat.result == 'success' && needs.run-enterprise-tests.result == 'success' && needs.run-enterprise-tests-redhat.result == 'success') || 
-        github.event.inputs.WORKFLOW_MODE == 'docker_images_only' || 
-        github.event.inputs.WORKFLOW_MODE == 'package_release_only'
-      )
+      (github.event.inputs.WORKFLOW_MODE == 'docker_images_only' || github.event.inputs.WORKFLOW_MODE == 'package_release_only')
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push reverse proxy image
+        uses: docker/build-push-action@v5
+        with:
+          context: "{{defaultContext}}:neo4j-reverse-proxy"
+          push: true
+          tags: "neo4j/helm-charts-reverse-proxy:${{ inputs.NEO4J_VERSION }}"
+          provenance: false
+
+      - name: Build and push operations image
+        uses: docker/build-push-action@v5
+        with:
+          context: "{{defaultContext}}:neo4j/neo4j-operations"
+          push: true
+          tags: "neo4j/helm-charts-operations:${{ inputs.NEO4J_VERSION }}"
+          provenance: false
+
+      - name: Build and push backup image
+        uses: docker/build-push-action@v5
+        with:
+          context: "{{defaultContext}}:neo4j-admin"
+          push: true
+          tags: "neo4j/helm-charts-backup:${{ inputs.NEO4J_VERSION }}"
+          provenance: false
+          build-args: |
+            IMAGE=neo4j:${{ inputs.NEO4J_VERSION }}-enterprise
+            DISTRIBUTION=debian
+
+      - name: Build and push red hat backup image
+        uses: docker/build-push-action@v5
+        with:
+          context: "{{defaultContext}}:neo4j-admin"
+          push: true
+          tags: "neo4j/helm-charts-backup:${{ inputs.NEO4J_VERSION }}-ubi9"
+          provenance: false
+          build-args: |
+            IMAGE=neo4j:${{ inputs.NEO4J_VERSION }}-enterprise-ubi9
+            DISTRIBUTION=redhat
+
+  build-reverseproxy-backup-release-image-after-tests:
+    name: ReverseProxy and Backup Docker Image build for Release (after tests)
+    needs: [check-pr, run-community-tests, run-community-tests-redhat, run-enterprise-tests, run-enterprise-tests-redhat]
+    runs-on: ubuntu-latest
+    if: >
+      needs.check-pr.outputs.should_run == 'true' && 
+      needs.check-pr.outputs.is_pull_request == 'false' &&
+      github.ref_name == 'dev' && 
+      github.event_name == 'workflow_dispatch' && 
+      (github.actor == 'bfeshti') && 
+      github.event.inputs.WORKFLOW_MODE == 'full_pipeline' && 
+      needs.run-community-tests.result == 'success' && 
+      needs.run-community-tests-redhat.result == 'success' && 
+      needs.run-enterprise-tests.result == 'success' && 
+      needs.run-enterprise-tests-redhat.result == 'success'
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -532,16 +645,17 @@ jobs:
 
   packaging:
     name: Packaging and Release
-    needs: [check-pr, build-reverseproxy-backup-release-image]
+    needs: [check-pr, build-reverseproxy-backup-release-image, build-reverseproxy-backup-release-image-after-tests]
     runs-on: ubuntu-latest
     if: >
       needs.check-pr.outputs.should_run == 'true' && 
+      needs.check-pr.outputs.is_pull_request == 'false' &&
       github.ref_name == 'dev' && 
       github.event_name == 'workflow_dispatch' && 
       (github.actor == 'bfeshti') && 
       (
-        (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' && needs.run-community-tests.result == 'success' && needs.run-community-tests-redhat.result == 'success' && needs.run-enterprise-tests.result == 'success' && needs.run-enterprise-tests-redhat.result == 'success') || 
-        github.event.inputs.WORKFLOW_MODE == 'package_release_only'
+        (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' && needs.build-reverseproxy-backup-release-image-after-tests.result == 'success') || 
+        (github.event.inputs.WORKFLOW_MODE == 'package_release_only' && needs.build-reverseproxy-backup-release-image.result == 'success')
       )
     env:
       NEO4J_VERSION: ${{ inputs.NEO4J_VERSION }}
