@@ -14,7 +14,7 @@ on:
           - tests_only
           - docker_images_only
           - package_release_only
-        default: 'full_pipeline'
+        default: 'tests_only'
         required: true
   pull_request:
     paths-ignore:
@@ -143,7 +143,7 @@ jobs:
       CLOUDSDK_CONTAINER_CLUSTER_REDHAT: "${{ env.RESOURCE_PREFIX }}-redhat-${{ env.RUN_ID }}"
 
   build-reverseproxy-backup:
-    name: ReverseProxy and Backup Docker Image build
+    name: Build and Push Docker Images Dev
     needs: [cleanup, check-pr]
     if: >
       needs.check-pr.outputs.should_run == 'true' && 
@@ -522,7 +522,7 @@ jobs:
           ./bin/gcloud/delete_cluster
 
   build-reverseproxy-backup-release-image:
-    name: ReverseProxy and Backup Docker Image build for Release
+    name: Build and Push Docker Images Prod
     needs: [check-pr]
     runs-on: ubuntu-latest
     if: >
@@ -582,7 +582,7 @@ jobs:
             DISTRIBUTION=redhat
 
   build-reverseproxy-backup-release-image-after-tests:
-    name: ReverseProxy and Backup Docker Image build for Release (after tests)
+    name: Build and Push Docker Images Prod (after tests)
     needs: [check-pr, run-community-tests, run-community-tests-redhat, run-enterprise-tests, run-enterprise-tests-redhat]
     runs-on: ubuntu-latest
     if: >
