@@ -526,6 +526,7 @@ jobs:
     needs: [check-pr]
     runs-on: ubuntu-latest
     if: >
+      github.event_name != 'pull_request' &&
       needs.check-pr.outputs.should_run == 'true' && 
       needs.check-pr.outputs.is_pull_request == 'false' &&
       github.ref_name == 'dev' && 
@@ -585,6 +586,7 @@ jobs:
     needs: [check-pr, run-community-tests, run-community-tests-redhat, run-enterprise-tests, run-enterprise-tests-redhat]
     runs-on: ubuntu-latest
     if: >
+      github.event_name != 'pull_request' &&
       needs.check-pr.outputs.should_run == 'true' && 
       needs.check-pr.outputs.is_pull_request == 'false' &&
       github.ref_name == 'dev' && 
@@ -648,6 +650,7 @@ jobs:
     needs: [check-pr, build-reverseproxy-backup-release-image, build-reverseproxy-backup-release-image-after-tests]
     runs-on: ubuntu-latest
     if: >
+      github.event_name != 'pull_request' &&
       needs.check-pr.outputs.should_run == 'true' && 
       needs.check-pr.outputs.is_pull_request == 'false' &&
       github.ref_name == 'dev' && 
