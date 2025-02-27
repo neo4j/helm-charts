@@ -1,4 +1,4 @@
-name: Execute Tests
+name: Test and Release pipeline
 
 on:
   workflow_dispatch:
@@ -10,8 +10,8 @@ on:
         description: 'Select which parts of the workflow to run'
         type: choice
         options:
+          - tests_only          
           - full_pipeline
-          - tests_only
           - docker_images_only
           - package_release_only
         default: 'tests_only'
@@ -658,7 +658,7 @@ jobs:
       (github.actor == 'bfeshti') && 
       (
         (github.event.inputs.WORKFLOW_MODE == 'full_pipeline' && needs.build-reverseproxy-backup-release-image-after-tests.result == 'success') || 
-        (github.event.inputs.WORKFLOW_MODE == 'package_release_only' && needs.build-reverseproxy-backup-release-image.result == 'success')
+        (github.event.inputs.WORKFLOW_MODE == 'package_release_only')
       )
     env:
       NEO4J_VERSION: ${{ inputs.NEO4J_VERSION }}
