@@ -63,6 +63,32 @@ then
   sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-admin/values.yaml"
   sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-reverse-proxy/values.yaml"
 
+  # Verify the updates were applied correctly
+  echo "Verifying Chart.yaml updates:"
+  echo "neo4j/Chart.yaml:"
+  grep "version:" neo4j/Chart.yaml
+  grep "appVersion:" neo4j/Chart.yaml
+  
+  echo "neo4j-headless-service/Chart.yaml:"
+  grep "version:" neo4j-headless-service/Chart.yaml
+  grep "appVersion:" neo4j-headless-service/Chart.yaml
+  
+  echo "neo4j-persistent-volume/Chart.yaml:"
+  grep "version:" neo4j-persistent-volume/Chart.yaml
+  grep "appVersion:" neo4j-persistent-volume/Chart.yaml
+  
+  echo "neo4j-admin/Chart.yaml:"
+  grep "version:" neo4j-admin/Chart.yaml
+  grep "appVersion:" neo4j-admin/Chart.yaml
+  
+  echo "neo4j-reverse-proxy/Chart.yaml:"
+  grep "version:" neo4j-reverse-proxy/Chart.yaml
+  grep "appVersion:" neo4j-reverse-proxy/Chart.yaml
+  
+  echo "neo4j-loadbalancer/Chart.yaml:"
+  grep "version:" neo4j-loadbalancer/Chart.yaml
+  grep "appVersion:" neo4j-loadbalancer/Chart.yaml
+
   HELM_CHARTS_LIST=("neo4j" "neo4j-headless-service" "neo4j-persistent-volume" "neo4j-admin" "neo4j-reverse-proxy" "neo4j-loadbalancer")
   for chart in "${HELM_CHARTS_LIST[@]}"
   do
