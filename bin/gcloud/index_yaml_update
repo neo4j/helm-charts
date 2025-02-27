@@ -8,19 +8,62 @@ shopt -s inherit_errexit
 NEO4J_VERSION="${NEO4J_VERSION:?NEO4J_VERSION is required}"
 # neo4j or neo4j-experimental
 HELM_REPO_NAME="${HELM_REPO_NAME:?HELM_REPO_NAME is required}"
+
+# Function to convert calver format from 2025.02.00 to 2025.2.0 for chart version
+convert_to_helm_compatible_version() {
+  local version=$1
+  # Check if it's a calver format (YYYY.MM.DD)
+  if [[ $version =~ ^[0-9]{4}\.[0-9]{2}\.[0-9]{2}$ ]]; then
+    # Extract year, month, and day
+    local year=$(echo $version | cut -d. -f1)
+    local month=$(echo $version | cut -d. -f2)
+    local day=$(echo $version | cut -d. -f3)
+    
+    # Remove leading zeros from month and day
+    month=$(echo $month | sed 's/^0*//')
+    day=$(echo $day | sed 's/^0*//')
+    
+    # If day is 0 or empty, set it to 0
+    if [[ -z "$day" || "$day" == "00" ]]; then
+      day="0"
+    fi
+    
+    # Return the converted version
+    echo "${year}.${month}.${day}"
+  else
+    # If it's not calver, return the original version
+    echo $version
+  fi
+}
+
+# Get the helm-compatible version
+HELM_COMPATIBLE_VERSION=$(convert_to_helm_compatible_version "${NEO4J_VERSION}")
+echo "Original version: ${NEO4J_VERSION}, Helm-compatible version: ${HELM_COMPATIBLE_VERSION}"
+
 echo "sleeping for 300 seconds"
 sleep 300
 helm repo add neo4j "https://helm.neo4j.com/${HELM_REPO_NAME}"
 helm repo update
 
-echo "Pulling 5.x helm charts"
-helm pull neo4j/neo4j --version "${NEO4J_VERSION}"
-helm pull neo4j/neo4j-admin --version "${NEO4J_VERSION}"
-helm pull neo4j/neo4j-headless-service --version "${NEO4J_VERSION}"
-helm pull neo4j/neo4j-persistent-volume --version "${NEO4J_VERSION}"
-helm pull neo4j/neo4j-reverse-proxy --version "${NEO4J_VERSION}"
-helm pull neo4j/neo4j-loadbalancer --version "${NEO4J_VERSION}"
+echo "Pulling helm charts"
+# Use the Helm-compatible version for pulling charts
+helm pull neo4j/neo4j --version "${HELM_COMPATIBLE_VERSION}"
+helm pull neo4j/neo4j-admin --version "${HELM_COMPATIBLE_VERSION}"
+helm pull neo4j/neo4j-headless-service --version "${HELM_COMPATIBLE_VERSION}"
+helm pull neo4j/neo4j-persistent-volume --version "${HELM_COMPATIBLE_VERSION}"
+helm pull neo4j/neo4j-reverse-proxy --version "${HELM_COMPATIBLE_VERSION}"
+helm pull neo4j/neo4j-loadbalancer --version "${HELM_COMPATIBLE_VERSION}"
 
+# Rename the pulled files to use the original Neo4j version for GitHub releases
+if [[ "${NEO4J_VERSION}" != "${HELM_COMPATIBLE_VERSION}" ]]; then
+  echo "Renaming pulled files to use the original Neo4j version for GitHub releases"
+  for file in *.tgz; do
+    new_name=$(echo "$file" | sed "s/-${HELM_COMPATIBLE_VERSION}.tgz/-${NEO4J_VERSION}.tgz/")
+    mv "$file" "$new_name"
+  done
+fi
+
+# Use the original Neo4j version for GitHub releases
 helm repo index . --merge index.yaml --url https://github.com/neo4j/helm-charts/releases/download/"${NEO4J_VERSION}"
 
 git add index.yaml

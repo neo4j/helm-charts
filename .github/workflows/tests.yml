@@ -568,6 +568,25 @@ jobs:
           token: ${{ secrets.GH_TOKEN }}
           ref: dev
 
+      - name: Determine Version Type
+        id: version_type
+        run: |
+          if [[ "${{ inputs.NEO4J_VERSION }}" =~ ^[0-9]{4}\.[0-9]{2}\.[0-9]{2}$ ]]; then
+            echo "is_calver=true" >> $GITHUB_OUTPUT
+            echo "version_type=calver" >> $GITHUB_OUTPUT
+            
+            # Extract year and month from calver format (YYYY.MM.DD)
+            year=$(echo "${{ inputs.NEO4J_VERSION }}" | cut -d. -f1)
+            month=$(echo "${{ inputs.NEO4J_VERSION }}" | cut -d. -f2)
+            
+            # Format the release notes URL with hyphens (YYYY-MM)
+            echo "release_notes_url=https://neo4j.com/release-notes/database/neo4j-${year}-${month}/" >> $GITHUB_OUTPUT
+          else
+            echo "is_calver=false" >> $GITHUB_OUTPUT
+            echo "version_type=semver" >> $GITHUB_OUTPUT
+            echo "release_notes_url=https://neo4j.com/release-notes/database/neo4j-5/" >> $GITHUB_OUTPUT
+          fi
+
       - name: Version Updates
         run: |          
           git config --global user.email team-smcs@neo4j.com
@@ -601,7 +620,7 @@ jobs:
           name: v${{ inputs.NEO4J_VERSION }}
           tag_name: ${{ inputs.NEO4J_VERSION }}
           token: ${{ secrets.GH_TOKEN }}
-          body: "- Update to Neo4j ${{ inputs.NEO4J_VERSION }} as the new baseline, see [Release notes](https://neo4j.com/release-notes/database/neo4j-5///) for details of changes"
+          body: "- Update to Neo4j ${{ inputs.NEO4J_VERSION }} as the new baseline, see [Release notes](${{ steps.version_type.outputs.release_notes_url }}) for details of changes"
           make_latest: true
           files: |
             neo4j-${{ inputs.NEO4J_VERSION }}.tgz

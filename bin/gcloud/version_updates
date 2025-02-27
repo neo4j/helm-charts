@@ -9,30 +9,71 @@ NEO4J_VERSION="${NEO4J_VERSION:?NEO4J_VERSION is required}"
 CURRENT_VERSION=$(cat neo4j/Chart.yaml | grep "appVersion" | awk -F ": " '{print $2}')
 echo "CURRENT_VERSION ${CURRENT_VERSION} NEO4J_VERSION ${NEO4J_VERSION}"
 
+# Function to convert calver format from 2025.02.00 to 2025.2.0 for chart version
+convert_to_helm_compatible_version() {
+  local version=$1
+  # Check if it's a calver format (YYYY.MM.DD)
+  if [[ $version =~ ^[0-9]{4}\.[0-9]{2}\.[0-9]{2}$ ]]; then
+    # Extract year, month, and day
+    local year=$(echo $version | cut -d. -f1)
+    local month=$(echo $version | cut -d. -f2)
+    local day=$(echo $version | cut -d. -f3)
+    
+    # Remove leading zeros from month and day
+    month=$(echo $month | sed 's/^0*//')
+    day=$(echo $day | sed 's/^0*//')
+    
+    # If day is 0 or empty, set it to 0
+    if [[ -z "$day" || "$day" == "00" ]]; then
+      day="0"
+    fi
+    
+    # Return the converted version
+    echo "${year}.${month}.${day}"
+  else
+    # If it's not calver, return the original version
+    echo $version
+  fi
+}
+
+# Get the helm-compatible version
+HELM_COMPATIBLE_VERSION=$(convert_to_helm_compatible_version "${NEO4J_VERSION}")
+echo "Original version: ${NEO4J_VERSION}, Helm-compatible version: ${HELM_COMPATIBLE_VERSION}"
+
 if [[ ${CURRENT_VERSION} != ${NEO4J_VERSION} ]]
 then
-	sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j/Chart.yaml"
-	# this update is for updating neo4j-operations image tag value which is same as the neo4j version being released
-	sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j/values.yaml"
-  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-headless-service/Chart.yaml"
-  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-persistent-volume/Chart.yaml"
-  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-admin/Chart.yaml"
+  # Update appVersion to the original Neo4j version format
+  sed -i "s/appVersion: ${CURRENT_VERSION}/appVersion: ${NEO4J_VERSION}/g" "neo4j/Chart.yaml"
+  sed -i "s/appVersion: ${CURRENT_VERSION}/appVersion: ${NEO4J_VERSION}/g" "neo4j-headless-service/Chart.yaml"
+  sed -i "s/appVersion: ${CURRENT_VERSION}/appVersion: ${NEO4J_VERSION}/g" "neo4j-persistent-volume/Chart.yaml"
+  sed -i "s/appVersion: ${CURRENT_VERSION}/appVersion: ${NEO4J_VERSION}/g" "neo4j-admin/Chart.yaml"
+  sed -i "s/appVersion: ${CURRENT_VERSION}/appVersion: ${NEO4J_VERSION}/g" "neo4j-reverse-proxy/Chart.yaml"
+  sed -i "s/appVersion: ${CURRENT_VERSION}/appVersion: ${NEO4J_VERSION}/g" "neo4j-loadbalancer/Chart.yaml"
+  
+  # Update chart version to the helm-compatible version
+  sed -i "s/version: ${CURRENT_VERSION}/version: ${HELM_COMPATIBLE_VERSION}/g" "neo4j/Chart.yaml"
+  sed -i "s/version: ${CURRENT_VERSION}/version: ${HELM_COMPATIBLE_VERSION}/g" "neo4j-headless-service/Chart.yaml"
+  sed -i "s/version: ${CURRENT_VERSION}/version: ${HELM_COMPATIBLE_VERSION}/g" "neo4j-persistent-volume/Chart.yaml"
+  sed -i "s/version: ${CURRENT_VERSION}/version: ${HELM_COMPATIBLE_VERSION}/g" "neo4j-admin/Chart.yaml"
+  sed -i "s/version: ${CURRENT_VERSION}/version: ${HELM_COMPATIBLE_VERSION}/g" "neo4j-reverse-proxy/Chart.yaml"
+  sed -i "s/version: ${CURRENT_VERSION}/version: ${HELM_COMPATIBLE_VERSION}/g" "neo4j-loadbalancer/Chart.yaml"
+  
+  # Update values.yaml files with the original Neo4j version
+  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j/values.yaml"
   sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-admin/values.yaml"
-  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-reverse-proxy/Chart.yaml"
   sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-reverse-proxy/values.yaml"
-  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-loadbalancer/Chart.yaml"
 
-	HELM_CHARTS_LIST=("neo4j" "neo4j-headless-service" "neo4j-persistent-volume" "neo4j-admin" "neo4j-reverse-proxy" "neo4j-loadbalancer")
-	for chart in "${HELM_CHARTS_LIST[@]}"
-	do
-      cat "${chart}/Chart.yaml"
-	  echo "Performing helm dep update and helm package on ${chart} chart !!"
-	  ##perform helm dependency version_updates
-	  helm dependency update "${chart}"
-	  git add "${chart}/*"
-	done
+  HELM_CHARTS_LIST=("neo4j" "neo4j-headless-service" "neo4j-persistent-volume" "neo4j-admin" "neo4j-reverse-proxy" "neo4j-loadbalancer")
+  for chart in "${HELM_CHARTS_LIST[@]}"
+  do
+    cat "${chart}/Chart.yaml"
+    echo "Performing helm dep update and helm package on ${chart} chart !!"
+    ##perform helm dependency version_updates
+    helm dependency update "${chart}"
+    git add "${chart}/*"
+  done
 else
-	echo "Neo4j version is same !!"
+  echo "Neo4j version is same !!"
   exit 1
 fi
 

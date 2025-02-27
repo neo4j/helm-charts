@@ -14,6 +14,40 @@ PACKAGE_SIGNING_KEYRING_DIR="$HOME/.gnupg"
 mkdir -p ${PACKAGE_SIGNING_KEYRING_DIR}
 PACKAGE_SIGNING_KEYRING=${PACKAGE_SIGNING_KEYRING_DIR}/secring.gpg
 
+# Get the original Neo4j version
+NEO4J_VERSION="${NEO4J_VERSION:?NEO4J_VERSION is required}"
+
+# Function to convert calver format from 2025.02.00 to 2025.2.0 for chart version
+convert_to_helm_compatible_version() {
+  local version=$1
+  # Check if it's a calver format (YYYY.MM.DD)
+  if [[ $version =~ ^[0-9]{4}\.[0-9]{2}\.[0-9]{2}$ ]]; then
+    # Extract year, month, and day
+    local year=$(echo $version | cut -d. -f1)
+    local month=$(echo $version | cut -d. -f2)
+    local day=$(echo $version | cut -d. -f3)
+    
+    # Remove leading zeros from month and day
+    month=$(echo $month | sed 's/^0*//')
+    day=$(echo $day | sed 's/^0*//')
+    
+    # If day is 0 or empty, set it to 0
+    if [[ -z "$day" || "$day" == "00" ]]; then
+      day="0"
+    fi
+    
+    # Return the converted version
+    echo "${year}.${month}.${day}"
+  else
+    # If it's not calver, return the original version
+    echo $version
+  fi
+}
+
+# Get the helm-compatible version
+HELM_COMPATIBLE_VERSION=$(convert_to_helm_compatible_version "${NEO4J_VERSION}")
+echo "Original version: ${NEO4J_VERSION}, Helm-compatible version: ${HELM_COMPATIBLE_VERSION}"
+
 # Local env vars
 #
 BUILD_OUT_DIR="tmp/new-packages/"
@@ -33,9 +67,9 @@ rm -rf signingkeysandbox
 
 if [ ${S3_UPLOAD_TO_SUB_FOLDER} == "neo4j" ]; then
     CHART_VERSION=$(helm show chart ./neo4j| grep -E "version:(.*)" | awk -F ": " '{print $2}')
-    tar -czvf "neo4j-helm-charts-${CHART_VERSION}.tgz" neo4j neo4j-persistent-volume neo4j-headless-service neo4j-docker-desktop-pv neo4j-admin neo4j-reverse-proxy neo4j-loadbalancer
-    aws s3 cp --acl public-read "neo4j-helm-charts-${CHART_VERSION}.tgz" s3://dist.neo4j.org/helm/
-    rm -f "neo4j-helm-charts-${CHART_VERSION}.tgz"
+    tar -czvf "neo4j-helm-charts-${NEO4J_VERSION}.tgz" neo4j neo4j-persistent-volume neo4j-headless-service neo4j-docker-desktop-pv neo4j-admin neo4j-reverse-proxy neo4j-loadbalancer
+    aws s3 cp --acl public-read "neo4j-helm-charts-${NEO4J_VERSION}.tgz" s3://dist.neo4j.org/helm/
+    rm -f "neo4j-helm-charts-${NEO4J_VERSION}.tgz"
 fi
 
 # create the package!
@@ -52,6 +86,20 @@ echo "Copying packaged files to ${BUILD_OUT_DIR}"
 mkdir -p ${BUILD_OUT_DIR}
 mv *.tgz ${BUILD_OUT_DIR}
 mv *.tgz.prov ${BUILD_OUT_DIR}
+
+# Rename the packaged files to use the original Neo4j version for consistency in GitHub releases
+# This is needed because the chart version might be different from the Neo4j version
+if [[ "${NEO4J_VERSION}" != "${HELM_COMPATIBLE_VERSION}" ]]; then
+  echo "Renaming packaged files to use the original Neo4j version for GitHub releases"
+  for file in ${BUILD_OUT_DIR}/*.tgz; do
+    base_name=$(basename "$file" | sed "s/-${HELM_COMPATIBLE_VERSION}.tgz/-${NEO4J_VERSION}.tgz/")
+    cp "$file" "${BUILD_OUT_DIR}/${base_name}"
+  done
+  for file in ${BUILD_OUT_DIR}/*.tgz.prov; do
+    base_name=$(basename "$file" | sed "s/-${HELM_COMPATIBLE_VERSION}.tgz.prov/-${NEO4J_VERSION}.tgz.prov/")
+    cp "$file" "${BUILD_OUT_DIR}/${base_name}"
+  done
+fi
 
 # Upload packages
 
