@@ -33,73 +33,102 @@ env:
   IPS_USERNAME: ${{ secrets.IPS_USERNAME }}
   IPS_EMAIL: ${{ secrets.IPS_EMAIL }}
 
-jobs:
+  RESOURCE_PREFIX: ghactions
 
-  current-date:
-    name: Current Date
+permissions:
+  pull-requests: read
+
+jobs:
+  check-pr:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - id: check
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.actor }}" == "bfeshti" ]]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.actor }}" == "bfeshti" ]]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
+
+  cleanup:
+    needs: check-pr
+    if: needs.check-pr.outputs.should_run == 'true'
+    name: Cleanup Dangling Resources
     runs-on: ubuntu-latest
     steps:
-      - name: Set Current Date
-        id: currentDate
-        run: |
-          CURRENT_DATE=$(date +'%Y-%m-%d-%s')
-          echo "CURRENT_DATE=${CURRENT_DATE}" >> $GITHUB_OUTPUT
-    outputs:
-      CURRENT_DATE: ${{ steps.currentDate.outputs.CURRENT_DATE }}
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Authenticate Service Account
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
+          
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+        with:
+          version: '>= 363.0.0'
+          
+      - name: Run Cleanup
+        run: ./bin/gcloud/cleanup_resources
 
   gke-setup:
     name: Debian GKE Creation
+    needs: [cleanup, check-pr]
+    if: needs.check-pr.outputs.should_run == 'true'
     runs-on: ubuntu-latest
-    needs:
-      - current-date
     env:
-      CURRENT_DATE: ${{ needs.current-date.outputs.CURRENT_DATE }}
+      RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Authenticate Service Account
-        id: serviceAccount
-        run: |
-          ./bin/gcloud/auth
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
 
       - name: Create GKE Cluster
         run: |
-          export CLOUDSDK_CONTAINER_CLUSTER=ghactions-${CURRENT_DATE}
+          export CLOUDSDK_CONTAINER_CLUSTER=${RESOURCE_PREFIX}-${RUN_ID}
           ./bin/gcloud/create_cluster
     outputs:
-      CLOUDSDK_CONTAINER_CLUSTER: "ghactions-${{ env.CURRENT_DATE }}"
+      CLOUDSDK_CONTAINER_CLUSTER: "${{ env.RESOURCE_PREFIX }}-${{ env.RUN_ID }}"
 
   gke-setup-redhat:
     name: RedHat GKE Creation
+    needs: [cleanup, check-pr]
+    if: needs.check-pr.outputs.should_run == 'true'
     runs-on: ubuntu-latest
-    needs:
-      - current-date
     env:
-      CURRENT_DATE: ${{ needs.current-date.outputs.CURRENT_DATE }}
+      RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Authenticate Service Account
-        id: serviceAccount
-        run: |
-          ./bin/gcloud/auth
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
 
       - name: Create GKE Cluster
         run: |
-          export CLOUDSDK_CONTAINER_CLUSTER=ghactions-redhat-${CURRENT_DATE}
+          export CLOUDSDK_CONTAINER_CLUSTER=${RESOURCE_PREFIX}-redhat-${RUN_ID}
           ./bin/gcloud/create_cluster
     outputs:
-      CLOUDSDK_CONTAINER_CLUSTER_REDHAT: "ghactions-redhat-${{ env.CURRENT_DATE }}"
+      CLOUDSDK_CONTAINER_CLUSTER_REDHAT: "${{ env.RESOURCE_PREFIX }}-redhat-${{ env.RUN_ID }}"
 
   build-reverseproxy-backup:
     name: ReverseProxy and Backup Docker Image build
+    needs: [cleanup, check-pr]
+    if: needs.check-pr.outputs.should_run == 'true'
     runs-on: ubuntu-latest
-    needs:
-      - current-date
     env:
-      CURRENT_DATE: ${{ needs.current-date.outputs.CURRENT_DATE }}
+      RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -116,7 +145,7 @@ jobs:
         with:
           context: "{{defaultContext}}:neo4j-reverse-proxy"
           push: true
-          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ env.CURRENT_DATE }}"
+          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ env.RUN_ID }}"
           provenance: false
 
       - name: Build and push neo4j operations image
@@ -124,9 +153,8 @@ jobs:
         with:
           context: "{{defaultContext}}:neo4j/neo4j-operations"
           push: true
-          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ env.CURRENT_DATE }}"
+          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ env.RUN_ID }}"
           provenance: false
-
 
       - name: Build and push backup image
         uses: docker/build-push-action@v5
@@ -134,7 +162,7 @@ jobs:
         with:
           context: "{{defaultContext}}:neo4j-admin"
           push: true
-          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ env.CURRENT_DATE }}"
+          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ env.RUN_ID }}"
           provenance: false
           build-args: |
             IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-dev
@@ -146,7 +174,7 @@ jobs:
         with:
           context: "{{defaultContext}}:neo4j-admin"
           push: true
-          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ env.CURRENT_DATE }}"
+          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ env.RUN_ID }}"
           provenance: false
           build-args: |
             IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-dev-ubi9
@@ -158,7 +186,7 @@ jobs:
         with:
           context: "{{defaultContext}}:neo4j-admin"
           push: true
-          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ env.CURRENT_DATE }}"
+          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ env.RUN_ID }}"
           provenance: false
           build-args: |
             IMAGE=neo4j:${{ inputs.NEO4J_VERSION }}-enterprise
@@ -170,27 +198,25 @@ jobs:
         with:
           context: "{{defaultContext}}:neo4j-admin"
           push: true
-          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ env.CURRENT_DATE }}"
+          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ env.RUN_ID }}"
           provenance: false
           build-args: |
             IMAGE=neo4j:${{ inputs.NEO4J_VERSION }}-enterprise-ubi9
             DISTRIBUTION=redhat
 
-
   run-enterprise-tests:
     name: Debian Enterprise tests
-    needs:
-      - gke-setup
-      - build-reverseproxy-backup
-      - current-date
+    needs: [gke-setup, build-reverseproxy-backup, check-pr]
+    if: needs.check-pr.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     env:
+      RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       NEO4J_EDITION: "enterprise"
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
       NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-dev"
-      NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
-      NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ needs.current-date.outputs.CURRENT_DATE }}"
-      NEO4J_OPERATIONS_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ needs.current-date.outputs.CURRENT_DATE }}"
+      NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ github.run_id }}-${{ github.run_attempt }}"
+      NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ github.run_id }}-${{ github.run_attempt }}"
+      NEO4J_OPERATIONS_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ github.run_id }}-${{ github.run_attempt }}"
     container:
       image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
       credentials:
@@ -238,18 +264,17 @@ jobs:
 
   run-community-tests:
     name: Debian Community Tests
-    needs:
-      - gke-setup
-      - build-reverseproxy-backup
-      - current-date
+    needs: [gke-setup, build-reverseproxy-backup, check-pr]
+    if: needs.check-pr.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     env:
+      RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       NEO4J_EDITION: "community"
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
-      NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
       NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:community-dev"
-      NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ needs.current-date.outputs.CURRENT_DATE }}"
-      NEO4J_OPERATIONS_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ needs.current-date.outputs.CURRENT_DATE }}"
+      NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ github.run_id }}-${{ github.run_attempt }}"
+      NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ github.run_id }}-${{ github.run_attempt }}"
+      NEO4J_OPERATIONS_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ github.run_id }}-${{ github.run_attempt }}"
     container:
       image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
       credentials:
@@ -297,18 +322,17 @@ jobs:
 
   run-enterprise-tests-redhat:
     name: RedHat Enterprise Tests
-    needs:
-      - gke-setup-redhat
-      - build-reverseproxy-backup
-      - current-date
+    needs: [gke-setup-redhat, build-reverseproxy-backup, check-pr]
+    if: needs.check-pr.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     env:
+      RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       NEO4J_EDITION: "enterprise"
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
       NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-dev-ubi9"
-      NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
-      NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ needs.current-date.outputs.CURRENT_DATE }}"
-      NEO4J_OPERATIONS_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ needs.current-date.outputs.CURRENT_DATE }}"
+      NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ github.run_id }}-${{ github.run_attempt }}"
+      NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ github.run_id }}-${{ github.run_attempt }}"
+      NEO4J_OPERATIONS_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ github.run_id }}-${{ github.run_attempt }}"
     container:
       image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
       credentials:
@@ -356,18 +380,17 @@ jobs:
 
   run-community-tests-redhat:
     name: RedHat Community Tests
-    needs:
-      - gke-setup-redhat
-      - build-reverseproxy-backup
-      - current-date
+    needs: [gke-setup-redhat, build-reverseproxy-backup, check-pr]
+    if: needs.check-pr.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     env:
+      RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       NEO4J_EDITION: "community"
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
       NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:community-dev-ubi9"
-      NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}"
-      NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ needs.current-date.outputs.CURRENT_DATE }}"
-      NEO4J_OPERATIONS_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ needs.current-date.outputs.CURRENT_DATE }}"
+      NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ github.run_id }}-${{ github.run_attempt }}"
+      NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ github.run_id }}-${{ github.run_attempt }}"
+      NEO4J_OPERATIONS_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ github.run_id }}-${{ github.run_attempt }}"
     container:
       image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
       credentials:
@@ -416,7 +439,7 @@ jobs:
   gke-delete:
     name: Debian GKE Cluster Deletion
     runs-on: ubuntu-latest
-    if: always()
+    if: always() && needs.check-pr.outputs.should_run == 'true'
     env:
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
     needs:
@@ -424,7 +447,6 @@ jobs:
       - run-community-tests
       - gke-setup
     steps:
-
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -445,7 +467,7 @@ jobs:
   gke-delete-redhat:
     name: RedHat GKE Cluster Deletion
     runs-on: ubuntu-latest
-    if: always()
+    if: always() && needs.check-pr.outputs.should_run == 'true'
     env:
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
     needs:
@@ -453,7 +475,6 @@ jobs:
       - run-community-tests-redhat
       - gke-setup-redhat
     steps:
-
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -473,13 +494,9 @@ jobs:
 
   build-reverseproxy-backup-release-image:
     name: ReverseProxy and Backup Docker Image build
-    needs:
-      - run-community-tests
-      - run-community-tests-redhat
-      - run-enterprise-tests
-      - run-enterprise-tests-redhat
+    needs: [run-community-tests, run-community-tests-redhat, run-enterprise-tests, run-enterprise-tests-redhat, check-pr]
     runs-on: ubuntu-latest
-    if: ${{ inputs.RELEASE && github.ref_name == 'dev' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'bfeshti') }}
+    if: ${{ inputs.RELEASE && github.ref_name == 'dev' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'bfeshti') && needs.check-pr.outputs.should_run == 'true' }}
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -530,14 +547,9 @@ jobs:
 
   packaging:
     name: Packaging and Release
-    needs:
-      - run-community-tests
-      - run-community-tests-redhat
-      - run-enterprise-tests
-      - run-enterprise-tests-redhat
-      - build-reverseproxy-backup-release-image
+    needs: [run-community-tests, run-community-tests-redhat, run-enterprise-tests, run-enterprise-tests-redhat, build-reverseproxy-backup-release-image, check-pr]
     runs-on: ubuntu-latest
-    if: ${{ inputs.RELEASE && github.ref_name == 'dev' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'bfeshti') }}
+    if: ${{ inputs.RELEASE && github.ref_name == 'dev' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'bfeshti') && needs.check-pr.outputs.should_run == 'true' }}
     env:
       NEO4J_VERSION: ${{ inputs.NEO4J_VERSION }}
       HELM_REPO_NAME: ${{ vars.HELM_REPO_NAME }}
