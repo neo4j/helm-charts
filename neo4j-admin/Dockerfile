@@ -1,6 +1,5 @@
 ARG IMAGE
-
-FROM golang:1.22-bullseye AS build
+FROM golang:1.22-bullseye as build
 RUN apt-get update && apt-get install -y curl && apt-get remove -y python* && apt-get autoremove -y && apt-get clean
 WORKDIR backup
 COPY backup/aws aws/
@@ -13,7 +12,8 @@ COPY backup/go.mod go.mod
 RUN go mod tidy && go mod download && go mod verify
 RUN env GOOS=linux GOARCH=amd64 go build -v -o backup_linux main/*
 
-FROM ${IMAGE} AS final
+ARG IMAGE
+FROM ${IMAGE} as final
 ARG DISTRIBUTION
 RUN \
     if [ "${DISTRIBUTION}" = "debian" ]; then  \
