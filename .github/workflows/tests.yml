@@ -14,7 +14,7 @@ on:
     paths-ignore:
       - build/*
     branches:
-      - dev
+      - 5.26
 
 env:
   GCLOUD_SERVICE_KEY: ${{ secrets.GCLOUD_SERVICE_KEY }}
@@ -496,7 +496,7 @@ jobs:
     name: ReverseProxy and Backup Docker Image build
     needs: [run-community-tests, run-community-tests-redhat, run-enterprise-tests, run-enterprise-tests-redhat, check-pr]
     runs-on: ubuntu-latest
-    if: ${{ inputs.RELEASE && github.ref_name == 'dev' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'bfeshti') && needs.check-pr.outputs.should_run == 'true' }}
+    if: ${{ inputs.RELEASE && github.ref_name == '5.26' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'bfeshti') && needs.check-pr.outputs.should_run == 'true' }}
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -549,7 +549,7 @@ jobs:
     name: Packaging and Release
     needs: [run-community-tests, run-community-tests-redhat, run-enterprise-tests, run-enterprise-tests-redhat, build-reverseproxy-backup-release-image, check-pr]
     runs-on: ubuntu-latest
-    if: ${{ inputs.RELEASE && github.ref_name == 'dev' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'bfeshti') && needs.check-pr.outputs.should_run == 'true' }}
+    if: ${{ inputs.RELEASE && github.ref_name == '5.26' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'bfeshti') && needs.check-pr.outputs.should_run == 'true' }}
     env:
       NEO4J_VERSION: ${{ inputs.NEO4J_VERSION }}
       HELM_REPO_NAME: ${{ vars.HELM_REPO_NAME }}
@@ -566,7 +566,7 @@ jobs:
           fetch-depth: '0'
           fetch-tags: true
           token: ${{ secrets.GH_TOKEN }}
-          ref: dev
+          ref: 5.26
 
       - name: Version Updates
         run: |          
