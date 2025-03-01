@@ -21,7 +21,6 @@ helm pull neo4j/neo4j-persistent-volume --version "${NEO4J_VERSION}"
 helm pull neo4j/neo4j-reverse-proxy --version "${NEO4J_VERSION}"
 helm pull neo4j/neo4j-loadbalancer --version "${NEO4J_VERSION}"
 
-CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 # index.yaml is present only in dev branch
 git checkout dev
 git pull
@@ -29,7 +28,3 @@ helm repo index . --merge index.yaml --url https://github.com/neo4j/helm-charts/
 git add index.yaml
 git commit -m "Updating index.yaml with ${NEO4J_VERSION} entries"
 git push
-
-git checkout ${CURRENT_BRANCH}
-git tag -m "Tagging ${NEO4J_VERSION}" -a "${NEO4J_VERSION}"
-git push --tags
