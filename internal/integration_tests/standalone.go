@@ -479,18 +479,11 @@ func InstallNeo4jInGcloud(t *testing.T, zone gcloud.Zone, project gcloud.Project
 	}()
 
 	cleanupGcloud, diskName, err := gcloud.InstallGcloud(t, zone, project, releaseName)
+	createPersistentVolume(diskName, zone, project, releaseName)
 	if err != nil {
 		return AsCloseable(closeables), err
 	}
 	addCloseable(cleanupGcloud)
-
-	if diskName != nil {
-		_, err = createPersistentVolume(diskName, zone, project, releaseName)
-		if err != nil {
-			return AsCloseable(closeables), err
-		}
-	}
-
 	// delete the statefulset like this otherwise the pods will hang around for their termination grace period
 	addCloseable(func() error {
 		return runAll(t, "kubectl", [][]string{
