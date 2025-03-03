@@ -604,13 +604,6 @@ func installNeo4j(t *testing.T, releaseName model.ReleaseName, chart model.Neo4j
 		return AsCloseable(closeables), err
 	}
 
-	cleanupGcloud, diskName, err := gcloud.InstallGcloud(t, gcloud.CurrentZone(), gcloud.CurrentProject(), releaseName)
-	if err != nil {
-		return AsCloseable(closeables), err
-	}
-	createPersistentVolume(diskName, gcloud.CurrentZone(), gcloud.CurrentProject(), releaseName)
-	addCloseable(cleanupGcloud)
-
 	closeable, err = InstallNeo4jInGcloud(t, gcloud.CurrentZone(), gcloud.CurrentProject(), releaseName, chart, extraHelmInstallArgs...)
 	addCloseable(closeable)
 	if err != nil {
