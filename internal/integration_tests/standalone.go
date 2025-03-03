@@ -614,7 +614,11 @@ func installNeo4j(t *testing.T, releaseName model.ReleaseName, chart model.Neo4j
 	closeable, err = InstallNeo4jInGcloud(t, gcloud.CurrentZone(), gcloud.CurrentProject(), releaseName, chart, extraHelmInstallArgs...)
 	addCloseable(closeable)
 	if err != nil {
-		return AsCloseable(closeables), err
+		if strings.Contains(err.Error(), "already exists") {
+			t.Logf("Resource already exists, continuing with test: %v", err)
+		} else {
+			return AsCloseable(closeables), err
+		}
 	}
 
 	err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()), "rollout", "status", "--watch", "--timeout=120s", "statefulset/"+releaseName.String())
