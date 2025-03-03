@@ -1,0 +1,174 @@
+name: Package and Release Only
+
+on:
+  workflow_dispatch:
+    inputs:
+      NEO4J_VERSION:
+        description: 'Neo4j version to be released'
+        type: string
+        required: true
+
+env:
+  GCLOUD_SERVICE_KEY: ${{ secrets.GCLOUD_SERVICE_KEY }}
+  CLOUDSDK_CORE_PROJECT: ${{ secrets.CLOUDSDK_CORE_PROJECT }}
+  CLOUDSDK_COMPUTE_ZONE: "europe-west2-b"
+  CLOUDSDK_COMPUTE_REGION: "europe-west2"
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AZURE_STORAGE_ACCOUNT_NAME: ${{ secrets.AZURE_STORAGE_ACCOUNT_NAME }}
+  AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+  GCP_SERVICE_ACCOUNT_CRED: ${{ secrets.GCLOUD_SERVICE_KEY }}
+  BLOOM_LICENSE: ${{ secrets.BLOOM_LICENSE }}
+  IPS_USERNAME: ${{ secrets.IPS_USERNAME }}
+  IPS_EMAIL: ${{ secrets.IPS_EMAIL }}
+  RESOURCE_PREFIX: ghactions
+
+permissions:
+  contents: write
+
+jobs:
+  check-authorization:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - id: check
+        run: |
+          if [[ "${{ github.actor }}" == "bfeshti" ]]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+            echo "Only authorized users can run this workflow"
+            exit 1
+          fi
+
+  build-reverseproxy-backup-release-image:
+    name: ReverseProxy and Backup Docker Image build
+    needs: [check-authorization]
+    runs-on: ubuntu-latest
+    if: ${{ needs.check-authorization.outputs.should_run == 'true' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push reverse proxy image
+        uses: docker/build-push-action@v5
+        with:
+          context: "{{defaultContext}}:neo4j-reverse-proxy"
+          push: true
+          tags: "neo4j/helm-charts-reverse-proxy:${{ inputs.NEO4J_VERSION }}"
+          provenance: false
+
+      - name: Build and push operations image
+        uses: docker/build-push-action@v5
+        with:
+          context: "{{defaultContext}}:neo4j/neo4j-operations"
+          push: true
+          tags: "neo4j/helm-charts-operations:${{ inputs.NEO4J_VERSION }}"
+          provenance: false
+
+      - name: Build and push backup image
+        uses: docker/build-push-action@v5
+        with:
+          context: "{{defaultContext}}:neo4j-admin"
+          push: true
+          tags: "neo4j/helm-charts-backup:${{ inputs.NEO4J_VERSION }}"
+          provenance: false
+          build-args: |
+            IMAGE=neo4j:${{ inputs.NEO4J_VERSION }}-enterprise
+            DISTRIBUTION=debian
+
+      - name: Build and push red hat backup image
+        uses: docker/build-push-action@v5
+        with:
+          context: "{{defaultContext}}:neo4j-admin"
+          push: true
+          tags: "neo4j/helm-charts-backup:${{ inputs.NEO4J_VERSION }}-ubi9"
+          provenance: false
+          build-args: |
+            IMAGE=neo4j:${{ inputs.NEO4J_VERSION }}-enterprise-ubi9
+            DISTRIBUTION=redhat
+
+  packaging:
+    name: Packaging and Release
+    needs: [build-reverseproxy-backup-release-image]
+    runs-on: ubuntu-latest
+    if: ${{ needs.check-authorization.outputs.should_run == 'true' }}
+    env:
+      NEO4J_VERSION: ${{ inputs.NEO4J_VERSION }}
+      HELM_REPO_NAME: ${{ vars.HELM_REPO_NAME }}
+    container:
+      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
+      options: --user 1001
+      credentials:
+        username: _json_key
+        password: ${{ secrets.GCLOUD_SERVICE_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+          fetch-tags: true
+          token: ${{ secrets.GH_TOKEN }}
+          ref: dev
+
+      - name: Version Updates
+        run: |          
+          git config --global user.email team-smcs@neo4j.com
+          git config --global user.name "team-smcs"
+          ./bin/gcloud/version_updates
+
+      - name: GPG Key Signing
+        run: |
+          export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_GPG }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_GPG }}
+          export ROLE_ARN_GPG=${{ secrets.ROLE_ARN_GPG }}
+          export SECRET_ID_GPG=${{ secrets.SECRET_ID_GPG }}          
+          ./bin/gcloud/gpg_signing          
+
+      - name: Upload Helm Charts
+        run: |
+          export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_HELM }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_HELM }}
+          export AWS_REGION="us-east-1"          
+          export PACKAGE_SIGNING_KEY=${{ secrets.PACKAGE_SIGNING_KEY }}
+          export PACKAGE_SIGNING_PASSPHRASE=${{ secrets.PACKAGE_SIGNING_PASSPHRASE }}
+          ./bin/gcloud/package_upload          
+
+      - name: Update index.yaml
+        run: |          
+          ./bin/gcloud/index_yaml_update
+
+      - name: Set Chart Version
+        id: chart_version
+        run: |
+          CHART_VERSION=$(echo ${NEO4J_VERSION} | sed -E 's/\.0*([0-9]+)\./\.\1\./')
+          echo "CHART_VERSION=${CHART_VERSION}" >> $GITHUB_OUTPUT
+          echo "Using chart version ${CHART_VERSION} for release"
+
+      - name: Release Notes
+        uses: softprops/action-gh-release@v2
+        with:
+          name: v${{ steps.chart_version.outputs.CHART_VERSION }}
+          tag_name: ${{ steps.chart_version.outputs.CHART_VERSION }}
+          token: ${{ secrets.GH_TOKEN }}
+          body: |
+            - Update to Neo4j ${{ inputs.NEO4J_VERSION }} as the new baseline
+            - See [Release notes](https://neo4j.com/release-notes/database/neo4j-$(echo "${{ inputs.NEO4J_VERSION }}" | sed -E 's/([0-9]{4})\.([0-9]{2})\.[0-9]+/\1-\2/')//) for details of changes
+          make_latest: true
+          files: |
+            neo4j-${{ steps.chart_version.outputs.CHART_VERSION }}.tgz
+            neo4j-admin-${{ steps.chart_version.outputs.CHART_VERSION }}.tgz
+            neo4j-reverse-proxy-${{ steps.chart_version.outputs.CHART_VERSION }}.tgz
+            neo4j-headless-service-${{ steps.chart_version.outputs.CHART_VERSION }}.tgz
+            neo4j-persistent-volume-${{ steps.chart_version.outputs.CHART_VERSION }}.tgz
+            neo4j-loadbalancer-${{ steps.chart_version.outputs.CHART_VERSION }}.tgz 

@@ -31,7 +31,6 @@ helm pull neo4j/neo4j-headless-service --version "${CHART_VERSION}" || echo "Fai
 helm pull neo4j/neo4j-persistent-volume --version "${CHART_VERSION}" || echo "Failed to pull neo4j-persistent-volume chart"
 helm pull neo4j/neo4j-reverse-proxy --version "${CHART_VERSION}" || echo "Failed to pull neo4j-reverse-proxy chart"
 helm pull neo4j/neo4j-loadbalancer --version "${CHART_VERSION}" || echo "Failed to pull neo4j-loadbalancer chart"
-helm pull neo4j/neo4j-docker-desktop-pv --version "${CHART_VERSION}" || echo "Failed to pull neo4j-docker-desktop-pv chart"
 
 helm repo index . --merge index.yaml --url https://github.com/neo4j/helm-charts/releases/download/"${CHART_VERSION}"
 
