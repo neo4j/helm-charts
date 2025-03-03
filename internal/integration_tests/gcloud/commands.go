@@ -1,12 +1,13 @@
 package gcloud
 
 import (
-	. "github.com/neo4j/helm-charts/internal/helpers"
-	"github.com/neo4j/helm-charts/internal/model"
 	"os/exec"
 	"strings"
 	"testing"
 	"time"
+
+	. "github.com/neo4j/helm-charts/internal/helpers"
+	"github.com/neo4j/helm-charts/internal/model"
 )
 
 func InstallGcloud(t *testing.T, zone Zone, project Project, releaseName model.ReleaseName) (Closeable, *model.PersistentDiskName, error) {
@@ -36,6 +37,12 @@ func run(t *testing.T, command string, args ...string) error {
 func createDisk(t *testing.T, zone Zone, project Project, releaseName model.ReleaseName) (model.PersistentDiskName, Closeable, error) {
 	diskName := releaseName.DiskName()
 	err := run(t, "gcloud", "compute", "disks", "create", "--size", model.StorageSize, "--type", "pd-ssd", string(diskName), "--zone="+string(zone), "--project="+string(project))
+
+	if err != nil && strings.Contains(err.Error(), "already exists") {
+		t.Logf("Disk %s already exists, will reuse it", diskName)
+		err = nil
+	}
+
 	return diskName, func() error { return deleteDisk(t, zone, project, string(diskName)) }, err
 }
 

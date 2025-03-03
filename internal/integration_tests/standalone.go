@@ -464,11 +464,18 @@ func InstallNeo4jInGcloud(t *testing.T, zone gcloud.Zone, project gcloud.Project
 	}()
 
 	cleanupGcloud, diskName, err := gcloud.InstallGcloud(t, zone, project, releaseName)
-	createPersistentVolume(diskName, zone, project, releaseName)
 	if err != nil {
 		return AsCloseable(closeables), err
 	}
 	addCloseable(cleanupGcloud)
+
+	if diskName != nil {
+		_, err = createPersistentVolume(diskName, zone, project, releaseName)
+		if err != nil {
+			return AsCloseable(closeables), err
+		}
+	}
+
 	// delete the statefulset like this otherwise the pods will hang around for their termination grace period
 	addCloseable(func() error {
 		return runAll(t, "kubectl", [][]string{
@@ -600,7 +607,11 @@ func installNeo4j(t *testing.T, releaseName model.ReleaseName, chart model.Neo4j
 	closeable, err = InstallNeo4jInGcloud(t, gcloud.CurrentZone(), gcloud.CurrentProject(), releaseName, chart, extraHelmInstallArgs...)
 	addCloseable(closeable)
 	if err != nil {
-		return AsCloseable(closeables), err
+		if strings.Contains(err.Error(), "already exists") {
+			t.Logf("Resource already exists, continuing with test: %v", err)
+		} else {
+			return AsCloseable(closeables), err
+		}
 	}
 
 	err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()), "rollout", "status", "--watch", "--timeout=120s", "statefulset/"+releaseName.String())
