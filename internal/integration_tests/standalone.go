@@ -402,7 +402,22 @@ func createNamespace(t *testing.T, releaseName model.ReleaseName) (Closeable, er
 	// Try to delete the namespace if it exists
 	_ = run(t, "kubectl", "delete", "ns", namespace, "--ignore-not-found=true")
 
-	time.Sleep(5 * time.Second)
+	// Wait for the namespace to be fully deleted
+	maxRetries := 30
+	for i := 0; i < maxRetries; i++ {
+		err := run(t, "kubectl", "get", "ns", namespace)
+		if err != nil {
+			// Namespace doesn't exist, we can proceed
+			break
+		}
+		t.Logf("Waiting for namespace %s to be deleted... (%d/%d)", namespace, i+1, maxRetries)
+		time.Sleep(5 * time.Second)
+		if i == maxRetries-1 {
+			return func() error {
+				return runAll(t, "kubectl", kCleanupCommands(releaseName.Namespace()), false)
+			}, fmt.Errorf("timed out waiting for namespace %s to be deleted", namespace)
+		}
+	}
 
 	err := run(t, "kubectl", "create", "ns", namespace)
 	return func() error {
@@ -607,11 +622,7 @@ func installNeo4j(t *testing.T, releaseName model.ReleaseName, chart model.Neo4j
 	closeable, err = InstallNeo4jInGcloud(t, gcloud.CurrentZone(), gcloud.CurrentProject(), releaseName, chart, extraHelmInstallArgs...)
 	addCloseable(closeable)
 	if err != nil {
-		if strings.Contains(err.Error(), "already exists") {
-			t.Logf("Resource already exists, continuing with test: %v", err)
-		} else {
-			return AsCloseable(closeables), err
-		}
+		return AsCloseable(closeables), err
 	}
 
 	err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()), "rollout", "status", "--watch", "--timeout=120s", "statefulset/"+releaseName.String())
