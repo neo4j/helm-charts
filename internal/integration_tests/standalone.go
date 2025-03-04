@@ -846,6 +846,9 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 		Verbose:                  true,
 		KeepBackupFiles:          true,
 		Type:                     "FULL",
+		S3ForcePathStyle:         true,
+		S3Region:                 "us-east-1",
+		S3SignatureVersion:       "4",
 	}
 	helmValues.ConsistencyCheck.Database = "neo4j"
 
@@ -1437,7 +1440,7 @@ func introduceInconsistency(t *testing.T, releaseName model.ReleaseName) error {
 	}
 
 	// corrupting the database
-	// echo “” > /var/lib/neo4j/data/databases/neo4j/block.relationship.xd.db
+	// echo "" > /var/lib/neo4j/data/databases/neo4j/block.relationship.xd.db
 	cmd := []string{
 		"bash",
 		"-c",

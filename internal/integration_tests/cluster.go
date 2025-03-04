@@ -377,7 +377,9 @@ func InstallNeo4jBackupAWSHelmChartViaS3(t *testing.T, releaseName model.Release
 		S3Endpoint:               "http://localhost:9000",
 		S3EndpointTLS:            false,
 		S3Region:                 "us-east-1",
+		S3SignatureVersion:       "4",
 		Verbose:                  true,
+		KeepBackupFiles:          true,
 		Type:                     "FULL",
 	}
 	helmValues.ConsistencyCheck.Database = "neo4j"
@@ -409,6 +411,34 @@ func InstallNeo4jBackupAWSHelmChartViaS3(t *testing.T, releaseName model.Release
 	for _, pod := range pods.Items {
 		if strings.Contains(pod.Name, "cluster-backup-aws-s3") {
 			found = true
+			// Verify that the new S3 parameters are correctly set
+			for _, container := range pod.Spec.Containers {
+				foundS3ForcePathStyle := false
+				foundS3Region := false
+				foundS3SignatureVersion := false
+
+				for _, env := range container.Env {
+					if env.Name == "S3_FORCE_PATH_STYLE" && env.Value == "true" {
+						foundS3ForcePathStyle = true
+					}
+					if env.Name == "S3_REGION" && env.Value == "us-east-1" {
+						foundS3Region = true
+					}
+					if env.Name == "S3_SIGNATURE_VERSION" && env.Value == "4" {
+						foundS3SignatureVersion = true
+					}
+				}
+
+				if !foundS3ForcePathStyle {
+					return fmt.Errorf("S3_FORCE_PATH_STYLE environment variable not found or not set to true")
+				}
+				if !foundS3Region {
+					return fmt.Errorf("S3_REGION environment variable not found or not set to us-east-1")
+				}
+				if !foundS3SignatureVersion {
+					return fmt.Errorf("S3_SIGNATURE_VERSION environment variable not found or not set to 4")
+				}
+			}
 			break
 		}
 	}
@@ -529,8 +559,12 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 		S3Endpoint:               "https://s3.amazonaws.com",
 		S3CASecretName:           caCertSecretName,
 		S3CASecretKey:            "ca.crt",
+		S3SkipVerify:             false,
+		S3ForcePathStyle:         true,
 		S3Region:                 "us-east-1",
+		S3SignatureVersion:       "4",
 		Verbose:                  true,
+		KeepBackupFiles:          true,
 		Type:                     "FULL",
 	}
 	helmValues.ConsistencyCheck.Database = "neo4j"
@@ -582,6 +616,33 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 							return fmt.Errorf("expected S3_CA_CERT_PATH to be /s3-ca-cert/ca.crt but got %s", env.Value)
 						}
 					}
+				}
+
+				// Verify that the new S3 parameters are correctly set
+				foundS3ForcePathStyle := false
+				foundS3Region := false
+				foundS3SignatureVersion := false
+
+				for _, env := range container.Env {
+					if env.Name == "S3_FORCE_PATH_STYLE" && env.Value == "true" {
+						foundS3ForcePathStyle = true
+					}
+					if env.Name == "S3_REGION" && env.Value == "us-east-1" {
+						foundS3Region = true
+					}
+					if env.Name == "S3_SIGNATURE_VERSION" && env.Value == "4" {
+						foundS3SignatureVersion = true
+					}
+				}
+
+				if !foundS3ForcePathStyle {
+					return fmt.Errorf("S3_FORCE_PATH_STYLE environment variable not found or not set to true")
+				}
+				if !foundS3Region {
+					return fmt.Errorf("S3_REGION environment variable not found or not set to us-east-1")
+				}
+				if !foundS3SignatureVersion {
+					return fmt.Errorf("S3_SIGNATURE_VERSION environment variable not found or not set to 4")
 				}
 			}
 			break
