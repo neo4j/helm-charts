@@ -602,3 +602,36 @@ func TestBackupS3CASecretConfiguration(t *testing.T) {
 	}
 	assert.True(t, certVolumeFound, "s3-ca-cert volume not found")
 }
+
+// TestBackupS3GenericParameters checks that the new S3 parameters are correctly set in the environment variables
+func TestBackupS3GenericParameters(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.Backup = model.Backup{
+		BucketName:               "test-bucket",
+		DatabaseAdminServiceName: "neo4j-admin",
+		CloudProvider:            "aws",
+		SecretName:               "demo",
+		SecretKeyName:            "credentials",
+		S3Endpoint:               "https://s3.example.com",
+		S3EndpointTLS:            true,
+		S3ForcePathStyle:         true,
+		S3Region:                 "us-east-1",
+		S3SignatureVersion:       "4",
+	}
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err)
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
+
+	envVariables := cronjobs[0].(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env
+
+	// Check that the S3 parameters are correctly set in the environment variables
+	assert.Contains(t, envVariables, corev1.EnvVar{Name: "S3_FORCE_PATH_STYLE", Value: "true"})
+	assert.Contains(t, envVariables, corev1.EnvVar{Name: "S3_REGION", Value: "us-east-1"})
+	assert.Contains(t, envVariables, corev1.EnvVar{Name: "S3_SIGNATURE_VERSION", Value: "4"})
+}
