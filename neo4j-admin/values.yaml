@@ -72,6 +72,16 @@ backup:
   s3CASecretKey: ""
   # Optional: Skip TLS verification (not recommended for production)
   s3SkipVerify: false
+  # Optional: Force path-style addressing (default: true)
+  # Some S3-compatible storage providers require this to be set to true
+  s3ForcePathStyle: true
+  # Optional: Explicitly set the region for S3 signature calculation
+  # For non-AWS S3 providers, this is often set to a fixed value like "us-east-1"
+  s3Region: ""
+  # Optional: Force a specific signature version (2 or 4)
+  # Some S3-compatible storage providers only support signature version 2
+  # Valid values: "2", "4", or "" (empty for auto-detection)
+  s3SignatureVersion: ""
 
   #name of the database to backup ex: neo4j or neo4j,system (You can provide command separated database names)
   # In case of comma separated databases failure of any single database will lead to failure of complete operation
