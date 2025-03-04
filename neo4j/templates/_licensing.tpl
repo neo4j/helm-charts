@@ -4,7 +4,7 @@
   {{- if not (kindIs "string" .Values.neo4j.acceptLicenseAgreement) | or (not .Values.neo4j.acceptLicenseAgreement) }}
   {{- include "neo4j.licenseAgreementMessage" .Values.neo4j.acceptLicenseAgreement | fail }}
   {{- else }}
-  {{- if ne .Values.neo4j.acceptLicenseAgreement "yes" }}
+  {{- if and (ne .Values.neo4j.acceptLicenseAgreement "yes") (ne .Values.neo4j.acceptLicenseAgreement "eval") }}
     {{- include "neo4j.licenseAgreementMessage" .Values.neo4j.acceptLicenseAgreement | fail }}
   {{- end }}
   {{- end }}
@@ -16,6 +16,6 @@
 In order to use Neo4j Enterprise Edition you must have a Neo4j license agreement.
 More information is available at: https://neo4j.com/licensing/
 Email inquiries can be directed to: licensing@neo4j.com
-Set neo4j.acceptLicenseAgreement: "yes" to confirm that you have a Neo4j license agreement.
+Set neo4j.acceptLicenseAgreement: "yes" or neo4j.acceptLicenseAgreement: "eval" to confirm that you have a Neo4j license agreement.
 
 {{ end -}}
