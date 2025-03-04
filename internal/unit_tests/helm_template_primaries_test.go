@@ -152,7 +152,7 @@ func TestEnterpriseThrowsErrorIfLicenseAgreementNotAccepted(t *testing.T) {
 		_, err := model.HelmTemplate(t, chart, testCase, useNeo4jClusterName...)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "to use Neo4j Enterprise Edition you must have a Neo4j license agreement")
-		assert.Contains(t, err.Error(), "Set neo4j.acceptLicenseAgreement: \"yes\" to confirm that you have a Neo4j license agreement.")
+		assert.Contains(t, err.Error(), "Set neo4j.acceptLicenseAgreement: \"yes\" or neo4j.acceptLicenseAgreement: \"eval\" to confirm that you have a Neo4j license agreement.")
 	}
 
 	forEachPrimaryChart(t, func(t *testing.T, chart model.Neo4jHelmChartBuilder) {
@@ -169,8 +169,10 @@ func TestEnterpriseDoesNotThrowErrorIfLicenseAgreementAccepted(t *testing.T) {
 
 	testCases := [][]string{
 		append(useEnterprise, "--set", "neo4j.acceptLicenseAgreement=yes"),
+		append(useEnterprise, "--set", "neo4j.acceptLicenseAgreement=eval"),
 		append(useEnterprise, acceptLicenseAgreement...),
 		append(useEnterprise, resources.AcceptLicenseAgreement.HelmArgs()...),
+		append(useEnterprise, resources.AcceptLicenseAgreementEval.HelmArgs()...),
 	}
 
 	doTestCase := func(t *testing.T, chart model.Neo4jHelmChartBuilder, testCase []string) {
