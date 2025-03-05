@@ -81,6 +81,9 @@ type Backup struct {
 	S3CASecretName           string          `yaml:"s3CASecretName,omitempty"`
 	S3CASecretKey            string          `yaml:"s3CASecretKey,omitempty"`
 	S3SkipVerify             bool            `yaml:"s3SkipVerify,omitempty" default:"false"`
+	S3ForcePathStyle         bool            `yaml:"s3ForcePathStyle,omitempty" default:"true"`
+	S3Region                 string          `yaml:"s3Region,omitempty"`
+	S3SignatureVersion       string          `yaml:"s3SignatureVersion,omitempty"`
 	SecretName               string          `yaml:"secretName,omitempty"`
 	SecretKeyName            string          `yaml:"secretKeyName,omitempty"`
 	PageCache                string          `yaml:"pageCache,omitempty"`
@@ -93,7 +96,6 @@ type Backup struct {
 	KeepBackupFiles          bool            `yaml:"keepBackupFiles" default:"true"`
 	Verbose                  bool            `yaml:"verbose" default:"true"`
 	AggregateBackup          AggregateBackup `yaml:"aggregate,omitempty"`
-	S3Region                 string          `json:"s3Region,omitempty"`
 }
 
 type AggregateBackup struct {

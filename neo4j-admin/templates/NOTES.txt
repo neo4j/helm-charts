@@ -1,0 +1,29 @@
+Neo4j Backup Helm Chart has been installed!
+
+This chart provides backup functionality for Neo4j databases.
+
+Configuration:
+- Backup Schedule: {{ $.Values.neo4j.jobSchedule | default "* * * * *" }}
+- Cloud Provider: {{ .Values.backup.cloudProvider | default "None (local backup)" }}
+- Bucket Name: {{ .Values.backup.bucketName | default "None" }}
+- Database: {{ .Values.backup.database | default "*" }}
+
+{{- if eq .Values.backup.cloudProvider "aws" }}
+
+AWS S3 Configuration:
+- S3 Endpoint: {{ .Values.backup.s3Endpoint | default "Default AWS S3" }}
+{{- if .Values.backup.s3Endpoint }}
+- S3 TLS Enabled: {{ .Values.backup.s3EndpointTLS | default false }}
+- S3 Skip Verify: {{ .Values.backup.s3SkipVerify | default false }}
+- S3 Force Path Style: {{ .Values.backup.s3ForcePathStyle | default true }}
+- S3 Region: {{ .Values.backup.s3Region | default "Default from credentials" }}
+- S3 Signature Version: {{ .Values.backup.s3SignatureVersion | default "Auto-detect" }}
+
+For S3-compatible storage providers (like Cloudian, MinIO, etc.):
+1. If you encounter signature errors, try setting s3Region to a fixed value like "us-east-1"
+2. Ensure s3ForcePathStyle is set to true
+3. For older S3 implementations, try setting s3SignatureVersion to "2"
+{{- end }}
+{{- end }}
+
+For more information, please refer to the documentation.
