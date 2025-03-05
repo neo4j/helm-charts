@@ -177,6 +177,9 @@ func (a *awsClient) getS3Client() *s3.Client {
 	if value := os.Getenv("S3_ENDPOINT"); strings.TrimSpace(value) != "" {
 		useTLS := strings.ToLower(os.Getenv("S3_ENDPOINT_TLS")) == "true"
 		skipVerify := strings.ToLower(os.Getenv("S3_SKIP_VERIFY")) == "true"
+		forcePathStyle := strings.ToLower(os.Getenv("S3_FORCE_PATH_STYLE")) != "false" // Default to true
+		customRegion := os.Getenv("S3_REGION")
+		signatureVersion := os.Getenv("S3_SIGNATURE_VERSION")
 
 		var httpClient *http.Client
 		if useTLS {
@@ -207,7 +210,20 @@ func (a *awsClient) getS3Client() *s3.Client {
 
 		client = s3.NewFromConfig(*a.cfg, func(options *s3.Options) {
 			options.BaseEndpoint = aws.String(value)
-			options.UsePathStyle = true
+			options.UsePathStyle = forcePathStyle
+
+			// Set custom region if provided
+			if customRegion != "" {
+				options.Region = customRegion
+			}
+
+			// Set signature version if provided
+			if signatureVersion == "2" {
+				log.Printf("Using S3 signature version 2")
+				// AWS SDK v2 doesn't directly support setting signature version 2
+				// This is a limitation of the SDK
+				log.Printf("Warning: Signature version 2 is not directly supported in AWS SDK v2")
+			}
 
 			if httpClient != nil {
 				options.HTTPClient = httpClient
