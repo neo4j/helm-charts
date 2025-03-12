@@ -1,0 +1,83 @@
+name: Release Only
+
+on:
+  workflow_dispatch:
+    inputs:
+      NEO4J_VERSION:
+        description: 'Neo4j version to be released'
+        type: string
+        required: true
+
+jobs:
+  check-pr:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - id: check
+        run: |
+          if [[ "${{ github.actor }}" == "bfeshti" ]]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
+
+  packaging:
+    name: Packaging and Release
+    needs: [check-pr]
+    runs-on: ubuntu-latest
+    if: ${{ github.ref_name == '5.26' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'bfeshti') && needs.check-pr.outputs.should_run == 'true' }}
+    env:
+      NEO4J_VERSION: ${{ inputs.NEO4J_VERSION }}
+      HELM_REPO_NAME: ${{ vars.HELM_REPO_NAME }}
+    container:
+      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
+      options: --user 1001
+      credentials:
+        username: _json_key
+        password: ${{ secrets.GCLOUD_SERVICE_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+          fetch-tags: true
+          token: ${{ secrets.GH_TOKEN }}
+          ref: 5.26
+
+      - name: Version Updates
+        run: |          
+          git config --global user.email team-smcs@neo4j.com
+          git config --global user.name "team-smcs"
+          ./bin/gcloud/version_updates
+
+      - name: GPG Key Signing
+        run: |
+          export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_GPG }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_GPG }}
+          export ROLE_ARN_GPG=${{ secrets.ROLE_ARN_GPG }}
+          export SECRET_ID_GPG=${{ secrets.SECRET_ID_GPG }}          
+          ./bin/gcloud/gpg_signing          
+
+      - name: Upload Helm Charts
+        run: |
+          export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_HELM }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_HELM }}
+          export AWS_REGION="us-east-1"          
+          export PACKAGE_SIGNING_KEY=${{ secrets.PACKAGE_SIGNING_KEY }}
+          export PACKAGE_SIGNING_PASSPHRASE=${{ secrets.PACKAGE_SIGNING_PASSPHRASE }}
+          ./bin/gcloud/package_upload          
+
+      - name: Update index.yaml
+        run: |          
+          ./bin/gcloud/index_yaml_update
+
+      - name: Release Notes
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.NEO4J_VERSION }}
+          name: "Neo4j Helm Charts ${{ inputs.NEO4J_VERSION }}"
+          body: "- Update to Neo4j ${{ inputs.NEO4J_VERSION }} as the new baseline, see [Release notes](https://neo4j.com/release-notes/database/neo4j-5///) for details of changes"
+          files: |
+            neo4j-*.tgz
+          token: ${{ secrets.GH_TOKEN }} 

@@ -14,7 +14,6 @@ helm repo add neo4j "https://helm.neo4j.com/${HELM_REPO_NAME}"
 helm repo update
 
 echo "Pulling 5.x helm charts"
-# First, commit any local changes to avoid conflicts when checking out dev branch
 git add .
 git commit -m "Update chart versions to ${NEO4J_VERSION}"
 git push
