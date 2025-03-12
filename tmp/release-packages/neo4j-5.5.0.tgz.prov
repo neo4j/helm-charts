@@ -1,0 +1,42 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+apiVersion: v1
+appVersion: 5.5.0
+description: Neo4j is the world's leading graph database
+home: https://www.neo4j.com
+icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
+keywords:
+- - graph
+- - database
+- - cypher
+maintainers:
+- - email: bledi.feshti@neotechnology.com
+  name: bfeshti
+- - email: harshit.singhvi@neotechnology.com
+  name: harshitsinghvi22
+name: neo4j
+sources:
+- - https://github.com/neo4j/neo4j
+- - https://github.com/neo4j/docker-neo4j
+version: 5.5.0
+
+...
+files:
+  neo4j-5.5.0.tgz: sha256:d592ace1a0412bcca4b3cb7916359198a056f547da7e691a2e3e218f24950c03
+-----BEGIN PGP SIGNATURE-----
+
+wsFcBAEBCgAQBQJj868eCRBZ1wDk039fGQAAQpoQAJ4q3P92flmnkdWuAdM3ifXx
+5hi4SIXAJ+cDSdEn0k2XrbbjfHFNsgGYyrb5jhY5sgUpzcEe1PSd0DnIy2X+xcuv
+EIibdmecfONN7MK2JcuCk3soXvkJb4CtfzsqYIYRTSLeD/W8Fr+MAf09OVhvCZ3y
+5XPbEyalzlT6rqfZniJ0GtpqavcB21RIrKtUYP6Su1bHSCOTiP5AO4tCqoaCeIuU
+ZYre7o5X/1x/M62oIUjYYRi4D1rSRHM7zZBcIG/Fr3i47f7P5ZsVKL8D5WBqmCR+
+Lf8xiyqfw/ydUKXdbbPl7xe/fZPCdqJixnGwy+KoqP6c2G+buY6YmNbuSYx51B/E
+NEX2w0kG0+0DcM3z5v0K1K07Kmft0EhkEqhMojQ5YA5eVToqjaSpt5kB/Svkl3UW
+3ZPM2xuRLUt3p404FiB1NEFRhZ/7EQytiYrOD83nBR+K1+GGpYvUBd99WEp1jHkT
+8mHmvRI+UPlH85s8XEpuDTeqZZmG71TYXFDY45uO/lK8xxaGqoOCCwYTRhx4/BXr
+I+MxjG7hdN3eUH+0A0jJceWGkXnI5/A1ecbTLa7RN9eRS5uedXNXQl8I0tNnRFBf
+jZsvgwdQUkSAGctq3TVHCuR3JCp1a1wgC7o4eVorUDpuqrUU2ir6wpB51+awCvTs
+9Uy7PDK7TrqS1+xgThup
+=o/qB
+-----END PGP SIGNATURE-----

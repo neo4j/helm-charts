@@ -1,0 +1,43 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+apiVersion: v1
+appVersion: '-'
+description: Sets up persistent disks suitable for simple development tasks with Neo4j
+  Helm when using Kubernetes provided Google Kubernetes Engine
+home: https://www.neo4j.com
+icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
+keywords:
+- - graph
+- - database
+- - cypher
+maintainers:
+- - email: bledi.feshti@neotechnology.com
+  name: bfeshti
+- - email: harshit.singhvi@neotechnology.com
+  name: harshitsinghvi22
+name: neo4j-gcloud-pv
+sources:
+- - https://github.com/neo4j/neo4j
+- - https://github.com/neo4j/docker-neo4j
+version: 4.4.9
+
+...
+files:
+  neo4j-gcloud-pv-4.4.9.tgz: sha256:d0758f90a740955e3e329a8fa3cee4f1a225175e9a38cc973c776f03d3f2fd93
+-----BEGIN PGP SIGNATURE-----
+
+wsFcBAEBCgAQBQJi2VkaCRBZ1wDk039fGQAAZekQAKhHhYe6eLbxJLZ920R2TDxI
+DNnINKzSdCTcKwRDjXMz5GYyHuHGd9Ru8f6z2aiLEFCvKJbJ/pGVWP8hOJtgiC6z
+e1McvkJxFJl3IJPADCKGSqDPLV7L655H3v1V0PPM4Okj0Oi/qOfyVQNYsms295h3
+8jB6R8E9e90lXoTJnlKbtP2W2M6D0S3Tp7ZmhPPZ2b3U0oslHTw52jAwNMHZur2T
+0tvlsqWBdNakGVZlJBB0wau8ui84uqLc407H2EiVvDnS2QlmaFO1QwNoMoyMtDz/
+3NlTMN6WioJLZtgy29Nm5XzULJ28GV4rlNIttTZclB8Pg+o/4p1vlDkMmIr4jk4X
+mk5Nyb+p/YUP5uPEsOh/vUxaYHy0Os9xnduIk/57EfTMkxOcQIFzOR/coHxEHC1v
+LsoI4Ho22aUdI2aLAqOpEfWPK3t23JfwtK6UM0aNf25rlmoH733SYPvSc2xxQ6bP
+nwxSD/98c1cyU5oHs/l/gYj9jbst/rHDpnLM9Xf1zYb6duVV3tWesBXn7bM2xCJc
+Eh01uxBvVzFGYQOeBqFoBdjlcFj0zqTcDuuur78MGKzT1wPZabq1bwAehraz9/LY
+QVYadm2lySf0/+3gFb4XX4rTHCLIswXXvajkOXrBjHeHNo7xkM1VilKbfWIhTcp5
+5dNCcXZ+c/Lbyfd6+Fr4
+=FZe8
+-----END PGP SIGNATURE-----
