@@ -1,0 +1,42 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+apiVersion: v1
+appVersion: 5.13.0
+description: Sets up an http server and a reverse proxy for bolt and http requests
+home: https://www.neo4j.com
+icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
+keywords:
+- - graph
+- - database
+- - cypher
+maintainers:
+- - email: bledi.feshti@neotechnology.com
+  name: bfeshti
+- - email: harshit.singhvi@neotechnology.com
+  name: harshitsinghvi22
+name: neo4j-reverse-proxy
+sources:
+- - https://github.com/neo4j/neo4j
+- - https://github.com/neo4j/docker-neo4j
+version: 5.13.0
+
+...
+files:
+  neo4j-reverse-proxy-5.13.0.tgz: sha256:bffce106828e9ed963b8001599d540e56ec919d7681d88bd17052ad8a4cf8c90
+-----BEGIN PGP SIGNATURE-----
+
+wsFcBAEBCgAQBQJlOBqACRBZ1wDk039fGQAAzLIQAE+cGPv60JcFlUfBwjgqemA1
+tYqeI8saKgwg0iZDkugeHNGy3WryR8lr0p68TPUkRT891Zr/oQI5Db8633O4sXCj
+SnL8djHX/jaHu1FayeWipvemggvsWWmdvdM6B6Bqlav5zqQ/0Up4k4dmm2uOejge
+vi69vb2SkTbE46KfVlryOGEg+k4xpAURhI1Nar4rTdew4+V/A9mAoNDX8OU1aeBb
+dBFSR5gXsG5qGg71p2za2bjxTzafjUlDUkB4M0G+rhBt2O3/AprbI+mY/l5jagYL
+NlMkJHLpeybqQh5ZH2+vz5YMUudiK18naYuKFxlyOU6LRzo+JwO/tnuTm9m5Pr4z
+1N8si/FY7UDb05qOGxkPHgydFx4maZ+9MTIHNkZiuyQ6GwP2rhrAskWZgnHPhfLK
+9acCMGYzNj7OCMcrnCwYnCSCehnQfmoRX8gKLK6MjtGU4caxYqAvQBWZ0POi2uZu
+lSwAjJeKEpBUpoNdn3kzHZy3HV/uqrRAQrZ2U6q+OF0AQouWPqy3Nhznm1pT6j/7
+mgCkKSrRmZ4TRZF1Tt1y0j9AgzrRa/y0iltkueJjZQu/4m4tpU+nUfjeSFfoWJrl
+uexvfa1bbij3iUZkoXl3lkvQS4zTVV+xsujnCRkKGnbejToesw6RNt4X44/SmNmC
+GMCEFmvJ9NK8ZW5mq41T
+=Oae7
+-----END PGP SIGNATURE-----

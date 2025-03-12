@@ -1,0 +1,46 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+apiVersion: v2
+appVersion: 4.4.19
+dependencies:
+- - name: neo4j-shared-templates
+  repository: file://../neo4j-shared-templates
+  version: 4.4.19
+description: Neo4j is the world's leading graph database
+home: https://www.neo4j.com
+icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
+keywords:
+- - graph
+- - database
+- - cypher
+maintainers:
+- - email: bledi.feshti@neotechnology.com
+  name: bfeshti
+- - email: harshit.singhvi@neotechnology.com
+  name: harshitsinghvi22
+name: neo4j-standalone
+sources:
+- - https://github.com/neo4j/neo4j
+- - https://github.com/neo4j/docker-neo4j
+version: 4.4.19
+
+...
+files:
+  neo4j-standalone-4.4.19.tgz: sha256:e75da5731bba4cf058fbcaf34234a3aa658887b4abcadb0faf8362c18a35c5ba
+-----BEGIN PGP SIGNATURE-----
+
+wsFcBAEBCgAQBQJkJA4LCRBZ1wDk039fGQAAlYoQABnN+11jCHE0azCd6B+DbWfd
+VQB8BoddigvuVQ1YWacj+Osr5IfBvkUo2cqpkHKhEB7jDYDaneP074lDp6C1ePlf
+VwknfDtg86aikpmpCkB6vQuty2kLmlLO5PEyLVQKMYZCQwUQsuWjJxzPOFhdHQP5
+J7OR8DidmRGWlciebkQOU+9EVdSK5uZKAHt4FxIcFta6KORII+QuhzjAxwnfqB0/
+MOOVHlKl5t/y4mUibvTp1iEloZteQV7r7WAcdCFqUOj018OVeFkZPnLNFtuuapFf
+0uc+z3sVgin0bcDlnOKHRrxWBX1EipXqsseAsVsJKbScaUHc6wZHyAze4Eim+TeO
+bNRudIsEOYZtw63/fUPG28lG2LwWKt1zYGIq/THcGUA2mygIumBLvnkBaOct77eW
+7vBzq2LtqKauMtj/sIdwNh2sGF3RhDXQlKvsMz+mqBOXawhSDaD9yz9PFmuSwItz
+yV18QT/p8cM+2eg0eiysPQeKSmWA0McN8w+iA3t6dn0I7N7O+LwilTzDoCW3rlnV
+1Ai0LNXODshyzZ32p7AQt63ZVjntcrIJ4mB4j1H1mvjBSD7YA212pMqMy211v5AD
+P2QcGItzWIC9Q5w/9skWGPczYp/ZKMZrDuU22Ks/EgQGVtI3ZhWq+YSZBawVErdG
+e3h7jRtbC/eSGtYdTGCg
+=aChp
+-----END PGP SIGNATURE-----

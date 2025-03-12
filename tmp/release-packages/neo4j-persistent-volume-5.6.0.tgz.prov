@@ -1,0 +1,42 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+apiVersion: v1
+appVersion: '-'
+description: Sets up persistent disks suitable for a Neo4j Helm installation
+home: https://www.neo4j.com
+icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
+keywords:
+- - graph
+- - database
+- - cypher
+maintainers:
+- - email: bledi.feshti@neotechnology.com
+  name: bfeshti
+- - email: harshit.singhvi@neotechnology.com
+  name: harshitsinghvi22
+name: neo4j-persistent-volume
+sources:
+- - https://github.com/neo4j/neo4j
+- - https://github.com/neo4j/docker-neo4j
+version: 5.6.0
+
+...
+files:
+  neo4j-persistent-volume-5.6.0.tgz: sha256:df0d6d74241676ee68c049e8efd32e1536c999752d1a662f9e44a0822193fe67
+-----BEGIN PGP SIGNATURE-----
+
+wsFcBAEBCgAQBQJkKqjLCRBZ1wDk039fGQAAt8oQAJxkrVWk9DGNHm3G+oPBDrA0
+wnlx7923fPyiGKPEYFoekWFBmDVST4PlVAb0vyCGBpPIossPBOhOOrZmi8hh5TlK
+TkXF4vzsBFA33l9C0lQd/jl4gqCK2ioDc2e6UYC+EfYGVHHQa2EwemyF1ilnlKAj
+Nu8tWD3OS4yka9gL2C+qxe9J/wqV/Sn7zMdIU7N0Ox8xMalhBv6b/G9vy9OvJHO+
+KqtlLwrkrEN0qnkqIouXRToAML1I8Sggxh2r2YpQmNawCOCRFYes+PLilenSw+31
+hS74XSJJBp7yGv/SzCrD46yjDpun6073pU8Go1Sc+BafdXRfH9+exbiywTsxdO06
+Rt68PglS8pu/yAAEd3cmx/6cQW4o2vL6yCn5yqvFYtC9HqLpqGfYCzgCr1P8ysFN
+ncESll+a0G/T4AYit16vXHwqJQtToBGjGSmkDwX5efRw9NnBlmK4238thgNFPybJ
+FUGPECPvVmS/6h+9MPWxaBsqKdNqEwJGqu0vF9F7jCYvbG6eGqFj4VR9YDN1IDsA
+4sdFhDnInKbMUjkUVSszZqD7tpgiCTbuwOy8IYG4bb37l+8nFB6XGOSVd/eljwxA
+JD5tI8oGViPx9Mhl1moy9gVGL2TOfVYfbrBpWxQ+zsZMfLj5ZzIRIoBkIoF+D4Yk
+ewe43vBPIK9C0W1dcmGR
+=Ebn+
+-----END PGP SIGNATURE-----
