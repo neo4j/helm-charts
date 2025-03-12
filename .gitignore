@@ -1,5 +1,6 @@
 output/
 temp/
+tmp/
 devenv.local
 .idea/
 .kube/
