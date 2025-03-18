@@ -1,8 +1,11 @@
 *.tar
 output/
+output/
 temp/
+tmp/
 devenv.local
 .idea/
 .kube/
 .DS_Store
 *.test
+.backup_linux
