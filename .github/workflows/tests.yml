@@ -269,7 +269,7 @@ jobs:
       - run-community-tests
       - run-enterprise-tests
     runs-on: ubuntu-latest
-    if: ${{ inputs.RELEASE && github.ref_name == '4.4' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'harshitsinghvi22' || github.actor == 'bfeshti ') }}
+    if: ${{ inputs.RELEASE && github.ref_name == '4.4' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'riggi-alekaj' || github.actor == 'bfeshti') }}
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -305,7 +305,7 @@ jobs:
       - run-community-tests
       - run-enterprise-tests
     runs-on: ubuntu-latest
-    if: ${{ inputs.RELEASE && github.ref_name == '4.4' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'harshitsinghvi22' || github.actor == 'bfeshti ') }}
+    if: ${{ inputs.RELEASE && github.ref_name == '4.4' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'riggi-alekaj' || github.actor == 'bfeshti') }}
     env:
       NEO4J_VERSION: ${{ inputs.NEO4J_VERSION }}
       HELM_REPO_NAME: ${{ vars.HELM_REPO_NAME }}
@@ -326,8 +326,8 @@ jobs:
 
       - name: Version Updates
         run: |
-          git config --global user.email harshit.singhvi@neo4j.com
-          git config --global user.name "Harshit Singhvi"
+          git config --global user.email team-smcs@neo4j.com
+          git config --global user.name "team-smcs"
           ./bin/gcloud/version_updates
       - name: GPG Key Signing
         run: |
