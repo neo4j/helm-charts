@@ -12,17 +12,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	. "github.com/neo4j/helm-charts/internal/helpers"
-	"github.com/neo4j/helm-charts/internal/integration_tests/gcloud"
-	"github.com/neo4j/helm-charts/internal/model"
-	"github.com/stretchr/testify/assert"
 	"io"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	restclient "k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"log"
 	"math/big"
 	"os"
@@ -33,6 +23,17 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	. "github.com/neo4j/helm-charts/internal/helpers"
+	"github.com/neo4j/helm-charts/internal/integration_tests/gcloud"
+	"github.com/neo4j/helm-charts/internal/model"
+	"github.com/stretchr/testify/assert"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 type SubTest struct {
@@ -993,7 +994,7 @@ func createGCPServiceAccount(k8sServiceAccountName string, namespace string, gcp
 	log.Printf("Adding iam policy binding to service account \n Stdout = %s \n Stderr = %s", string(stdout), string(stderr))
 
 	// sleep for few seconds to allow the settings be applied...immediate helm install after this step leads to failure
-	time.Sleep(60 * time.Second)
+	time.Sleep(120 * time.Second)
 	mutex.Unlock()
 	return nil
 }
