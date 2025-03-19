@@ -15,8 +15,12 @@ helm repo update
 
 echo "Pulling 4.x helm charts"
 git add .
-git commit -m "Update chart versions to ${NEO4J_VERSION}"
-git push
+if [ -n "$(git status --porcelain)" ]; then
+  git commit -m "Update chart versions to ${NEO4J_VERSION}"
+  git push
+else
+  echo "No changes to commit, skipping commit and push"
+fi
 
 helm pull neo4j/neo4j-standalone --version "${NEO4J_VERSION}"
 helm pull neo4j/neo4j-cluster-headless-service --version "${NEO4J_VERSION}"
