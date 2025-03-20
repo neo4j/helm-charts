@@ -4,6 +4,7 @@ title: "[Bug]: "
 labels: ["bug"]
 assignees:
   - bfeshti
+  - riggi-alekaj
 body:
   - type: markdown
     attributes:
