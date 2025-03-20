@@ -26,8 +26,8 @@ func TestGetAggregateBackupCommandFlags(t *testing.T) {
 				"VERBOSE":                            "true",
 			},
 			expected: []string{
-				"database",
-				"aggregate-backup",
+				"backup",
+				"aggregate",
 				"--temp-path=/tmp/backup",
 				"--from-path=s3://bucket/path",
 				"--keep-old-backup=true",
@@ -43,8 +43,8 @@ func TestGetAggregateBackupCommandFlags(t *testing.T) {
 				"AGGREGATE_BACKUP_FROM_PATH": "s3://bucket/path",
 			},
 			expected: []string{
-				"database",
-				"aggregate-backup",
+				"backup",
+				"aggregate",
 				"--from-path=s3://bucket/path",
 				"--keep-old-backup=",
 				"--parallel-recovery=",
@@ -58,8 +58,8 @@ func TestGetAggregateBackupCommandFlags(t *testing.T) {
 				"AGGREGATE_BACKUP_FROM_PATH": "s3://bucket/path",
 			},
 			expected: []string{
-				"database",
-				"aggregate-backup",
+				"backup",
+				"aggregate",
 				"--from-path=s3://bucket/path",
 				"--keep-old-backup=",
 				"--parallel-recovery=",
