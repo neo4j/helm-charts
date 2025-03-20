@@ -34,10 +34,22 @@ then
   	  helm dependency update "${chart}"
   	  git add "${chart}/*"
   	done
+  
+  if [[ -n "$(git status --porcelain)" ]]; then
+    git commit -m "Updating version to ${NEO4J_VERSION}"
+    git push
+    git tag -m "Tagging ${NEO4J_VERSION}" -a ${NEO4J_VERSION}
+    git push --tags
+  else
+    echo "No changes to commit."
+  fi
 else
 	echo "Neo4j version is same !!"
+  if ! git rev-parse "${NEO4J_VERSION}" >/dev/null 2>&1; then
+    echo "Creating tag for existing version"
+    git tag -m "Tagging ${NEO4J_VERSION}" -a ${NEO4J_VERSION}
+    git push --tags
+  else
+    echo "Tag ${NEO4J_VERSION} already exists"
+  fi
 fi
-git commit -m "Updating version to ${NEO4J_VERSION}"
-git push
-git tag -m "Tagging ${NEO4J_VERSION}" -a ${NEO4J_VERSION}
-git push --tags
