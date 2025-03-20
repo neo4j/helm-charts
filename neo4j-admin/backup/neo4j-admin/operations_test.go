@@ -144,7 +144,7 @@ func TestAggregateBackupLogStreaming(t *testing.T) {
 
 	scriptPath := fmt.Sprintf("%s/neo4j-admin", tmpDir)
 	script := `#!/bin/bash
-if [ "$1" = "database" ] && [ "$2" = "aggregate-backup" ]; then
+if [ "$1" = "backup" ] && [ "$2" = "aggregate" ]; then
     echo "Starting aggregate backup operation..."
     for i in {1..3}; do
         echo "Aggregating backup files: $i/3"
