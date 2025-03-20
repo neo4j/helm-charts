@@ -34,7 +34,7 @@ jobs:
     steps:
       - id: check
         run: |
-          if [[ "${{ github.actor }}" == "bfeshti" ]]; then
+          if [[ "${{ github.actor }}" == "bfeshti" || "${{ github.actor }}" == "riggi-alekaj" ]]; then
             echo "should_run=true" >> $GITHUB_OUTPUT
           else
             echo "should_run=false" >> $GITHUB_OUTPUT
