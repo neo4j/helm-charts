@@ -33,11 +33,11 @@ then
   	  ##perform helm dependency updates
   	  helm dependency update "${chart}"
   	  git add "${chart}/*"
-      git commit -m "Updating version to ${NEO4J_VERSION}"
-      git push
-      git tag -m "Tagging ${NEO4J_VERSION}" -a ${NEO4J_VERSION}
-      git push --tags
   	done
 else
 	echo "Neo4j version is same !!"
 fi
+git commit -m "Updating version to ${NEO4J_VERSION}"
+git push
+git tag -m "Tagging ${NEO4J_VERSION}" -a ${NEO4J_VERSION}
+git push --tags
