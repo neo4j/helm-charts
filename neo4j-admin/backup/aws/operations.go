@@ -146,6 +146,7 @@ func (a *awsClient) GenerateEnvVariablesFromCredentials() error {
 	if err != nil {
 		return err
 	}
+
 	err = os.Setenv("AWS_ACCESS_KEY_ID", creds.AccessKeyID)
 	if err != nil {
 		return err
@@ -157,6 +158,46 @@ func (a *awsClient) GenerateEnvVariablesFromCredentials() error {
 	err = os.Setenv("AWS_REGION", a.cfg.Region)
 	if err != nil {
 		return err
+	}
+
+	if endpoint := os.Getenv("S3_ENDPOINT"); endpoint != "" {
+		err = os.Setenv("AWS_S3_ENDPOINT", endpoint)
+		if err != nil {
+			return err
+		}
+		err = os.Setenv("AWS_S3_ENDPOINT_URL", endpoint)
+		if err != nil {
+			return err
+		}
+		err = os.Setenv("S3_ENDPOINT_URL", endpoint)
+		if err != nil {
+			return err
+		}
+
+		err = os.Setenv("AWS_S3_FORCE_PATH_STYLE", os.Getenv("S3_FORCE_PATH_STYLE"))
+		if err != nil {
+			return err
+		}
+		err = os.Setenv("AWS_S3_ENDPOINT_TLS", os.Getenv("S3_ENDPOINT_TLS"))
+		if err != nil {
+			return err
+		}
+		err = os.Setenv("AWS_S3_SKIP_VERIFY", os.Getenv("S3_SKIP_VERIFY"))
+		if err != nil {
+			return err
+		}
+		if caCertPath := os.Getenv("S3_CA_CERT_PATH"); strings.TrimSpace(caCertPath) != "" {
+			err = os.Setenv("AWS_S3_CA_CERT_PATH", caCertPath)
+			if err != nil {
+				return err
+			}
+		}
+		if sigVer := os.Getenv("S3_SIGNATURE_VERSION"); sigVer != "" {
+			err = os.Setenv("AWS_S3_SIGNATURE_VERSION", sigVer)
+			if err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
