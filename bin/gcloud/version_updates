@@ -7,7 +7,8 @@ shopt -s inherit_errexit
 
 NEO4J_VERSION="${NEO4J_VERSION:?NEO4J_VERSION is required}"
 CURRENT_VERSION=$(cat neo4j/Chart.yaml | grep "appVersion" | awk -F ": " '{print $2}')
-echo "CURRENT_VERSION ${CURRENT_VERSION} NEO4J_VERSION ${NEO4J_VERSION}"
+CURRENT_CHART_VERSION=$(cat neo4j/Chart.yaml | grep "^version: " | awk -F ": " '{print $2}')
+echo "CURRENT_APPVERSION ${CURRENT_VERSION} CURRENT_CHART_VERSION ${CURRENT_CHART_VERSION} NEO4J_VERSION ${NEO4J_VERSION}"
 
 # For calver format (YYYY.MM.0), convert to helm-compatible format (YYYY.M.0) for chart version
 if [[ ${NEO4J_VERSION} =~ ^[0-9]{4}\.[0-9]{2}\.[0-9]+$ ]]; then
@@ -23,13 +24,13 @@ if [[ ${CURRENT_VERSION} != ${NEO4J_VERSION} ]]
 then
 	# Update appVersion to NEO4J_VERSION
 	sed -i "s/appVersion: ${CURRENT_VERSION}/appVersion: ${NEO4J_VERSION}/g" "neo4j/Chart.yaml"
-	# Update chart version to CHART_VERSION
-	sed -i "s/version: ${CURRENT_VERSION}/version: ${CHART_VERSION}/g" "neo4j/Chart.yaml"
+	# Update chart version to CHART_VERSION 
+	sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j/Chart.yaml"
 	# this update is for updating neo4j-operations image tag value which is same as the neo4j version being released
 	sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j/values.yaml"
   
   # Update headless service chart
-  sed -i "s/version: ${CURRENT_VERSION}/version: ${CHART_VERSION}/g" "neo4j-headless-service/Chart.yaml"
+  sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j-headless-service/Chart.yaml"
   # Only update appVersion if it's not "-"
   if grep -q 'appVersion: "-"' "neo4j-headless-service/Chart.yaml"; then
     echo "Skipping appVersion update for neo4j-headless-service as it's set to '-'"
@@ -38,7 +39,7 @@ then
   fi
   
   # Update persistent volume chart
-  sed -i "s/version: ${CURRENT_VERSION}/version: ${CHART_VERSION}/g" "neo4j-persistent-volume/Chart.yaml"
+  sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j-persistent-volume/Chart.yaml"
   # Only update appVersion if it's not "-"
   if grep -q 'appVersion: "-"' "neo4j-persistent-volume/Chart.yaml"; then
     echo "Skipping appVersion update for neo4j-persistent-volume as it's set to '-'"
@@ -47,17 +48,17 @@ then
   fi
   
   # Update admin chart
-  sed -i "s/version: ${CURRENT_VERSION}/version: ${CHART_VERSION}/g" "neo4j-admin/Chart.yaml"
+  sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j-admin/Chart.yaml"
   sed -i "s/appVersion: ${CURRENT_VERSION}/appVersion: ${NEO4J_VERSION}/g" "neo4j-admin/Chart.yaml"
   sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-admin/values.yaml"
   
   # Update reverse proxy chart
-  sed -i "s/version: ${CURRENT_VERSION}/version: ${CHART_VERSION}/g" "neo4j-reverse-proxy/Chart.yaml"
+  sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j-reverse-proxy/Chart.yaml"
   sed -i "s/appVersion: ${CURRENT_VERSION}/appVersion: ${NEO4J_VERSION}/g" "neo4j-reverse-proxy/Chart.yaml"
   sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-reverse-proxy/values.yaml"
   
   # Update loadbalancer chart
-  sed -i "s/version: ${CURRENT_VERSION}/version: ${CHART_VERSION}/g" "neo4j-loadbalancer/Chart.yaml"
+  sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j-loadbalancer/Chart.yaml"
   # Only update appVersion if it's not "-"
   if grep -q 'appVersion: "-"' "neo4j-loadbalancer/Chart.yaml"; then
     echo "Skipping appVersion update for neo4j-loadbalancer as it's set to '-'"
@@ -66,7 +67,7 @@ then
   fi
   
   # Update docker-desktop-pv chart
-  sed -i "s/version: .*/version: ${CHART_VERSION}/g" "neo4j-docker-desktop-pv/Chart.yaml"
+  sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j-docker-desktop-pv/Chart.yaml"
   echo "Updated neo4j-docker-desktop-pv chart version to ${CHART_VERSION}"
 
 	HELM_CHARTS_LIST=("neo4j" "neo4j-headless-service" "neo4j-persistent-volume" "neo4j-admin" "neo4j-reverse-proxy" "neo4j-loadbalancer" "neo4j-docker-desktop-pv")
