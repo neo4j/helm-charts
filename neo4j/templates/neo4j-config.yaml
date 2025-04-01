@@ -122,12 +122,10 @@ data:
   {{- if or $clusterEnabled $secondaryAnalyticsType }}
   # Clustering
   dbms.cluster.discovery.resolver_type: K8S
-  dbms.kubernetes.service_port_name: "tcp-discovery"
   dbms.routing.default_router: "SERVER"
   dbms.routing.client_side.enforce_for_domains: "*.{{ .Values.clusterDomain }}"
   dbms.routing.enabled: "true"
-  dbms.cluster.discovery.version: "{{ .Values.discoveryVersion }}"
-  dbms.kubernetes.discovery.v2.service_port_name: "tcp-tx"
+  dbms.kubernetes.discovery.service_port_name: "tcp-tx"
   {{- end }}
 
   {{- if $clusterEnabled }}
@@ -149,7 +147,6 @@ data:
   # Because "if we set default advertised address it over-rides the bolt address used to populate the browser in a really annoying way" we have to set the
   # advertised address for each cluster service individually instead
   server.bolt.advertised_address: "$(bash -c 'echo ${SERVICE_NEO4J}')"
-  server.discovery.advertised_address: "$(bash -c 'echo ${SERVICE_NEO4J_INTERNALS}')"
   server.cluster.raft.advertised_address: "$(bash -c 'echo ${SERVICE_NEO4J_INTERNALS}')"
   server.cluster.advertised_address: "$(bash -c 'echo ${SERVICE_NEO4J_INTERNALS}')"
   server.routing.advertised_address: "$(bash -c 'echo ${SERVICE_NEO4J_INTERNALS}')"

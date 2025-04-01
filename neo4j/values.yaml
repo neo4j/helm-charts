@@ -438,9 +438,6 @@ ssl:
 # Kubernetes cluster domain suffix
 clusterDomain: "cluster.local"
 
-# Discovery version, possible values are V1_ONLY, V1_OVER_V2, V2_OVER_V1, V2_ONLY
-discoveryVersion: "V1_ONLY"
-
 
 # Override image settings in Neo4j pod
 image:
