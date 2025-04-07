@@ -2,7 +2,7 @@
 Hash: SHA512
 
 apiVersion: v1
-appVersion: 2025.02.0
+appVersion: 2025.03.0
 description: Neo4j is the world's leading graph database
 home: https://www.neo4j.com
 icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
@@ -21,20 +21,20 @@ version: 2025.2.0
 
 ...
 files:
-  neo4j-admin-2025.2.0.tgz: sha256:a8974d3c7ae4a79657c406767a069090c2f234ef54e77967679eaef7f2419a5a
+  neo4j-admin-2025.2.0.tgz: sha256:f5e068c29cb91cb8ca6a90f8089a0cb4ddb490c8eafa14aeaa717a1c70ecf88e
 -----BEGIN PGP SIGNATURE-----
 
-wsFcBAEBCgAQBQJnxdaXCRBZ1wDk039fGQAAmjQQABMEc7H7AK9x+YtM8UE9VasB
-ORB181kMUhEAaT4Pn13yRzeiaejTd0Qf8SoI3JnUKKX4Gq8CNBOYET0rbLUvE/Q6
-BmBmvtPuro3h6CXcss5INELD5YQVwsFw1DRncXyg4jfxzo6bC6MFI1vJjAimOcng
-VHz0iQqEbZR00YtrYgOSQDK2SkUaiuXyWv5K+CygjP9I/ur/W68q2S/Qdk2JbbFd
-0AWOG4UVCn55gQKFOCWfFE6LBm8xYYtOtBRA32IJJ9dRpC79ueFFUa/uxg7d2gUy
-y+eDGzns6SAEdk2+fnghKlMiO6GaiW9L0IgxTTfKQqe6cmeVqfp6vfs1A9vFWdaN
-97drJZf2eHOgt2S7Yj6wHDvsq5/TGpjoY2pimI5o0qOy/J2+Z5NlhyIBrqCuEllt
-bFUQjydnmW3OXQ+vi/C0ntmI6JHwiOfdvsFWp3fFo8tTbcigabUz19+AQHh3u3I5
-kG1xG7++pjzAwe/VuL4uwupzlHklZLfRAIkQ5nmjmjwikgOT9Q6PDCIuZBKfdR4k
-9NVEjADnOVWI/lsfKP8ZO5KI+CxDZQmCLRtNYHI5O7YndmPqkx2OJ822TUQjU3Pu
-23iSLG9aD+5Co2nGmRZD5PxrAz1V+X1rhuZkWhEQLYnDpbwd6PICJLex6XAMdcVb
-N5gI4Lpvt6UjOtLjVkOj
-=9bYn
+wsFcBAEBCgAQBQJn5mpSCRBZ1wDk039fGQAA8JQQADDd9WuJOz/haL37zF/0bkyQ
+Tqu1iiNV12I1GJU0fK6yDj3rL0iPsR8C8r3Zr6jYA0L977bzE0oie+azufhICpca
+gKNql/A71eFPM9wz18TXtfo87a2kOZ/qzIte9iNisICtuDD0UOziXTn/eKlvMWpE
+/W0ux9DJC8iMzfSnZmMIV6/0qSHPtkJBCwbvhu4q3Fuki8Lzd1OK6v/4+e7cNiSs
+9XxYaJzHCMagOKTXOtQuPNYFJKs3Tn2STzclKJO9PyezfmnwrPQAjJuID2PcrYZb
+DsNxIM4LmSz3WShkbjxZe7KIinzEKbuoduS/rSeF3hL1LGzofIrBemRKzMVd+CgN
+fMFdJGEIAbMh0ZHaTKbNwe1PbRsl03Pb45IaDu7KtGxfqDFXNNMZ9cPkq4OBOit6
+4wvLQNm6AIXfZ4FctL0bJ083zuI45T4AmQGSezWDUPq2+Rll0FGeAKpEP2SCIWZ0
+HlO9qtzvC9P/DCH2/U9UrJiWQrt7qPWdAZmqkmo/6Xp7wEAcDzn9LQ6LiEO2FU5A
++UYxOZavS01azqARwcpVJgVDyC2IsGCv6PA9cBBazB2TFh+DGZetl8t5vx99CYEu
+lxT+r7kkNVpWovXfV51HoMmvDXwewtWCgjcnFXWDzUnWC/yaXvO8oPxEjqcHa1Ce
+KPmwTK3BbUSBsI3Tuwnj
+=aIGs
 -----END PGP SIGNATURE-----

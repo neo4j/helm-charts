@@ -13,6 +13,8 @@ keywords:
 maintainers:
 - - email: bledi.feshti@neotechnology.com
   name: bfeshti
+- - email: rigert.alekaj@neo4j.com
+  name: Rigert Alekaj
 name: neo4j-headless-service
 sources:
 - - https://github.com/neo4j/neo4j
@@ -21,20 +23,20 @@ version: 2025.2.0
 
 ...
 files:
-  neo4j-headless-service-2025.2.0.tgz: sha256:978c04f11b2fb04232fb79072cd41daf9c09e6dede51ef0b7e7c5472ae8fe5a0
+  neo4j-headless-service-2025.2.0.tgz: sha256:4dabf147a4cad0ec60c407cc3b3c015ce4a8ecd9d1164ffbc38a450c03475df9
 -----BEGIN PGP SIGNATURE-----
 
-wsFcBAEBCgAQBQJnxdaXCRBZ1wDk039fGQAA/j8QAKSI6TR7DUWJ3KqVCBNWldyq
-8e0sKkN3bH0GscCSWxcuxeZKB3wfW7dsHaiGaDGcKMAKdx61D/bFGEd0Z1ozdMIv
-S6Yxukw1slLlXBEX8YrTO3yNH84EgIWiE3xqrxgkjRGQbg9GyXLUalq9lHoB7nmw
-0MxcEcGGzaGBtjyFO0lcRsWyvjiz8p6+BKizCMnLAe/+y/ip0dxgfA77jKeHe4ra
-dZqWf9PuSG2C8o5AiOCcDtpSf21MDnfv9+j5N7nQyOFvKbCwmKt/6P+g1liCqqGx
-iLCSKowAU21D4EUxion0KR2SuhjKSbNDZG1QsfmnOqe5hy78OzivMhXyeP2WTk2D
-GM0LFEG2VzJ6iyRcyK3g6FdO2Kmk5VnCxPnVMu1ZAio0xQPW5NNKYzdOKt8rO/WB
-+rbXCJEAeRQJOLfT8v7z82VoiFGE0ffGPfIZ9XS8k+DWjReCf6s+oXfCNaUBTvYc
-1kSy0PvGpR+RVOnHofuNZU93GwcyvSGfW+oUNyi3FRJygddShnSdzV/cqFdIdT9a
-gZzzXpby1t6xnshrbBtA9u++pt6Jd3wi2TrauPXs64HEOozGGsmCt3EhHRbg0im2
-H/KayLwKrORNvoicYl2pHqLu9U2aTDmP9o2RgLjmfgbIdyzaCwuI3yKdd5qPCi0z
-F1otVqfAe05SYRT2yygl
-=8xB2
+wsFcBAEBCgAQBQJn5mpSCRBZ1wDk039fGQAA2G0QAAcjXAni68kFjPm8cJ8SPj3Y
+QkQdIEwBoJiDMvQQCp30ST9Gu2eRLOcA/1pbIPKfaHKI3KE9aPI1ORJhElEcPpxH
+b+DBb+ObVPlcG5kBmGSVCRKo1OGNHFpQ1Yi0ceXR9S+52gBherUpZ3D5rMfmF/Q3
+bzU0PQUcsP5952C9rMvlj63tGVfeHm8saAealpvDTco7sT2GasQOtb/hbBmAfroX
+zLDiu1zrWZHkhDaHCFTvjRqZr/wAKNStDjpeDl2qXZLutiVM7k0KLRykVI8W6kLw
+A6YdhQTXcgo7FzmYmPlk/iZgxVKIjI++ETWl2J92+gUa2JstyfBMSkDSDXhr/RW9
+l8xfnwMyBEwAuX++4Kv6iaokojvxOuOu4TRh/saGYpGPYWn2QXhStYho0LR1vqDJ
+XZ6fJ9P9NknavRr6UcaGyifXIshkL4gN4w5kv+OJ3uF4dbWxrhJLsX0hrpu0Dy+W
+HQtGS9IC4RQ1MRpj8E9X+Jcb4tSuW/UWIRL6AgkfR62P1lUb7fRBJGDpmdPYiWrO
+gig6qddNdsx1DP+esvTkIp4GGegSHzD6YDIUsPajaxetBWG4NyqSlhqeNjXBpsoA
+VXpklFOSh0FxOsir4FUHzr+Kfrl+vVgR410efEcFd52bxNgUafGabOhhguC3tqFB
+sSZ5pC3PTFVc3zTAFuAi
+=Gtd1
 -----END PGP SIGNATURE-----

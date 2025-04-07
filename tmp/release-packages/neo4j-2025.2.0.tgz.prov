@@ -2,7 +2,7 @@
 Hash: SHA512
 
 apiVersion: v1
-appVersion: 2025.02.0
+appVersion: 2025.03.0
 description: Neo4j is the world's leading graph database
 home: https://www.neo4j.com
 icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
@@ -13,6 +13,8 @@ keywords:
 maintainers:
 - - email: bledi.feshti@neotechnology.com
   name: bfeshti
+- - email: rigert.alekaj@neo4j.com
+  name: Rigert Alekaj
 name: neo4j
 sources:
 - - https://github.com/neo4j/neo4j
@@ -21,20 +23,20 @@ version: 2025.2.0
 
 ...
 files:
-  neo4j-2025.2.0.tgz: sha256:ead6569f5b4abd5580661aa15b0ae5a1409f3fa24ad2f3e86436b5daed04f403
+  neo4j-2025.2.0.tgz: sha256:a3e4cd2f5b0895d221c17f3c0784f8b43306af50e9981c007046834992ac4be8
 -----BEGIN PGP SIGNATURE-----
 
-wsFcBAEBCgAQBQJnxdaXCRBZ1wDk039fGQAA05MQAKQuOxPE7fACnvQBzSAltGX0
-4S0zPh7SbfmiaPmhMVNVVYhag3AMJyO19bGmQsB+HnavmsGpGxXY8B84Ty2b+9zw
-p8FiNrM7+UqIy/def8kutceTZ0lZMczONkCKYquSAgwMrYDjsyHQ+XtIhUks7ziV
-OcRkVVk5YJTu3QweDmLcMAc5IR7rw3/zZ5dPO/kptvr4Z/ZUvludCzjwv38e6NLG
-5UT5zJ1lrhfawbFeoQa4i9ufIDlEAoddDyavIsvjRJdqaY1lcg12XjEWu8zh+Pna
-y70otecvXSYDS0X4lhlc4wez91BjLnZ9/o4xA838neLU3DRA3hn+CGpjTKVOFuqM
-fDNsWEt7ZAqPkG3DzmOLFbk9tpgKEIiHGIb5g29Vg+TyoWF0mZhOhwUED7ivcCT4
-dpqZBvxZWh1QaRNl+C2Hh9TM0wsFRX/q1/fNSzZ5Y0SfBf5VQYbUdMzNc2JMKni5
-umeILsvfcWOPfybVqyTj/xYkc+LemwhQ9qm+RBRil91UEECMHv76LvCUsmGHNXjm
-EwiXZf3BlwDPj9ZTrfjSOP+wJPj7PMj+0Lp6z40r/4XUrC2ZHBU2XYRf90iv79yZ
-xbpyZunFoNyyuaXJQDnMBGEzSzCZJ4x/Vc8cdaLksLLvb+hDqwQWzTOnsNACX0nk
-nbbguVCBar3+BjzYlfWU
-=x3Wz
+wsFcBAEBCgAQBQJn5mpSCRBZ1wDk039fGQAA3LkQAJlatpAXZq875TaTna+Xzpgs
+jakDnt5TokYBYDmNDAmwy87T9sJBmEa46MCP/a7TZ3XCROXe4E5tiH0ztIpwG/fS
+HaYj1Rn0cSelxbHiMZ8FKacbGYO+tyqSUzN1uzidAOuP4bVXWiiLrbEfqqzBnIAr
+V39fZPF/mWswE6+Ama83YsOfl+cmhhKwJn7Hyp/sUbY+jbK+ZM+xqQ/8bXXEdd4W
+tA3AmAxwGYyh0ECJ1/OnrAMmZo/WfilDCAvqsibTJCgMoJ8X+u2ucBGNrlR3rbnT
+Wv1Oq6+J08k8a4wuH40+fkvhqUt36/MoT2/rF8BRc13dHE+PpibOWioMTbiXuQsl
+92im9Il62ewDFyN1TTwD/SdGYVnG0noCpatCXJTSYuhUZrUo/3HQj8ff8kAw1RUS
+913UKe4vvy0Q2ToZdBXKBHiT52G3oG6S4oXRUBVMFQ5OeRMD/1FLQJU9h8B+JGr5
+ZvH1QaOxNyxJ2jrC5ioYHIBJO9jf8niPOVJ9Jga4xhKdMnNdxP3iN/S9ZXg+w/2I
+a0NxtyAgOMN4joHiefwg3aqfIkEv4x0lHPr4jcpqByKzxO7cwUnt24E04QuUDCNt
+Gd5z1OM43YBO5XRVwgGANW66s0XVEeMKZhWq0vQwEiaR+pe+bXa0nVC1XljAte/p
+bpQGxRB2i0It8yI+AlrO
+=QJii
 -----END PGP SIGNATURE-----

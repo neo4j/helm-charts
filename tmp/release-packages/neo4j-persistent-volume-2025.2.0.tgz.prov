@@ -13,6 +13,8 @@ keywords:
 maintainers:
 - - email: bledi.feshti@neotechnology.com
   name: bfeshti
+- - email: rigert.alekaj@neo4j.com
+  name: Rigert Alekaj
 name: neo4j-persistent-volume
 sources:
 - - https://github.com/neo4j/neo4j
@@ -21,20 +23,20 @@ version: 2025.2.0
 
 ...
 files:
-  neo4j-persistent-volume-2025.2.0.tgz: sha256:95e17db9e473fd46349d16747e3da55c9c812d8b5c152cf520ec256ebe5e1f1d
+  neo4j-persistent-volume-2025.2.0.tgz: sha256:e815389e74f3d874cef357affdc939efe5ffd4358d40815999d55e526cf7da57
 -----BEGIN PGP SIGNATURE-----
 
-wsFcBAEBCgAQBQJnxdaXCRBZ1wDk039fGQAAkvkQACjQna/3fws3EykwQsp5eQlh
-LHS5cPYQvjQGibkvyTC3uOm2BLJIc2KRAXfUy1sWSH3XUd9wZ9uoqI0srpW/PxN2
-EkZIuUe9esXCvsJuNLqlGiXV56gjQQUL6U4/NNLNEg5MokI4WaeepPolElS/E3NC
-7nL9JMNPtNQg2l4Zvr15JNKC5FvWLxYpcPN/8uT4LU1qlwUCLqAKLP9axwsGCyyy
-StWsTf4dgWW5mGusJojF7tGDetoKPepo2zFlMTvltNAD9AdLV0EjUa0jCip8Tiep
-Shl4eAwkQWKuHp/9l1PHKrGVmljzGCUIA6zfnr+RJK8hIbfXu0GpCbS92PbidR5v
-aoyFrFfW90WCdT8sdo5tJlSRpXkZ3md3zDlGwy8iDYnMKT0/vqECl9jo0bjspjj+
-4RC4H2QMlii4+e0c/l2o8O1p7vkdNdRPeobMAhlXoXnoBr8+Yq2mOF3hHTvuVpmf
-upUTZJhpdjJq2etwqJet98Kgu5lfuRCmBifktGWwCueWx6oa0cVnf3tzPvEgE7NZ
-izVWFDthJK6grFB1A01Sjm/rz/jhcCTJH+LEYFqjnDg7wD9SteS9Eyyn+SDXWMFN
-JYeER//Kb1MQX/x0dnnf+LKblNenfpX9128KxLZtAMBm9mJ3NZpqmpEAM3pdo7/E
-HpGoPQ1RxacLOPxr/kcX
-=83iF
+wsFcBAEBCgAQBQJn5mpSCRBZ1wDk039fGQAAjh0QAJKgnK6Z9hZoYdPh6q2zStua
+idU7oa3YxuVo5cjDEGnwVUZ5fMagRnWNe753Y3S33kf1V2IU/Npmh9wAFdGFzAAm
+dbQZeqKtQ+msn7jHX/dWM7pOyvOSxaIyHO9ae3DMOuybQ8Cc7IiQqH2NiBToZcSb
+kzVgK/Yu+mbYiy68sevJWLLALweQKDk6rAx4N3aNrtRBOZXJMR4SAe9x9mM+SPdT
+T2Yxbe8NxUy6FViPZqmMDvKI+lJSz0T1iWrNwTVIat1q1DG4GVXRKt+2IquRzyk0
+SVPOOXreYWi9g59/K+LhrcW+X8HNqwFXVU7Enl8zx/4v3FBHlw1jwCsZkP+H+PsX
+ffARSdqXrd2C+vycmD7ZN3nnjtDW5TKjS/f0yba0GBcr1DKCV35TLMQjGi69M1R/
+S47N24A1BC1GnXk1ULo5g4zA0+yUXcHpH27H9fKE2Jy8j3Bk77uj6+/NHFhPziSm
+bAhjciDThzck4Aw7i4I7wgSdVvFJ27xHh34FbeP/pq3NakL4S4FbmLO0PDYEFd0d
+bgfEIu3tcTy5QyNaAAKISVi8Q2I4vohUKsEEKSY66mU+n5PhEtkO3KkBYiGUclTn
+b8zq4B3wDJZRUs/JK0cgeYJhW0R4N8nzyOiKCoBsrbcXaI5MMWAzQSFhqnbtJpcS
+gTwkMYURS2OhQlmdBYjc
+=taLa
 -----END PGP SIGNATURE-----

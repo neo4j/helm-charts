@@ -13,6 +13,8 @@ keywords:
 maintainers:
 - - email: bledi.feshti@neotechnology.com
   name: bfeshti
+- - email: rigert.alekaj@neo4j.com
+  name: Rigert Alekaj
 name: neo4j-loadbalancer
 sources:
 - - https://github.com/neo4j/neo4j
@@ -21,20 +23,20 @@ version: 2025.2.0
 
 ...
 files:
-  neo4j-loadbalancer-2025.2.0.tgz: sha256:a364c1077be7a505f23407d143f16cb355c32c2ba604a0e464ed8cbad5e383ba
+  neo4j-loadbalancer-2025.2.0.tgz: sha256:9395b007d78cfad8013025a23240ee8aa39723312da3d9d0e1f2c8e7ad02d831
 -----BEGIN PGP SIGNATURE-----
 
-wsFcBAEBCgAQBQJnxdaYCRBZ1wDk039fGQAAiawQACTgbOsrZdc1ZRkgrauJq+VM
-tzSmXz9siz7P85Pzy9T349UlNDu2UVth+aYU96EsFbzAXKboJ0Oi0l0+FQmJy1TE
-mDRqYbeJ4SiqxdrcNEgiDdlpoPbSOlzxcuHUG3y3vbllVarl6JrEyqM31BSNymQ9
-ZvFXo/oC+biSGlUJQTj1i8Cn1soCbnpN+/nyJx6mJz2FGwOzrkpPuVRIYV80Fnh5
-CxG0CILz4mYHZLRO8CClgdPUFVVI4BiDo7yQQ/YjyI/dAmdQOOuD0To2OZEAdith
-vZ60NmDd+fPi7icAwjn8QkdCqZBLDsHAaAz8lGrQuxUKBGasWxdhTQbzzA0ph6WV
-GMZIbWbXvJDT7dvw3UnQwb7TBCu5daonG8iyz/r9yancQCF3LVvoykSCz2I17lUV
-xFY6J2MPj+6iU6hvIm9u4jZXqPUR9LhakhJgU5BtD4YR5yistYPog+A1tfpcx105
-fPXTTdFGqj9g4eFWiLHH6njPB2Fn4h9CJA1GHpgO30IR0etqHtF5wYKVHcZMdSx2
-1q/m0vvMvGHyxLqJIkz8p8IyXJpLVs5ibttIkMh+YrlDl3B/qeQOfvypzqIz/F93
-7eWEKaub5eh08Jg+wLHCc/rKWs2Kf6B/MVMBRbaaaKtlYjx7jWMF1r0lHkkoNtKn
-2PyZdFtZtVfoEWRC7WL4
-=3Hnm
+wsFcBAEBCgAQBQJn5mpSCRBZ1wDk039fGQAAuBwQABqjiUOMnaKKS4JdETaJgCiS
+nENckapYDtcOKWWGCRvXsfpRpiRxoYFH/LQNfqhNQe2vwdzfAHLAwEa++kJZXd3q
+EIHAluJML4xn1m266RXn2P1x37w8nUl+Yn2yc5Z38c1XfgNVAwyDxIctx3g1GESX
+9XngeYiZvxOxZJ94YPiI/e10e53mB4/iZ6NzIznxpOelQCCFeErQeIvx4g3pYxmR
+7D3qgc3WmXD5DPd+36ypJH/C6BFHT4+wn10H+CF2GbF7pVwBoSz0BgNfdOr6op8j
+qEj22IssQvuhvqBw9hp/a4PzuoRcrM1oALBnxU1eFdJFAJF5IRDERrR/7FRYjhGU
+AbiDk4t6rbgzAVw630wOFEyMgnmA6ousgTccFaDIGia+obY7u2FkDdy6bkz+LWhd
+BkNWTrQWHcB/LC/EQSiXx0HY0UwGpDaUblBiz7hitAdEft3NKm0qKd2Dh8lYZFjr
+PqSTOTBA+HG/4Uk0QiEV1EZBtQ+AYlzCG49prPV65si/gIA9VNmaWvVBjRz8vxt1
+k6KpDjSwF1yRxUmd/gXuPXkNJifKF/Myj43Dy/DGw+3YqVZsT/SbXmXwHJQwqsxZ
+tW8eOOSqP7drIqHMAGdbXLHMEnxU0BJQqcqgySOpY1Q/aNBHfobMzY+Mt2aJBsD2
+aSyV6zrzp2lY4kk/jUZ5
+=DCZU
 -----END PGP SIGNATURE-----

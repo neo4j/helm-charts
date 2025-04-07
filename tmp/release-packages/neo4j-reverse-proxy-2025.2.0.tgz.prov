@@ -2,7 +2,7 @@
 Hash: SHA512
 
 apiVersion: v1
-appVersion: 2025.02.0
+appVersion: 2025.03.0
 description: Sets up an http server and a reverse proxy for bolt and http requests
 home: https://www.neo4j.com
 icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
@@ -13,6 +13,8 @@ keywords:
 maintainers:
 - - email: bledi.feshti@neotechnology.com
   name: bfeshti
+- - email: rigert.alekaj@neo4j.com
+  name: Rigert Alekaj
 name: neo4j-reverse-proxy
 sources:
 - - https://github.com/neo4j/neo4j
@@ -21,20 +23,20 @@ version: 2025.2.0
 
 ...
 files:
-  neo4j-reverse-proxy-2025.2.0.tgz: sha256:d7f560ea530a458295ba710120dfaf5f4444407461cfb90ee2c2880e02314d3c
+  neo4j-reverse-proxy-2025.2.0.tgz: sha256:330393173a9db84fb3faa557caad976a2a6e56267ab3da339fbb751e73eae6b9
 -----BEGIN PGP SIGNATURE-----
 
-wsFcBAEBCgAQBQJnxdaYCRBZ1wDk039fGQAAIYQQADLC7kHt3t1O+iWkBoKiBzg8
-Q2fJX5bni/L7rWnb+baZMISRYIYTmqxC0VWRB5YXPRorymSWgmwPneOzbQ9H0QgG
-hPHftjjUXdfn3XziFoYmFtRCB9OXMBmKi7U0TkxQna3IOJxxlcrjTSIGE6nd3rTu
-OunGBBCPdebMXfk8J2Nu6eBupFSBaFr6ddYI4honZKpsyeqZ4of4OlgKcYZWOBwv
-F2F6PnnLWakRalR0rPlAHKUeCTFSRAqvR3KL9VO6aMBQ9ugb2jHIalyDx8iy4zZ7
-iJrq40q6z/05VUXXVyiosjSlGJmPqo83i1Ang8/JH9QBov87FkqivneXaKT8Af+m
-xVS7aa3RA4aISwmRTzt9Xmz59PTacyABZ7q/d8qvD6xK8zZQ13l2N6J4OBZvvUk4
-ZocLXxmrTQyaYbCsvyGp4sMcKSujuxfmk8Qh40vp4zbXOMo82yHjhkBejwF/GnWm
-rTLWipTlyvFn2/45pL87hH+nxImP3di8GLiyRpOpwGTsUgzbEXeRMO0L0V49Tdo6
-TjYwRB5A4lQnPRre3B+y5iTYduhlRBfBq9QCXcMrzfDRT4JxBnOALwKiGG1xz2ta
-7YJcVYy8gXxWWJFsT9TgAb4ZFA0kNFrQ2k6Qn8NlW+JF1xXCQt29vvJf0L+zZTgW
-3Bm3yAxzG1J9Uwrruipv
-=xzwf
+wsFcBAEBCgAQBQJn5mpSCRBZ1wDk039fGQAA124QAEDBpQA7iWpW7P8sztwnnuX1
+oPhF83cbPSfutG+MomumILU/0q83FXM6/ak8ua4WNyWKH/QuECK/4IFvNj9BkN44
+/E19Io8hv4eDBZ3DtBqk78QQRPZOCMai9PegEpoolCWhwN/sCX/T5ZOl2e8u0wOp
+qkxnQLQWP0tCG+enxiEEwKP1CqlQSeXfY8ek5Xi+7JIpzPNoxTSPVTFTRUfAdw5z
+hUaJ3jcmOaA3wUl27soRCKRB1I7NuYjY74cvkIj2QIdS9NsaAVfZ1OePCeMAQn8o
+daQqRaeyP+kHRP3RaX2peDkYfTbv7tUIZYAYM6s/2xWdGo7FTZzmCR1DM5oKUIeN
+KgOwLx5xte9kfWKVP+TRGrdgvXhauJ3wHaSpmPLKNkeYVSyBgLgNqQM5xm//NEP1
+alJ78MuS3r8d3Pj0OD82s1CBPEyYu1ZeAFgK9xrLkYGMGVIqTg6YYktEbdCOpaWE
+Df47j6K2CZU42yoK8CietmCtmNtBbYxjN2mLitUGVRw5/F83DaAzF8XmUip4kejk
+NuAGL6j+rcZMUwQvT3zpdq+Ck+cl1igxob7lAkxIvAXcxmSpmmKoyINNZhkiPIoE
+DNLMYGA5gal53MyD3PFPiPr/Z7WsHbFArA0LaCPVcmm0n50MPHCs1pM5EV6HFg6l
+J9M8Kj9z0ov6Dd6jYVrK
+=CtVa
 -----END PGP SIGNATURE-----
