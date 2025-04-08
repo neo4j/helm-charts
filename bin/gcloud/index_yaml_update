@@ -8,6 +8,8 @@ shopt -s inherit_errexit
 NEO4J_VERSION="${NEO4J_VERSION:?NEO4J_VERSION is required}"
 # neo4j or neo4j-experimental
 HELM_REPO_NAME="${HELM_REPO_NAME:?HELM_REPO_NAME is required}"
+#Catch current branch to restore later
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 echo "sleeping for 300 seconds"
 sleep 300
 helm repo add neo4j "https://helm.neo4j.com/${HELM_REPO_NAME}"
@@ -33,3 +35,5 @@ helm repo index . --merge index.yaml --url https://github.com/neo4j/helm-charts/
 git add index.yaml
 git commit -m "Updating index.yaml with ${NEO4J_VERSION} entries"
 git push
+# Restore back to original branch
+git checkout "${CURRENT_BRANCH}"
