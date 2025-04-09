@@ -85,6 +85,8 @@ spec:
                   value: "{{ printf "/credentials/%s" .Values.backup.secretKeyName | default ""  }}"
                 - name: VERBOSE
                   value: "{{ .Values.backup.verbose | default true }}"
+                - name: COMPRESS
+                  value: "{{ .Values.backup.compress | default true }}"
                 - name: AZURE_STORAGE_ACCOUNT_NAME
                   value: "{{ .Values.backup.azureStorageAccountName | default "" }}"
                 - name: S3_ENDPOINT

@@ -130,6 +130,7 @@ backup:
   parallelRecovery: false
   verbose: true
   heapSize: ""
+  compress: true
 
   # https://neo4j.com/docs/operations-manual/current/backup-restore/aggregate/
   # Performs aggregate backup. If enabled, NORMAL BACKUP WILL NOT BE DONE only aggregate backup
