@@ -38,17 +38,20 @@ spec:
       port: 7687
       targetPort: 7687
       name: tcp-bolt
+      appProtocol: tcp
     {{- if $httpEnabled }}
     - protocol: TCP
       port: 7474
       targetPort: 7474
       name: tcp-http
+      appProtocol: http
     {{- end }}
     {{- if $httpsEnabled }}
     - protocol: TCP
       port: 7473
       targetPort: 7473
       name: tcp-https
+      appProtocol: https
     {{- end }}
 ---
 {{- with .Values.services.admin }}
