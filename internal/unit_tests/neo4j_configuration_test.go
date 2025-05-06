@@ -264,6 +264,36 @@ func TestProbeConfiguration(t *testing.T) {
 	forEachPrimaryChart(t, andEachSupportedEdition(doTestCase))
 }
 
+func TestTlsReloadConfiguration(t *testing.T) {
+	t.Parallel()
+
+	doTestCase := func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		// Test case 1: Default configuration (should be true)
+		helmValues := model.DefaultEnterpriseValues
+		manifest, err := model.HelmTemplateFromStruct(t, model.HelmChart, helmValues)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		userConfigMap := manifest.OfTypeWithName(&v1.ConfigMap{}, model.DefaultHelmTemplateReleaseName.UserConfigMapName()).(*v1.ConfigMap)
+		assert.Equal(t, "true", userConfigMap.Data["dbms.security.tls_reload_enabled"])
+
+		// Test case 2: Explicitly set to false
+		helmValues.Config = map[string]string{
+			"dbms.security.tls_reload_enabled": "false",
+		}
+		manifest, err = model.HelmTemplateFromStruct(t, model.HelmChart, helmValues)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		userConfigMap = manifest.OfTypeWithName(&v1.ConfigMap{}, model.DefaultHelmTemplateReleaseName.UserConfigMapName()).(*v1.ConfigMap)
+		assert.Equal(t, "false", userConfigMap.Data["dbms.security.tls_reload_enabled"])
+	}
+
+	forEachPrimaryChart(t, andEachSupportedEdition(doTestCase))
+}
+
 func checkConfigMapContainsJvmAdditionalFromDefaultConf(t *testing.T, edition string, userConfigMap *v1.ConfigMap) error {
 	// check that we picked up jvm additional from the conf file
 	file, err := os.Open(fmt.Sprintf("neo4j/neo4j-%s.conf", edition))
