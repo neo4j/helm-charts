@@ -1,5 +1,5 @@
 ARG IMAGE
-FROM golang:1.22-bullseye as build
+FROM golang:1.23.8-bullseye as build
 RUN apt-get update && apt-get install -y curl && apt-get remove -y python* && apt-get autoremove -y && apt-get clean
 WORKDIR backup
 COPY backup/aws aws/
