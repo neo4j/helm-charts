@@ -96,6 +96,7 @@ type Backup struct {
 	KeepBackupFiles          bool            `yaml:"keepBackupFiles" default:"true"`
 	Verbose                  bool            `yaml:"verbose" default:"true"`
 	AggregateBackup          AggregateBackup `yaml:"aggregate,omitempty"`
+	Compress                 bool            `yaml:"compress,omitempty"`
 }
 
 type AggregateBackup struct {
