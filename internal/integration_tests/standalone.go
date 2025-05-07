@@ -696,6 +696,82 @@ func TestBackupLogStreamingIntegration(t *testing.T, releaseName model.ReleaseNa
 	return nil
 }
 
+func TestBackupCompressIntegration(t *testing.T, releaseName model.ReleaseName) error {
+	if model.Neo4jEdition == "community" {
+		t.Skip()
+		return nil
+	}
+
+	backupReleaseName := model.NewReleaseName("standalone-backup-compress-" + TestRunIdentifier)
+	namespace := string(releaseName.Namespace())
+
+	t.Cleanup(func() {
+		_ = runAll(t, "helm", [][]string{
+			{"uninstall", backupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
+		}, false)
+	})
+
+	// Install backup chart with compress option enabled
+	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.Backup = model.Backup{
+		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", releaseName.String()),
+		DatabaseNamespace:        namespace,
+		Database:                 "neo4j,system",
+		CloudProvider:            "",
+		Verbose:                  true,
+		Type:                     "FULL",
+		KeepBackupFiles:          true,
+		Compress:                 true,
+	}
+	helmValues.Neo4J.JobSchedule = "* * * * *"
+
+	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
+	if err != nil {
+		return fmt.Errorf("helm install failed: %v", err)
+	}
+
+	// Wait for backup job to complete
+	time.Sleep(2 * time.Minute)
+
+	// Get all pods in the namespace
+	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error while retrieving pod list during backup operation: %v", err)
+	}
+
+	var found bool
+	var logOutput string
+	for _, pod := range pods.Items {
+		if strings.Contains(pod.Name, "standalone-backup-compress") {
+			found = true
+			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
+			if err != nil {
+				return fmt.Errorf("error while getting backup pod logs: %v", err)
+			}
+			logOutput = string(out)
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("no backup pod found")
+	}
+
+	// Verify log content for compression enabled
+	expectedLogEntries := []string{
+		"Backup Completed",
+		"--compress=true",
+	}
+
+	for _, expectedLog := range expectedLogEntries {
+		if !strings.Contains(logOutput, expectedLog) {
+			return fmt.Errorf("expected log entry '%s' not found in logs:\n%s", expectedLog, logOutput)
+		}
+	}
+
+	return nil
+}
+
 func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubTest, error) {
 	expectedConfiguration, err := (&model.Neo4jConfiguration{}).PopulateFromFile(Neo4jConfFile)
 	if err != nil {
@@ -753,6 +829,9 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 		}},
 		{name: "Check Backup Log Streaming", test: func(t *testing.T) {
 			assert.NoError(t, TestBackupLogStreamingIntegration(t, name), "Backup log streaming should work correctly")
+		}},
+		{name: "Check Backup Compression", test: func(t *testing.T) {
+			assert.NoError(t, TestBackupCompressIntegration(t, name), "Backup compression should work correctly")
 		}},
 	}, nil
 }
