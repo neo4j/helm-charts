@@ -165,7 +165,7 @@ jobs:
           tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ env.RUN_ID }}"
           provenance: false
           build-args: |
-            IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-dev
+            IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-2025-dev
             DISTRIBUTION=debian
 
       - name: Build and push red hat backup image
@@ -177,7 +177,7 @@ jobs:
           tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ env.RUN_ID }}"
           provenance: false
           build-args: |
-            IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-dev-ubi9
+            IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-2025-dev-ubi9
             DISTRIBUTION=redhat
 
       - name: Build and push backup image
