@@ -86,7 +86,7 @@ spec:
                 - name: VERBOSE
                   value: "{{ .Values.backup.verbose | default true }}"
                 - name: COMPRESS
-                  value: "{{ .Values.backup.compress | default true }}"
+                  value: {{ (hasKey .Values.backup "compress" | ternary .Values.backup.compress true) | toString | quote }}
                 - name: AZURE_STORAGE_ACCOUNT_NAME
                   value: "{{ .Values.backup.azureStorageAccountName | default "" }}"
                 - name: S3_ENDPOINT
