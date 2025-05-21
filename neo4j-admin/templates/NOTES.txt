@@ -7,6 +7,7 @@ Configuration:
 - Cloud Provider: {{ .Values.backup.cloudProvider | default "None (local backup)" }}
 - Bucket Name: {{ .Values.backup.bucketName | default "None" }}
 - Database: {{ .Values.backup.database | default "*" }}
+- Compress: {{ .Values.backup.compress | default true }}
 
 {{- if eq .Values.backup.cloudProvider "aws" }}
 

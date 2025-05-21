@@ -32,6 +32,14 @@ func getBackupCommandFlags(address string) []string {
 	flags = append(flags, fmt.Sprintf("--type=%s", os.Getenv("TYPE")))
 	flags = append(flags, fmt.Sprintf("--to-path=%s", getBackupPath()))
 
+	// Add compress flag, defaulting to true if not specified
+	compressValue := os.Getenv("COMPRESS")
+	if compressValue == "" || compressValue == "true" {
+		flags = append(flags, "--compress=true")
+	} else {
+		flags = append(flags, "--compress=false")
+	}
+
 	if len(strings.TrimSpace(os.Getenv("PAGE_CACHE"))) > 0 {
 		flags = append(flags, fmt.Sprintf("--pagecache=%s", os.Getenv("PAGE_CACHE")))
 	}

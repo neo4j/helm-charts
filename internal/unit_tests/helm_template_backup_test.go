@@ -635,3 +635,69 @@ func TestBackupS3GenericParameters(t *testing.T) {
 	assert.Contains(t, envVariables, corev1.EnvVar{Name: "S3_REGION", Value: "us-east-1"})
 	assert.Contains(t, envVariables, corev1.EnvVar{Name: "S3_SIGNATURE_VERSION", Value: "4"})
 }
+
+// TestBackupCompressEnvVar_DefaultTrue checks that the Compress value is set to true correctly when the variable is not specified
+func TestBackupCompressEnvVar_DefaultTrue(t *testing.T) {
+	t.Parallel()
+	// Test without setting helmValues.Backup.Compress
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.Backup.Compress = true
+
+	helmValues.Backup.SecretName = "demo"
+	helmValues.Backup.SecretKeyName = "key"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "bucket"
+	helmValues.Backup.DatabaseAdminServiceName = "admin"
+	helmValues.Backup.Database = "neo4j"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err)
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1)
+
+	envVars := cronjobs[0].(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env
+	var found bool
+	for _, env := range envVars {
+		if env.Name == "COMPRESS" {
+			found = true
+			assert.Equal(t, "true", env.Value, "Expected COMPRESS to be true by default")
+			break
+		}
+	}
+	assert.True(t, found, "COMPRESS env var not found")
+}
+
+// TestBackupCompressEnvVar_False checks that the Compress value is set to false when explicitly set as such
+func TestBackupCompressEnvVar_False(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.Backup.Compress = false
+
+	helmValues.Backup.SecretName = "demo"
+	helmValues.Backup.SecretKeyName = "key"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "bucket"
+	helmValues.Backup.DatabaseAdminServiceName = "admin"
+	helmValues.Backup.Database = "neo4j"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err)
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1)
+
+	envVars := cronjobs[0].(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env
+	var found bool
+	for _, env := range envVars {
+		if env.Name == "COMPRESS" {
+			found = true
+			assert.Equal(t, "false", env.Value, "Expected COMPRESS to be false when explicitly disabled")
+			break
+		}
+	}
+	assert.True(t, found, "COMPRESS env var not found")
+}
