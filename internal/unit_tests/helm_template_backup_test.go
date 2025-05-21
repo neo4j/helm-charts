@@ -642,6 +642,7 @@ func TestBackupCompressEnvVar_DefaultTrue(t *testing.T) {
 	// Test without setting helmValues.Backup.Compress
 	helmValues := model.DefaultNeo4jBackupValues
 	helmValues.DisableLookups = true
+	helmValues.Backup.Compress = true
 
 	helmValues.Backup.SecretName = "demo"
 	helmValues.Backup.SecretKeyName = "key"
