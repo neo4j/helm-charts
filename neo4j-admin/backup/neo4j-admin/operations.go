@@ -12,18 +12,43 @@ import (
 )
 
 // CheckDatabaseConnectivity checks if there is connectivity with the provided backup instance or not
-func CheckDatabaseConnectivity(hostPort string) error {
-	address := strings.Split(hostPort, ":")
-	output, err := exec.Command("nc", "-vz", address[0], address[1]).CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("connectivity cannot be established \n output = %s \n err = %v", string(output), err)
+func CheckDatabaseConnectivity(hostPortList string) error {
+	// Split by comma to handle multiple endpoints
+	endpoints := strings.Split(hostPortList, ",")
+
+	var lastErr error
+	for _, endpoint := range endpoints {
+		endpoint = strings.TrimSpace(endpoint)
+		address := strings.Split(endpoint, ":")
+
+		if len(address) != 2 {
+			lastErr = fmt.Errorf("invalid endpoint format %s, expected host:port", endpoint)
+			log.Printf("Warning: %v", lastErr)
+			continue
+		}
+
+		output, err := exec.Command("nc", "-vz", address[0], address[1]).CombinedOutput()
+		if err != nil {
+			lastErr = fmt.Errorf("connectivity cannot be established with %s \n output = %s \n err = %v",
+				endpoint, string(output), err)
+			log.Printf("Warning: %v", lastErr)
+			continue
+		}
+
+		outputString := strings.ToLower(string(output))
+		if !strings.Contains(outputString, "succeeded") && !strings.Contains(outputString, "connected") {
+			lastErr = fmt.Errorf("connectivity cannot be established with %s. Missing 'succeeded' in output \n output = %s",
+				endpoint, string(output))
+			log.Printf("Warning: %v", lastErr)
+			continue
+		}
+
+		log.Printf("Connectivity established with Database %s!!", endpoint)
+		return nil // Return on first successful connection
 	}
-	outputString := strings.ToLower(string(output))
-	if !strings.Contains(outputString, "succeeded") && !strings.Contains(outputString, "connected") {
-		return fmt.Errorf("connectivity cannot be established. Missing 'succeeded' in output \n output = %s", string(output))
-	}
-	log.Printf("Connectivity established with Database %s!!", hostPort)
-	return nil
+
+	// If we get here, all endpoints failed
+	return fmt.Errorf("connectivity cannot be established with any endpoint: %v", lastErr)
 }
 
 // PerformBackup performs the backup operation and returns the generated backup file name
