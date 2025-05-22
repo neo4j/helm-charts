@@ -136,14 +136,30 @@ func backupOperations() ([]string, []string, error) {
 	log.Printf("Backup File Name(s) %v", backupFileNames)
 
 	if consistencyCheckEnabled == "true" {
-		for _, consistencyCheckDB := range consistencyCheckDBs {
-			if slices.Contains(databases, consistencyCheckDB) || slices.Contains(databases, "*") {
-				reportArchiveName, err := neo4jAdmin.PerformConsistencyCheck(consistencyCheckDB)
-				if err != nil {
-					return nil, nil, err
+		// If consistencyCheckDBs is just an empty string, use all databases or "*"
+		if len(consistencyCheckDBs) == 1 && consistencyCheckDBs[0] == "" {
+			// Perform consistency check for all databases
+			reportArchiveName, err := neo4jAdmin.PerformConsistencyCheck("")
+			if err != nil {
+				return nil, nil, err
+			}
+			if len(reportArchiveName) != 0 {
+				consistencyCheckReports = append(consistencyCheckReports, reportArchiveName)
+			}
+		} else {
+			// Perform consistency check for each specified database
+			for _, consistencyCheckDB := range consistencyCheckDBs {
+				if consistencyCheckDB == "" {
+					continue // Skip empty entries
 				}
-				if len(reportArchiveName) != 0 {
-					consistencyCheckReports = append(consistencyCheckReports, reportArchiveName)
+				if slices.Contains(databases, consistencyCheckDB) || slices.Contains(databases, "*") {
+					reportArchiveName, err := neo4jAdmin.PerformConsistencyCheck(consistencyCheckDB)
+					if err != nil {
+						return nil, nil, err
+					}
+					if len(reportArchiveName) != 0 {
+						consistencyCheckReports = append(consistencyCheckReports, reportArchiveName)
+					}
 				}
 			}
 		}
