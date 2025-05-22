@@ -485,7 +485,6 @@ func TestBackupMultipleEndpoints(t *testing.T) {
 
 	helmValues := model.DefaultNeo4jBackupValues
 	helmValues.Backup.DatabaseBackupEndpoints = backupEndpoints
-	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
 
 	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
 	assert.NoError(t, err, "error generating helm template with multiple backup endpoints")
