@@ -98,19 +98,25 @@ func PerformBackup(address string) ([]string, error) {
 
 // PerformConsistencyCheck performs the consistency check on the backup taken and returns the generated report tar name
 func PerformConsistencyCheck(database string) (string, error) {
+	// For empty database value, the helpers will use "*", but we need a meaningful filename
+	fileNameDB := database
+	if database == "" || database == "*" {
+		fileNameDB = "all-databases"
+	}
+
 	timeStamp := time.Now().Format("2006-01-02T15-04-05")
-	fileName := fmt.Sprintf("%s-%s.backup", database, timeStamp)
+	fileName := fmt.Sprintf("%s-%s.backup", fileNameDB, timeStamp)
 	flags := getConsistencyCheckCommandFlags(fileName, database)
 	log.Printf("Printing consistency check flags %v", flags)
 	output, err := exec.Command("neo4j-admin", flags...).CombinedOutput()
 	if err == nil {
-		log.Printf("No inconsistencies found for %s database !! No Inconsistency report generated.", database)
+		log.Printf("No inconsistencies found for database %s !! No Inconsistency report generated.", database)
 		return "", nil
 	}
 
 	var me *exec.ExitError
 	if errors.As(err, &me) {
-		log.Printf("Inconsistencies found for %s database. Exit code was %d\n", database, me.ExitCode())
+		log.Printf("Inconsistencies found for database %s. Exit code was %d\n", database, me.ExitCode())
 		log.Printf("Consistency Check Completed !!")
 
 		tarFileName := fmt.Sprintf("/backups/%s.report.tar.gz", fileName)
