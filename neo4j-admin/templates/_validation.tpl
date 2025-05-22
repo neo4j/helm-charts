@@ -60,16 +60,16 @@
 {{- define "neo4j.backup.checkDatabaseIPAndServiceName" -}}
 
     {{- if or (kindIs "invalid" .Values.backup.aggregate) (not .Values.backup.aggregate.enabled) -}}
-        {{- if and (kindIs "invalid" .Values.backup.databaseAdminServiceName) (kindIs "invalid" .Values.backup.databaseAdminServiceIP) -}}
-            {{- fail (printf "Missing fields. Please set databaseAdminServiceName via --set backup.databaseAdminServiceName or databaseAdminServiceIP via --set backup.databaseAdminServiceIP")}}
+        {{- if and (kindIs "invalid" .Values.backup.databaseAdminServiceName) (kindIs "invalid" .Values.backup.databaseAdminServiceIP) (kindIs "invalid" .Values.backup.databaseBackupEndpoints) -}}
+            {{- fail (printf "Missing fields. Please set databaseAdminServiceName via --set backup.databaseAdminServiceName or databaseAdminServiceIP via --set backup.databaseAdminServiceIP or databaseBackupEndpoints via --set backup.databaseBackupEndpoints")}}
         {{- end -}}
 
-        {{- if and (empty (.Values.backup.databaseAdminServiceName | trim)) (empty (.Values.backup.databaseAdminServiceIP | trim)) -}}
-            {{- fail (printf "Empty fields. Please set databaseAdminServiceName via --set backup.databaseAdminServiceName or databaseAdminServiceIP via --set backup.databaseAdminServiceIP")}}
+        {{- if and (empty (.Values.backup.databaseAdminServiceName | trim)) (empty (.Values.backup.databaseAdminServiceIP | trim)) (empty (.Values.backup.databaseBackupEndpoints | trim)) -}}
+            {{- fail (printf "Empty fields. Please set databaseAdminServiceName via --set backup.databaseAdminServiceName or databaseAdminServiceIP via --set backup.databaseAdminServiceIP or databaseBackupEndpoints via --set backup.databaseBackupEndpoints")}}
         {{- end -}}
 
-            {{- if and (.Values.backup.databaseAdminServiceName | trim) (.Values.backup.databaseAdminServiceIP | trim) -}}
-            {{- fail (printf "Please set databaseAdminServiceName via --set backup.databaseAdminServiceName or databaseAdminServiceIP via --set backup.databaseAdminServiceIP. Cannot use both")}}
+        {{- if or (and (.Values.backup.databaseAdminServiceName | trim) (.Values.backup.databaseAdminServiceIP | trim)) (and (.Values.backup.databaseAdminServiceName | trim) (.Values.backup.databaseBackupEndpoints | trim)) (and (.Values.backup.databaseAdminServiceIP | trim) (.Values.backup.databaseBackupEndpoints | trim)) -}}
+            {{- fail (printf "Please set only one of: databaseAdminServiceName via --set backup.databaseAdminServiceName or databaseAdminServiceIP via --set backup.databaseAdminServiceIP or databaseBackupEndpoints via --set backup.databaseBackupEndpoints")}}
         {{- end -}}
     {{- end -}}
 
