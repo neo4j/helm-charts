@@ -105,7 +105,14 @@ func getConsistencyCheckCommandFlags(fileName string, database string) []string 
 		flags = append(flags, "--verbose")
 	}
 	//flags = append(flags, "--expand-commands")
-	flags = append(flags, database)
+
+	// Only append database if it's not empty
+	if database != "" {
+		flags = append(flags, database)
+	} else {
+		// Use "*" to indicate all databases when an empty string is provided
+		flags = append(flags, "*")
+	}
 
 	return flags
 }
