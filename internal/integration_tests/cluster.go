@@ -1190,7 +1190,6 @@ func TestBackupMultipleEndpointsE2E(t *testing.T) {
 
 	helmValues := model.DefaultNeo4jBackupValues
 	helmValues.Backup.DatabaseBackupEndpoints = backupEndpoints
-	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
 	helmValues.Backup.SecretName = "demo"
 	helmValues.Backup.CloudProvider = "aws"
 	helmValues.Backup.BucketName = "demo2"
