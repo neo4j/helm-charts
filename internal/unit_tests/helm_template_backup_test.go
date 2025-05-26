@@ -635,8 +635,8 @@ func TestBackupS3GenericParameters(t *testing.T) {
 	assert.Contains(t, envVariables, corev1.EnvVar{Name: "S3_SIGNATURE_VERSION", Value: "4"})
 }
 
-// TestBackupCompressEnvVar_DefaultTrue checks that the Compress value is set to true correctly when the variable is not specified
-func TestBackupCompressEnvVar_DefaultTrue(t *testing.T) {
+// TestBackupCompressEnvVarDefaultTrue checks that the Compress value is set to true correctly when the variable is not specified
+func TestBackupCompressEnvVarDefaultTrue(t *testing.T) {
 	t.Parallel()
 	// Test without setting helmValues.Backup.Compress
 	helmValues := model.DefaultNeo4jBackupValues
@@ -668,8 +668,8 @@ func TestBackupCompressEnvVar_DefaultTrue(t *testing.T) {
 	assert.True(t, found, "COMPRESS env var not found")
 }
 
-// TestBackupCompressEnvVar_False checks that the Compress value is set to false when explicitly set as such
-func TestBackupCompressEnvVar_False(t *testing.T) {
+// TestBackupCompressEnvVarFalse checks that the Compress value is set to false when explicitly set as such
+func TestBackupCompressEnvVarFalse(t *testing.T) {
 	t.Parallel()
 
 	helmValues := model.DefaultNeo4jBackupValues
