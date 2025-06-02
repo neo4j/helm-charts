@@ -145,6 +145,12 @@ func getConsistencyCheckCommandFlags(fileName string, database string) []string 
 	var fromPath string
 	if cloudProvider != "" {
 		fromPath = getCloudStoragePath()
+		// For cloud storage, Neo4j requires a temp path to unpack backups for consistency checking
+		tempPath := os.Getenv("CONSISTENCY_CHECK_TEMP_DIR")
+		if tempPath == "" {
+			tempPath = filepath.Join(getBackupPath(), "consistency-temp")
+		}
+		flags = append(flags, fmt.Sprintf("--temp-path=%s", tempPath))
 	} else {
 		fromPath = getBackupPath()
 	}

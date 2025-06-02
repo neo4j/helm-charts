@@ -139,6 +139,8 @@ spec:
                   value: "{{ .Values.consistencyCheck.threads | default "" | trim }}"
                 - name: CONSISTENCY_CHECK_VERBOSE
                   value: {{ .Values.consistencyCheck.verbose | toString | quote | default true }}
+                - name: CONSISTENCY_CHECK_TEMP_DIR
+                  value: {{ .Values.consistencyCheck.tempDir | default "" | quote }}
                 - name: AGGREGATE_BACKUP_ENABLED
                   value: "{{ .Values.backup.aggregate.enabled | default false }}"
                 - name: AGGREGATE_BACKUP_VERBOSE

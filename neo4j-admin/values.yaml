@@ -168,7 +168,8 @@ backup:
     # database name to aggregate. Can contain * and ? for globbing.
     database: ""
     # Optional temporary directory for aggregation process
-    # If not specified, will use the backup directory
+    # If not specified, will use the backup directory with an "aggregate-temp" subdirectory
+    # This is especially useful when working with cloud storage and large backup chains
     tempDir: ""
 
 #Below are all neo4j-admin database check flags / options
@@ -186,6 +187,9 @@ consistencyCheck:
   maxOffHeapMemory: ""
   threads: ""
   verbose: true
+  # Optional temporary directory for consistency check process when using cloud storage
+  # If not specified, will use the backup directory with a "consistency-temp" subdirectory
+  tempDir: ""
 
 # Set to name of an existing Service Account to use if desired
 # Follow the following links for setting up a service account with workload identity
