@@ -16,6 +16,29 @@ func getBackupPath() string {
 	return "/backups"
 }
 
+// getCloudStoragePath returns the appropriate cloud storage path for Neo4j backup
+func getCloudStoragePath() string {
+	cloudProvider := os.Getenv("CLOUD_PROVIDER")
+	bucketName := os.Getenv("BUCKET_NAME")
+
+	switch cloudProvider {
+	case "aws":
+		return fmt.Sprintf("s3://%s/", bucketName)
+	case "gcp":
+		return fmt.Sprintf("gs://%s/", bucketName)
+	case "azure":
+		storageAccount := os.Getenv("AZURE_STORAGE_ACCOUNT_NAME")
+		if storageAccount == "" {
+			// Fallback to bucket name if storage account not specified
+			return fmt.Sprintf("azb://%s/", bucketName)
+		}
+		return fmt.Sprintf("azb://%s/%s/", storageAccount, bucketName)
+	default:
+		// Fallback to local path for on-premises or unknown providers
+		return getBackupPath()
+	}
+}
+
 // getBackupCommandFlags returns a slice of string containing all the flags to be passed with the neo4j-admin backup command
 func getBackupCommandFlags(address string) []string {
 	flags := []string{"database", "backup"}
@@ -30,7 +53,13 @@ func getBackupCommandFlags(address string) []string {
 	flags = append(flags, fmt.Sprintf("--keep-failed=%s", os.Getenv("KEEP_FAILED")))
 	flags = append(flags, fmt.Sprintf("--parallel-recovery=%s", os.Getenv("PARALLEL_RECOVERY")))
 	flags = append(flags, fmt.Sprintf("--type=%s", os.Getenv("TYPE")))
-	flags = append(flags, fmt.Sprintf("--to-path=%s", getBackupPath()))
+
+	cloudProvider := os.Getenv("CLOUD_PROVIDER")
+	if cloudProvider != "" {
+		flags = append(flags, fmt.Sprintf("--to-path=%s", getCloudStoragePath()))
+	} else {
+		flags = append(flags, fmt.Sprintf("--to-path=%s", getBackupPath()))
+	}
 
 	// Add compress flag, defaulting to true if not specified
 	compressValue := os.Getenv("COMPRESS")
@@ -38,6 +67,11 @@ func getBackupCommandFlags(address string) []string {
 		flags = append(flags, "--compress=true")
 	} else {
 		flags = append(flags, "--compress=false")
+	}
+
+	// Add prefer-diff-as-parent flag for differential backup chains
+	if os.Getenv("PREFER_DIFF_AS_PARENT") == "true" {
+		flags = append(flags, "--prefer-diff-as-parent")
 	}
 
 	if len(strings.TrimSpace(os.Getenv("PAGE_CACHE"))) > 0 {

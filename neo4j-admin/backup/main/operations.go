@@ -6,99 +6,49 @@ import (
 	"os"
 	"strings"
 
-	"github.com/neo4j/helm-charts/neo4j-admin/backup/aws"
-	"github.com/neo4j/helm-charts/neo4j-admin/backup/azure"
-	gcp "github.com/neo4j/helm-charts/neo4j-admin/backup/gcp"
 	neo4jAdmin "github.com/neo4j/helm-charts/neo4j-admin/backup/neo4j-admin"
 	"k8s.io/utils/strings/slices"
 )
 
-func awsOperations() {
-
-	credentialPath := os.Getenv("CREDENTIAL_PATH")
-	awsClient, err := aws.NewAwsClient(credentialPath)
-	handleError(err)
+// cloudOperations handles backup operations for all cloud providers using Neo4j native cloud storage
+func cloudOperations() {
+	log.Printf("Using Neo4j native cloud storage backup for provider: %s", os.Getenv("CLOUD_PROVIDER"))
 
 	if aggregateEnabled := os.Getenv("AGGREGATE_BACKUP_ENABLED"); aggregateEnabled == "true" {
-
-		//service account is NOT used hence env variables need to be set for aggregate backup operation
-		if credentialPath != "/credentials/" {
-			err = awsClient.GenerateEnvVariablesFromCredentials()
-			handleError(err)
-		}
-
-		err = aggregateBackupOperations()
+		err := aggregateBackupOperations()
 		handleError(err)
 		return
 	}
 
-	bucketName := os.Getenv("BUCKET_NAME")
-	err = awsClient.CheckBucketAccess(bucketName)
-	handleError(err)
-
 	backupFileNames, consistencyCheckReports, err := backupOperations()
 	handleError(err)
 
-	err = awsClient.UploadFile(backupFileNames, bucketName)
-	handleError(err)
-
+	// Only handle consistency check reports if they exist and need local processing
 	enableConsistencyCheck := os.Getenv("CONSISTENCY_CHECK_ENABLE")
-	if enableConsistencyCheck == "true" {
-		err = awsClient.UploadFile(consistencyCheckReports, bucketName)
-		handleError(err)
+	if enableConsistencyCheck == "true" && len(consistencyCheckReports) > 0 {
+		log.Printf("Consistency check reports generated: %v", consistencyCheckReports)
+		// Note: Consistency checks still generate local reports that may need manual handling
 	}
-	err = deleteBackupFiles(backupFileNames, consistencyCheckReports)
-	handleError(err)
+
+	log.Printf("Cloud backup completed successfully. Files: %v", backupFileNames)
 }
 
+// awsOperations
+func awsOperations() {
+	cloudOperations()
+}
+
+// gcpOperations
 func gcpOperations() {
-	gcpClient, err := gcp.NewGCPClient(os.Getenv("CREDENTIAL_PATH"))
-	handleError(err)
-
-	bucketName := os.Getenv("BUCKET_NAME")
-	err = gcpClient.CheckBucketAccess(bucketName)
-	handleError(err)
-
-	backupFileNames, consistencyCheckReports, err := backupOperations()
-	handleError(err)
-
-	err = gcpClient.UploadFile(backupFileNames, bucketName)
-	handleError(err)
-
-	enableConsistencyCheck := os.Getenv("CONSISTENCY_CHECK_ENABLE")
-	if enableConsistencyCheck == "true" {
-		err = gcpClient.UploadFile(consistencyCheckReports, bucketName)
-		handleError(err)
-	}
-	err = deleteBackupFiles(backupFileNames, consistencyCheckReports)
-	handleError(err)
+	cloudOperations()
 }
 
+// azureOperations
 func azureOperations() {
-	azureClient, err := azure.NewAzureClient(os.Getenv("CREDENTIAL_PATH"))
-	handleError(err)
-
-	containerName := os.Getenv("BUCKET_NAME")
-	err = azureClient.CheckContainerAccess(containerName)
-	handleError(err)
-
-	backupFileNames, consistencyCheckReports, err := backupOperations()
-	handleError(err)
-
-	err = azureClient.UploadFile(backupFileNames, containerName)
-	handleError(err)
-
-	enableConsistencyCheck := os.Getenv("CONSISTENCY_CHECK_ENABLE")
-	if enableConsistencyCheck == "true" {
-		err = azureClient.UploadFile(consistencyCheckReports, containerName)
-		handleError(err)
-	}
-	err = deleteBackupFiles(backupFileNames, consistencyCheckReports)
-	handleError(err)
+	cloudOperations()
 }
 
 func onPrem() {
-
 	if aggregateEnabled := os.Getenv("AGGREGATE_BACKUP_ENABLED"); aggregateEnabled == "true" {
 		err := aggregateBackupOperations()
 		handleError(err)
@@ -110,12 +60,11 @@ func onPrem() {
 
 	err = deleteBackupFiles(backupFileNames, consistencyCheckReports)
 	handleError(err)
-
 }
 
-// backupOperations returns backupFileNames , consistencyCheckReports and error
-// performs aggregate backup is aggregate backup is enabled
+// Returns backup file names and consistency check reports
 func backupOperations() ([]string, []string, error) {
+	// Clean up any existing backup files first
 	if err := deleteBackupFiles([]string{}, []string{}); err != nil {
 		log.Printf("Warning: failed to cleanup existing backups: %v", err)
 	}
@@ -124,6 +73,7 @@ func backupOperations() ([]string, []string, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+
 	databases := strings.Split(os.Getenv("DATABASE"), ",")
 	consistencyCheckDBs := strings.Split(os.Getenv("CONSISTENCY_CHECK_DATABASE"), ",")
 	consistencyCheckEnabled := os.Getenv("CONSISTENCY_CHECK_ENABLE")
@@ -133,10 +83,10 @@ func backupOperations() ([]string, []string, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	log.Printf("Backup File Name(s) %v", backupFileNames)
+	log.Printf("Backup completed successfully. Files: %v", backupFileNames)
 
+	// Handle consistency checks if enabled
 	if consistencyCheckEnabled == "true" {
-		// If consistencyCheckDBs is just an empty string, use all databases or "*"
 		if len(consistencyCheckDBs) == 1 && consistencyCheckDBs[0] == "" {
 			// Perform consistency check for all databases
 			reportArchiveName, err := neo4jAdmin.PerformConsistencyCheck("")
@@ -167,12 +117,13 @@ func backupOperations() ([]string, []string, error) {
 	return backupFileNames, consistencyCheckReports, nil
 }
 
-// aggregateBackupOperations perform aggregate backup
 func aggregateBackupOperations() error {
+	log.Printf("Performing aggregate backup")
 	err := neo4jAdmin.PerformAggregateBackup()
 	if err != nil {
 		return err
 	}
+	log.Printf("Aggregate backup completed successfully")
 	return nil
 }
 
@@ -183,6 +134,7 @@ func startupOperations() {
 	err = neo4jAdmin.CheckDatabaseConnectivity(address)
 	handleError(err)
 
+	// Set backup location - will be overridden for cloud storage in helpers.go
 	os.Setenv("LOCATION", "/backups")
 }
 

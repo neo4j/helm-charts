@@ -45,6 +45,7 @@ func TestGetAggregateBackupCommandFlags(t *testing.T) {
 			expected: []string{
 				"backup",
 				"aggregate",
+				"--temp-path=/backups/aggregate-temp",
 				"--from-path=s3://bucket/path",
 				"--keep-old-backup=",
 				"--parallel-recovery=",
@@ -60,6 +61,7 @@ func TestGetAggregateBackupCommandFlags(t *testing.T) {
 			expected: []string{
 				"backup",
 				"aggregate",
+				"--temp-path=/backups/aggregate-temp",
 				"--from-path=s3://bucket/path",
 				"--keep-old-backup=",
 				"--parallel-recovery=",
