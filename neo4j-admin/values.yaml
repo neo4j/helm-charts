@@ -28,6 +28,11 @@ neo4j:
   labels: {}
 
 backup:
+  # Neo4j Backup Modes:
+  # - Cloud Provider Mode (aws/gcp/azure): Uses Neo4j native cloud storage with direct upload to create immutable backup objects
+  # - Local Mode (empty cloudProvider): Creates local backups in /backups mount - requires persistent storage for large databases
+  # - Native cloud storage supports differential backups and eliminates need for persistent volume claims
+  
   # Ensure the bucket is already existing in the respective cloud provider
   # In case of azure the bucket is the container name in the storage account
   # bucket: azure-storage-container
@@ -91,6 +96,8 @@ backup:
   # the /backups mount can point to a persistentVolume based on the definition set in tempVolume
   cloudProvider: ""
 
+  # Cloud provider authentication
+  # For cloud providers, credentials are used by Neo4j native backup for direct cloud storage access
   # name of the kubernetes secret containing the respective cloud provider credentials
   # Ensure you have read,write access to the mentioned bucket
   # For AWS :
@@ -132,6 +139,11 @@ backup:
   heapSize: ""
   compress: true
 
+  # Neo4j Native Cloud Storage Features
+  # Enable differential backups - allows Neo4j to create differential backups directly to cloud storage
+  # This creates backup chains where subsequent backups only store changes from previous backup
+  preferDiffAsParent: false
+  
   # https://neo4j.com/docs/operations-manual/current/backup-restore/aggregate/
   # Performs aggregate backup. If enabled, NORMAL BACKUP WILL NOT BE DONE only aggregate backup
   # fromPath supports only s3 or local mount. For s3 , please set cloudProvider to aws and use either serviceAccount or creds
@@ -172,8 +184,9 @@ consistencyCheck:
 # AWS - https://docs.aws.amazon.com/eks/latest/userguide/associate-service-account-role.html
 serviceAccountName: ""
 
-# Volume to use as temporary storage for files before they are uploaded to cloud. For large databases local storage may not have sufficient space.
-# In that case set an ephemeral or persistent volume with sufficient space here
+# Volume to use for local backup storage and temporary files. 
+# Note: When using cloud providers (aws/gcp/azure), Neo4j native backup uploads directly to cloud storage
+# For large databases with local backups, you may need persistent storage here
 # The chart defaults to an emptyDir, use this to overwrite default behavior
 #tempVolume:
 #  persistentVolumeClaim:
