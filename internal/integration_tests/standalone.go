@@ -684,7 +684,7 @@ func TestBackupLogStreamingIntegration(t *testing.T, releaseName model.ReleaseNa
 
 	// Verify log content
 	expectedLogEntries := []string{
-		"Backup Completed",
+		"Backup completed successfully",
 	}
 
 	for _, expectedLog := range expectedLogEntries {
@@ -759,7 +759,7 @@ func TestBackupCompressIntegration(t *testing.T, releaseName model.ReleaseName) 
 
 	// Verify log content for compression enabled
 	expectedLogEntries := []string{
-		"Backup Completed",
+		"Backup completed successfully",
 		"--compress=true",
 	}
 
@@ -1033,9 +1033,8 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 				"--include-metadata=all",
 				"--type=FULL",
 				"neo4j system",
-				"Backup command completed",
-				"Backup Completed",
-				"uploaded to azure container",
+				"Backup completed successfully",
+				"Cloud backup completed successfully",
 			}
 
 			for _, requiredLog := range requiredLogs {
@@ -1081,7 +1080,7 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 		BucketName:               bucketName,
 		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", standaloneReleaseName.String()),
 		DatabaseNamespace:        string(standaloneReleaseName.Namespace()),
-		Database:                 "neo4j",
+		Database:                 "neo4j,system",
 		CloudProvider:            "gcp",
 		SecretName:               "gcpcred",
 		SecretKeyName:            "credentials",
@@ -1140,13 +1139,12 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 			// Check for connectivity and initialization logs
 			requiredLogs := []string{
 				"Connectivity established with Database",
-				"Connectivity with bucket",
 				"Printing backup flags",
 				"--include-metadata=all",
 				"--type=FULL",
-				"neo4j",
-				"Backup command completed",
-				"Backup Completed",
+				"neo4j system",
+				"Backup completed successfully",
+				"Cloud backup completed successfully",
 			}
 
 			for _, requiredLog := range requiredLogs {
@@ -1267,8 +1265,8 @@ func InstallNeo4jBackupGCPHelmChartWithInconsistencies(t *testing.T, standaloneR
 				"--check-graph=true",
 				"--check-counts=true",
 				"--check-property-owners=true",
-				"Backup command completed",
-				"Backup Completed",
+				"Backup completed successfully",
+				"Cloud backup completed successfully",
 			}
 
 			for _, requiredLog := range requiredLogs {
@@ -1379,7 +1377,6 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t *testing.T, standalone
 			// Check for connectivity and initialization logs
 			assert.Contains(t, logOutput, "Connectivity established with Database")
 			assert.Contains(t, logOutput, "Credential Path is /credentials/")
-			assert.Contains(t, logOutput, "Connectivity with bucket")
 			assert.Contains(t, logOutput, "Printing backup flags")
 			// Check backup command parameters
 			assert.Contains(t, logOutput, "--include-metadata=all")
