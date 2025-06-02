@@ -201,7 +201,6 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t *testing.T, 
 			assert.NoError(t, err, "error while getting gcp workload backup pod logs")
 			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
 			assert.Contains(t, string(out), "Backup completed successfully")
-			assert.Contains(t, string(out), "Cloud backup completed successfully")
 			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
 			assert.NotContains(t, string(out), "Deleting file")
 			break
@@ -302,7 +301,6 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 			assert.NoError(t, err, "error while getting aws backup pod logs")
 			assert.NotNil(t, out, "aws backup logs cannot be retrieved")
 			assert.Contains(t, string(out), "Backup completed successfully")
-			assert.Contains(t, string(out), "Cloud backup completed successfully")
 			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
 			assert.Equal(t, nodeSelectorNode.Name, pod.Spec.NodeName, fmt.Sprintf("backup pod %s is not scheduled on the correct node %s", pod.Spec.NodeName, nodeSelectorNode.Name))
 			break

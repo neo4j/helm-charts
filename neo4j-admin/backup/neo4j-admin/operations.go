@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -131,6 +132,19 @@ func PerformConsistencyCheck(database string) (string, error) {
 
 	timeStamp := time.Now().Format("2006-01-02T15-04-05")
 	fileName := fmt.Sprintf("%s-%s.backup", fileNameDB, timeStamp)
+
+	// Ensure temp directory exists for cloud storage consistency checks
+	cloudProvider := os.Getenv("CLOUD_PROVIDER")
+	if cloudProvider != "" {
+		tempPath := os.Getenv("CONSISTENCY_CHECK_TEMP_DIR")
+		if tempPath == "" {
+			tempPath = filepath.Join(getBackupPath(), "consistency-temp")
+		}
+		if err := os.MkdirAll(tempPath, 0755); err != nil {
+			log.Printf("Warning: Failed to create temp directory %s: %v", tempPath, err)
+		}
+	}
+
 	flags := getConsistencyCheckCommandFlags(fileName, database)
 	log.Printf("Printing consistency check flags %v", flags)
 	output, err := exec.Command("neo4j-admin", flags...).CombinedOutput()
@@ -144,7 +158,6 @@ func PerformConsistencyCheck(database string) (string, error) {
 		log.Printf("Inconsistencies found for database %s. Exit code was %d\n", database, me.ExitCode())
 		log.Printf("Consistency Check Completed !!")
 
-		// For cloud storage, the report is still generated locally
 		tarFileName := fmt.Sprintf("%s/%s.report.tar.gz", getBackupPath(), fileName)
 		directoryName := fmt.Sprintf("%s/%s.report", getBackupPath(), fileName)
 		log.Printf("tarfileName %s directoryName %s", tarFileName, directoryName)
