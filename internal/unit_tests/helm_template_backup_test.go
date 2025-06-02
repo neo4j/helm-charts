@@ -631,7 +631,7 @@ func TestBackupS3GenericParameters(t *testing.T) {
 
 	// Check that the S3 parameters are correctly set in the environment variables
 	assert.Contains(t, envVariables, corev1.EnvVar{Name: "S3_FORCE_PATH_STYLE", Value: "true"})
-	assert.Contains(t, envVariables, corev1.EnvVar{Name: "S3_REGION", Value: "us-east-1"})
+	assert.Contains(t, envVariables, corev1.EnvVar{Name: "AWS_REGION", Value: "us-east-1"})
 	assert.Contains(t, envVariables, corev1.EnvVar{Name: "S3_SIGNATURE_VERSION", Value: "4"})
 }
 

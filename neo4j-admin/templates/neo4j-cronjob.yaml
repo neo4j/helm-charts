@@ -101,7 +101,7 @@ spec:
                   value: "{{ .Values.backup.s3SkipVerify | default false }}"
                 - name: S3_FORCE_PATH_STYLE
                   value: {{ .Values.backup.s3ForcePathStyle | toString | quote | default true }}
-                - name: S3_REGION
+                - name: AWS_REGION
                   value: "{{ .Values.backup.s3Region | default "" }}"
                 - name: S3_SIGNATURE_VERSION
                   value: "{{ .Values.backup.s3SignatureVersion | default "" }}"

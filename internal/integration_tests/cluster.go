@@ -411,29 +411,29 @@ func InstallNeo4jBackupAWSHelmChartViaS3(t *testing.T, releaseName model.Release
 			found = true
 			// Verify that the new S3 parameters are correctly set
 			for _, container := range pod.Spec.Containers {
-				foundS3ForcePathStyle := false
-				foundS3Region := false
-				foundS3SignatureVersion := false
+				s3ForcePathStyleFound := false
+				s3RegionFound := false
+				s3SignatureVersionFound := false
 
 				for _, env := range container.Env {
 					if env.Name == "S3_FORCE_PATH_STYLE" && env.Value == "true" {
-						foundS3ForcePathStyle = true
+						s3ForcePathStyleFound = true
 					}
-					if env.Name == "S3_REGION" && env.Value == "us-east-1" {
-						foundS3Region = true
+					if env.Name == "AWS_REGION" && env.Value == "us-east-1" {
+						s3RegionFound = true
 					}
 					if env.Name == "S3_SIGNATURE_VERSION" && env.Value == "4" {
-						foundS3SignatureVersion = true
+						s3SignatureVersionFound = true
 					}
 				}
 
-				if !foundS3ForcePathStyle {
+				if !s3ForcePathStyleFound {
 					return fmt.Errorf("S3_FORCE_PATH_STYLE environment variable not found or not set to true")
 				}
-				if !foundS3Region {
-					return fmt.Errorf("S3_REGION environment variable not found or not set to us-east-1")
+				if !s3RegionFound {
+					return fmt.Errorf("AWS_REGION environment variable not found or not set to us-east-1")
 				}
-				if !foundS3SignatureVersion {
+				if !s3SignatureVersionFound {
 					return fmt.Errorf("S3_SIGNATURE_VERSION environment variable not found or not set to 4")
 				}
 			}
@@ -617,29 +617,29 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 				}
 
 				// Verify that the new S3 parameters are correctly set
-				foundS3ForcePathStyle := false
-				foundS3Region := false
-				foundS3SignatureVersion := false
+				s3ForcePathStyleFound := false
+				s3RegionFound := false
+				s3SignatureVersionFound := false
 
 				for _, env := range container.Env {
 					if env.Name == "S3_FORCE_PATH_STYLE" && env.Value == "true" {
-						foundS3ForcePathStyle = true
+						s3ForcePathStyleFound = true
 					}
-					if env.Name == "S3_REGION" && env.Value == "us-east-1" {
-						foundS3Region = true
+					if env.Name == "AWS_REGION" && env.Value == "us-east-1" {
+						s3RegionFound = true
 					}
 					if env.Name == "S3_SIGNATURE_VERSION" && env.Value == "4" {
-						foundS3SignatureVersion = true
+						s3SignatureVersionFound = true
 					}
 				}
 
-				if !foundS3ForcePathStyle {
+				if !s3ForcePathStyleFound {
 					return fmt.Errorf("S3_FORCE_PATH_STYLE environment variable not found or not set to true")
 				}
-				if !foundS3Region {
-					return fmt.Errorf("S3_REGION environment variable not found or not set to us-east-1")
+				if !s3RegionFound {
+					return fmt.Errorf("AWS_REGION environment variable not found or not set to us-east-1")
 				}
-				if !foundS3SignatureVersion {
+				if !s3SignatureVersionFound {
 					return fmt.Errorf("S3_SIGNATURE_VERSION environment variable not found or not set to 4")
 				}
 			}
