@@ -122,6 +122,16 @@ backup:
   secretName: ""
   # provide the keyname used in the above secret
   secretKeyName: ""
+  # Cloud provider specific credential environment variables
+  # These are set by Neo4j's native cloud storage clients for authentication
+  # AWS: Path to AWS credentials file (will set AWS_SHARED_CREDENTIALS_FILE)
+  awsCredentialsFile: ""
+  # GCP: Path to Google Cloud service account key file (will set GOOGLE_APPLICATION_CREDENTIALS)
+  gcpCredentialsFile: ""
+  # 
+  # NOTE: When cloudProvider is set to "aws" or "gcp" and secretKeyName is provided,
+  # the chart will automatically set AWS_SHARED_CREDENTIALS_FILE or GOOGLE_APPLICATION_CREDENTIALS
+  # to "/credentials/{secretKeyName}". Use awsCredentialsFile/gcpCredentialsFile to override this default.
   # provide the azure storage account name
   # this to be provided when you are using workload identity integration for azure
   azureStorageAccountName: ""

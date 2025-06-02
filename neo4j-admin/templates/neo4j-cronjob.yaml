@@ -85,6 +85,22 @@ spec:
                   value: "{{ .Values.backup.preferDiffAsParent | default false }}"
                 - name: CREDENTIAL_PATH
                   value: "{{ printf "/credentials/%s" .Values.backup.secretKeyName | default ""  }}"
+                {{- if .Values.backup.secretKeyName }}
+                {{- if .Values.backup.awsCredentialsFile }}
+                - name: AWS_SHARED_CREDENTIALS_FILE
+                  value: "{{ .Values.backup.awsCredentialsFile }}"
+                {{- else if eq .Values.backup.cloudProvider "aws" }}
+                - name: AWS_SHARED_CREDENTIALS_FILE
+                  value: "{{ printf "/credentials/%s" .Values.backup.secretKeyName }}"
+                {{- end }}
+                {{- if .Values.backup.gcpCredentialsFile }}
+                - name: GOOGLE_APPLICATION_CREDENTIALS
+                  value: "{{ .Values.backup.gcpCredentialsFile }}"
+                {{- else if eq .Values.backup.cloudProvider "gcp" }}
+                - name: GOOGLE_APPLICATION_CREDENTIALS
+                  value: "{{ printf "/credentials/%s" .Values.backup.secretKeyName }}"
+                {{- end }}
+                {{- end }}
                 - name: VERBOSE
                   value: {{ .Values.backup.verbose | toString | quote | default true }}
                 - name: COMPRESS

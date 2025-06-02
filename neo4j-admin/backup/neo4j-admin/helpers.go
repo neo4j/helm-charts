@@ -112,7 +112,7 @@ func GetAggregateBackupCommandFlags() []string {
 		flags = append(flags, "--verbose")
 	}
 	for _, db := range strings.Split(database, ",") {
-		flags = append(flags, fmt.Sprintf("%s", db))
+		flags = append(flags, strings.TrimSpace(db))
 	}
 	return flags
 }
