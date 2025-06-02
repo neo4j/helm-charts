@@ -113,7 +113,7 @@ func PerformBackup(address string) ([]string, error) {
 		return nil, fmt.Errorf("Backup Failed for database %s !! output = %s \n err = %v", databases, outputBuffer.String(), err)
 	}
 
-	log.Printf("Backup Completed for database %s !!", databases)
+	log.Printf("Backup completed successfully for database %s", databases)
 	backupFileNames, err := retrieveBackupFileNames(outputBuffer.String())
 	if err != nil {
 		return nil, err
@@ -220,7 +220,7 @@ func PerformAggregateBackup() error {
 		return fmt.Errorf("Aggregate Backup Failed for database %s !! output = %s \n err = %v", database, outputBuffer.String(), err)
 	}
 
-	log.Printf("Aggregate Backup Completed for database %s !!", database)
+	log.Printf("Aggregate backup completed successfully for database %s", database)
 	if !strings.Contains(outputBuffer.String(), "no need to aggregate") {
 		backupFileNames, err := retrieveAggregatedBackupFileNames(outputBuffer.String())
 		if err != nil {
