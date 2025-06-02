@@ -2,10 +2,6 @@ ARG IMAGE
 FROM golang:1.23.8-bullseye as build
 RUN apt-get update && apt-get install -y curl && apt-get remove -y python* && apt-get autoremove -y && apt-get clean
 WORKDIR backup
-COPY backup/aws aws/
-COPY backup/azure azure/
-COPY backup/gcp gcp/
-COPY backup/common common/
 COPY backup/main main/
 COPY backup/neo4j-admin neo4j-admin/
 COPY backup/go.mod go.mod

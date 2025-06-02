@@ -188,6 +188,7 @@ serviceAccountName: ""
 # Note: When using cloud providers (aws/gcp/azure), Neo4j native backup uploads directly to cloud storage
 # For large databases with local backups, you may need persistent storage here
 # The chart defaults to an emptyDir, use this to overwrite default behavior
+
 #tempVolume:
 #  persistentVolumeClaim:
 #    claimName: backup-pvc
