@@ -145,8 +145,8 @@ func PerformConsistencyCheck(database string) (string, error) {
 		log.Printf("Consistency Check Completed !!")
 
 		// For cloud storage, the report is still generated locally
-		tarFileName := fmt.Sprintf("/backups/%s.report.tar.gz", fileName)
-		directoryName := fmt.Sprintf("/backups/%s.report", fileName)
+		tarFileName := fmt.Sprintf("%s/%s.report.tar.gz", getBackupPath(), fileName)
+		directoryName := fmt.Sprintf("%s/%s.report", getBackupPath(), fileName)
 		log.Printf("tarfileName %s directoryName %s", tarFileName, directoryName)
 		_, err = exec.Command("tar", "-czvf", tarFileName, directoryName, "--absolute-names").CombinedOutput()
 		if err != nil {

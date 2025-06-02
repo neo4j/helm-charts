@@ -135,7 +135,11 @@ func startupOperations() {
 	handleError(err)
 
 	// Set backup location - will be overridden for cloud storage in helpers.go
-	os.Setenv("LOCATION", "/backups")
+	backupPath := "/backups"
+	if path := os.Getenv("BACKUP_PATH"); path != "" {
+		backupPath = path
+	}
+	os.Setenv("LOCATION", backupPath)
 }
 
 func handleError(err error) {
@@ -168,16 +172,21 @@ func generateAddress() (string, error) {
 
 func deleteBackupFiles(backupFileNames, consistencyCheckReports []string) error {
 	if value, present := os.LookupEnv("KEEP_BACKUP_FILES"); present && value == "false" {
+		backupPath := "/backups"
+		if path := os.Getenv("BACKUP_PATH"); path != "" {
+			backupPath = path
+		}
+
 		for _, backupFileName := range backupFileNames {
-			log.Printf("Deleting file /backups/%s", backupFileName)
-			err := os.Remove(fmt.Sprintf("/backups/%s", backupFileName))
+			log.Printf("Deleting file %s/%s", backupPath, backupFileName)
+			err := os.Remove(fmt.Sprintf("%s/%s", backupPath, backupFileName))
 			if err != nil {
 				return err
 			}
 		}
 		for _, consistencyCheckReportName := range consistencyCheckReports {
-			log.Printf("Deleting file /backups/%s", consistencyCheckReportName)
-			err := os.Remove(fmt.Sprintf("/backups/%s", consistencyCheckReportName))
+			log.Printf("Deleting file %s/%s", backupPath, consistencyCheckReportName)
+			err := os.Remove(fmt.Sprintf("%s/%s", backupPath, consistencyCheckReportName))
 			if err != nil {
 				return err
 			}

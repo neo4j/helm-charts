@@ -103,7 +103,17 @@ func GetAggregateBackupCommandFlags() []string {
 		flags = append(flags, fmt.Sprintf("--temp-path=%s", aggregateTempDir))
 	}
 
-	flags = append(flags, fmt.Sprintf("--from-path=%s", os.Getenv("AGGREGATE_BACKUP_FROM_PATH")))
+	// Use cloud storage path if cloud provider is configured and AGGREGATE_BACKUP_FROM_PATH is not explicitly set
+	fromPath := os.Getenv("AGGREGATE_BACKUP_FROM_PATH")
+	if fromPath == "" {
+		cloudProvider := os.Getenv("CLOUD_PROVIDER")
+		if cloudProvider != "" {
+			fromPath = getCloudStoragePath()
+		} else {
+			fromPath = getBackupPath()
+		}
+	}
+	flags = append(flags, fmt.Sprintf("--from-path=%s", fromPath))
 	flags = append(flags, fmt.Sprintf("--keep-old-backup=%s", os.Getenv("AGGREGATE_BACKUP_KEEPOLDBACKUP")))
 	flags = append(flags, fmt.Sprintf("--parallel-recovery=%s", os.Getenv("AGGREGATE_BACKUP_PARALLEL_RECOVERY")))
 
