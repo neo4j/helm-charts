@@ -144,6 +144,7 @@ func PerformConsistencyCheck(database string) (string, error) {
 		log.Printf("Inconsistencies found for database %s. Exit code was %d\n", database, me.ExitCode())
 		log.Printf("Consistency Check Completed !!")
 
+		// For cloud storage, the report is still generated locally
 		tarFileName := fmt.Sprintf("/backups/%s.report.tar.gz", fileName)
 		directoryName := fmt.Sprintf("/backups/%s.report", fileName)
 		log.Printf("tarfileName %s directoryName %s", tarFileName, directoryName)

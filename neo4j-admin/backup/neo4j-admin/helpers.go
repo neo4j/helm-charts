@@ -129,14 +129,22 @@ func GetAggregateBackupCommandFlags() []string {
 //	verbose: true
 func getConsistencyCheckCommandFlags(fileName string, database string) []string {
 	flags := []string{"database", "check"}
-	backupPath := getBackupPath()
+
+	// Use cloud storage path if cloud provider is configured, otherwise use local backup path
+	cloudProvider := os.Getenv("CLOUD_PROVIDER")
+	var fromPath string
+	if cloudProvider != "" {
+		fromPath = getCloudStoragePath()
+	} else {
+		fromPath = getBackupPath()
+	}
 
 	flags = append(flags, fmt.Sprintf("--check-indexes=%s", os.Getenv("CONSISTENCY_CHECK_INDEXES")))
 	flags = append(flags, fmt.Sprintf("--check-graph=%s", os.Getenv("CONSISTENCY_CHECK_GRAPH")))
 	flags = append(flags, fmt.Sprintf("--check-counts=%s", os.Getenv("CONSISTENCY_CHECK_COUNTS")))
 	flags = append(flags, fmt.Sprintf("--check-property-owners=%s", os.Getenv("CONSISTENCY_CHECK_PROPERTYOWNERS")))
-	flags = append(flags, fmt.Sprintf("--report-path=%s/%s.report", backupPath, fileName))
-	flags = append(flags, fmt.Sprintf("--from-path=%s", backupPath))
+	flags = append(flags, fmt.Sprintf("--report-path=%s/%s.report", getBackupPath(), fileName))
+	flags = append(flags, fmt.Sprintf("--from-path=%s", fromPath))
 	if len(strings.TrimSpace(os.Getenv("CONSISTENCY_CHECK_THREADS"))) > 0 {
 		flags = append(flags, fmt.Sprintf("--threads=%s", os.Getenv("CONSISTENCY_CHECK_THREADS")))
 	}
