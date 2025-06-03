@@ -2,6 +2,7 @@ package neo4j_admin
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -123,15 +124,12 @@ func PerformBackup(address string) ([]string, error) {
 }
 
 // PerformConsistencyCheck performs the consistency check on the backup taken and returns the generated report tar name
-func PerformConsistencyCheck(database string) (string, error) {
-	// For empty database value, the helpers will use "*", but we need a meaningful filename
-	fileNameDB := database
-	if database == "" || database == "*" {
-		fileNameDB = "all-databases"
+func PerformConsistencyCheck(database string, backupFileName string) (string, error) {
+	// Use the provided backup file name (without .backup extension if present)
+	fileName := strings.TrimSuffix(backupFileName, ".backup")
+	if fileName == "" {
+		return "", fmt.Errorf("backup file name cannot be empty for consistency check")
 	}
-
-	timeStamp := time.Now().Format("2006-01-02T15-04-05")
-	fileName := fmt.Sprintf("%s-%s.backup", fileNameDB, timeStamp)
 
 	// Ensure temp directory exists for cloud storage consistency checks
 	cloudProvider := os.Getenv("CLOUD_PROVIDER")
@@ -147,7 +145,22 @@ func PerformConsistencyCheck(database string) (string, error) {
 
 	flags := getConsistencyCheckCommandFlags(fileName, database)
 	log.Printf("Printing consistency check flags %v", flags)
-	output, err := exec.Command("neo4j-admin", flags...).CombinedOutput()
+
+	log.Printf("Starting consistency check execution for database %s", database)
+
+	// Add timeout to prevent hanging
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "neo4j-admin", flags...)
+	output, err := cmd.CombinedOutput()
+	log.Printf("Consistency check command completed. Output length: %d bytes", len(output))
+	log.Printf("Consistency check output: %s", string(output))
+
+	if ctx.Err() == context.DeadlineExceeded {
+		return "", fmt.Errorf("Consistency check timed out after 10 minutes for database %s", database)
+	}
+
 	if err == nil {
 		log.Printf("No inconsistencies found for database %s !! No Inconsistency report generated.", database)
 		return "", nil

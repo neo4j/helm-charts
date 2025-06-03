@@ -87,9 +87,15 @@ func backupOperations() ([]string, []string, error) {
 
 	// Handle consistency checks if enabled
 	if consistencyCheckEnabled == "true" {
+		if len(backupFileNames) == 0 {
+			return nil, nil, fmt.Errorf("no backup files found, cannot perform consistency check")
+		}
+
 		if len(consistencyCheckDBs) == 1 && consistencyCheckDBs[0] == "" {
-			// Perform consistency check for all databases
-			reportArchiveName, err := neo4jAdmin.PerformConsistencyCheck("")
+			// Perform consistency check for all databases using the first backup file as reference
+			firstBackupFile := backupFileNames[0]
+			baseName := strings.TrimSuffix(firstBackupFile, ".backup")
+			reportArchiveName, err := neo4jAdmin.PerformConsistencyCheck("", baseName)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -103,12 +109,25 @@ func backupOperations() ([]string, []string, error) {
 					continue // Skip empty entries
 				}
 				if slices.Contains(databases, consistencyCheckDB) || slices.Contains(databases, "*") {
-					reportArchiveName, err := neo4jAdmin.PerformConsistencyCheck(consistencyCheckDB)
-					if err != nil {
-						return nil, nil, err
+					// Find the corresponding backup file for this database
+					var matchingBackupFile string
+					for _, backupFile := range backupFileNames {
+						if strings.HasPrefix(backupFile, consistencyCheckDB+"-") {
+							matchingBackupFile = strings.TrimSuffix(backupFile, ".backup")
+							break
+						}
 					}
-					if len(reportArchiveName) != 0 {
-						consistencyCheckReports = append(consistencyCheckReports, reportArchiveName)
+
+					if matchingBackupFile != "" {
+						reportArchiveName, err := neo4jAdmin.PerformConsistencyCheck(consistencyCheckDB, matchingBackupFile)
+						if err != nil {
+							return nil, nil, err
+						}
+						if len(reportArchiveName) != 0 {
+							consistencyCheckReports = append(consistencyCheckReports, reportArchiveName)
+						}
+					} else {
+						log.Printf("Warning: No backup file found for database %s, skipping consistency check", consistencyCheckDB)
 					}
 				}
 			}
