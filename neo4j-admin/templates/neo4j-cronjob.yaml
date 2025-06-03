@@ -119,6 +119,8 @@ spec:
                   value: {{ .Values.backup.s3ForcePathStyle | toString | quote | default true }}
                 - name: AWS_REGION
                   value: "{{ .Values.backup.s3Region | default "" }}"
+                - name: AWS_DEFAULT_REGION
+                  value: "{{ .Values.backup.s3Region | default "" }}"
                 - name: S3_SIGNATURE_VERSION
                   value: "{{ .Values.backup.s3SignatureVersion | default "" }}"
                 - name: CONSISTENCY_CHECK_ENABLE

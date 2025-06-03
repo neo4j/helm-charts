@@ -140,6 +140,29 @@ func PerformConsistencyCheck(database string, backupFileName string) (string, er
 		}
 		if err := os.MkdirAll(tempPath, 0755); err != nil {
 			log.Printf("Warning: Failed to create temp directory %s: %v", tempPath, err)
+		} else {
+			log.Printf("Created consistency check temp directory: %s", tempPath)
+		}
+
+		// For AWS, verify that required environment variables are set
+		if cloudProvider == "aws" {
+			awsRegion := os.Getenv("AWS_REGION")
+			awsDefaultRegion := os.Getenv("AWS_DEFAULT_REGION")
+			awsCredsFile := os.Getenv("AWS_SHARED_CREDENTIALS_FILE")
+			bucketName := os.Getenv("BUCKET_NAME")
+
+			log.Printf("AWS configuration for consistency check:")
+			log.Printf("  AWS_REGION: %s", awsRegion)
+			log.Printf("  AWS_DEFAULT_REGION: %s", awsDefaultRegion)
+			log.Printf("  AWS_SHARED_CREDENTIALS_FILE: %s", awsCredsFile)
+			log.Printf("  BUCKET_NAME: %s", bucketName)
+
+			if awsRegion == "" && awsDefaultRegion == "" {
+				log.Printf("Warning: No AWS region configured, this might cause consistency check to fail")
+			}
+			if awsCredsFile == "" {
+				log.Printf("Warning: No AWS credentials file configured, this might cause consistency check to fail")
+			}
 		}
 	}
 
@@ -148,17 +171,73 @@ func PerformConsistencyCheck(database string, backupFileName string) (string, er
 
 	log.Printf("Starting consistency check execution for database %s", database)
 
-	// Add timeout to prevent hanging
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	// Increase timeout to 30 minutes for cloud storage consistency checks
+	timeout := 30 * time.Minute
+	if cloudProvider != "" {
+		log.Printf("Using extended timeout of %v for cloud storage consistency check", timeout)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "neo4j-admin", flags...)
-	output, err := cmd.CombinedOutput()
-	log.Printf("Consistency check command completed. Output length: %d bytes", len(output))
-	log.Printf("Consistency check output: %s", string(output))
+
+	// Log the exact command being executed
+	log.Printf("Executing command: neo4j-admin %s", strings.Join(flags, " "))
+
+	// Create pipes for stdout and stderr to get real-time output
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return "", fmt.Errorf("Failed to create stdout pipe: %v", err)
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return "", fmt.Errorf("Failed to create stderr pipe: %v", err)
+	}
+
+	// Start the command
+	if err := cmd.Start(); err != nil {
+		return "", fmt.Errorf("Failed to start consistency check command: %v", err)
+	}
+
+	var outputBuffer strings.Builder
+	stdoutDone := make(chan bool)
+	stderrDone := make(chan bool)
+
+	// Start goroutine to read and stream stdout
+	go func() {
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			line := scanner.Text()
+			log.Printf("CONSISTENCY_CHECK_STDOUT: %s", line)
+			outputBuffer.WriteString(line + "\n")
+		}
+		stdoutDone <- true
+	}()
+
+	// Start goroutine to read and stream stderr
+	go func() {
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			line := scanner.Text()
+			log.Printf("CONSISTENCY_CHECK_STDERR: %s", line)
+			outputBuffer.WriteString(line + "\n")
+		}
+		stderrDone <- true
+	}()
+
+	// Wait for both stdout and stderr to be fully read
+	<-stdoutDone
+	<-stderrDone
+
+	// Wait for the command to complete
+	err = cmd.Wait()
+
+	log.Printf("Consistency check command completed. Output length: %d bytes", len(outputBuffer.String()))
+	log.Printf("Consistency check output: %s", outputBuffer.String())
 
 	if ctx.Err() == context.DeadlineExceeded {
-		return "", fmt.Errorf("Consistency check timed out after 10 minutes for database %s", database)
+		return "", fmt.Errorf("Consistency check timed out after %v for database %s", timeout, database)
 	}
 
 	if err == nil {
@@ -176,12 +255,12 @@ func PerformConsistencyCheck(database string, backupFileName string) (string, er
 		log.Printf("tarfileName %s directoryName %s", tarFileName, directoryName)
 		_, err = exec.Command("tar", "-czvf", tarFileName, directoryName, "--absolute-names").CombinedOutput()
 		if err != nil {
-			return "", fmt.Errorf("Unable to create a tar archive of consistency check report for database %s !! \n output = %s \n err = %v", database, string(output), err)
+			return "", fmt.Errorf("Unable to create a tar archive of consistency check report for database %s !! \n output = %s \n err = %v", database, outputBuffer.String(), err)
 		}
 		log.Printf("Consistency Check Report tar archive created for database %s at %s !!", database, tarFileName)
 		return fmt.Sprintf("%s.report.tar.gz", fileName), nil
 	}
-	return "", fmt.Errorf("Consistency Check Failed for database %s!! \n output = %s \n err = %v", database, string(output), err)
+	return "", fmt.Errorf("Consistency Check Failed for database %s!! \n output = %s \n err = %v", database, outputBuffer.String(), err)
 }
 
 // PerformAggregateBackup triggers the neo4j-admin aggregate backup command
