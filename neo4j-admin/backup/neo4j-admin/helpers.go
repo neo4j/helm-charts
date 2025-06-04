@@ -142,21 +142,20 @@ func getConsistencyCheckCommandFlags(fileName string, database string) []string 
 
 	// Use cloud storage path if cloud provider is configured, otherwise use local backup path
 	cloudProvider := os.Getenv("CLOUD_PROVIDER")
-	var fromPath string
 	if cloudProvider != "" {
-		// For cloud storage, we need to specify the exact backup file path
-		cloudStorageBasePath := getCloudStoragePath()
-		fromPath = fmt.Sprintf("%s%s.backup", cloudStorageBasePath, fileName)
-
 		// For cloud storage, Neo4j requires a temp path to unpack backups for consistency checking
 		tempPath := os.Getenv("CONSISTENCY_CHECK_TEMP_DIR")
 		if tempPath == "" {
 			tempPath = filepath.Join(getBackupPath(), "consistency-temp")
 		}
 		flags = append(flags, fmt.Sprintf("--temp-path=%s", tempPath))
+
+		// For cloud storage, specify the cloud storage base path and let Neo4j find the backup
+		cloudStorageBasePath := getCloudStoragePath()
+		flags = append(flags, fmt.Sprintf("--from-path=%s", cloudStorageBasePath))
 	} else {
 		// For local storage, use the backup directory
-		fromPath = fmt.Sprintf("%s/%s.backup", getBackupPath(), fileName)
+		flags = append(flags, fmt.Sprintf("--from-path=%s", getBackupPath()))
 	}
 
 	flags = append(flags, fmt.Sprintf("--check-indexes=%s", os.Getenv("CONSISTENCY_CHECK_INDEXES")))
@@ -164,7 +163,7 @@ func getConsistencyCheckCommandFlags(fileName string, database string) []string 
 	flags = append(flags, fmt.Sprintf("--check-counts=%s", os.Getenv("CONSISTENCY_CHECK_COUNTS")))
 	flags = append(flags, fmt.Sprintf("--check-property-owners=%s", os.Getenv("CONSISTENCY_CHECK_PROPERTYOWNERS")))
 	flags = append(flags, fmt.Sprintf("--report-path=%s/%s.report", getBackupPath(), fileName))
-	flags = append(flags, fmt.Sprintf("--from-path=%s", fromPath))
+
 	if len(strings.TrimSpace(os.Getenv("CONSISTENCY_CHECK_THREADS"))) > 0 {
 		flags = append(flags, fmt.Sprintf("--threads=%s", os.Getenv("CONSISTENCY_CHECK_THREADS")))
 	}
@@ -176,12 +175,13 @@ func getConsistencyCheckCommandFlags(fileName string, database string) []string 
 	}
 	//flags = append(flags, "--expand-commands")
 
-	// Only append database if it's not empty
-	if database != "" {
+	// For consistency check, we need to specify the backup file name (without .backup extension)
+	// followed by the database name
+	flags = append(flags, fileName)
+
+	// Only append database if it's not empty and different from the backup file name
+	if database != "" && database != fileName {
 		flags = append(flags, database)
-	} else {
-		// Use "*" to indicate all databases when an empty string is provided
-		flags = append(flags, "*")
 	}
 
 	return flags
