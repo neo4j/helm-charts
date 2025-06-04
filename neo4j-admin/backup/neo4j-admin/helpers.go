@@ -175,12 +175,13 @@ func getConsistencyCheckCommandFlags(fileName string, database string) []string 
 	}
 	//flags = append(flags, "--expand-commands")
 
-	// For consistency check, we need to specify the backup file name (without .backup extension)
-	// followed by the database name
-	flags = append(flags, fileName)
+	// For consistency check, specify the backup file name (with .backup extension)
+	// This tells Neo4j which backup file to check within the from-path
+	backupFileName := fmt.Sprintf("%s.backup", fileName)
+	flags = append(flags, backupFileName)
 
-	// Only append database if it's not empty and different from the backup file name
-	if database != "" && database != fileName {
+	// Append the database name to check within the backup
+	if database != "" {
 		flags = append(flags, database)
 	}
 

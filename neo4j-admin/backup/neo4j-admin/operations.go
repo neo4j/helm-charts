@@ -168,6 +168,10 @@ func PerformConsistencyCheck(database string, backupFileName string) (string, er
 
 	flags := getConsistencyCheckCommandFlags(fileName, database)
 	log.Printf("Printing consistency check flags %v", flags)
+	log.Printf("Individual flags:")
+	for i, flag := range flags {
+		log.Printf("  [%d]: %s", i, flag)
+	}
 
 	log.Printf("Starting consistency check execution for database %s", database)
 	log.Printf("Backup file name: %s", fileName)
