@@ -144,7 +144,10 @@ func getConsistencyCheckCommandFlags(fileName string, database string) []string 
 	cloudProvider := os.Getenv("CLOUD_PROVIDER")
 	var fromPath string
 	if cloudProvider != "" {
-		fromPath = getCloudStoragePath()
+		// For cloud storage, we need to specify the exact backup file path
+		cloudStorageBasePath := getCloudStoragePath()
+		fromPath = fmt.Sprintf("%s%s.backup", cloudStorageBasePath, fileName)
+
 		// For cloud storage, Neo4j requires a temp path to unpack backups for consistency checking
 		tempPath := os.Getenv("CONSISTENCY_CHECK_TEMP_DIR")
 		if tempPath == "" {
@@ -152,7 +155,8 @@ func getConsistencyCheckCommandFlags(fileName string, database string) []string 
 		}
 		flags = append(flags, fmt.Sprintf("--temp-path=%s", tempPath))
 	} else {
-		fromPath = getBackupPath()
+		// For local storage, use the backup directory
+		fromPath = fmt.Sprintf("%s/%s.backup", getBackupPath(), fileName)
 	}
 
 	flags = append(flags, fmt.Sprintf("--check-indexes=%s", os.Getenv("CONSISTENCY_CHECK_INDEXES")))

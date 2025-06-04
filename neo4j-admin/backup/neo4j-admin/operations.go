@@ -170,6 +170,8 @@ func PerformConsistencyCheck(database string, backupFileName string) (string, er
 	log.Printf("Printing consistency check flags %v", flags)
 
 	log.Printf("Starting consistency check execution for database %s", database)
+	log.Printf("Backup file name: %s", fileName)
+	log.Printf("Cloud provider: %s", cloudProvider)
 
 	// Increase timeout to 30 minutes for cloud storage consistency checks
 	timeout := 30 * time.Minute
@@ -184,6 +186,7 @@ func PerformConsistencyCheck(database string, backupFileName string) (string, er
 
 	// Log the exact command being executed
 	log.Printf("Executing command: neo4j-admin %s", strings.Join(flags, " "))
+	log.Printf("Working directory: %s", getBackupPath())
 
 	// Create pipes for stdout and stderr to get real-time output
 	stdout, err := cmd.StdoutPipe()
@@ -212,6 +215,7 @@ func PerformConsistencyCheck(database string, backupFileName string) (string, er
 			log.Printf("CONSISTENCY_CHECK_STDOUT: %s", line)
 			outputBuffer.WriteString(line + "\n")
 		}
+		log.Printf("CONSISTENCY_CHECK: stdout reading completed")
 		stdoutDone <- true
 	}()
 
@@ -223,15 +227,20 @@ func PerformConsistencyCheck(database string, backupFileName string) (string, er
 			log.Printf("CONSISTENCY_CHECK_STDERR: %s", line)
 			outputBuffer.WriteString(line + "\n")
 		}
+		log.Printf("CONSISTENCY_CHECK: stderr reading completed")
 		stderrDone <- true
 	}()
 
 	// Wait for both stdout and stderr to be fully read
+	log.Printf("CONSISTENCY_CHECK: waiting for stdout and stderr to complete")
 	<-stdoutDone
 	<-stderrDone
+	log.Printf("CONSISTENCY_CHECK: stdout and stderr reading completed")
 
 	// Wait for the command to complete
+	log.Printf("CONSISTENCY_CHECK: waiting for command to complete")
 	err = cmd.Wait()
+	log.Printf("CONSISTENCY_CHECK: command completed with error: %v", err)
 
 	log.Printf("Consistency check command completed. Output length: %d bytes", len(outputBuffer.String()))
 	log.Printf("Consistency check output: %s", outputBuffer.String())
