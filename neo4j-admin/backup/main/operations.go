@@ -192,17 +192,17 @@ func loadAzureCredentialsFromFile() {
 	credentialsContent := string(content)
 	log.Printf("Loading Azure credentials from file: %s", credentialPath)
 
-	// Parse AZURE_STORAGE_ACCOUNT_NAME using regex
+	// Parse AZURE_STORAGE_ACCOUNT using regex
 	storageAccountName, err := extractAzureStorageAccountName(credentialsContent)
 	if err != nil {
-		log.Printf("Warning: Failed to extract AZURE_STORAGE_ACCOUNT_NAME from credentials file: %v", err)
+		log.Printf("Warning: Failed to extract Azure storage account from credentials file: %v", err)
 		return
 	}
 
-	// Parse AZURE_STORAGE_ACCOUNT_KEY using regex
+	// Parse AZURE_STORAGE_KEY using regex
 	storageAccountKey, err := extractAzureStorageAccountKey(credentialsContent)
 	if err != nil {
-		log.Printf("Warning: Failed to extract AZURE_STORAGE_ACCOUNT_KEY from credentials file: %v", err)
+		log.Printf("Warning: Failed to extract Azure storage key from credentials file: %v", err)
 		return
 	}
 
@@ -216,20 +216,20 @@ func loadAzureCredentialsFromFile() {
 
 // extractAzureStorageAccountName extracts the storage account name from credentials file content
 func extractAzureStorageAccountName(content string) (string, error) {
-	re := regexp.MustCompile(`AZURE_STORAGE_ACCOUNT_NAME=(.*)`)
+	re := regexp.MustCompile(`AZURE_STORAGE_ACCOUNT=(.*)`)
 	matches := re.FindStringSubmatch(content)
 	if len(matches) < 2 {
-		return "", fmt.Errorf("AZURE_STORAGE_ACCOUNT_NAME not found in credentials file")
+		return "", fmt.Errorf("AZURE_STORAGE_ACCOUNT not found in credentials file")
 	}
 	return strings.TrimSpace(matches[1]), nil
 }
 
 // extractAzureStorageAccountKey extracts the storage account key from credentials file content
 func extractAzureStorageAccountKey(content string) (string, error) {
-	re := regexp.MustCompile(`AZURE_STORAGE_ACCOUNT_KEY=(.*)`)
+	re := regexp.MustCompile(`AZURE_STORAGE_KEY=(.*)`)
 	matches := re.FindStringSubmatch(content)
 	if len(matches) < 2 {
-		return "", fmt.Errorf("AZURE_STORAGE_ACCOUNT_KEY not found in credentials file")
+		return "", fmt.Errorf("AZURE_STORAGE_KEY not found in credentials file")
 	}
 	return strings.TrimSpace(matches[1]), nil
 }

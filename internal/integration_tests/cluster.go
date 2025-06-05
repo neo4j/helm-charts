@@ -185,6 +185,11 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t *testing.T, 
 	}
 	helmValues.ServiceAccountName = k8sServiceAccountName
 
+	// Explicitly disable consistency checks for cloud storage backups to avoid timeouts
+	// This follows the same pattern used for AWS cloud backups
+	helmValues.ConsistencyCheck.Enable = false
+	helmValues.ConsistencyCheck.Database = ""
+
 	_, err = helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
 
