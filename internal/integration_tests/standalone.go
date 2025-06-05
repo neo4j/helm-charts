@@ -1602,7 +1602,6 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 	helmValues.ReverseProxy.ServiceName = fmt.Sprintf("%s-admin", standaloneReleaseName.String())
 	helmValues.ReverseProxy.Namespace = namespace
 
-	//installing nginx ingress controller
 	err := run(t, "helm", "upgrade", "--install", "ingress-nginx", "ingress-nginx", "--repo", "https://kubernetes.github.io/ingress-nginx", "--namespace", "ingress-nginx", "--create-namespace")
 	assert.NoError(t, err)
 	time.Sleep(1 * time.Minute)
