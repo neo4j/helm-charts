@@ -13,7 +13,6 @@ import (
 	"math/big"
 	"os"
 	"os/exec"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -181,6 +180,7 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t *testing.T, 
 		KeepBackupFiles:          true,
 	}
 	helmValues.ServiceAccountName = k8sServiceAccountName
+	helmValues.ConsistencyCheck.Database = "neo4j" // Enable consistency check
 
 	_, err = helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
@@ -190,25 +190,76 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t *testing.T, 
 	assert.NoError(t, err, "cannot retrieve gcp backup cronjob")
 	assert.Equal(t, cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule, fmt.Sprintf("gcp cronjob schedule %s not matching with the schedule defined in values.yaml %s", cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule))
 
-	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
-	assert.NoError(t, err, "error while retrieving pod list during gcp backup operation")
-
+	// Poll for backup completion with consistency check - use longer timeout for cloud storage
+	deadline := time.Now().Add(35 * time.Minute) // Allow extra time beyond the 30-minute consistency check timeout
 	var found bool
-	for _, pod := range pods.Items {
-		if strings.Contains(pod.Name, "gcp-workload") {
-			found = true
-			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
-			assert.NoError(t, err, "error while getting gcp workload backup pod logs")
-			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
-			assert.Contains(t, string(out), "Backup completed successfully")
-			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
-			assert.NotContains(t, string(out), "Deleting file")
-			break
+	var logOutput string
+
+	for !time.Now().After(deadline) {
+		pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
+		if err != nil {
+			t.Logf("Error retrieving pod list: %v", err)
+			time.Sleep(30 * time.Second)
+			continue
+		}
+
+		found = false
+		for _, pod := range pods.Items {
+			if strings.Contains(pod.Name, "gcp-workload") {
+				found = true
+				out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
+				if err != nil {
+					t.Logf("Error getting pod logs: %v", err)
+					time.Sleep(30 * time.Second)
+					continue
+				}
+
+				logOutput = string(out)
+
+				// Check if backup completed successfully
+				if !strings.Contains(logOutput, "Backup completed successfully") {
+					t.Logf("Backup not yet completed, waiting...")
+					time.Sleep(30 * time.Second)
+					continue
+				}
+
+				// Check if consistency check completed (either success or failure)
+				if strings.Contains(logOutput, "No inconsistencies found") {
+					t.Logf("Consistency check completed successfully")
+					assert.NotContains(t, logOutput, "Deleting file")
+					return nil
+				} else if strings.Contains(logOutput, "Consistency Check Failed") || strings.Contains(logOutput, "Consistency check timed out") {
+					t.Logf("Consistency check failed or timed out")
+					assert.Fail(t, "Consistency check failed", "Consistency check failed or timed out. Logs: %s", logOutput)
+					return fmt.Errorf("consistency check failed")
+				} else if strings.Contains(logOutput, "CONSISTENCY_CHECK: command completed") {
+					// Check if the command completed but we haven't seen the final result yet
+					t.Logf("Consistency check command completed, waiting for final result...")
+					time.Sleep(10 * time.Second)
+					continue
+				} else {
+					// Consistency check is still running
+					t.Logf("Consistency check still in progress, waiting...")
+					time.Sleep(30 * time.Second)
+					continue
+				}
+			}
+		}
+
+		if !found {
+			t.Logf("No backup pod found yet, waiting...")
+			time.Sleep(30 * time.Second)
 		}
 	}
-	assert.Equal(t, true, found, "no gcp workload backup pod found")
 
-	return nil
+	if !found {
+		assert.Fail(t, "No GCP backup pod found after timeout")
+		return fmt.Errorf("no gcp workload backup pod found")
+	}
+
+	// If we reach here, we timed out waiting for consistency check
+	assert.Fail(t, "Consistency check did not complete within timeout", "Final logs: %s", logOutput)
+	return fmt.Errorf("consistency check did not complete within 35 minutes")
 }
 
 // InstallNeo4jBackupAWSHelmChartWithNodeSelector installs backup cronjob using the given nodeselector labels
@@ -290,24 +341,76 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 	nodeSelectorNode, err := getNodeWithLabel(fmt.Sprintf("testLabel=%s-5", namespace))
 	assert.NoError(t, err)
 
-	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
-	assert.NoError(t, err, "error while retrieving pod list during aws backup operation")
-
+	// Poll for backup completion with consistency check - use longer timeout for cloud storage
+	deadline := time.Now().Add(35 * time.Minute) // Allow extra time beyond the 30-minute consistency check timeout
 	var found bool
-	for _, pod := range pods.Items {
-		if strings.Contains(pod.Name, "cluster-backup-aws") {
-			found = true
-			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
-			assert.NoError(t, err, "error while getting aws backup pod logs")
-			assert.NotNil(t, out, "aws backup logs cannot be retrieved")
-			assert.Contains(t, string(out), "Backup completed successfully")
-			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
-			assert.Equal(t, nodeSelectorNode.Name, pod.Spec.NodeName, fmt.Sprintf("backup pod %s is not scheduled on the correct node %s", pod.Spec.NodeName, nodeSelectorNode.Name))
-			break
+	var logOutput string
+
+	for !time.Now().After(deadline) {
+		pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
+		if err != nil {
+			t.Logf("Error retrieving pod list: %v", err)
+			time.Sleep(30 * time.Second)
+			continue
+		}
+
+		found = false
+		for _, pod := range pods.Items {
+			if strings.Contains(pod.Name, "cluster-backup-aws") {
+				found = true
+				out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
+				if err != nil {
+					t.Logf("Error getting pod logs: %v", err)
+					time.Sleep(30 * time.Second)
+					continue
+				}
+
+				logOutput = string(out)
+
+				// Check if backup completed successfully
+				if !strings.Contains(logOutput, "Backup completed successfully") {
+					t.Logf("Backup not yet completed, waiting...")
+					time.Sleep(30 * time.Second)
+					continue
+				}
+
+				// Check if consistency check completed (either success or failure)
+				if strings.Contains(logOutput, "No inconsistencies found") {
+					t.Logf("Consistency check completed successfully")
+					assert.Equal(t, nodeSelectorNode.Name, pod.Spec.NodeName, fmt.Sprintf("backup pod %s is not scheduled on the correct node %s", pod.Spec.NodeName, nodeSelectorNode.Name))
+					return nil
+				} else if strings.Contains(logOutput, "Consistency Check Failed") || strings.Contains(logOutput, "Consistency check timed out") {
+					t.Logf("Consistency check failed or timed out")
+					assert.Fail(t, "Consistency check failed", "Consistency check failed or timed out. Logs: %s", logOutput)
+					return fmt.Errorf("consistency check failed")
+				} else if strings.Contains(logOutput, "CONSISTENCY_CHECK: command completed") {
+					// Check if the command completed but we haven't seen the final result yet
+					t.Logf("Consistency check command completed, waiting for final result...")
+					time.Sleep(10 * time.Second)
+					continue
+				} else {
+					// Consistency check is still running
+					t.Logf("Consistency check still in progress, waiting...")
+					time.Sleep(30 * time.Second)
+					continue
+				}
+			}
+		}
+
+		if !found {
+			t.Logf("No backup pod found yet, waiting...")
+			time.Sleep(30 * time.Second)
 		}
 	}
-	assert.Equal(t, true, found, "no aws backup pod found")
-	return nil
+
+	if !found {
+		assert.Fail(t, "No AWS backup pod found after timeout")
+		return fmt.Errorf("no aws backup pod found")
+	}
+
+	// If we reach here, we timed out waiting for consistency check
+	assert.Fail(t, "Consistency check did not complete within timeout", "Final logs: %s", logOutput)
+	return fmt.Errorf("consistency check did not complete within 35 minutes")
 }
 
 func InstallNeo4jBackupAWSHelmChartViaS3(t *testing.T, releaseName model.ReleaseName) error {
