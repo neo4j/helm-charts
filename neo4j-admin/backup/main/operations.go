@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 
 	neo4jAdmin "github.com/neo4j/helm-charts/neo4j-admin/backup/neo4j-admin"
@@ -147,6 +148,11 @@ func aggregateBackupOperations() error {
 }
 
 func startupOperations() {
+	// Load Azure credentials from file if using secret-based authentication
+	if os.Getenv("CLOUD_PROVIDER") == "azure" && os.Getenv("CREDENTIAL_PATH") != "" {
+		loadAzureCredentialsFromFile()
+	}
+
 	address, err := generateAddress()
 	handleError(err)
 
@@ -159,6 +165,68 @@ func startupOperations() {
 		backupPath = path
 	}
 	os.Setenv("LOCATION", backupPath)
+}
+
+// loadAzureCredentialsFromFile reads Azure credentials from the mounted secret file
+// and sets the appropriate environment variables
+func loadAzureCredentialsFromFile() {
+	credentialPath := os.Getenv("CREDENTIAL_PATH")
+	if credentialPath == "" {
+		log.Printf("Warning: CREDENTIAL_PATH not set for Azure, skipping credential file loading")
+		return
+	}
+
+	log.Printf("Loading Azure credentials from file: %s", credentialPath)
+
+	// Read the credentials file
+	content, err := os.ReadFile(credentialPath)
+	if err != nil {
+		log.Printf("Warning: Failed to read Azure credentials file %s: %v", credentialPath, err)
+		return
+	}
+
+	// Parse AZURE_STORAGE_ACCOUNT_NAME using regex (consistent with dev branch approach)
+	storageAccountName, err := extractAzureStorageAccountName(string(content))
+	if err != nil {
+		log.Printf("Warning: Failed to extract AZURE_STORAGE_ACCOUNT_NAME: %v", err)
+	} else {
+		os.Setenv("AZURE_STORAGE_ACCOUNT_NAME", storageAccountName)
+		log.Printf("Set AZURE_STORAGE_ACCOUNT_NAME from credentials file")
+	}
+
+	// Parse AZURE_STORAGE_ACCOUNT_KEY using regex (consistent with dev branch approach)
+	storageAccountKey, err := extractAzureStorageAccountKey(string(content))
+	if err != nil {
+		log.Printf("Warning: Failed to extract AZURE_STORAGE_ACCOUNT_KEY: %v", err)
+	} else {
+		os.Setenv("AZURE_STORAGE_ACCOUNT_KEY", storageAccountKey)
+		log.Printf("Set AZURE_STORAGE_ACCOUNT_KEY from credentials file")
+	}
+}
+
+// extractAzureStorageAccountName extracts the storage account name from Azure credentials file
+func extractAzureStorageAccountName(data string) (string, error) {
+	re := regexp.MustCompile(`AZURE_STORAGE_ACCOUNT_NAME=(.*)`)
+	matches := re.FindStringSubmatch(data)
+	if len(matches) == 0 {
+		return "", fmt.Errorf("missing azure storage account name")
+	} else if len(matches) > 2 {
+		return "", fmt.Errorf("more than one azure storage account name found: %v", matches)
+	}
+	// FindStringSubmatch returns the complete string and then the matches, hence index 1 is the first match
+	return strings.TrimSpace(matches[1]), nil
+}
+
+// extractAzureStorageAccountKey extracts the storage account key from Azure credentials file
+func extractAzureStorageAccountKey(data string) (string, error) {
+	re := regexp.MustCompile(`AZURE_STORAGE_ACCOUNT_KEY=(.*)`)
+	matches := re.FindStringSubmatch(data)
+	if len(matches) == 0 {
+		return "", fmt.Errorf("missing storage account key")
+	} else if len(matches) > 2 {
+		return "", fmt.Errorf("more than one storage account key found: %v", matches)
+	}
+	return strings.TrimSpace(matches[1]), nil
 }
 
 func handleError(err error) {
