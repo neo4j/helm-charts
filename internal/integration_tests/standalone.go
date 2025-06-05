@@ -1567,12 +1567,14 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t *testing.T, standalone
 			logOutput := string(out)
 			// Check for connectivity and initialization logs
 			assert.Contains(t, logOutput, "Connectivity established with Database")
-			assert.Contains(t, logOutput, "Credential Path is /credentials/")
+
 			assert.Contains(t, logOutput, "Printing backup flags")
 			// Check backup command parameters
 			assert.Contains(t, logOutput, "--include-metadata=all")
 			assert.Contains(t, logOutput, "--type=FULL")
 			assert.Contains(t, logOutput, "neo4j system")
+			// Check that backup completed successfully
+			assert.Contains(t, logOutput, "Backup completed successfully")
 			break
 		}
 	}
