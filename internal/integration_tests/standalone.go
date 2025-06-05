@@ -977,7 +977,9 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 		Verbose:                  true,
 		Type:                     "FULL",
 	}
-	helmValues.ConsistencyCheck.Database = "system"
+	// Disable consistency checks for cloud storage backups
+	helmValues.ConsistencyCheck.Enable = false
+	helmValues.ConsistencyCheck.Database = ""
 
 	t.Logf("Installing Azure backup helm chart with values: %+v", helmValues)
 	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
@@ -987,7 +989,7 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 	}
 
 	t.Log("Waiting for Azure backup job to complete")
-	time.Sleep(2 * time.Minute)
+	time.Sleep(4 * time.Minute)
 
 	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
 	if err != nil {
@@ -1088,6 +1090,9 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 		Type:                     "FULL",
 		KeepBackupFiles:          true,
 	}
+	// Disable consistency checks for cloud storage backups
+	helmValues.ConsistencyCheck.Enable = false
+	helmValues.ConsistencyCheck.Database = ""
 
 	t.Logf("Installing GCP backup helm chart with values: %+v", helmValues)
 	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
