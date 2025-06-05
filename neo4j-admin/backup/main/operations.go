@@ -168,46 +168,50 @@ func startupOperations() {
 }
 
 // loadAzureCredentialsFromFile reads Azure credentials from the mounted secret file
-// and sets the appropriate environment variables
+// and sets the environment variables that Neo4j's Azure client expects
 func loadAzureCredentialsFromFile() {
-	credentialsFile := "/etc/neo4j-backup-credentials/credentials"
+	credentialPath := os.Getenv("CREDENTIAL_PATH")
+	if credentialPath == "" {
+		log.Printf("Warning: CREDENTIAL_PATH not set for Azure, skipping credential file loading")
+		return
+	}
 
 	// Check if credentials file exists
-	if _, err := os.Stat(credentialsFile); os.IsNotExist(err) {
-		log.Printf("Azure credentials file not found at %s, skipping credential loading", credentialsFile)
+	if _, err := os.Stat(credentialPath); os.IsNotExist(err) {
+		log.Printf("Azure credentials file not found at %s, skipping credential loading", credentialPath)
 		return
 	}
 
 	// Read the credentials file
-	content, err := os.ReadFile(credentialsFile)
+	content, err := os.ReadFile(credentialPath)
 	if err != nil {
-		log.Printf("Warning: Failed to read Azure credentials file: %v", err)
+		log.Printf("Warning: Failed to read Azure credentials file %s: %v", credentialPath, err)
 		return
 	}
 
 	credentialsContent := string(content)
-	log.Printf("Loading Azure credentials from file...")
+	log.Printf("Loading Azure credentials from file: %s", credentialPath)
 
 	// Parse AZURE_STORAGE_ACCOUNT_NAME using regex
 	storageAccountName, err := extractAzureStorageAccountName(credentialsContent)
 	if err != nil {
 		log.Printf("Warning: Failed to extract AZURE_STORAGE_ACCOUNT_NAME from credentials file: %v", err)
+		return
 	}
 
 	// Parse AZURE_STORAGE_ACCOUNT_KEY using regex
 	storageAccountKey, err := extractAzureStorageAccountKey(credentialsContent)
 	if err != nil {
 		log.Printf("Warning: Failed to extract AZURE_STORAGE_ACCOUNT_KEY from credentials file: %v", err)
+		return
 	}
 
-	if storageAccountName != "" && storageAccountKey != "" {
-		// Set Neo4j's expected environment variable names
-		os.Setenv("AZURE_STORAGE_ACCOUNT", storageAccountName)
-		os.Setenv("AZURE_STORAGE_KEY", storageAccountKey)
+	// Set Neo4j's expected environment variable names
+	os.Setenv("AZURE_STORAGE_ACCOUNT", storageAccountName)
+	os.Setenv("AZURE_STORAGE_KEY", storageAccountKey)
 
-		log.Printf("Set AZURE_STORAGE_ACCOUNT from credentials file")
-		log.Printf("Set AZURE_STORAGE_KEY from credentials file")
-	}
+	log.Printf("Set AZURE_STORAGE_ACCOUNT from credentials file")
+	log.Printf("Set AZURE_STORAGE_KEY from credentials file")
 }
 
 // extractAzureStorageAccountName extracts the storage account name from credentials file content
