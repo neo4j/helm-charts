@@ -289,7 +289,7 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 	assert.NoError(t, err)
 
 	// Poll for backup completion with consistency check - use longer timeout for cloud storage
-	deadline := time.Now().Add(10 * time.Minute) // Allow reasonable time for consistency check
+	deadline := time.Now().Add(20 * time.Minute) // Allow reasonable time for consistency check
 	var found bool
 	var logOutput string
 
