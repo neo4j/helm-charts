@@ -13,8 +13,8 @@ if [ -f ./devenv.local ]; then
     export AWS_SECRET_ACCESS_KEY
 
     # Azure storage
-    export AZURE_STORAGE_ACCOUNT_KEY
-    export AZURE_STORAGE_ACCOUNT_NAME
+    export AZURE_STORAGE_KEY
+    export AZURE_STORAGE_ACCOUNT
 
     # Bloom license
     export BLOOM_LICENSE

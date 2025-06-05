@@ -105,7 +105,7 @@ spec:
                   value: {{ .Values.backup.verbose | toString | quote | default true }}
                 - name: COMPRESS
                   value: {{ .Values.backup.compress | toString | quote | default true}}
-                - name: AZURE_STORAGE_ACCOUNT_NAME
+                - name: AZURE_STORAGE_ACCOUNT
                   value: "{{ .Values.backup.azureStorageAccountName | default "" }}"
                 - name: S3_ENDPOINT
                   value: "{{ .Values.backup.s3Endpoint | default .Values.backup.minioEndpoint | default "" }}"

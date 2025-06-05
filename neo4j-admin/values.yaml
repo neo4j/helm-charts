@@ -113,8 +113,8 @@ backup:
   # add the storage account name and key in below format in a file create a secret via
   # 'kubectl create secret generic azurecred --from-file=credentials=/demo/azurecredentials'
 
-  #  AZURE_STORAGE_ACCOUNT_NAME=XXXX
-  #  AZURE_STORAGE_ACCOUNT_KEY=XXXX
+  #  AZURE_STORAGE_ACCOUNT=XXXX
+  #  AZURE_STORAGE_KEY=XXXX
 
   # For GCP :
   # create the secret via the gcp service account json key file.

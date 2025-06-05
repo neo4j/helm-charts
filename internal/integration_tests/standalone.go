@@ -179,7 +179,7 @@ region = us-east-1
 }
 
 func createAzureCredFile(dirName string) (string, error) {
-	fileContent := fmt.Sprintf("AZURE_STORAGE_ACCOUNT_NAME=%s\nAZURE_STORAGE_ACCOUNT_KEY=%s", os.Getenv("AZURE_STORAGE_ACCOUNT_NAME"), os.Getenv("AZURE_STORAGE_ACCOUNT_KEY"))
+	fileContent := fmt.Sprintf("AZURE_STORAGE_ACCOUNT=%s\nAZURE_STORAGE_KEY=%s", os.Getenv("AZURE_STORAGE_ACCOUNT"), os.Getenv("AZURE_STORAGE_KEY"))
 	filePath := fmt.Sprintf("%s/azurecredentials", dirName)
 	err := os.WriteFile(filePath, []byte(fileContent), 0666)
 	if err != nil {

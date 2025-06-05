@@ -170,61 +170,62 @@ func startupOperations() {
 // loadAzureCredentialsFromFile reads Azure credentials from the mounted secret file
 // and sets the appropriate environment variables
 func loadAzureCredentialsFromFile() {
-	credentialPath := os.Getenv("CREDENTIAL_PATH")
-	if credentialPath == "" {
-		log.Printf("Warning: CREDENTIAL_PATH not set for Azure, skipping credential file loading")
+	credentialsFile := "/etc/neo4j-backup-credentials/credentials"
+
+	// Check if credentials file exists
+	if _, err := os.Stat(credentialsFile); os.IsNotExist(err) {
+		log.Printf("Azure credentials file not found at %s, skipping credential loading", credentialsFile)
 		return
 	}
-
-	log.Printf("Loading Azure credentials from file: %s", credentialPath)
 
 	// Read the credentials file
-	content, err := os.ReadFile(credentialPath)
+	content, err := os.ReadFile(credentialsFile)
 	if err != nil {
-		log.Printf("Warning: Failed to read Azure credentials file %s: %v", credentialPath, err)
+		log.Printf("Warning: Failed to read Azure credentials file: %v", err)
 		return
 	}
 
-	// Parse AZURE_STORAGE_ACCOUNT_NAME using regex (consistent with dev branch approach)
-	storageAccountName, err := extractAzureStorageAccountName(string(content))
+	credentialsContent := string(content)
+	log.Printf("Loading Azure credentials from file...")
+
+	// Parse AZURE_STORAGE_ACCOUNT_NAME using regex
+	storageAccountName, err := extractAzureStorageAccountName(credentialsContent)
 	if err != nil {
-		log.Printf("Warning: Failed to extract AZURE_STORAGE_ACCOUNT_NAME: %v", err)
-	} else {
-		os.Setenv("AZURE_STORAGE_ACCOUNT_NAME", storageAccountName)
-		log.Printf("Set AZURE_STORAGE_ACCOUNT_NAME from credentials file")
+		log.Printf("Warning: Failed to extract AZURE_STORAGE_ACCOUNT_NAME from credentials file: %v", err)
 	}
 
-	// Parse AZURE_STORAGE_ACCOUNT_KEY using regex (consistent with dev branch approach)
-	storageAccountKey, err := extractAzureStorageAccountKey(string(content))
+	// Parse AZURE_STORAGE_ACCOUNT_KEY using regex
+	storageAccountKey, err := extractAzureStorageAccountKey(credentialsContent)
 	if err != nil {
-		log.Printf("Warning: Failed to extract AZURE_STORAGE_ACCOUNT_KEY: %v", err)
-	} else {
-		os.Setenv("AZURE_STORAGE_ACCOUNT_KEY", storageAccountKey)
-		log.Printf("Set AZURE_STORAGE_ACCOUNT_KEY from credentials file")
+		log.Printf("Warning: Failed to extract AZURE_STORAGE_ACCOUNT_KEY from credentials file: %v", err)
+	}
+
+	if storageAccountName != "" && storageAccountKey != "" {
+		// Set Neo4j's expected environment variable names
+		os.Setenv("AZURE_STORAGE_ACCOUNT", storageAccountName)
+		os.Setenv("AZURE_STORAGE_KEY", storageAccountKey)
+
+		log.Printf("Set AZURE_STORAGE_ACCOUNT from credentials file")
+		log.Printf("Set AZURE_STORAGE_KEY from credentials file")
 	}
 }
 
-// extractAzureStorageAccountName extracts the storage account name from Azure credentials file
-func extractAzureStorageAccountName(data string) (string, error) {
+// extractAzureStorageAccountName extracts the storage account name from credentials file content
+func extractAzureStorageAccountName(content string) (string, error) {
 	re := regexp.MustCompile(`AZURE_STORAGE_ACCOUNT_NAME=(.*)`)
-	matches := re.FindStringSubmatch(data)
-	if len(matches) == 0 {
-		return "", fmt.Errorf("missing azure storage account name")
-	} else if len(matches) > 2 {
-		return "", fmt.Errorf("more than one azure storage account name found: %v", matches)
+	matches := re.FindStringSubmatch(content)
+	if len(matches) < 2 {
+		return "", fmt.Errorf("AZURE_STORAGE_ACCOUNT_NAME not found in credentials file")
 	}
-	// FindStringSubmatch returns the complete string and then the matches, hence index 1 is the first match
 	return strings.TrimSpace(matches[1]), nil
 }
 
-// extractAzureStorageAccountKey extracts the storage account key from Azure credentials file
-func extractAzureStorageAccountKey(data string) (string, error) {
+// extractAzureStorageAccountKey extracts the storage account key from credentials file content
+func extractAzureStorageAccountKey(content string) (string, error) {
 	re := regexp.MustCompile(`AZURE_STORAGE_ACCOUNT_KEY=(.*)`)
-	matches := re.FindStringSubmatch(data)
-	if len(matches) == 0 {
-		return "", fmt.Errorf("missing storage account key")
-	} else if len(matches) > 2 {
-		return "", fmt.Errorf("more than one storage account key found: %v", matches)
+	matches := re.FindStringSubmatch(content)
+	if len(matches) < 2 {
+		return "", fmt.Errorf("AZURE_STORAGE_ACCOUNT_KEY not found in credentials file")
 	}
 	return strings.TrimSpace(matches[1]), nil
 }

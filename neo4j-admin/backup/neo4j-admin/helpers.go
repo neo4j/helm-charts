@@ -27,7 +27,7 @@ func getCloudStoragePath() string {
 	case "gcp":
 		return fmt.Sprintf("gs://%s/", bucketName)
 	case "azure":
-		storageAccount := os.Getenv("AZURE_STORAGE_ACCOUNT_NAME")
+		storageAccount := os.Getenv("AZURE_STORAGE_ACCOUNT")
 		if storageAccount == "" {
 			// Fallback to bucket name if storage account not specified
 			return fmt.Sprintf("azb://%s/", bucketName)
