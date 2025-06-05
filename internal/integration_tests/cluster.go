@@ -242,7 +242,8 @@ func InstallNeo4jBackupAWSLocalWithConsistencyCheck(t *testing.T, releaseName mo
 	helmValues.NodeSelector = map[string]string{
 		"testLabel": fmt.Sprintf("%s-5", namespace),
 	}
-	// Enable consistency check for local backup (faster)
+	// Enable consistency check for local backup
+	helmValues.ConsistencyCheck.Enable = true
 	helmValues.ConsistencyCheck.Database = "neo4j"
 
 	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
@@ -391,8 +392,9 @@ func InstallNeo4jBackupAWSCloudStorage(t *testing.T, releaseName model.ReleaseNa
 	helmValues.NodeSelector = map[string]string{
 		"testLabel": fmt.Sprintf("%s-5", namespace),
 	}
-	// Disable consistency check for cloud backup to avoid timeouts
-	// helmValues.ConsistencyCheck.Database = ""
+	// Disable consistency check for cloud backup to avoid timeouts and reduce template size
+	helmValues.ConsistencyCheck.Enable = false
+	helmValues.ConsistencyCheck.Database = ""
 
 	_, err = helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
@@ -535,7 +537,8 @@ func InstallNeo4jBackupAWSHelmChartViaS3(t *testing.T, releaseName model.Release
 	}
 	// Disable consistency check for S3 configuration test to avoid timeouts
 	// This test focuses on S3 parameters, not consistency check functionality
-	// helmValues.ConsistencyCheck.Database = "neo4j"
+	helmValues.ConsistencyCheck.Enable = false
+	helmValues.ConsistencyCheck.Database = ""
 	helmValues.Neo4J.JobSchedule = "* * * * *"
 
 	_, err = helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
@@ -722,7 +725,8 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 	}
 	// Disable consistency check for S3 TLS configuration test to avoid timeouts
 	// This test focuses on S3 TLS parameters, not consistency check functionality
-	// helmValues.ConsistencyCheck.Database = "neo4j"
+	helmValues.ConsistencyCheck.Enable = false
+	helmValues.ConsistencyCheck.Database = ""
 	helmValues.Neo4J.JobSchedule = "* * * * *"
 	_, err = helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	if err != nil {
@@ -875,7 +879,8 @@ func InstallBackupViaTempDir(t *testing.T, releaseName model.ReleaseName) error 
 	}
 	// Disable consistency check for temp directory configuration test to avoid timeouts
 	// This test focuses on custom temp directory functionality, not consistency check
-	// helmValues.ConsistencyCheck.Database = "neo4j"
+	helmValues.ConsistencyCheck.Enable = false
+	helmValues.ConsistencyCheck.Database = ""
 	helmValues.Neo4J.JobSchedule = "* * * * *"
 
 	_, err = helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
