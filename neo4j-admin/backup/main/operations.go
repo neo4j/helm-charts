@@ -210,6 +210,27 @@ func loadAzureCredentialsFromFile() {
 	os.Setenv("AZURE_STORAGE_ACCOUNT", storageAccountName)
 	os.Setenv("AZURE_STORAGE_KEY", storageAccountKey)
 
+	// For Neo4j's Azure SDK to work with DefaultAzureCredential, we also need to set
+	// the service principal environment variables that DefaultAzureCredential expects
+	// Try to extract service principal information from the credentials file
+	clientId, err := extractFromCredentialsFile(credentialsContent, "AZURE_CLIENT_ID")
+	if err == nil {
+		os.Setenv("AZURE_CLIENT_ID", clientId)
+		log.Printf("Set AZURE_CLIENT_ID from credentials file")
+	}
+
+	clientSecret, err := extractFromCredentialsFile(credentialsContent, "AZURE_CLIENT_SECRET")
+	if err == nil {
+		os.Setenv("AZURE_CLIENT_SECRET", clientSecret)
+		log.Printf("Set AZURE_CLIENT_SECRET from credentials file")
+	}
+
+	tenantId, err := extractFromCredentialsFile(credentialsContent, "AZURE_TENANT_ID")
+	if err == nil {
+		os.Setenv("AZURE_TENANT_ID", tenantId)
+		log.Printf("Set AZURE_TENANT_ID from credentials file")
+	}
+
 	log.Printf("Set AZURE_STORAGE_ACCOUNT from credentials file")
 	log.Printf("Set AZURE_STORAGE_KEY from credentials file")
 }
@@ -230,6 +251,16 @@ func extractAzureStorageAccountKey(content string) (string, error) {
 	matches := re.FindStringSubmatch(content)
 	if len(matches) < 2 {
 		return "", fmt.Errorf("AZURE_STORAGE_KEY not found in credentials file")
+	}
+	return strings.TrimSpace(matches[1]), nil
+}
+
+// extractFromCredentialsFile extracts any environment variable from credentials file content
+func extractFromCredentialsFile(content string, variableName string) (string, error) {
+	re := regexp.MustCompile(fmt.Sprintf(`%s=(.*)`, variableName))
+	matches := re.FindStringSubmatch(content)
+	if len(matches) < 2 {
+		return "", fmt.Errorf("%s not found in credentials file", variableName)
 	}
 	return strings.TrimSpace(matches[1]), nil
 }

@@ -15,6 +15,9 @@ if [ -f ./devenv.local ]; then
     # Azure storage
     export AZURE_STORAGE_KEY
     export AZURE_STORAGE_ACCOUNT
+    export AZURE_CLIENT_ID
+    export AZURE_CLIENT_SECRET
+    export AZURE_TENANT_ID
 
     # Bloom license
     export BLOOM_LICENSE

@@ -99,6 +99,21 @@ func init() {
 		log.Panic("Please set AZURE_STORAGE_KEY env variable !!")
 	}
 
+	_, present = os.LookupEnv("AZURE_CLIENT_ID")
+	if !present {
+		log.Panic("Please set AZURE_CLIENT_ID env variable !!")
+	}
+
+	_, present = os.LookupEnv("AZURE_CLIENT_SECRET")
+	if !present {
+		log.Panic("Please set AZURE_CLIENT_SECRET env variable !!")
+	}
+
+	_, present = os.LookupEnv("AZURE_TENANT_ID")
+	if !present {
+		log.Panic("Please set AZURE_TENANT_ID env variable !!")
+	}
+
 	_, present = os.LookupEnv("GCP_SERVICE_ACCOUNT_CRED")
 	if !present {
 		log.Panic("Please set GCP_SERVICE_ACCOUNT_CRED env variable !!. This environment variable holds the json credentials of GCP service account")

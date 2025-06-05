@@ -115,6 +115,9 @@ backup:
 
   #  AZURE_STORAGE_ACCOUNT=XXXX
   #  AZURE_STORAGE_KEY=XXXX
+  #  AZURE_CLIENT_ID=XXXX
+  #  AZURE_CLIENT_SECRET=XXXX
+  #  AZURE_TENANT_ID=XXXX
 
   # For GCP :
   # create the secret via the gcp service account json key file.
