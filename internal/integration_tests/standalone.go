@@ -972,6 +972,7 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 		DatabaseNamespace:        string(standaloneReleaseName.Namespace()),
 		Database:                 "neo4j,system",
 		CloudProvider:            "azure",
+		AzureStorageAccountName:  "helmbackuptest", // Set Azure storage account name for proper URI format
 		SecretName:               "azurecred",
 		SecretKeyName:            "credentials",
 		Verbose:                  true,
