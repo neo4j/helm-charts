@@ -95,6 +95,12 @@ data:
     {{- $primariesCount := index $.Values.neo4j "minimumClusterSize" }}
   initial.dbms.default_primaries_count: "{{ $primariesCount }}"
   dbms.cluster.minimum_initial_system_primaries_count: "{{ $primariesCount }}"
+  {{- if gt $primariesCount 1 }}
+  # Automatically extend the binding timeout when minimumClusterSize > 1
+  # This ensures the cluster waits for the minimum number of nodes before timing out
+  # dbms.cluster.raft.binding_timeout controls how long a database waits to join a cluster
+  dbms.cluster.raft.binding_timeout: "1d"
+  {{- end }}
   {{- end }}
 
   {{- if $primaryAnalyticsType }}
