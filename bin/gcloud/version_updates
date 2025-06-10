@@ -80,7 +80,16 @@ then
 	  git add "${chart}/*"
 	done
 else
-	echo "Neo4j version is same !!"
-  exit 1
+	echo "Neo4j version is same !! Continuing with packaging..."
+	# Still update chart versions and perform packaging even if versions are the same
+	HELM_CHARTS_LIST=("neo4j" "neo4j-headless-service" "neo4j-persistent-volume" "neo4j-admin" "neo4j-reverse-proxy" "neo4j-loadbalancer" "neo4j-docker-desktop-pv")
+	for chart in "${HELM_CHARTS_LIST[@]}"
+	do
+      cat "${chart}/Chart.yaml"
+	  echo "Performing helm dep update and helm package on ${chart} chart !!"
+	  ##perform helm dependency version_updates
+	  helm dependency update "${chart}"
+	  git add "${chart}/*"
+	done
 fi
 
