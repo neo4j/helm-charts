@@ -729,3 +729,33 @@ func TestBackupWithTempDir(t *testing.T) {
 	}
 	assert.Equal(t, found, true)
 }
+
+// TestBackupFallbackToFull checks for fallbackToFull environment variable
+func TestBackupFallbackToFull(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "test-bucket"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+	helmValues.Backup.FallbackToFull = false // Test explicit false setting
+	helmValues.ServiceAccountName = "demo"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while performing backup with fallbackToFull")
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
+
+	envVariables := cronjobs[0].(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env
+	var found bool
+	for _, variable := range envVariables {
+		if variable.Name == "FALLBACK_TO_FULL" {
+			found = true
+			assert.Equal(t, "false", variable.Value)
+			break
+		}
+	}
+	assert.True(t, found, "FALLBACK_TO_FULL env var not found")
+}

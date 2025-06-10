@@ -80,6 +80,16 @@ func getBackupCommandFlags(address string) []string {
 		flags = append(flags, fmt.Sprintf("--temp-path=%s", backupTempDir))
 	}
 
+	// Add fallback-to-full flag
+	if os.Getenv("FALLBACK_TO_FULL") == "true" {
+		flags = append(flags, "--fallback-to-full")
+	}
+
+	// Add heap-size flag for backup JVM memory configuration
+	if len(strings.TrimSpace(os.Getenv("HEAP_SIZE"))) > 0 {
+		flags = append(flags, fmt.Sprintf("--heap-size=%s", os.Getenv("HEAP_SIZE")))
+	}
+
 	if len(strings.TrimSpace(os.Getenv("PAGE_CACHE"))) > 0 {
 		flags = append(flags, fmt.Sprintf("--pagecache=%s", os.Getenv("PAGE_CACHE")))
 	}
