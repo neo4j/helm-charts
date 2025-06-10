@@ -182,9 +182,4 @@ jobs:
             - See [Release notes](https://neo4j.com/release-notes/database/neo4j-${{ steps.release_notes.outputs.RELEASE_NOTES_SUFFIX }}/) for details of changes
           make_latest: true
           files: |
-            tmp/new-packages/neo4j-${{ steps.chart_version.outputs.CHART_VERSION }}.tgz
-            tmp/new-packages/neo4j-admin-${{ steps.chart_version.outputs.CHART_VERSION }}.tgz
-            tmp/new-packages/neo4j-reverse-proxy-${{ steps.chart_version.outputs.CHART_VERSION }}.tgz
-            tmp/new-packages/neo4j-headless-service-${{ steps.chart_version.outputs.CHART_VERSION }}.tgz
-            tmp/new-packages/neo4j-persistent-volume-${{ steps.chart_version.outputs.CHART_VERSION }}.tgz
-            tmp/new-packages/neo4j-loadbalancer-${{ steps.chart_version.outputs.CHART_VERSION }}.tgz 
+            tmp/new-packages/*.tgz 
