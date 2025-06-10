@@ -3,11 +3,12 @@ package azure
 import (
 	"errors"
 	"fmt"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"log"
 	"os"
 	"regexp"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 )
 
 type azureClient struct {
@@ -21,7 +22,15 @@ func NewAzureClient(credentialPath string) (*azureClient, error) {
 	if credentialPath == "/credentials/" {
 		storageAccountName := os.Getenv("AZURE_STORAGE_ACCOUNT_NAME")
 		log.Printf("Azure storage account name %v", storageAccountName)
-		serviceURL := fmt.Sprintf("https://%s.blob.core.windows.net/", storageAccountName)
+
+		// Use configurable blob service URL, default to commercial Azure endpoint
+		blobServiceURL := os.Getenv("AZURE_BLOB_SERVICE_URL")
+		if blobServiceURL == "" {
+			blobServiceURL = "blob.core.windows.net"
+		}
+		serviceURL := fmt.Sprintf("https://%s.%s/", storageAccountName, blobServiceURL)
+		log.Printf("Using Azure blob service URL: %s", serviceURL)
+
 		cred, err := azidentity.NewDefaultAzureCredential(nil)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to create azure credential without sharedKeyCredentials: %v\n", err)
@@ -45,7 +54,14 @@ func NewAzureClient(credentialPath string) (*azureClient, error) {
 		if err != nil {
 			return nil, err
 		}
-		serviceURL := fmt.Sprintf("https://%s.blob.core.windows.net/", storageAccountName)
+
+		// Use configurable blob service URL, default to commercial Azure endpoint
+		blobServiceURL := os.Getenv("AZURE_BLOB_SERVICE_URL")
+		if blobServiceURL == "" {
+			blobServiceURL = "blob.core.windows.net"
+		}
+		serviceURL := fmt.Sprintf("https://%s.%s/", storageAccountName, blobServiceURL)
+		log.Printf("Using Azure blob service URL: %s", serviceURL)
 
 		cred, err := azblob.NewSharedKeyCredential(storageAccountName, storageAccountKey)
 		if err != nil {
