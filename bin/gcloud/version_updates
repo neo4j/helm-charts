@@ -80,7 +80,6 @@ then
 	  git add "${chart}/*"
 	done
 else
-	echo "Neo4j version is same !!"
-  exit 1
+	echo "Neo4j version is same !! Continuing with release process..."
 fi
 

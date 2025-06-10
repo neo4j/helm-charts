@@ -9,7 +9,7 @@ disableLookups: false
 
 neo4j:
   image: "neo4j/helm-charts-backup"
-  imageTag: "2025.04.0"
+  imageTag: "2025.05.0"
   podLabels: {}
 #    app: "demo"
 #    acac: "dcdddc"
@@ -138,6 +138,10 @@ backup:
   # provide the azure storage account name
   # this to be provided when you are using workload identity integration for azure
   azureStorageAccountName: ""
+  # Azure blob service URL for different Azure clouds
+  # Default: "blob.core.windows.net" (Azure Commercial)
+  # Azure Government: "blob.core.usgovcloudapi.net"
+  azureBlobServiceURL: ""
   #setting this to true will not delete the backup files generated at the /backup mount
   keepBackupFiles: true
 
