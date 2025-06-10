@@ -151,7 +151,7 @@ jobs:
           ./bin/gcloud/index_yaml_update
 
       - name: Release Notes
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v1
         with:
           name: v${{ inputs.NEO4J_VERSION }}
           tag_name: ${{ inputs.NEO4J_VERSION }}
