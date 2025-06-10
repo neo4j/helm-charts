@@ -3,9 +3,9 @@ entries:
   neo4j:
   - apiVersion: v1
     appVersion: 2025.05.0
-    created: "2025-06-10T13:20:33.781686089Z"
+    created: "2025-06-10T13:40:32.641886482Z"
     description: Neo4j is the world's leading graph database
-    digest: 896395c7f24393a4f595f5e6899ff7fd2f7cd833571f77eaafc06668400f9b64
+    digest: b610c0c2f699dff40ee3681a5c69d39e9e7b3a7144d77e068d82cdd07a9b33d7
     home: https://www.neo4j.com
     icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
     keywords:
@@ -815,9 +815,9 @@ entries:
   neo4j-admin:
   - apiVersion: v1
     appVersion: 2025.05.0
-    created: "2025-06-10T13:20:33.782505858Z"
+    created: "2025-06-10T13:40:32.642825918Z"
     description: Neo4j is the world's leading graph database
-    digest: 548a1b9b24c8a2751f53283a8878ff9a38fbf3dfe55c29c15a04d78882fa3f65
+    digest: 9813ac98d2a0acc7311f444a6222e0e9f41c5ddf548e43777a92599fe1f1eb0c
     home: https://www.neo4j.com
     icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
     keywords:
@@ -4948,9 +4948,9 @@ entries:
   neo4j-headless-service:
   - apiVersion: v1
     appVersion: '-'
-    created: "2025-06-10T13:20:33.782847295Z"
+    created: "2025-06-10T13:40:32.643211529Z"
     description: Neo4j is the world's leading graph database
-    digest: 50380859cad8d75f498db3fad86bf3708788003a86df314cd11c3aa0f6ab376c
+    digest: f855bdadcb3284fa758814f57bf91473ca5753415ce90fddea202f67d501df8e
     home: https://www.neo4j.com
     icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
     keywords:
@@ -5760,9 +5760,9 @@ entries:
   neo4j-loadbalancer:
   - apiVersion: v1
     appVersion: '-'
-    created: "2025-06-10T13:20:33.783157353Z"
+    created: "2025-06-10T13:40:32.64360772Z"
     description: Neo4j is the world's leading graph database
-    digest: fe2382a00373ee35f738347fd6e129a7691f7c6cb112d04a6b9f50378481f93f
+    digest: 0f858899106512336e6640cee17127323427dc47426292b9755e836e49a23e82
     home: https://www.neo4j.com
     icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
     keywords:
@@ -6319,9 +6319,9 @@ entries:
   neo4j-persistent-volume:
   - apiVersion: v1
     appVersion: '-'
-    created: "2025-06-10T13:20:33.783431093Z"
+    created: "2025-06-10T13:40:32.643958546Z"
     description: Sets up persistent disks suitable for a Neo4j Helm installation
-    digest: c3d8413963d12291d07822caada27da65e5b0fc1702c6bb1d3b3c1c3bd284643
+    digest: 825643a1e313b6ae6f7f0d2e603155afae70ecd8b23425520d15ce39f65001ba
     home: https://www.neo4j.com
     icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
     keywords:
@@ -7131,9 +7131,9 @@ entries:
   neo4j-reverse-proxy:
   - apiVersion: v1
     appVersion: 2025.05.0
-    created: "2025-06-10T13:20:33.78384755Z"
+    created: "2025-06-10T13:40:32.644500069Z"
     description: Sets up an http server and a reverse proxy for bolt and http requests
-    digest: 01e17792721f18b1b6a2ae5d9aab1e3c1233d31e3c77b8401a598e5f7b4cd689
+    digest: a296e56b3b229890cfbecf5fd06ebf496be3451f5d2d9b0804e17ed3a2433481
     home: https://www.neo4j.com
     icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
     keywords:
@@ -8848,4 +8848,4 @@ entries:
     urls:
     - https://github.com/neo4j/helm-charts/releases/download/4.3.2/neo4j-standalone-4.3.2.tgz
     version: 4.3.2
-generated: "2025-06-10T13:20:33.77922629Z"
+generated: "2025-06-10T13:40:32.639445598Z"
