@@ -162,6 +162,15 @@ jobs:
           echo "RELEASE_NOTES_SUFFIX=${RELEASE_NOTES_SUFFIX}" >> $GITHUB_OUTPUT
           echo "Release notes suffix: ${RELEASE_NOTES_SUFFIX}"
 
+      - name: Debug - List packaged files
+        run: |
+          echo "=== Listing all .tgz files in workspace ==="
+          find . -name "*.tgz" -type f -ls || echo "No .tgz files found"
+          echo "=== Contents of tmp/new-packages/ ==="
+          ls -la tmp/new-packages/ || echo "tmp/new-packages/ does not exist"
+          echo "=== Contents of root directory ==="
+          ls -la *.tgz || echo "No .tgz files in root"
+
       - name: Release Notes
         uses: softprops/action-gh-release@v2
         with:
