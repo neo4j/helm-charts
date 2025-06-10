@@ -75,6 +75,7 @@ type Backup struct {
 	DatabaseBackupEndpoints  string          `yaml:"databaseBackupEndpoints,omitempty"`
 	Database                 string          `yaml:"database,omitempty"`
 	AzureStorageAccountName  string          `yaml:"azureStorageAccountName,omitempty"`
+	AzureBlobServiceURL      string          `yaml:"azureBlobServiceURL,omitempty"`
 	CloudProvider            string          `yaml:"cloudProvider,omitempty"`
 	S3Endpoint               string          `yaml:"s3Endpoint,omitempty"`
 	S3EndpointTLS            bool            `yaml:"s3EndpointTLS,omitempty" default:"false"`

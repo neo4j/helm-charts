@@ -87,6 +87,8 @@ spec:
                   value: {{ .Values.backup.verbose | toString | quote | default true }}
                 - name: AZURE_STORAGE_ACCOUNT_NAME
                   value: "{{ .Values.backup.azureStorageAccountName | default "" }}"
+                - name: AZURE_BLOB_SERVICE_URL
+                  value: "{{ .Values.backup.azureBlobServiceURL | default "" }}"
                 - name: S3_ENDPOINT
                   value: "{{ .Values.backup.s3Endpoint | default .Values.backup.minioEndpoint | default "" }}"
                 - name: S3_ENDPOINT_TLS
