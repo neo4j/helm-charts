@@ -10,6 +10,9 @@ Configuration:
 - Backup Type: {{ .Values.backup.type | default "AUTO" }}
 - Compress: {{ .Values.backup.compress | default true }}
 - Prefer Diff as Parent: {{ .Values.backup.preferDiffAsParent | default false }}
+{{- if .Values.backup.tempDir }}
+- Temp Directory: {{ .Values.backup.tempDir }}
+{{- end }}
 
 {{- if eq .Values.backup.cloudProvider "aws" }}
 

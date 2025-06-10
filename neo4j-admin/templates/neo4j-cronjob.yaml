@@ -107,6 +107,8 @@ spec:
                   value: {{ .Values.backup.compress | toString | quote | default true}}
                 - name: AZURE_STORAGE_ACCOUNT
                   value: "{{ .Values.backup.azureStorageAccountName | default "" }}"
+                - name: BACKUP_TEMP_DIR
+                  value: {{ .Values.backup.tempDir | default "" | quote }}
                 - name: S3_ENDPOINT
                   value: "{{ .Values.backup.s3Endpoint | default .Values.backup.minioEndpoint | default "" }}"
                 - name: S3_ENDPOINT_TLS

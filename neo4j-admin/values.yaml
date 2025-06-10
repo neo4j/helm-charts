@@ -157,6 +157,12 @@ backup:
   # This creates backup chains where subsequent backups only store changes from previous backup
   preferDiffAsParent: false
   
+  # Optional temporary directory for backup process when using cloud storage
+  # If not specified, Neo4j will use a temporary directory inside the current working directory
+  # This is strongly recommended when backing up to cloud storage to avoid disk space issues
+  # on the local filesystem where Neo4j is installed
+  tempDir: ""
+  
   # https://neo4j.com/docs/operations-manual/current/backup-restore/aggregate/
   # Performs aggregate backup. If enabled, NORMAL BACKUP WILL NOT BE DONE only aggregate backup
   # fromPath supports only s3 or local mount. For s3 , please set cloudProvider to aws and use either serviceAccount or creds

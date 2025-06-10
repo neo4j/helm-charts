@@ -74,6 +74,12 @@ func getBackupCommandFlags(address string) []string {
 		flags = append(flags, "--prefer-diff-as-parent")
 	}
 
+	// Add temp-path flag for backup operations, especially important for cloud storage
+	// to avoid disk space issues on the local filesystem where Neo4j is installed
+	if backupTempDir := os.Getenv("BACKUP_TEMP_DIR"); backupTempDir != "" {
+		flags = append(flags, fmt.Sprintf("--temp-path=%s", backupTempDir))
+	}
+
 	if len(strings.TrimSpace(os.Getenv("PAGE_CACHE"))) > 0 {
 		flags = append(flags, fmt.Sprintf("--pagecache=%s", os.Getenv("PAGE_CACHE")))
 	}

@@ -700,3 +700,32 @@ func TestBackupCompressEnvVarFalse(t *testing.T) {
 	}
 	assert.True(t, found, "COMPRESS env var not found")
 }
+
+// TestBackupWithTempDir checks for tempDir in the regular backup
+func TestBackupWithTempDir(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "test-bucket"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+	helmValues.Backup.TempDir = "/custom/backup/temp/dir"
+	helmValues.ServiceAccountName = "demo"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while performing backup with tempDir")
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
+
+	envVariables := cronjobs[0].(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env
+	var found bool
+	for _, variable := range envVariables {
+		if variable.Name == "BACKUP_TEMP_DIR" {
+			found = true
+			assert.Equal(t, variable.Value, helmValues.Backup.TempDir)
+			break
+		}
+	}
+	assert.Equal(t, found, true)
+}
