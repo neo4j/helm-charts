@@ -486,3 +486,15 @@ startupProbe:
   failureThreshold: {{ .failureThreshold | default 1000 }}
   periodSeconds: {{ .periodSeconds | default 5 }}
 {{- end -}}
+
+{{/*
+Resolve the actual service account name to use
+Returns the custom service account name if provided, otherwise the auto-generated name
+*/}}
+{{- define "neo4j.serviceAccountName" -}}
+    {{- if and (kindIs "string" $.Values.podSpec.serviceAccountName) $.Values.podSpec.serviceAccountName -}}
+        {{- $.Values.podSpec.serviceAccountName -}}
+    {{- else -}}
+        {{- include "neo4j.fullname" . -}}
+    {{- end -}}
+{{- end -}}
