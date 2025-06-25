@@ -76,19 +76,41 @@ spec:
                 - name: INCLUDE_METADATA
                   value: "{{ .Values.backup.includeMetadata | default "all" | trim }}"
                 - name: PARALLEL_RECOVERY
-                  value: "{{ .Values.backup.parallelRecovery | default false }}"
+                  value: {{ .Values.backup.parallelRecovery | toString | quote | default false }}
                 - name: TYPE
                   value: "{{ .Values.backup.type | default "AUTO" | trim }}"
                 - name: KEEP_FAILED
-                  value: "{{ .Values.backup.keepFailed | default false }}"
+                  value: {{ .Values.backup.keepFailed | toString | quote | default false }}
+                - name: PREFER_DIFF_AS_PARENT
+                  value: {{ .Values.backup.preferDiffAsParent | toString | quote | default false }}
                 - name: CREDENTIAL_PATH
                   value: "{{ printf "/credentials/%s" .Values.backup.secretKeyName | default ""  }}"
+                {{- if .Values.backup.secretKeyName }}
+                {{- if .Values.backup.awsCredentialsFile }}
+                - name: AWS_SHARED_CREDENTIALS_FILE
+                  value: "{{ .Values.backup.awsCredentialsFile }}"
+                {{- else if eq .Values.backup.cloudProvider "aws" }}
+                - name: AWS_SHARED_CREDENTIALS_FILE
+                  value: "{{ printf "/credentials/%s" .Values.backup.secretKeyName }}"
+                {{- end }}
+                {{- if .Values.backup.gcpCredentialsFile }}
+                - name: GOOGLE_APPLICATION_CREDENTIALS
+                  value: "{{ .Values.backup.gcpCredentialsFile }}"
+                {{- else if eq .Values.backup.cloudProvider "gcp" }}
+                - name: GOOGLE_APPLICATION_CREDENTIALS
+                  value: "{{ printf "/credentials/%s" .Values.backup.secretKeyName }}"
+                {{- end }}
+                {{- end }}
                 - name: VERBOSE
                   value: {{ .Values.backup.verbose | toString | quote | default true }}
                 - name: COMPRESS
                   value: {{ .Values.backup.compress | toString | quote | default true}}
-                - name: AZURE_STORAGE_ACCOUNT_NAME
+                - name: AZURE_STORAGE_ACCOUNT
                   value: "{{ .Values.backup.azureStorageAccountName | default "" }}"
+                - name: BACKUP_TEMP_DIR
+                  value: {{ .Values.backup.tempDir | default "" | quote }}
+                - name: FALLBACK_TO_FULL
+                  value: {{ .Values.backup.fallbackToFull | toString | quote | default true }}
                 - name: AZURE_BLOB_SERVICE_URL
                   value: "{{ .Values.backup.azureBlobServiceURL | default "" }}"
                 - name: S3_ENDPOINT
@@ -98,15 +120,17 @@ spec:
                 - name: S3_CA_CERT_PATH
                   value: "{{ if .Values.backup.s3CASecretName }}{{ printf "/s3-ca-cert/%s" .Values.backup.s3CASecretKey }}{{ end }}"
                 - name: S3_SKIP_VERIFY
-                  value: "{{ .Values.backup.s3SkipVerify | default false }}"
+                  value: {{ .Values.backup.s3SkipVerify | toString | quote | default false }}
                 - name: S3_FORCE_PATH_STYLE
                   value: {{ .Values.backup.s3ForcePathStyle | toString | quote | default true }}
-                - name: S3_REGION
+                - name: AWS_REGION
+                  value: "{{ .Values.backup.s3Region | default "" }}"
+                - name: AWS_DEFAULT_REGION
                   value: "{{ .Values.backup.s3Region | default "" }}"
                 - name: S3_SIGNATURE_VERSION
                   value: "{{ .Values.backup.s3SignatureVersion | default "" }}"
                 - name: CONSISTENCY_CHECK_ENABLE
-                  value: "{{ .Values.consistencyCheck.enable | default false }}"
+                  value: {{ .Values.consistencyCheck.enable | toString | quote | default false }}
                 - name: CONSISTENCY_CHECK_INDEXES
                   value: {{ .Values.consistencyCheck.checkIndexes | toString | quote | default false }}
                 - name: CONSISTENCY_CHECK_DATABASE
@@ -123,14 +147,16 @@ spec:
                   value: "{{ .Values.consistencyCheck.threads | default "" | trim }}"
                 - name: CONSISTENCY_CHECK_VERBOSE
                   value: {{ .Values.consistencyCheck.verbose | toString | quote | default true }}
+                - name: CONSISTENCY_CHECK_TEMP_DIR
+                  value: {{ .Values.consistencyCheck.tempDir | default "" | quote }}
                 - name: AGGREGATE_BACKUP_ENABLED
-                  value: "{{ .Values.backup.aggregate.enabled | default false }}"
+                  value: {{ .Values.backup.aggregate.enabled | toString | quote | default false }}
                 - name: AGGREGATE_BACKUP_VERBOSE
                   value: {{ .Values.backup.aggregate.verbose | toString | quote | default true }}
                 - name: AGGREGATE_BACKUP_KEEPOLDBACKUP
-                  value: "{{ .Values.backup.aggregate.keepOldBackup | default false }}"
+                  value: {{ .Values.backup.aggregate.keepOldBackup | toString | quote | default false }}
                 - name: AGGREGATE_BACKUP_PARALLEL_RECOVERY
-                  value: "{{ .Values.backup.aggregate.parallelRecovery | default false }}"
+                  value: {{ .Values.backup.aggregate.parallelRecovery | toString | quote | default false }}
                 - name: AGGREGATE_BACKUP_FROM_PATH
                   value: "{{ .Values.backup.aggregate.fromPath | default "/backups" | trim }}"
                 - name: AGGREGATE_BACKUP_DATABASE

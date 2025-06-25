@@ -2,11 +2,12 @@ package model
 
 import (
 	"fmt"
-	. "github.com/neo4j/helm-charts/internal/helpers"
-	"k8s.io/utils/env"
 	"log"
 	"os"
 	"strconv"
+
+	. "github.com/neo4j/helm-charts/internal/helpers"
+	"k8s.io/utils/env"
 )
 
 var DefaultPassword = fmt.Sprintf("defaulthelmpassword%da", RandomIntBetween(100000, 999999999))
@@ -88,14 +89,29 @@ func init() {
 		log.Panic("Please set AWS_SECRET_ACCESS_KEY env variable !!")
 	}
 
-	_, present = os.LookupEnv("AZURE_STORAGE_ACCOUNT_NAME")
+	_, present = os.LookupEnv("AZURE_STORAGE_ACCOUNT")
 	if !present {
-		log.Panic("Please set AZURE_STORAGE_ACCOUNT_NAME env variable !!")
+		log.Panic("Please set AZURE_STORAGE_ACCOUNT env variable !!")
 	}
 
-	_, present = os.LookupEnv("AZURE_STORAGE_ACCOUNT_KEY")
+	_, present = os.LookupEnv("AZURE_STORAGE_KEY")
 	if !present {
-		log.Panic("Please set AZURE_STORAGE_ACCOUNT_KEY env variable !!")
+		log.Panic("Please set AZURE_STORAGE_KEY env variable !!")
+	}
+
+	_, present = os.LookupEnv("AZURE_CLIENT_ID")
+	if !present {
+		log.Panic("Please set AZURE_CLIENT_ID env variable !!")
+	}
+
+	_, present = os.LookupEnv("AZURE_CLIENT_SECRET")
+	if !present {
+		log.Panic("Please set AZURE_CLIENT_SECRET env variable !!")
+	}
+
+	_, present = os.LookupEnv("AZURE_TENANT_ID")
+	if !present {
+		log.Panic("Please set AZURE_TENANT_ID env variable !!")
 	}
 
 	_, present = os.LookupEnv("GCP_SERVICE_ACCOUNT_CRED")

@@ -98,6 +98,7 @@ type Backup struct {
 	Verbose                  bool            `yaml:"verbose" default:"true"`
 	AggregateBackup          AggregateBackup `yaml:"aggregate,omitempty"`
 	Compress                 bool            `yaml:"compress" default:"true"`
+	TempDir                  string          `yaml:"tempDir,omitempty"`
 }
 
 type AggregateBackup struct {
@@ -120,6 +121,7 @@ type ConsistencyCheck struct {
 	MaxOffHeapMemory    string `yaml:"maxOffHeapMemory,omitempty"`
 	Threads             string `yaml:"threads,omitempty"`
 	Verbose             bool   `yaml:"verbose" default:"true"`
+	TempDir             string `yaml:"tempDir,omitempty"`
 }
 
 type Toleration struct {

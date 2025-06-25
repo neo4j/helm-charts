@@ -4,101 +4,52 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 
-	"github.com/neo4j/helm-charts/neo4j-admin/backup/aws"
-	"github.com/neo4j/helm-charts/neo4j-admin/backup/azure"
-	gcp "github.com/neo4j/helm-charts/neo4j-admin/backup/gcp"
 	neo4jAdmin "github.com/neo4j/helm-charts/neo4j-admin/backup/neo4j-admin"
 	"k8s.io/utils/strings/slices"
 )
 
-func awsOperations() {
-
-	credentialPath := os.Getenv("CREDENTIAL_PATH")
-	awsClient, err := aws.NewAwsClient(credentialPath)
-	handleError(err)
+// cloudOperations handles backup operations for all cloud providers using Neo4j native cloud storage
+func cloudOperations() {
+	log.Printf("Using Neo4j native cloud storage backup for provider: %s", os.Getenv("CLOUD_PROVIDER"))
 
 	if aggregateEnabled := os.Getenv("AGGREGATE_BACKUP_ENABLED"); aggregateEnabled == "true" {
-
-		//service account is NOT used hence env variables need to be set for aggregate backup operation
-		if credentialPath != "/credentials/" {
-			err = awsClient.GenerateEnvVariablesFromCredentials()
-			handleError(err)
-		}
-
-		err = aggregateBackupOperations()
+		err := aggregateBackupOperations()
 		handleError(err)
 		return
 	}
 
-	bucketName := os.Getenv("BUCKET_NAME")
-	err = awsClient.CheckBucketAccess(bucketName)
-	handleError(err)
-
 	backupFileNames, consistencyCheckReports, err := backupOperations()
 	handleError(err)
 
-	err = awsClient.UploadFile(backupFileNames, bucketName)
-	handleError(err)
-
+	// Only handle consistency check reports if they exist and need local processing
 	enableConsistencyCheck := os.Getenv("CONSISTENCY_CHECK_ENABLE")
-	if enableConsistencyCheck == "true" {
-		err = awsClient.UploadFile(consistencyCheckReports, bucketName)
-		handleError(err)
+	if enableConsistencyCheck == "true" && len(consistencyCheckReports) > 0 {
+		log.Printf("Consistency check reports generated: %v", consistencyCheckReports)
+		// Note: Consistency checks still generate local reports that may need manual handling
 	}
-	err = deleteBackupFiles(backupFileNames, consistencyCheckReports)
-	handleError(err)
+
+	log.Printf("Cloud backup completed successfully. Files: %v", backupFileNames)
 }
 
+// awsOperations
+func awsOperations() {
+	cloudOperations()
+}
+
+// gcpOperations
 func gcpOperations() {
-	gcpClient, err := gcp.NewGCPClient(os.Getenv("CREDENTIAL_PATH"))
-	handleError(err)
-
-	bucketName := os.Getenv("BUCKET_NAME")
-	err = gcpClient.CheckBucketAccess(bucketName)
-	handleError(err)
-
-	backupFileNames, consistencyCheckReports, err := backupOperations()
-	handleError(err)
-
-	err = gcpClient.UploadFile(backupFileNames, bucketName)
-	handleError(err)
-
-	enableConsistencyCheck := os.Getenv("CONSISTENCY_CHECK_ENABLE")
-	if enableConsistencyCheck == "true" {
-		err = gcpClient.UploadFile(consistencyCheckReports, bucketName)
-		handleError(err)
-	}
-	err = deleteBackupFiles(backupFileNames, consistencyCheckReports)
-	handleError(err)
+	cloudOperations()
 }
 
+// azureOperations
 func azureOperations() {
-	azureClient, err := azure.NewAzureClient(os.Getenv("CREDENTIAL_PATH"))
-	handleError(err)
-
-	containerName := os.Getenv("BUCKET_NAME")
-	err = azureClient.CheckContainerAccess(containerName)
-	handleError(err)
-
-	backupFileNames, consistencyCheckReports, err := backupOperations()
-	handleError(err)
-
-	err = azureClient.UploadFile(backupFileNames, containerName)
-	handleError(err)
-
-	enableConsistencyCheck := os.Getenv("CONSISTENCY_CHECK_ENABLE")
-	if enableConsistencyCheck == "true" {
-		err = azureClient.UploadFile(consistencyCheckReports, containerName)
-		handleError(err)
-	}
-	err = deleteBackupFiles(backupFileNames, consistencyCheckReports)
-	handleError(err)
+	cloudOperations()
 }
 
 func onPrem() {
-
 	if aggregateEnabled := os.Getenv("AGGREGATE_BACKUP_ENABLED"); aggregateEnabled == "true" {
 		err := aggregateBackupOperations()
 		handleError(err)
@@ -110,12 +61,11 @@ func onPrem() {
 
 	err = deleteBackupFiles(backupFileNames, consistencyCheckReports)
 	handleError(err)
-
 }
 
-// backupOperations returns backupFileNames , consistencyCheckReports and error
-// performs aggregate backup is aggregate backup is enabled
+// Returns backup file names and consistency check reports
 func backupOperations() ([]string, []string, error) {
+	// Clean up any existing backup files first
 	if err := deleteBackupFiles([]string{}, []string{}); err != nil {
 		log.Printf("Warning: failed to cleanup existing backups: %v", err)
 	}
@@ -124,6 +74,7 @@ func backupOperations() ([]string, []string, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+
 	databases := strings.Split(os.Getenv("DATABASE"), ",")
 	consistencyCheckDBs := strings.Split(os.Getenv("CONSISTENCY_CHECK_DATABASE"), ",")
 	consistencyCheckEnabled := os.Getenv("CONSISTENCY_CHECK_ENABLE")
@@ -133,13 +84,19 @@ func backupOperations() ([]string, []string, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	log.Printf("Backup File Name(s) %v", backupFileNames)
+	log.Printf("Backup completed successfully. Files: %v", backupFileNames)
 
+	// Handle consistency checks if enabled
 	if consistencyCheckEnabled == "true" {
-		// If consistencyCheckDBs is just an empty string, use all databases or "*"
+		if len(backupFileNames) == 0 {
+			return nil, nil, fmt.Errorf("no backup files found, cannot perform consistency check")
+		}
+
 		if len(consistencyCheckDBs) == 1 && consistencyCheckDBs[0] == "" {
-			// Perform consistency check for all databases
-			reportArchiveName, err := neo4jAdmin.PerformConsistencyCheck("")
+			// Perform consistency check for all databases using the first backup file as reference
+			firstBackupFile := backupFileNames[0]
+			baseName := strings.TrimSuffix(firstBackupFile, ".backup")
+			reportArchiveName, err := neo4jAdmin.PerformConsistencyCheck("", baseName)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -153,12 +110,25 @@ func backupOperations() ([]string, []string, error) {
 					continue // Skip empty entries
 				}
 				if slices.Contains(databases, consistencyCheckDB) || slices.Contains(databases, "*") {
-					reportArchiveName, err := neo4jAdmin.PerformConsistencyCheck(consistencyCheckDB)
-					if err != nil {
-						return nil, nil, err
+					// Find the corresponding backup file for this database
+					var matchingBackupFile string
+					for _, backupFile := range backupFileNames {
+						if strings.HasPrefix(backupFile, consistencyCheckDB+"-") {
+							matchingBackupFile = strings.TrimSuffix(backupFile, ".backup")
+							break
+						}
 					}
-					if len(reportArchiveName) != 0 {
-						consistencyCheckReports = append(consistencyCheckReports, reportArchiveName)
+
+					if matchingBackupFile != "" {
+						reportArchiveName, err := neo4jAdmin.PerformConsistencyCheck(consistencyCheckDB, matchingBackupFile)
+						if err != nil {
+							return nil, nil, err
+						}
+						if len(reportArchiveName) != 0 {
+							consistencyCheckReports = append(consistencyCheckReports, reportArchiveName)
+						}
+					} else {
+						log.Printf("Warning: No backup file found for database %s, skipping consistency check", consistencyCheckDB)
 					}
 				}
 			}
@@ -167,23 +137,132 @@ func backupOperations() ([]string, []string, error) {
 	return backupFileNames, consistencyCheckReports, nil
 }
 
-// aggregateBackupOperations perform aggregate backup
 func aggregateBackupOperations() error {
+	log.Printf("Performing aggregate backup")
 	err := neo4jAdmin.PerformAggregateBackup()
 	if err != nil {
 		return err
 	}
+	log.Printf("Aggregate backup completed successfully")
 	return nil
 }
 
 func startupOperations() {
+	// Load Azure credentials from file if using secret-based authentication
+	if os.Getenv("CLOUD_PROVIDER") == "azure" && os.Getenv("CREDENTIAL_PATH") != "" {
+		loadAzureCredentialsFromFile()
+	}
+
 	address, err := generateAddress()
 	handleError(err)
 
 	err = neo4jAdmin.CheckDatabaseConnectivity(address)
 	handleError(err)
 
-	os.Setenv("LOCATION", "/backups")
+	// Set backup location - will be overridden for cloud storage in helpers.go
+	backupPath := "/backups"
+	if path := os.Getenv("BACKUP_PATH"); path != "" {
+		backupPath = path
+	}
+	os.Setenv("LOCATION", backupPath)
+}
+
+// loadAzureCredentialsFromFile reads Azure credentials from the mounted secret file
+// and sets the environment variables that Neo4j's Azure client expects
+func loadAzureCredentialsFromFile() {
+	credentialPath := os.Getenv("CREDENTIAL_PATH")
+	if credentialPath == "" {
+		log.Printf("Warning: CREDENTIAL_PATH not set for Azure, skipping credential file loading")
+		return
+	}
+
+	// Check if credentials file exists
+	if _, err := os.Stat(credentialPath); os.IsNotExist(err) {
+		log.Printf("Azure credentials file not found at %s, skipping credential loading", credentialPath)
+		return
+	}
+
+	// Read the credentials file
+	content, err := os.ReadFile(credentialPath)
+	if err != nil {
+		log.Printf("Warning: Failed to read Azure credentials file %s: %v", credentialPath, err)
+		return
+	}
+
+	credentialsContent := string(content)
+	log.Printf("Loading Azure credentials from file: %s", credentialPath)
+
+	// Parse AZURE_STORAGE_ACCOUNT using regex
+	storageAccountName, err := extractAzureStorageAccountName(credentialsContent)
+	if err != nil {
+		log.Printf("Warning: Failed to extract Azure storage account from credentials file: %v", err)
+		return
+	}
+
+	// Parse AZURE_STORAGE_KEY using regex
+	storageAccountKey, err := extractAzureStorageAccountKey(credentialsContent)
+	if err != nil {
+		log.Printf("Warning: Failed to extract Azure storage key from credentials file: %v", err)
+		return
+	}
+
+	// Set Neo4j's expected environment variable names
+	os.Setenv("AZURE_STORAGE_ACCOUNT", storageAccountName)
+	os.Setenv("AZURE_STORAGE_KEY", storageAccountKey)
+
+	// For Neo4j's Azure SDK to work with DefaultAzureCredential, we also need to set
+	// the service principal environment variables that DefaultAzureCredential expects
+	// Try to extract service principal information from the credentials file
+	clientId, err := extractFromCredentialsFile(credentialsContent, "AZURE_CLIENT_ID")
+	if err == nil {
+		os.Setenv("AZURE_CLIENT_ID", clientId)
+		log.Printf("Set AZURE_CLIENT_ID from credentials file")
+	}
+
+	clientSecret, err := extractFromCredentialsFile(credentialsContent, "AZURE_CLIENT_SECRET")
+	if err == nil {
+		os.Setenv("AZURE_CLIENT_SECRET", clientSecret)
+		log.Printf("Set AZURE_CLIENT_SECRET from credentials file")
+	}
+
+	tenantId, err := extractFromCredentialsFile(credentialsContent, "AZURE_TENANT_ID")
+	if err == nil {
+		os.Setenv("AZURE_TENANT_ID", tenantId)
+		log.Printf("Set AZURE_TENANT_ID from credentials file")
+	}
+
+	log.Printf("Set AZURE_STORAGE_ACCOUNT from credentials file")
+	log.Printf("Set AZURE_STORAGE_KEY from credentials file")
+}
+
+// extractAzureStorageAccountName extracts the storage account name from credentials file content
+func extractAzureStorageAccountName(content string) (string, error) {
+	re := regexp.MustCompile(`AZURE_STORAGE_ACCOUNT=(.*)`)
+	matches := re.FindStringSubmatch(content)
+	if len(matches) < 2 {
+		return "", fmt.Errorf("AZURE_STORAGE_ACCOUNT not found in credentials file")
+	}
+	return strings.TrimSpace(matches[1]), nil
+}
+
+// extractAzureStorageAccountKey extracts the storage account key from credentials file content
+func extractAzureStorageAccountKey(content string) (string, error) {
+	re := regexp.MustCompile(`AZURE_STORAGE_KEY=(.*)`)
+	matches := re.FindStringSubmatch(content)
+	if len(matches) < 2 {
+		return "", fmt.Errorf("AZURE_STORAGE_KEY not found in credentials file")
+	}
+	return strings.TrimSpace(matches[1]), nil
+}
+
+// extractFromCredentialsFile extracts any environment variable from credentials file content
+func extractFromCredentialsFile(content string, variableName string) (string, error) {
+	re := regexp.MustCompile(fmt.Sprintf(`%s=(.*)`, variableName))
+	matches := re.FindStringSubmatch(content)
+	if len(matches) < 2 {
+		return "", fmt.Errorf("%s not found in credentials file", variableName)
+	}
+	return strings.TrimSpace(matches[1]), nil
 }
 
 func handleError(err error) {
@@ -216,16 +295,21 @@ func generateAddress() (string, error) {
 
 func deleteBackupFiles(backupFileNames, consistencyCheckReports []string) error {
 	if value, present := os.LookupEnv("KEEP_BACKUP_FILES"); present && value == "false" {
+		backupPath := "/backups"
+		if path := os.Getenv("BACKUP_PATH"); path != "" {
+			backupPath = path
+		}
+
 		for _, backupFileName := range backupFileNames {
-			log.Printf("Deleting file /backups/%s", backupFileName)
-			err := os.Remove(fmt.Sprintf("/backups/%s", backupFileName))
+			log.Printf("Deleting file %s/%s", backupPath, backupFileName)
+			err := os.Remove(fmt.Sprintf("%s/%s", backupPath, backupFileName))
 			if err != nil {
 				return err
 			}
 		}
 		for _, consistencyCheckReportName := range consistencyCheckReports {
-			log.Printf("Deleting file /backups/%s", consistencyCheckReportName)
-			err := os.Remove(fmt.Sprintf("/backups/%s", consistencyCheckReportName))
+			log.Printf("Deleting file %s/%s", backupPath, consistencyCheckReportName)
+			err := os.Remove(fmt.Sprintf("%s/%s", backupPath, consistencyCheckReportName))
 			if err != nil {
 				return err
 			}

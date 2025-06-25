@@ -10,50 +10,65 @@ import (
 )
 
 func TestDeleteBackupFiles(t *testing.T) {
-	t.Parallel()
-
+	// Create a temporary directory and files
 	tmpDir := t.TempDir()
-	backupDir := filepath.Join(tmpDir, "backups")
-	err := os.MkdirAll(backupDir, 0755)
-	assert.NoError(t, err)
 
-	originalBackupDir := "/backups"
-	os.Setenv("BACKUP_DIR", backupDir)
-	defer os.Setenv("BACKUP_DIR", originalBackupDir)
+	// Create test files
+	testFiles := []string{"backup1.backup", "backup2.backup"}
+	for _, file := range testFiles {
+		filePath := filepath.Join(tmpDir, file)
+		f, err := os.Create(filePath)
+		assert.NoError(t, err)
+		f.Close()
+	}
 
+	// Set environment variables
 	os.Setenv("KEEP_BACKUP_FILES", "false")
+	os.Setenv("BACKUP_DIR", tmpDir)
 
-	testFiles := []string{
-		"neo4j-2024-01-01.backup",
-		"system-2024-01-01.backup",
-		"neo4j-2024-01-01.backup.report.tar.gz",
-	}
+	// Test deletion
+	err := backup.DeleteBackupFiles(testFiles, []string{})
+	assert.NoError(t, err)
 
+	// Verify files are deleted
 	for _, file := range testFiles {
-		filePath := filepath.Join(backupDir, file)
-		err := os.WriteFile(filePath, []byte("test"), 0644)
-		assert.NoError(t, err)
+		filePath := filepath.Join(tmpDir, file)
+		_, err := os.Stat(filePath)
+		assert.True(t, os.IsNotExist(err), "File should be deleted")
 	}
 
-	err = backup.DeleteBackupFiles(testFiles, []string{})
-	assert.NoError(t, err)
+	// Clean up environment
+	os.Unsetenv("KEEP_BACKUP_FILES")
+	os.Unsetenv("BACKUP_DIR")
+}
 
-	files, err := os.ReadDir(backupDir)
-	assert.NoError(t, err)
-	assert.Equal(t, 0, len(files), "Backup directory should be empty")
+func TestKeepBackupFiles(t *testing.T) {
+	// Create a temporary directory and files
+	tmpDir := t.TempDir()
 
+	// Create test files
+	testFiles := []string{"backup1.backup", "backup2.backup"}
+	for _, file := range testFiles {
+		filePath := filepath.Join(tmpDir, file)
+		f, err := os.Create(filePath)
+		assert.NoError(t, err)
+		f.Close()
+	}
+
+	// Set environment variables to keep files
 	os.Setenv("KEEP_BACKUP_FILES", "true")
+	os.Setenv("BACKUP_DIR", tmpDir)
 
-	for _, file := range testFiles {
-		filePath := filepath.Join(backupDir, file)
-		err := os.WriteFile(filePath, []byte("test"), 0644)
-		assert.NoError(t, err)
-	}
-
-	err = backup.DeleteBackupFiles(testFiles, []string{})
+	// Test keep files
+	err := backup.DeleteBackupFiles(testFiles, []string{})
 	assert.NoError(t, err)
 
-	files, err = os.ReadDir(backupDir)
+	// Verify files are NOT deleted
+	files, err := os.ReadDir(tmpDir)
 	assert.NoError(t, err)
 	assert.Equal(t, len(testFiles), len(files), "Files should not be deleted when KEEP_BACKUP_FILES=true")
+
+	// Clean up environment
+	os.Unsetenv("KEEP_BACKUP_FILES")
+	os.Unsetenv("BACKUP_DIR")
 }

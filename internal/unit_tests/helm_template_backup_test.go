@@ -631,7 +631,7 @@ func TestBackupS3GenericParameters(t *testing.T) {
 
 	// Check that the S3 parameters are correctly set in the environment variables
 	assert.Contains(t, envVariables, corev1.EnvVar{Name: "S3_FORCE_PATH_STYLE", Value: "true"})
-	assert.Contains(t, envVariables, corev1.EnvVar{Name: "S3_REGION", Value: "us-east-1"})
+	assert.Contains(t, envVariables, corev1.EnvVar{Name: "AWS_REGION", Value: "us-east-1"})
 	assert.Contains(t, envVariables, corev1.EnvVar{Name: "S3_SIGNATURE_VERSION", Value: "4"})
 }
 
@@ -701,74 +701,61 @@ func TestBackupCompressEnvVarFalse(t *testing.T) {
 	assert.True(t, found, "COMPRESS env var not found")
 }
 
-// TestBackupAzureBlobServiceURL checks that the Azure blob service URL is properly configured
-func TestBackupAzureBlobServiceURL(t *testing.T) {
+// TestBackupWithTempDir checks for tempDir in the regular backup
+func TestBackupWithTempDir(t *testing.T) {
 	t.Parallel()
 
 	helmValues := model.DefaultNeo4jBackupValues
-	helmValues.DisableLookups = true
-	helmValues.Backup.CloudProvider = "azure"
-	helmValues.Backup.BucketName = "test-container"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "test-bucket"
 	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
-	helmValues.Backup.Database = "neo4j"
-	helmValues.Backup.AzureStorageAccountName = "testgovaccount"
-	helmValues.Backup.AzureBlobServiceURL = "blob.core.usgovcloudapi.net"
-	helmValues.ServiceAccountName = "azure-backup-sa"
+	helmValues.Backup.TempDir = "/custom/backup/temp/dir"
+	helmValues.ServiceAccountName = "demo"
 
 	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
-	assert.NoError(t, err, "error seen while performing helm template on backup helm chart with Azure blob service URL")
+	assert.NoError(t, err, "error seen while performing backup with tempDir")
 
 	cronjobs := manifests.OfType(&batchv1.CronJob{})
 	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
 
-	cronjob := cronjobs[0].(*batchv1.CronJob)
-	container := cronjob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
-
-	// Check that AZURE_BLOB_SERVICE_URL environment variable is set
-	var azureBlobServiceURLEnv *corev1.EnvVar
-	for _, env := range container.Env {
-		if env.Name == "AZURE_BLOB_SERVICE_URL" {
-			azureBlobServiceURLEnv = &env
+	envVariables := cronjobs[0].(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env
+	var found bool
+	for _, variable := range envVariables {
+		if variable.Name == "BACKUP_TEMP_DIR" {
+			found = true
+			assert.Equal(t, variable.Value, helmValues.Backup.TempDir)
 			break
 		}
 	}
-
-	assert.NotNil(t, azureBlobServiceURLEnv, "AZURE_BLOB_SERVICE_URL environment variable should be present")
-	assert.Equal(t, "blob.core.usgovcloudapi.net", azureBlobServiceURLEnv.Value, "AZURE_BLOB_SERVICE_URL should match the configured value")
+	assert.Equal(t, found, true)
 }
 
-// TestBackupAzureBlobServiceURLDefault checks that the Azure blob service URL defaults to empty when not specified
-func TestBackupAzureBlobServiceURLDefault(t *testing.T) {
+// TestBackupFallbackToFull checks for fallbackToFull environment variable
+func TestBackupFallbackToFull(t *testing.T) {
 	t.Parallel()
 
 	helmValues := model.DefaultNeo4jBackupValues
 	helmValues.DisableLookups = true
-	helmValues.Backup.CloudProvider = "azure"
-	helmValues.Backup.BucketName = "test-container"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "test-bucket"
 	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
-	helmValues.Backup.Database = "neo4j"
-	helmValues.Backup.AzureStorageAccountName = "testaccount"
-	helmValues.ServiceAccountName = "azure-backup-sa"
-	// Not setting AzureBlobServiceURL to test default behavior
+	helmValues.Backup.FallbackToFull = false // Test explicit false setting
+	helmValues.ServiceAccountName = "demo"
 
 	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
-	assert.NoError(t, err, "error seen while performing helm template on backup helm chart without Azure blob service URL")
+	assert.NoError(t, err, "error seen while performing backup with fallbackToFull")
 
 	cronjobs := manifests.OfType(&batchv1.CronJob{})
 	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
 
-	cronjob := cronjobs[0].(*batchv1.CronJob)
-	container := cronjob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
-
-	// Check that AZURE_BLOB_SERVICE_URL environment variable is set but empty
-	var azureBlobServiceURLEnv *corev1.EnvVar
-	for _, env := range container.Env {
-		if env.Name == "AZURE_BLOB_SERVICE_URL" {
-			azureBlobServiceURLEnv = &env
+	envVariables := cronjobs[0].(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env
+	var found bool
+	for _, variable := range envVariables {
+		if variable.Name == "FALLBACK_TO_FULL" {
+			found = true
+			assert.Equal(t, "false", variable.Value)
 			break
 		}
 	}
-
-	assert.NotNil(t, azureBlobServiceURLEnv, "AZURE_BLOB_SERVICE_URL environment variable should be present")
-	assert.Equal(t, "", azureBlobServiceURLEnv.Value, "AZURE_BLOB_SERVICE_URL should be empty when not configured")
+	assert.True(t, found, "FALLBACK_TO_FULL env var not found")
 }

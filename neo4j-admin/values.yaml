@@ -28,6 +28,11 @@ neo4j:
   labels: {}
 
 backup:
+  # Neo4j Backup Modes:
+  # - Cloud Provider Mode (aws/gcp/azure): Uses Neo4j native cloud storage with direct upload to create immutable backup objects
+  # - Local Mode (empty cloudProvider): Creates local backups in /backups mount - requires persistent storage for large databases
+  # - Native cloud storage supports differential backups and eliminates need for persistent volume claims
+  
   # Ensure the bucket is already existing in the respective cloud provider
   # In case of azure the bucket is the container name in the storage account
   # bucket: azure-storage-container
@@ -91,6 +96,8 @@ backup:
   # the /backups mount can point to a persistentVolume based on the definition set in tempVolume
   cloudProvider: ""
 
+  # Cloud provider authentication
+  # For cloud providers, credentials are used by Neo4j native backup for direct cloud storage access
   # name of the kubernetes secret containing the respective cloud provider credentials
   # Ensure you have read,write access to the mentioned bucket
   # For AWS :
@@ -106,8 +113,11 @@ backup:
   # add the storage account name and key in below format in a file create a secret via
   # 'kubectl create secret generic azurecred --from-file=credentials=/demo/azurecredentials'
 
-  #  AZURE_STORAGE_ACCOUNT_NAME=XXXX
-  #  AZURE_STORAGE_ACCOUNT_KEY=XXXX
+  #  AZURE_STORAGE_ACCOUNT=XXXX
+  #  AZURE_STORAGE_KEY=XXXX
+  #  AZURE_CLIENT_ID=XXXX
+  #  AZURE_CLIENT_SECRET=XXXX
+  #  AZURE_TENANT_ID=XXXX
 
   # For GCP :
   # create the secret via the gcp service account json key file.
@@ -115,6 +125,16 @@ backup:
   secretName: ""
   # provide the keyname used in the above secret
   secretKeyName: ""
+  # Cloud provider specific credential environment variables
+  # These are set by Neo4j's native cloud storage clients for authentication
+  # AWS: Path to AWS credentials file (will set AWS_SHARED_CREDENTIALS_FILE)
+  awsCredentialsFile: ""
+  # GCP: Path to Google Cloud service account key file (will set GOOGLE_APPLICATION_CREDENTIALS)
+  gcpCredentialsFile: ""
+  # 
+  # NOTE: When cloudProvider is set to "aws" or "gcp" and secretKeyName is provided,
+  # the chart will automatically set AWS_SHARED_CREDENTIALS_FILE or GOOGLE_APPLICATION_CREDENTIALS
+  # to "/credentials/{secretKeyName}". Use awsCredentialsFile/gcpCredentialsFile to override this default.
   # provide the azure storage account name
   # this to be provided when you are using workload identity integration for azure
   azureStorageAccountName: ""
@@ -135,7 +155,21 @@ backup:
   verbose: true
   heapSize: ""
   compress: true
+  # fallbackToFull determines whether to fall back to a full backup if incremental backup fails
+  # This is particularly useful for automated backup systems where you want reliability over efficiency
+  fallbackToFull: true
 
+  # Neo4j Native Cloud Storage Features
+  # Enable differential backups - allows Neo4j to create differential backups directly to cloud storage
+  # This creates backup chains where subsequent backups only store changes from previous backup
+  preferDiffAsParent: false
+  
+  # Optional temporary directory for backup process when using cloud storage
+  # If not specified, Neo4j will use a temporary directory inside the current working directory
+  # This is strongly recommended when backing up to cloud storage to avoid disk space issues
+  # on the local filesystem where Neo4j is installed
+  tempDir: ""
+  
   # https://neo4j.com/docs/operations-manual/current/backup-restore/aggregate/
   # Performs aggregate backup. If enabled, NORMAL BACKUP WILL NOT BE DONE only aggregate backup
   # fromPath supports only s3 or local mount. For s3 , please set cloudProvider to aws and use either serviceAccount or creds
@@ -150,7 +184,8 @@ backup:
     # database name to aggregate. Can contain * and ? for globbing.
     database: ""
     # Optional temporary directory for aggregation process
-    # If not specified, will use the backup directory
+    # If not specified, will use the backup directory with an "aggregate-temp" subdirectory
+    # This is especially useful when working with cloud storage and large backup chains
     tempDir: ""
 
 #Below are all neo4j-admin database check flags / options
@@ -168,6 +203,9 @@ consistencyCheck:
   maxOffHeapMemory: ""
   threads: ""
   verbose: true
+  # Optional temporary directory for consistency check process when using cloud storage
+  # If not specified, will use the backup directory with a "consistency-temp" subdirectory
+  tempDir: ""
 
 # Set to name of an existing Service Account to use if desired
 # Follow the following links for setting up a service account with workload identity
@@ -176,9 +214,11 @@ consistencyCheck:
 # AWS - https://docs.aws.amazon.com/eks/latest/userguide/associate-service-account-role.html
 serviceAccountName: ""
 
-# Volume to use as temporary storage for files before they are uploaded to cloud. For large databases local storage may not have sufficient space.
-# In that case set an ephemeral or persistent volume with sufficient space here
+# Volume to use for local backup storage and temporary files. 
+# Note: When using cloud providers (aws/gcp/azure), Neo4j native backup uploads directly to cloud storage
+# For large databases with local backups, you may need persistent storage here
 # The chart defaults to an emptyDir, use this to overwrite default behavior
+
 #tempVolume:
 #  persistentVolumeClaim:
 #    claimName: backup-pvc
