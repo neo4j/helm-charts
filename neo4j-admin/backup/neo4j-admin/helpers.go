@@ -133,6 +133,15 @@ func GetAggregateBackupCommandFlags() []string {
 	flags = append(flags, fmt.Sprintf("--keep-old-backup=%s", os.Getenv("AGGREGATE_BACKUP_KEEPOLDBACKUP")))
 	flags = append(flags, fmt.Sprintf("--parallel-recovery=%s", os.Getenv("AGGREGATE_BACKUP_PARALLEL_RECOVERY")))
 
+	// Add heap-size flag for aggregate backup JVM memory configuration
+	if len(strings.TrimSpace(os.Getenv("HEAP_SIZE"))) > 0 {
+		flags = append(flags, fmt.Sprintf("--heap-size=%s", os.Getenv("HEAP_SIZE")))
+	}
+
+	if len(strings.TrimSpace(os.Getenv("PAGE_CACHE"))) > 0 {
+		flags = append(flags, fmt.Sprintf("--pagecache=%s", os.Getenv("PAGE_CACHE")))
+	}
+
 	//flags = append(flags, "--expand-commands")
 	if os.Getenv("VERBOSE") == "true" {
 		flags = append(flags, "--verbose")
