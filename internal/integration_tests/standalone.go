@@ -425,6 +425,16 @@ func createNamespace(t *testing.T, releaseName model.ReleaseName) (Closeable, er
 	}
 
 	err := run(t, "kubectl", "create", "ns", namespace)
+	if err != nil {
+		// Check if the error is because namespace already exists (race condition)
+		// This can happen when parallel tests use the same namespace name
+		checkErr := run(t, "kubectl", "get", "ns", namespace)
+		if checkErr == nil {
+			// Namespace exists, this is likely a race condition with another parallel test
+			t.Logf("Namespace %s already exists, likely created by parallel test - continuing", namespace)
+			err = nil // Clear the error to continue successfully
+		}
+	}
 	return func() error {
 		return runAll(t, "kubectl", kCleanupCommands(releaseName.Namespace()), false)
 	}, err
@@ -855,6 +865,36 @@ func waitForServiceAccountCreation(projectID, serviceAccountEmail string, maxRet
 	}
 	return fmt.Errorf("service account %s was not created after %d retries",
 		serviceAccountEmail, maxRetries)
+}
+
+// runGcloudCommandWithRetry executes gcloud commands with retry logic for concurrent policy changes errors
+func runGcloudCommandWithRetry(cmd *exec.Cmd, maxRetries int, description string) ([]byte, []byte, error) {
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		stdout, stderr, err := RunCommand(cmd)
+
+		if err == nil {
+			return stdout, stderr, nil
+		}
+
+		// Check if this is the specific concurrent policy changes error
+		stderrStr := string(stderr)
+		if strings.Contains(stderrStr, "There were concurrent policy changes") &&
+			strings.Contains(stderrStr, "Please retry the whole read-modify-write with exponential backoff") {
+
+			if attempt < maxRetries-1 { // Don't sleep on the last attempt
+				backoffDuration := time.Duration(math.Pow(2, float64(attempt))) * time.Second
+				log.Printf("Concurrent policy changes detected for %s, retrying in %v (attempt %d/%d)",
+					description, backoffDuration, attempt+1, maxRetries)
+				time.Sleep(backoffDuration)
+				continue
+			}
+		}
+
+		// If it's not the concurrent policy error or we've exhausted retries, return the error
+		return stdout, stderr, err
+	}
+
+	return nil, nil, fmt.Errorf("failed after %d retries for %s", maxRetries, description)
 }
 
 func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.ReleaseName) error {
@@ -1666,23 +1706,23 @@ func createGCPServiceAccount(k8sServiceAccountName string, namespace string, gcp
 		return fmt.Errorf("failed waiting for service account creation: %v", err)
 	}
 
-	stdout, stderr, err = RunCommand(exec.Command("gcloud", "projects", "add-iam-policy-binding",
-		project, "--member", serviceAccountConfig, "--role", "roles/storage.admin"))
+	stdout, stderr, err = runGcloudCommandWithRetry(exec.Command("gcloud", "projects", "add-iam-policy-binding",
+		project, "--member", serviceAccountConfig, "--role", "roles/storage.admin"), 3, "storage.admin role binding")
 	if err != nil {
 		return fmt.Errorf("error seen while trying to add iam policy binding to gcp service account %s \n Here's why err := %s \n stderr := %s", gcpServiceAccountName, err, string(stderr))
 	}
 	log.Printf("Adding iam policy binding \n Stdout = %s \n Stderr = %s", string(stdout), string(stderr))
 
-	stdout, stderr, err = RunCommand(exec.Command("gcloud", "projects", "add-iam-policy-binding",
-		project, "--member", serviceAccountConfig, "--role", "roles/artifactregistry.repoAdmin"))
+	stdout, stderr, err = runGcloudCommandWithRetry(exec.Command("gcloud", "projects", "add-iam-policy-binding",
+		project, "--member", serviceAccountConfig, "--role", "roles/artifactregistry.repoAdmin"), 3, "artifactregistry.repoAdmin role binding")
 	if err != nil {
 		return fmt.Errorf("error seen while trying to add artifact registry iam policy binding to gcp service account %s \n Here's why err := %s \n stderr := %s", gcpServiceAccountName, err, string(stderr))
 	}
 	log.Printf("Adding iam policy binding \n Stdout = %s \n Stderr = %s", string(stdout), string(stderr))
 
-	stdout, stderr, err = RunCommand(exec.Command("gcloud", "iam", "service-accounts", "add-iam-policy-binding",
+	stdout, stderr, err = runGcloudCommandWithRetry(exec.Command("gcloud", "iam", "service-accounts", "add-iam-policy-binding",
 		serviceAccountEmail, "--role", "roles/iam.workloadIdentityUser",
-		"--member", fmt.Sprintf("serviceAccount:%s.svc.id.goog[%s/%s]", string(gcloud.CurrentProject()), namespace, k8sServiceAccountName)))
+		"--member", fmt.Sprintf("serviceAccount:%s.svc.id.goog[%s/%s]", string(gcloud.CurrentProject()), namespace, k8sServiceAccountName)), 3, "workloadIdentityUser role binding")
 	if err != nil {
 		return fmt.Errorf("error seen while trying to add iam policy binding to k8s service account %s \n Here's why err := %s \n stderr := %s", k8sServiceAccountName, err, string(stderr))
 	}
