@@ -113,10 +113,8 @@ spec:
                   value: {{ .Values.backup.fallbackToFull | toString | quote | default true }}
                 - name: AZURE_BLOB_SERVICE_URL
                   value: "{{ .Values.backup.azureBlobServiceURL | default "" }}"
-                - name: S3_ENDPOINT
+                - name: AWS_ENDPOINT_URL_S3
                   value: "{{ .Values.backup.s3Endpoint | default .Values.backup.minioEndpoint | default "" }}"
-                - name: S3_ENDPOINT_TLS
-                  value: "{{ if .Values.backup.s3CASecretName }}true{{ else }}{{ .Values.backup.s3EndpointTLS | default false }}{{ end }}"
                 - name: S3_CA_CERT_PATH
                   value: "{{ if .Values.backup.s3CASecretName }}{{ printf "/s3-ca-cert/%s" .Values.backup.s3CASecretKey }}{{ end }}"
                 - name: S3_SKIP_VERIFY

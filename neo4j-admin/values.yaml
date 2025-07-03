@@ -62,16 +62,12 @@ backup:
   databaseBackupPort: ""
   #default value is cluster.local
   databaseClusterDomain: ""
-  # specify S3-compatible endpoint (e.g., http://s3.amazonaws.com or your custom S3 endpoint)
+  # specify S3-compatible endpoint (e.g., https://s3.amazonaws.com or your custom S3 endpoint)
   # This can be any S3-compatible endpoint including AWS S3, MinIO, or other S3-compatible storage services
-  # For TLS endpoints (https), set s3EndpointTLS to true
+  # TLS is automatically enabled for https:// endpoints
   s3Endpoint: ""
-  # Enable TLS for S3 endpoint (default: false)
-  # Note: This will be automatically set to true if s3CASecretName is provided
-  s3EndpointTLS: false
   # Name of the Kubernetes secret containing the CA certificate for S3 endpoint TLS verification
   # Only needed for self-signed certificates or private CA
-  # When provided, s3EndpointTLS will automatically be set to true
   s3CASecretName: ""
   # Key in the secret containing the CA certificate
   s3CASecretKey: ""
