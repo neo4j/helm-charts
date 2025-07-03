@@ -530,6 +530,37 @@ func TestAggregateBackupWithTempDir(t *testing.T) {
 	assert.Equal(t, found, true)
 }
 
+// TestAggregateBackupDefaultTempDir checks that aggregate backup uses /backups as default temp directory
+func TestAggregateBackupDefaultTempDir(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "test-bucket"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+	helmValues.Backup.AggregateBackup = model.AggregateBackup{
+		Enabled:  true,
+		FromPath: "s3://demo-bucket",
+		// No TempDir specified - should default to /backups
+	}
+	helmValues.ServiceAccountName = "demo"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while performing aggregate backup with default tempDir")
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
+
+	envVariables := cronjobs[0].(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env
+
+	// AGGREGATE_BACKUP_TEMP_DIR should not be set when using default
+	for _, variable := range envVariables {
+		if variable.Name == "AGGREGATE_BACKUP_TEMP_DIR" {
+			assert.Equal(t, "", variable.Value, "AGGREGATE_BACKUP_TEMP_DIR should be empty when using default")
+		}
+	}
+}
+
 // TestBackupS3CASecretValidation checks that s3CASecretKey is required when s3CASecretName is provided
 func TestBackupS3CASecretValidation(t *testing.T) {
 	t.Parallel()

@@ -114,9 +114,8 @@ func GetAggregateBackupCommandFlags() []string {
 	if aggregateTempDir := os.Getenv("AGGREGATE_BACKUP_TEMP_DIR"); aggregateTempDir != "" {
 		flags = append(flags, fmt.Sprintf("--temp-path=%s", aggregateTempDir))
 	} else {
-		// Fall back to using the backup directory
-		aggregateTempDir := filepath.Join(getBackupPath(), "aggregate-temp")
-		flags = append(flags, fmt.Sprintf("--temp-path=%s", aggregateTempDir))
+		// Fall back to using the backup directory directly (more reliable than subdirectory)
+		flags = append(flags, fmt.Sprintf("--temp-path=%s", getBackupPath()))
 	}
 
 	// Use cloud storage path if cloud provider is configured and AGGREGATE_BACKUP_FROM_PATH is not explicitly set
