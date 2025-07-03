@@ -19,7 +19,6 @@ Configuration:
 AWS S3 Configuration:
 - S3 Endpoint: {{ .Values.backup.s3Endpoint | default "Default AWS S3" }}
 {{- if .Values.backup.s3Endpoint }}
-- S3 TLS Enabled: {{ .Values.backup.s3EndpointTLS | default false }}
 - S3 Skip Verify: {{ .Values.backup.s3SkipVerify | default false }}
 - S3 Force Path Style: {{ .Values.backup.s3ForcePathStyle | default true }}
 - S3 Region: {{ .Values.backup.s3Region | default "Default from credentials" }}
