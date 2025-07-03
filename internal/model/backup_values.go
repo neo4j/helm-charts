@@ -78,7 +78,6 @@ type Backup struct {
 	AzureBlobServiceURL      string          `yaml:"azureBlobServiceURL,omitempty"`
 	CloudProvider            string          `yaml:"cloudProvider,omitempty"`
 	S3Endpoint               string          `yaml:"s3Endpoint,omitempty"`
-	S3EndpointTLS            bool            `yaml:"s3EndpointTLS,omitempty" default:"false"`
 	S3CASecretName           string          `yaml:"s3CASecretName,omitempty"`
 	S3CASecretKey            string          `yaml:"s3CASecretKey,omitempty"`
 	S3SkipVerify             bool            `yaml:"s3SkipVerify,omitempty" default:"false"`

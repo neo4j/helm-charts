@@ -533,7 +533,6 @@ func InstallNeo4jBackupAWSHelmChartViaS3(t *testing.T, releaseName model.Release
 		SecretName:               secretName,
 		SecretKeyName:            "credentials",
 		S3Endpoint:               "http://localhost:9000",
-		S3EndpointTLS:            false,
 		S3Region:                 "us-east-1",
 		S3SignatureVersion:       "4",
 		Verbose:                  true,
@@ -768,13 +767,8 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 						}
 					}
 				}
-				// Verify that TLS is enabled
+				// Verify that CA certificate path is set correctly
 				for _, env := range container.Env {
-					if env.Name == "S3_ENDPOINT_TLS" {
-						if env.Value != "true" {
-							return fmt.Errorf("expected S3_ENDPOINT_TLS to be true but got %s", env.Value)
-						}
-					}
 					if env.Name == "S3_CA_CERT_PATH" {
 						if env.Value != "/s3-ca-cert/ca.crt" {
 							return fmt.Errorf("expected S3_CA_CERT_PATH to be /s3-ca-cert/ca.crt but got %s", env.Value)

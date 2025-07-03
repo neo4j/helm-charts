@@ -570,14 +570,7 @@ func TestBackupS3CASecretConfiguration(t *testing.T) {
 	assert.Len(t, cronjobs, 1)
 	cronjob := cronjobs[0].(*batchv1.CronJob)
 
-	// Check that TLS is automatically enabled
-	var tlsEnabled bool
-	for _, env := range cronjob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env {
-		if env.Name == "S3_ENDPOINT_TLS" {
-			tlsEnabled = env.Value == "true"
-		}
-	}
-	assert.True(t, tlsEnabled, "S3_ENDPOINT_TLS should be true when s3CASecretName is provided")
+	// TLS is now automatically handled by AWS_ENDPOINT_URL_S3 (https:// = TLS enabled)
 
 	var certMountFound bool
 	for _, volumeMount := range cronjob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].VolumeMounts {
@@ -615,7 +608,6 @@ func TestBackupS3GenericParameters(t *testing.T) {
 		SecretName:               "demo",
 		SecretKeyName:            "credentials",
 		S3Endpoint:               "https://s3.example.com",
-		S3EndpointTLS:            true,
 		S3ForcePathStyle:         true,
 		S3Region:                 "us-east-1",
 		S3SignatureVersion:       "4",
@@ -633,6 +625,7 @@ func TestBackupS3GenericParameters(t *testing.T) {
 	assert.Contains(t, envVariables, corev1.EnvVar{Name: "S3_FORCE_PATH_STYLE", Value: "true"})
 	assert.Contains(t, envVariables, corev1.EnvVar{Name: "AWS_REGION", Value: "us-east-1"})
 	assert.Contains(t, envVariables, corev1.EnvVar{Name: "S3_SIGNATURE_VERSION", Value: "4"})
+	assert.Contains(t, envVariables, corev1.EnvVar{Name: "AWS_ENDPOINT_URL_S3", Value: "https://s3.example.com"})
 }
 
 // TestBackupCompressEnvVarDefaultTrue checks that the Compress value is set to true correctly when the variable is not specified
