@@ -295,6 +295,9 @@ func PerformAggregateBackup() error {
 	log.Printf("  S3_SKIP_VERIFY: %s", os.Getenv("S3_SKIP_VERIFY"))
 	log.Printf("  S3_FORCE_PATH_STYLE: %s", os.Getenv("S3_FORCE_PATH_STYLE"))
 	log.Printf("  S3_SIGNATURE_VERSION: %s", os.Getenv("S3_SIGNATURE_VERSION"))
+	log.Printf("  AWS_REQUEST_CHECKSUM_CALCULATION: %s", os.Getenv("AWS_REQUEST_CHECKSUM_CALCULATION"))
+	log.Printf("  AWS_RESPONSE_CHECKSUM_VALIDATION: %s", os.Getenv("AWS_RESPONSE_CHECKSUM_VALIDATION"))
+	log.Printf("  AWS_S3_DISABLE_MULTIPART_CHECKSUMS: %s", os.Getenv("AWS_S3_DISABLE_MULTIPART_CHECKSUMS"))
 	log.Printf("  AGGREGATE_BACKUP_FROM_PATH: %s", os.Getenv("AGGREGATE_BACKUP_FROM_PATH"))
 
 	cmd := exec.Command("neo4j-admin", flags...)
