@@ -19,7 +19,6 @@ Configuration:
 AWS S3 Configuration:
 - S3 Endpoint: {{ .Values.backup.s3Endpoint | default "Default AWS S3" }}
 {{- if .Values.backup.s3Endpoint }}
-- S3 TLS Enabled: {{ .Values.backup.s3EndpointTLS | default false }}
 - S3 Skip Verify: {{ .Values.backup.s3SkipVerify | default false }}
 - S3 Force Path Style: {{ .Values.backup.s3ForcePathStyle | default true }}
 - S3 Region: {{ .Values.backup.s3Region | default "Default from credentials" }}
@@ -30,6 +29,12 @@ For S3-compatible storage providers (like Cloudian, MinIO, etc.):
 1. If you encounter signature errors, try setting s3Region to a fixed value like "us-east-1"
 2. Ensure s3ForcePathStyle is set to true
 3. For older S3 implementations, try setting s3SignatureVersion to "2"
+4. If you encounter checksum errors (e.g., "Checksum Type mismatch"), try these settings:
+   - Set s3RequestChecksumCalculation to "WHEN_REQUIRED" to disable automatic checksums
+   - Set s3ResponseChecksumValidation to "WHEN_REQUIRED" to disable checksum validation
+   - Set s3DisableMultipartChecksums to true for multipart upload checksum issues
+5. If you encounter "Unable to load HTTP implementation" errors, the chart automatically
+   configures the AWS SDK to use URLConnection HTTP client which should resolve the issue
 {{- end }}
 {{- end }}
 

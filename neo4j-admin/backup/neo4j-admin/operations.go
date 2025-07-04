@@ -284,7 +284,26 @@ func PerformAggregateBackup() error {
 	dir, _ := os.Getwd()
 	log.Println("current directory", dir)
 
+	// Log important environment variables for debugging
+	log.Printf("Environment variables for S3 access:")
+	log.Printf("  CLOUD_PROVIDER: %s", os.Getenv("CLOUD_PROVIDER"))
+	log.Printf("  AWS_REGION: %s", os.Getenv("AWS_REGION"))
+	log.Printf("  AWS_DEFAULT_REGION: %s", os.Getenv("AWS_DEFAULT_REGION"))
+	log.Printf("  AWS_SHARED_CREDENTIALS_FILE: %s", os.Getenv("AWS_SHARED_CREDENTIALS_FILE"))
+	log.Printf("  AWS_ENDPOINT_URL_S3: %s", os.Getenv("AWS_ENDPOINT_URL_S3"))
+	log.Printf("  S3_CA_CERT_PATH: %s", os.Getenv("S3_CA_CERT_PATH"))
+	log.Printf("  S3_SKIP_VERIFY: %s", os.Getenv("S3_SKIP_VERIFY"))
+	log.Printf("  S3_FORCE_PATH_STYLE: %s", os.Getenv("S3_FORCE_PATH_STYLE"))
+	log.Printf("  S3_SIGNATURE_VERSION: %s", os.Getenv("S3_SIGNATURE_VERSION"))
+	log.Printf("  AWS_REQUEST_CHECKSUM_CALCULATION: %s", os.Getenv("AWS_REQUEST_CHECKSUM_CALCULATION"))
+	log.Printf("  AWS_RESPONSE_CHECKSUM_VALIDATION: %s", os.Getenv("AWS_RESPONSE_CHECKSUM_VALIDATION"))
+	log.Printf("  AWS_S3_DISABLE_MULTIPART_CHECKSUMS: %s", os.Getenv("AWS_S3_DISABLE_MULTIPART_CHECKSUMS"))
+	log.Printf("  AGGREGATE_BACKUP_FROM_PATH: %s", os.Getenv("AGGREGATE_BACKUP_FROM_PATH"))
+
 	cmd := exec.Command("neo4j-admin", flags...)
+
+	// Log the full command line being executed
+	log.Printf("Executing command line: %s %s", cmd.Path, strings.Join(cmd.Args[1:], " "))
 
 	// Create pipes for stdout and stderr
 	stdout, err := cmd.StdoutPipe()
