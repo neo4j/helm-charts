@@ -104,6 +104,10 @@ backup:
   # This sets AWS_S3_DISABLE_MULTIPART_CHECKSUMS environment variable
   s3DisableMultipartChecksums: false
 
+  # Note: When using AWS cloud provider, the chart automatically configures the AWS SDK
+  # to use URLConnection HTTP client to avoid "Unable to load HTTP implementation" errors
+  # that can occur with Apache HTTP client in containerized environments
+
   #name of the database to backup ex: neo4j or neo4j,system (You can provide command separated database names)
   # In case of comma separated databases failure of any single database will lead to failure of complete operation
   database: ""
