@@ -33,6 +33,8 @@ For S3-compatible storage providers (like Cloudian, MinIO, etc.):
    - Set s3RequestChecksumCalculation to "WHEN_REQUIRED" to disable automatic checksums
    - Set s3ResponseChecksumValidation to "WHEN_REQUIRED" to disable checksum validation
    - Set s3DisableMultipartChecksums to true for multipart upload checksum issues
+5. If you encounter "Unable to load HTTP implementation" errors, the chart automatically
+   configures the AWS SDK to use URLConnection HTTP client which should resolve the issue
 {{- end }}
 {{- end }}
 

@@ -137,6 +137,14 @@ spec:
                 - name: AWS_S3_DISABLE_MULTIPART_CHECKSUMS
                   value: "true"
                 {{- end }}
+                {{- if eq .Values.backup.cloudProvider "aws" }}
+                - name: AWS_SDK_HTTP_CLIENT
+                  value: "urlconnection"
+                - name: AWS_SDK_SYNC_HTTP_CLIENT
+                  value: "urlconnection"
+                - name: JAVA_OPTS
+                  value: "-Daws.java.v2.sync.http.client=urlconnection"
+                {{- end }}
                 - name: CONSISTENCY_CHECK_ENABLE
                   value: {{ .Values.consistencyCheck.enable | toString | quote | default false }}
                 - name: CONSISTENCY_CHECK_INDEXES
