@@ -81,7 +81,7 @@ type Backup struct {
 	S3CASecretName               string          `yaml:"s3CASecretName,omitempty"`
 	S3CASecretKey                string          `yaml:"s3CASecretKey,omitempty"`
 	S3SkipVerify                 bool            `yaml:"s3SkipVerify,omitempty" default:"false"`
-	S3ForcePathStyle             bool            `yaml:"s3ForcePathStyle,omitempty" default:"true"`
+	S3ForcePathStyle             bool            `yaml:"s3ForcePathStyle" default:"true"`
 	S3Region                     string          `yaml:"s3Region,omitempty"`
 	S3SignatureVersion           string          `yaml:"s3SignatureVersion,omitempty"`
 	S3RequestChecksumCalculation string          `yaml:"s3RequestChecksumCalculation,omitempty"`
