@@ -332,6 +332,11 @@ config:
   # Enable automatic reloading of TLS certificates
   dbms.security.tls_reload_enabled: "true"
 
+  # SPeeDy (Sharded Property Database) feature flag
+  # Enables the sharded property database feature for improved performance with large datasets
+  # Set to "true" to enable SPeeDy, "false" to disable (default: false)
+  internal.dbms.sharded_property_database.enabled: "false"
+
 apoc_config: {}
 #  apoc.trigger.enabled: "true"
 #  apoc.import.file.enabled: "true"

@@ -294,6 +294,36 @@ func TestTlsReloadConfiguration(t *testing.T) {
 	forEachPrimaryChart(t, andEachSupportedEdition(doTestCase))
 }
 
+func TestSpeedyConfiguration(t *testing.T) {
+	t.Parallel()
+
+	doTestCase := func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		// Test case 1: Default configuration (should be false)
+		helmValues := model.DefaultEnterpriseValues
+		manifest, err := model.HelmTemplateFromStruct(t, model.HelmChart, helmValues)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		userConfigMap := manifest.OfTypeWithName(&v1.ConfigMap{}, model.DefaultHelmTemplateReleaseName.UserConfigMapName()).(*v1.ConfigMap)
+		assert.Equal(t, "false", userConfigMap.Data["internal.dbms.sharded_property_database.enabled"])
+
+		// Test case 2: Explicitly set to true
+		helmValues.Config = map[string]string{
+			"internal.dbms.sharded_property_database.enabled": "true",
+		}
+		manifest, err = model.HelmTemplateFromStruct(t, model.HelmChart, helmValues)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		userConfigMap = manifest.OfTypeWithName(&v1.ConfigMap{}, model.DefaultHelmTemplateReleaseName.UserConfigMapName()).(*v1.ConfigMap)
+		assert.Equal(t, "true", userConfigMap.Data["internal.dbms.sharded_property_database.enabled"])
+	}
+
+	forEachPrimaryChart(t, andEachSupportedEdition(doTestCase))
+}
+
 func checkConfigMapContainsJvmAdditionalFromDefaultConf(t *testing.T, edition string, userConfigMap *v1.ConfigMap) error {
 	// check that we picked up jvm additional from the conf file
 	file, err := os.Open(fmt.Sprintf("neo4j/neo4j-%s.conf", edition))
