@@ -93,15 +93,24 @@ func backupOperations() ([]string, []string, error) {
 		}
 
 		if len(consistencyCheckDBs) == 1 && consistencyCheckDBs[0] == "" {
-			// Perform consistency check for all databases using the first backup file as reference
-			firstBackupFile := backupFileNames[0]
-			baseName := strings.TrimSuffix(firstBackupFile, ".backup")
-			reportArchiveName, err := neo4jAdmin.PerformConsistencyCheck("", baseName)
-			if err != nil {
-				return nil, nil, err
-			}
-			if len(reportArchiveName) != 0 {
-				consistencyCheckReports = append(consistencyCheckReports, reportArchiveName)
+			// When no specific database is configured, check all backed up databases
+			for _, backupFile := range backupFileNames {
+				baseName := strings.TrimSuffix(backupFile, ".backup")
+				// Extract database name from backup file name (format: database-timestamp.backup)
+				parts := strings.Split(baseName, "-")
+				if len(parts) >= 2 {
+					dbName := parts[0]
+					log.Printf("Performing consistency check for database %s using backup file %s", dbName, backupFile)
+					reportArchiveName, err := neo4jAdmin.PerformConsistencyCheck(dbName, baseName)
+					if err != nil {
+						return nil, nil, err
+					}
+					if len(reportArchiveName) != 0 {
+						consistencyCheckReports = append(consistencyCheckReports, reportArchiveName)
+					}
+				} else {
+					log.Printf("Warning: Could not extract database name from backup file %s, skipping consistency check", backupFile)
+				}
 			}
 		} else {
 			// Perform consistency check for each specified database
