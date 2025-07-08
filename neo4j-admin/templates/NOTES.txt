@@ -29,10 +29,18 @@ For S3-compatible storage providers (like Cloudian, MinIO, etc.):
 1. If you encounter signature errors, try setting s3Region to a fixed value like "us-east-1"
 2. Ensure s3ForcePathStyle is set to true
 3. For older S3 implementations, try setting s3SignatureVersion to "2"
-4. If you encounter checksum errors (e.g., "Checksum Type mismatch"), try these settings:
+4. If you encounter checksum errors (e.g., "Checksum Type mismatch"), try ALL of these settings together:
    - Set s3RequestChecksumCalculation to "WHEN_REQUIRED" to disable automatic checksums
    - Set s3ResponseChecksumValidation to "WHEN_REQUIRED" to disable checksum validation
    - Set s3DisableMultipartChecksums to true for multipart upload checksum issues
+   
+   Example configuration for custom S3 endpoints:
+   backup:
+     s3RequestChecksumCalculation: "WHEN_REQUIRED"
+     s3ResponseChecksumValidation: "WHEN_REQUIRED"
+     s3DisableMultipartChecksums: true
+     s3ForcePathStyle: true
+     s3Region: "us-east-1"
 5. If you encounter "Unable to load HTTP implementation" errors, the chart automatically
    configures the AWS SDK to use URLConnection HTTP client which should resolve the issue
 {{- end }}
@@ -59,6 +67,23 @@ Aggregate Backup Configuration:
 - From Path: {{ .Values.backup.aggregate.fromPath }}
 - Database: {{ .Values.backup.aggregate.database | default "*" }}
 - Keep Old Backup: {{ .Values.backup.aggregate.keepOldBackup | default false }}
+{{- end }}
+
+{{- if .Values.consistencyCheck.enable }}
+
+Consistency Check Configuration:
+- Check Indexes: {{ .Values.consistencyCheck.checkIndexes | default false }}
+- Check Graph: {{ .Values.consistencyCheck.checkGraph | default false }}
+- Check Counts: {{ .Values.consistencyCheck.checkCounts | default false }}
+- Check Property Owners: {{ .Values.consistencyCheck.checkPropertyOwners | default false }}
+{{- if .Values.consistencyCheck.database }}
+- Target Database(s): {{ .Values.consistencyCheck.database }}
+{{- else }}
+- Target Database(s): All backed up databases
+{{- end }}
+{{- if .Values.consistencyCheck.tempDir }}
+- Temp Directory: {{ .Values.consistencyCheck.tempDir }}
+{{- end }}
 {{- end }}
 
 Features:

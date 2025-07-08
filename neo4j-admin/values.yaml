@@ -92,16 +92,21 @@ backup:
   # Valid values: "WHEN_SUPPORTED" (default), "WHEN_REQUIRED"
   # Set to "WHEN_REQUIRED" to disable automatic checksum calculation for custom S3 endpoints
   # that don't support CRC32 or other checksum algorithms
+  # IMPORTANT: For custom S3 endpoints experiencing "Checksum Type mismatch" errors,
+  # set this to "WHEN_REQUIRED" to resolve the issue
   s3RequestChecksumCalculation: ""
   
   # Optional: Control when AWS SDK validates response checksums
   # Valid values: "WHEN_SUPPORTED" (default), "WHEN_REQUIRED"
   # Set to "WHEN_REQUIRED" to disable automatic checksum validation for custom S3 endpoints
+  # IMPORTANT: For custom S3 endpoints experiencing checksum validation errors,
+  # set this to "WHEN_REQUIRED" to resolve the issue
   s3ResponseChecksumValidation: ""
   
   # Optional: Disable multipart upload checksums entirely
   # Set to true to disable checksums for multipart uploads when using custom S3 endpoints
   # This sets AWS_S3_DISABLE_MULTIPART_CHECKSUMS environment variable
+  # IMPORTANT: For custom S3 endpoints, set this to true along with the above checksum settings
   s3DisableMultipartChecksums: false
 
   # Note: When using AWS cloud provider, the chart automatically configures the AWS SDK
@@ -219,6 +224,11 @@ consistencyCheck:
   #The database name for which consistency check needs to be done.
   #Defaults to the backup.database values if left empty
   #The database name here should match with one of the database names present in backup.database. If not , the consistency check will be ignored
+  # 
+  # When left empty: Consistency check will be performed for ALL backed up databases
+  # When specified: Only the specified database(s) will be checked
+  # 
+  # You can specify multiple databases using comma separation: "neo4j,system"
   database: ""
   maxOffHeapMemory: ""
   threads: ""
