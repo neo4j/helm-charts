@@ -390,6 +390,7 @@ func InstallNeo4jBackupAWSCloudStorage(t *testing.T, releaseName model.ReleaseNa
 		SecretName:               "awscred",
 		SecretKeyName:            "credentials",
 		S3Region:                 "us-east-1",
+		S3ForcePathStyle:         true,
 		Verbose:                  true,
 		Type:                     "FULL",
 		KeepBackupFiles:          true,
@@ -535,6 +536,7 @@ func InstallNeo4jBackupAWSHelmChartViaS3(t *testing.T, releaseName model.Release
 		S3Endpoint:               "http://localhost:9000",
 		S3Region:                 "us-east-1",
 		S3SignatureVersion:       "4",
+		S3ForcePathStyle:         true,
 		Verbose:                  true,
 		KeepBackupFiles:          true,
 		Type:                     "FULL",
@@ -869,6 +871,7 @@ func InstallBackupViaTempDir(t *testing.T, releaseName model.ReleaseName) error 
 		SecretName:               secretName,
 		SecretKeyName:            "credentials",
 		S3Endpoint:               "s3.amazonaws.com",
+		S3ForcePathStyle:         true,
 		Verbose:                  true,
 		Type:                     "FULL",
 		AggregateBackup: model.AggregateBackup{
@@ -1355,6 +1358,7 @@ func TestBackupMultipleEndpointsE2E(t *testing.T) {
 	helmValues.Backup.CloudProvider = "aws"
 	helmValues.Backup.BucketName = "demo2"
 	helmValues.Backup.Database = "neo4j1"
+	helmValues.Backup.S3ForcePathStyle = true
 
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
 	_, err = helmClient.Install(t, releaseName.String(), namespace, helmValues)
