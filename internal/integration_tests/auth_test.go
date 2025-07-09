@@ -3,11 +3,12 @@ package integration_tests
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
 func TestAuthSecretsWrongKey(t *testing.T) {
@@ -243,6 +244,12 @@ func TestBackupInvalidSecretKeyName(t *testing.T) {
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
 	_, err = helmClient.Install(t, releaseName.String(), namespace, helmValues)
 	assert.Contains(t, err.Error(), fmt.Sprintf("Secret %s must contain key %s", helmValues.Backup.SecretName, helmValues.Backup.SecretKeyName))
+
+	t.Cleanup(func() {
+		_ = runAll(t, "kubectl", [][]string{
+			{"delete", "namespace", string(releaseName.Namespace())},
+		}, false)
+	})
 }
 
 // TestBackupNodeSelectorLabels checks for failure when missing nodeSelector labels are provided
