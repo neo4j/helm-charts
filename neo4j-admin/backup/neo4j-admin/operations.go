@@ -278,94 +278,104 @@ func PerformConsistencyCheck(database string, backupFileName string) (string, er
 
 // PerformAggregateBackup triggers the neo4j-admin aggregate backup command
 func PerformAggregateBackup() error {
-	flags := GetAggregateBackupCommandFlags()
-	database := os.Getenv("AGGREGATE_BACKUP_DATABASE")
-	log.Printf("Printing aggregate backup flags %v", flags)
-	dir, _ := os.Getwd()
-	log.Println("current directory", dir)
-
-	// Log important environment variables for debugging
-	log.Printf("Environment variables for S3 access:")
-	log.Printf("  CLOUD_PROVIDER: %s", os.Getenv("CLOUD_PROVIDER"))
-	log.Printf("  AWS_REGION: %s", os.Getenv("AWS_REGION"))
-	log.Printf("  AWS_DEFAULT_REGION: %s", os.Getenv("AWS_DEFAULT_REGION"))
-	log.Printf("  AWS_SHARED_CREDENTIALS_FILE: %s", os.Getenv("AWS_SHARED_CREDENTIALS_FILE"))
-	log.Printf("  AWS_ENDPOINT_URL_S3: %s", os.Getenv("AWS_ENDPOINT_URL_S3"))
-	log.Printf("  S3_CA_CERT_PATH: %s", os.Getenv("S3_CA_CERT_PATH"))
-	log.Printf("  S3_SKIP_VERIFY: %s", os.Getenv("S3_SKIP_VERIFY"))
-	log.Printf("  S3_FORCE_PATH_STYLE: %s", os.Getenv("S3_FORCE_PATH_STYLE"))
-	log.Printf("  S3_SIGNATURE_VERSION: %s", os.Getenv("S3_SIGNATURE_VERSION"))
-	log.Printf("  AWS_REQUEST_CHECKSUM_CALCULATION: %s", os.Getenv("AWS_REQUEST_CHECKSUM_CALCULATION"))
-	log.Printf("  AWS_RESPONSE_CHECKSUM_VALIDATION: %s", os.Getenv("AWS_RESPONSE_CHECKSUM_VALIDATION"))
-	log.Printf("  AWS_S3_DISABLE_MULTIPART_CHECKSUMS: %s", os.Getenv("AWS_S3_DISABLE_MULTIPART_CHECKSUMS"))
-	log.Printf("  AGGREGATE_BACKUP_FROM_PATH: %s", os.Getenv("AGGREGATE_BACKUP_FROM_PATH"))
-
-	cmd := exec.Command("neo4j-admin", flags...)
-
-	// Log the full command line being executed
-	log.Printf("Executing command line: %s %s", cmd.Path, strings.Join(cmd.Args[1:], " "))
-
-	// Create pipes for stdout and stderr
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("Failed to create stdout pipe: %v", err)
+	databaseStr := os.Getenv("AGGREGATE_BACKUP_DATABASE")
+	databases := strings.Split(databaseStr, ",")
+	for i, db := range databases {
+		databases[i] = strings.TrimSpace(db)
 	}
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return fmt.Errorf("Failed to create stderr pipe: %v", err)
-	}
+	log.Printf("Performing aggregate backups for databases: %s", strings.Join(databases, ", "))
 
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("Failed to start aggregate backup command: %v", err)
-	}
-
-	// Create a buffer to store the complete output for parsing later
-	var outputBuffer strings.Builder
-
-	// Create channels to signal when reading is done
-	stdoutDone := make(chan bool)
-	stderrDone := make(chan bool)
-
-	// Start goroutine to read and stream stdout
-	go func() {
-		scanner := bufio.NewScanner(stdout)
-		for scanner.Scan() {
-			line := scanner.Text()
-			log.Println(line)
-			outputBuffer.WriteString(line + "\n")
+	for _, db := range databases {
+		if db == "" {
+			continue
 		}
-		stdoutDone <- true
-	}()
+		flags := GetAggregateBackupCommandFlags(db)
+		log.Printf("Printing aggregate backup flags for %s: %v", db, flags)
+		dir, _ := os.Getwd()
+		log.Println("current directory", dir)
 
-	// Start goroutine to read and stream stderr
-	go func() {
-		scanner := bufio.NewScanner(stderr)
-		for scanner.Scan() {
-			line := scanner.Text()
-			log.Println(line)
-			outputBuffer.WriteString(line + "\n")
-		}
-		stderrDone <- true
-	}()
+		// Log important environment variables for debugging
+		log.Printf("Environment variables for S3 access:")
+		log.Printf("  CLOUD_PROVIDER: %s", os.Getenv("CLOUD_PROVIDER"))
+		log.Printf("  AWS_REGION: %s", os.Getenv("AWS_REGION"))
+		log.Printf("  AWS_DEFAULT_REGION: %s", os.Getenv("AWS_DEFAULT_REGION"))
+		log.Printf("  AWS_SHARED_CREDENTIALS_FILE: %s", os.Getenv("AWS_SHARED_CREDENTIALS_FILE"))
+		log.Printf("  AWS_ENDPOINT_URL_S3: %s", os.Getenv("AWS_ENDPOINT_URL_S3"))
+		log.Printf("  S3_CA_CERT_PATH: %s", os.Getenv("S3_CA_CERT_PATH"))
+		log.Printf("  S3_SKIP_VERIFY: %s", os.Getenv("S3_SKIP_VERIFY"))
+		log.Printf("  S3_FORCE_PATH_STYLE: %s", os.Getenv("S3_FORCE_PATH_STYLE"))
+		log.Printf("  S3_SIGNATURE_VERSION: %s", os.Getenv("S3_SIGNATURE_VERSION"))
+		log.Printf("  AWS_REQUEST_CHECKSUM_CALCULATION: %s", os.Getenv("AWS_REQUEST_CHECKSUM_CALCULATION"))
+		log.Printf("  AWS_RESPONSE_CHECKSUM_VALIDATION: %s", os.Getenv("AWS_RESPONSE_CHECKSUM_VALIDATION"))
+		log.Printf("  AWS_S3_DISABLE_MULTIPART_CHECKSUMS: %s", os.Getenv("AWS_S3_DISABLE_MULTIPART_CHECKSUMS"))
+		log.Printf("  AGGREGATE_BACKUP_FROM_PATH: %s", os.Getenv("AGGREGATE_BACKUP_FROM_PATH"))
+		cmd := exec.Command("neo4j-admin", flags...)
 
-	// Wait for both stdout and stderr to be fully read
-	<-stdoutDone
-	<-stderrDone
+		log.Printf("Executing command line for %s: %s %s", db, cmd.Path, strings.Join(cmd.Args[1:], " "))
 
-	// Wait for the command to complete
-	err = cmd.Wait()
-	if err != nil {
-		return fmt.Errorf("Aggregate Backup Failed for database %s !! output = %s \n err = %v", database, outputBuffer.String(), err)
-	}
-
-	log.Printf("Aggregate backup completed successfully for database %s", database)
-	if !strings.Contains(outputBuffer.String(), "no need to aggregate") {
-		backupFileNames, err := retrieveAggregatedBackupFileNames(outputBuffer.String())
+		// Create pipes for stdout and stderr
+		stdout, err := cmd.StdoutPipe()
 		if err != nil {
-			return err
+			return fmt.Errorf("Failed to create stdout pipe: %v", err)
 		}
-		log.Printf("%s", backupFileNames)
+		stderr, err := cmd.StderrPipe()
+		if err != nil {
+			return fmt.Errorf("Failed to create stderr pipe: %v", err)
+		}
+
+		os.Setenv("JAVA_OPTS", "--add-opens=java.base/java.nio=ALL-UNNAMED")
+
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("Failed to start aggregate backup command: %v", err)
+		}
+
+		// Create a buffer to store the complete output for parsing later
+		var outputBuffer strings.Builder
+
+		// Create channels to signal when reading is done
+		stdoutDone := make(chan bool)
+		stderrDone := make(chan bool)
+
+		// Start goroutine to read and stream stdout
+		go func() {
+			scanner := bufio.NewScanner(stdout)
+			for scanner.Scan() {
+				line := scanner.Text()
+				log.Println(line)
+				outputBuffer.WriteString(line + "\n")
+			}
+			stdoutDone <- true
+		}()
+
+		// Start goroutine to read and stream stderr
+		go func() {
+			scanner := bufio.NewScanner(stderr)
+			for scanner.Scan() {
+				line := scanner.Text()
+				log.Println(line)
+				outputBuffer.WriteString(line + "\n")
+			}
+			stderrDone <- true
+		}()
+
+		// Wait for both stdout and stderr to be fully read
+		<-stdoutDone
+		<-stderrDone
+
+		// Wait for the command to complete
+		err = cmd.Wait()
+		if err != nil {
+			return fmt.Errorf("Aggregate Backup Failed for database %s !! output = %s \n err = %v", db, outputBuffer.String(), err)
+		}
+		log.Printf("Aggregate backup completed successfully for database %s", db)
+		if !strings.Contains(outputBuffer.String(), "no need to aggregate") {
+			backupFileNames, err := retrieveAggregatedBackupFileNames(outputBuffer.String())
+			if err != nil {
+				return err
+			}
+			log.Printf("%s", backupFileNames)
+		}
+		log.Printf(outputBuffer.String())
 	}
-	log.Printf(outputBuffer.String())
 	return nil
 }
