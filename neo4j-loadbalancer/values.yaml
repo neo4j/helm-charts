@@ -4,6 +4,13 @@ neo4j:
   name: "neo4j-loadbalancer"
   edition: "enterprise"
 
+# Service name configuration
+serviceName:
+  # Suffix for the load balancer service name. 
+  # The full service name will be: {{ neo4j.name }}-{{ suffix }}
+  # This allows multiple load balancers in the same namespace when using different suffixes
+  suffix: "lb-neo4j"
+
 # Annotations for the external service
 annotations: { }
 
