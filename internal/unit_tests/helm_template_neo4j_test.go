@@ -1,11 +1,12 @@
 package unit_tests
 
 import (
+	"testing"
+
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	"testing"
 )
 
 func TestNeo4jNameWithLoadBalancerSelector(t *testing.T) {
@@ -133,4 +134,49 @@ func TestNeo4jServerAndUserLogsConfig(t *testing.T) {
 	assert.Contains(t, defaultConfigMap.Data["server.logs.config"], "/config/server-logs.xml/server-logs.xml")
 	assert.Contains(t, serverLogsConfigMap.Data["server-logs.xml"], "unit test case to test it")
 	assert.Contains(t, userLogsConfigMap.Data["user-logs.xml"], "unit test case to test it")
+}
+
+// TestSeparatedImageFields checks if the image is correctly constructed using separated fields
+func TestSeparatedImageFields(t *testing.T) {
+	t.Parallel()
+
+	release := model.NewReleaseName("test-separated")
+
+	args := append(useDataModeAndAcceptLicense, useNeo4jClusterName...)
+	args = append(args, []string{
+		"--set", "image.registry=myregistry.com",
+		"--set", "image.repository=neo4j-custom",
+		"--set", "neo4j.edition=enterprise",
+	}...)
+
+	manifests, err := model.HelmTemplateForRelease(t, release, model.HelmChart, args)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	stsList := manifests.OfType(&appsv1.StatefulSet{})
+	assert.Len(t, stsList, 1)
+
+	sts := stsList[0].(*appsv1.StatefulSet)
+	container := sts.Spec.Template.Spec.Containers[0]
+
+	assert.Contains(t, container.Image, "myregistry.com/neo4j-custom:")
+	assert.Contains(t, container.Image, "-enterprise")
+}
+
+// TestFailBothCustomAndSeparated checks if validation fails when both customImage and separated fields are set
+func TestFailBothCustomAndSeparated(t *testing.T) {
+	t.Parallel()
+
+	release := model.NewReleaseName("test-fail-both")
+
+	args := append(useDataModeAndAcceptLicense, useNeo4jClusterName...)
+	args = append(args, []string{
+		"--set", "image.customImage=custom/image:tag",
+		"--set", "image.registry=myregistry.com",
+	}...)
+
+	_, err := model.HelmTemplateForRelease(t, release, model.HelmChart, args)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Cannot use both image.customImage and separated image fields")
 }
