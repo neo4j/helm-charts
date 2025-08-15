@@ -6,11 +6,20 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"cloud.google.com/go/storage"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"google.golang.org/api/iterator"
 )
 
 // CheckDatabaseConnectivity checks if there is connectivity with the provided backup instance or not
@@ -276,7 +285,142 @@ func PerformConsistencyCheck(database string, backupFileName string) (string, er
 	return "", fmt.Errorf("Consistency Check Failed for database %s!! \n output = %s \n err = %v", database, outputBuffer.String(), err)
 }
 
-// PerformAggregateBackup triggers the neo4j-admin aggregate backup command
+// New functions to count backups
+
+func getBackupCount(db string, fromPath string) (int, error) {
+	u, err := url.Parse(fromPath)
+	if err != nil {
+		return 0, err
+	}
+
+	switch u.Scheme {
+	case "s3":
+		return countS3Backups(db, u.Host, strings.TrimPrefix(u.Path, "/"))
+	case "gs":
+		return countGCSBackups(db, u.Host, strings.TrimPrefix(u.Path, "/"))
+	case "azb":
+		return countAzureBackups(db, u.Host, strings.TrimPrefix(u.Path, "/"))
+	default:
+		// local path
+		return countLocalBackups(fromPath, db)
+	}
+}
+
+func countLocalBackups(path, db string) (int, error) {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return 0, err
+	}
+	count := 0
+	prefix := db + "-"
+	suffix := ".backup"
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasPrefix(e.Name(), prefix) && strings.HasSuffix(e.Name(), suffix) {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func countS3Backups(db, bucket, pathPrefix string) (int, error) {
+	sess, err := session.NewSession(&aws.Config{})
+	if err != nil {
+		return 0, err
+	}
+	client := s3.New(sess)
+	prefix := pathPrefix
+	if prefix != "" {
+		prefix += "/"
+	}
+	prefix += db + "-"
+	count := 0
+	err = client.ListObjectsV2Pages(&s3.ListObjectsV2Input{
+		Bucket: aws.String(bucket),
+		Prefix: aws.String(prefix),
+	}, func(page *s3.ListObjectsV2Output, lastPage bool) bool {
+		for _, obj := range page.Contents {
+			if strings.HasSuffix(*obj.Key, ".backup") {
+				count++
+			}
+		}
+		return true
+	})
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func countGCSBackups(db, bucket, pathPrefix string) (int, error) {
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer client.Close()
+	prefix := pathPrefix
+	if prefix != "" {
+		prefix += "/"
+	}
+	prefix += db + "-"
+	it := client.Bucket(bucket).Objects(ctx, &storage.Query{Prefix: prefix})
+	count := 0
+	for {
+		obj, err := it.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return 0, err
+		}
+		if strings.HasSuffix(obj.Name, ".backup") {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func countAzureBackups(db, account, containerPath string) (int, error) {
+	storageAccount := os.Getenv("AZURE_STORAGE_ACCOUNT")
+	if storageAccount == "" {
+		return 0, fmt.Errorf("AZURE_STORAGE_ACCOUNT environment variable is required")
+	}
+	cred, err := azidentity.NewDefaultAzureCredential(nil)
+	if err != nil {
+		return 0, err
+	}
+	serviceURL := fmt.Sprintf("https://%s.blob.core.windows.net", storageAccount)
+	client, err := azblob.NewClient(serviceURL, cred, nil)
+	if err != nil {
+		return 0, err
+	}
+	container := containerPath
+	if strings.Contains(container, "/") {
+		// If path has /, it's account/container, but since account is in host, container is path
+		container = strings.Trim(container, "/")
+	} else {
+		container = account // if no path, host is container
+	}
+	prefix := db + "-"
+	pager := client.NewListBlobsFlatPager(container, &azblob.ListBlobsFlatOptions{
+		Prefix: &prefix,
+	})
+	count := 0
+	for pager.More() {
+		resp, err := pager.NextPage(context.TODO())
+		if err != nil {
+			return 0, err
+		}
+		for _, blob := range resp.Segment.BlobItems {
+			if strings.HasSuffix(*blob.Name, ".backup") {
+				count++
+			}
+		}
+	}
+	return count, nil
+}
+
+// Modify PerformAggregateBackup to check backup count
 func PerformAggregateBackup() error {
 	databaseStr := os.Getenv("AGGREGATE_BACKUP_DATABASE")
 	databases := strings.Split(databaseStr, ",")
@@ -285,10 +429,32 @@ func PerformAggregateBackup() error {
 	}
 	log.Printf("Performing aggregate backups for databases: %s", strings.Join(databases, ", "))
 
+	// Get fromPath
+	fromPath := os.Getenv("AGGREGATE_BACKUP_FROM_PATH")
+	if fromPath == "" {
+		cloudProvider := os.Getenv("CLOUD_PROVIDER")
+		if cloudProvider != "" {
+			fromPath = getCloudStoragePath()
+		} else {
+			fromPath = getBackupPath()
+		}
+	}
+
 	for _, db := range databases {
 		if db == "" {
 			continue
 		}
+
+		// Check if aggregation is needed
+		count, err := getBackupCount(db, fromPath)
+		if err != nil {
+			return fmt.Errorf("failed to check backup count for database %s: %v", db, err)
+		}
+		if count <= 1 {
+			log.Printf("Skipping aggregation for database %s as there are only %d backups (no chain to aggregate)", db, count)
+			continue
+		}
+
 		flags := GetAggregateBackupCommandFlags(db)
 		log.Printf("Printing aggregate backup flags for %s: %v", db, flags)
 		dir, _ := os.Getwd()
