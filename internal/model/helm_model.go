@@ -163,6 +163,8 @@ var DefaultNeo4jBackupValues = Neo4jBackupValues{
 	Neo4J: Neo4jBackupNeo4j{
 		Image:                      strings.Split(os.Getenv("NEO4J_DOCKER_BACKUP_IMG"), ":")[0],
 		ImageTag:                   strings.Split(os.Getenv("NEO4J_DOCKER_BACKUP_IMG"), ":")[1],
+		Registry:                   "",
+		ImagePullSecrets:           []string{},
 		JobSchedule:                "* * * * *",
 		SuccessfulJobsHistoryLimit: 3,
 		FailedJobsHistoryLimit:     3,

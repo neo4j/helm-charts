@@ -41,13 +41,21 @@ spec:
           automountServiceAccountToken: true
           {{- end }}
           restartPolicy: Never
+          {{- if .Values.neo4j.imagePullSecrets }}
+          imagePullSecrets:
+          {{- range .Values.neo4j.imagePullSecrets }}
+          - name: {{ . }}
+          {{- end }}
+          {{- end }}
           securityContext: {{ .Values.securityContext | toYaml  | nindent 12 }}
           {{- include "neo4j.tolerations" .Values.tolerations | nindent 10 }}
           {{- include "neo4j.affinity" .Values.affinity| nindent 10 }}
           {{- include "neo4j.nodeSelector" . }}
           containers:
             - name: graph-backup
-              image: {{ .Values.neo4j.image }}:{{ .Values.neo4j.imageTag }}
+              {{- $registry := .Values.neo4j.registry | default "" }}
+              {{- $image_prefix := ternary (printf "%s/" $registry) "" (ne $registry "") }}
+              image: {{ $image_prefix }}{{ .Values.neo4j.image }}:{{ .Values.neo4j.imageTag }}
               imagePullPolicy: Always
               resources: {{- include "neo4j.resourcesAndLimits" . | nindent 16 }}
               env:

@@ -1370,3 +1370,37 @@ func TestConsistencyCheckVerboseEnvVarFalse(t *testing.T) {
 	}
 	assert.True(t, found, "CONSISTENCY_CHECK_VERBOSE env var not found")
 }
+
+// TestBackupWithRegistryAndPullSecrets checks if registry is used in image and pull secrets are set
+func TestBackupWithRegistryAndPullSecrets(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.Neo4J.Registry = "myregistry.com"
+	helmValues.Neo4J.ImagePullSecrets = []string{"my-pull-secret"}
+
+	// Set required fields
+	helmValues.Backup.SecretName = "demo"
+	helmValues.Backup.SecretKeyName = "credentials"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "test-bucket"
+	helmValues.Backup.DatabaseAdminServiceName = "admin"
+	helmValues.Backup.Database = "neo4j"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err)
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1)
+
+	cronjob := cronjobs[0].(*batchv1.CronJob)
+	container := cronjob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
+
+	expectedImage := "myregistry.com/" + helmValues.Neo4J.Image + ":" + helmValues.Neo4J.ImageTag
+	assert.Equal(t, expectedImage, container.Image)
+
+	pullSecrets := cronjob.Spec.JobTemplate.Spec.Template.Spec.ImagePullSecrets
+	assert.Len(t, pullSecrets, 1)
+	assert.Equal(t, "my-pull-secret", pullSecrets[0].Name)
+}

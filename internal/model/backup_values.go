@@ -56,6 +56,8 @@ type MatchExpressions struct {
 type Neo4jBackupNeo4j struct {
 	Image                      string            `yaml:"image" default:"neo4jbuildservice/helm-charts"`
 	ImageTag                   string            `yaml:"imageTag" default:"backup"`
+	Registry                   string            `yaml:"registry" default:""`
+	ImagePullSecrets           []string          `yaml:"imagePullSecrets,omitempty"`
 	PodLabels                  map[string]string `yaml:"podLabels,omitempty"`
 	PodAnnotations             map[string]string `yaml:"podAnnotations,omitempty"`
 	JobSchedule                string            `yaml:"jobSchedule" default:"* * * * *"`

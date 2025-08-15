@@ -453,6 +453,12 @@ image:
   # set a customImage if you want to use your own docker image
 #  customImage: eu.gcr.io/neo4j-helm/neo4j:v5
 
+  # New optional separated image configuration. Use either this or customImage, not both.
+  # If using these, the chart will manage the tag based on the Neo4j version and edition.
+  registry: ""  # e.g., "my.private.registry.com"
+  repository: ""  # default to "neo4j" if empty
+  tag: ""  # if empty, uses chart's default tag (AppVersion[-enterprise])
+
   #imagePullSecrets list
 #  imagePullSecrets:
 #    - "demo"

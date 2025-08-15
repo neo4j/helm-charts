@@ -10,6 +10,14 @@ disableLookups: false
 neo4j:
   image: "neo4j/helm-charts-backup"
   imageTag: "2025.07.1"
+
+  # Optional registry for backup image, e.g., "my.private.registry.com"
+  registry: ""
+
+  # imagePullSecrets for pulling the backup image from private registries
+  imagePullSecrets: []
+  #  - name: my-docker-secret
+
   podLabels: {}
 #    app: "demo"
 #    acac: "dcdddc"
