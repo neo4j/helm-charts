@@ -16,13 +16,29 @@
 
 {{- define "neo4j.image" -}}
 {{- template "neo4j.checkLicenseAgreement" . -}}
-{{- $image := include "neo4j.defaultChartImage" . -}}
-{{/* Allow override if a custom image has been specified */}}
-{{- if .Values.image -}}
-  {{- if .Values.image.customImage -}}
-    {{- $image = .Values.image.customImage -}}
-  {{- end -}}
+
+{{/* Validation: cannot use both customImage and separated fields */}}
+{{- if and .Values.image.customImage (or .Values.image.registry .Values.image.repository .Values.image.tag) -}}
+{{- fail "Cannot use both image.customImage and separated image fields (image.registry, image.repository, image.tag). Choose only one method." -}}
 {{- end -}}
+
+{{/* Validation: repository must be set if using separated fields */}}
+{{- if and (or .Values.image.registry .Values.image.tag .Values.image.repository) (eq (trim (.Values.image.repository | default "")) "") -}}
+{{- fail "image.repository must be set if using separated image fields" -}}
+{{- end -}}
+
+{{- $default_image := include "neo4j.defaultChartImage" . -}}
+{{- $image := "" -}}
+
+{{- if .Values.image.customImage -}}
+  {{- $image = .Values.image.customImage -}}
+{{- else -}}
+  {{- $registry := .Values.image.registry | default "" -}}
+  {{- $repository := .Values.image.repository | default "neo4j" -}}
+  {{- $tag := .Values.image.tag | default (regexReplaceAll "^neo4j:" $default_image "") -}}
+  {{- $image = printf "%s%s:%s" (ternary (printf "%s/" $registry) "" (ne $registry "")) $repository $tag -}}
+{{- end -}}
+
 {{ $image }}
 {{- end -}}
 
