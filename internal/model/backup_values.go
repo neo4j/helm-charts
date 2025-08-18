@@ -93,7 +93,6 @@ type Backup struct {
 	SecretKeyName                string          `yaml:"secretKeyName,omitempty"`
 	PageCache                    string          `yaml:"pageCache,omitempty"`
 	HeapSize                     string          `yaml:"heapSize,omitempty"`
-	FallbackToFull               bool            `yaml:"fallbackToFull" default:"true"`
 	IncludeMetadata              string          `yaml:"includeMetadata,omitempty"`
 	Type                         string          `yaml:"type,omitempty"`
 	KeepFailed                   bool            `yaml:"keepFailed" default:"false"`
