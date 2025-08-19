@@ -754,8 +754,8 @@ func TestBackupWithTempDir(t *testing.T) {
 	assert.Equal(t, found, true)
 }
 
-// TestBackupFallbackToFull checks for fallbackToFull environment variable
-func TestBackupFallbackToFull(t *testing.T) {
+// TestBackupVerboseEnvVarDefaultTrue checks that the Verbose value is set to true correctly
+func TestBackupVerboseEnvVarDefaultTrue(t *testing.T) {
 	t.Parallel()
 
 	helmValues := model.DefaultNeo4jBackupValues
@@ -763,11 +763,11 @@ func TestBackupFallbackToFull(t *testing.T) {
 	helmValues.Backup.CloudProvider = "aws"
 	helmValues.Backup.BucketName = "test-bucket"
 	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
-	helmValues.Backup.FallbackToFull = false // Test explicit false setting
+	helmValues.Backup.Verbose = true
 	helmValues.ServiceAccountName = "demo"
 
 	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
-	assert.NoError(t, err, "error seen while performing backup with fallbackToFull")
+	assert.NoError(t, err, "error seen while performing backup with verbose")
 
 	cronjobs := manifests.OfType(&batchv1.CronJob{})
 	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
@@ -775,41 +775,9 @@ func TestBackupFallbackToFull(t *testing.T) {
 	envVariables := cronjobs[0].(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env
 	var found bool
 	for _, variable := range envVariables {
-		if variable.Name == "FALLBACK_TO_FULL" {
+		if variable.Name == "VERBOSE" {
 			found = true
-			assert.Equal(t, "false", variable.Value)
-			break
-		}
-	}
-	assert.True(t, found, "FALLBACK_TO_FULL env var not found")
-}
-
-// TestBackupVerboseEnvVarDefaultTrue checks that the Verbose value is set to true correctly
-func TestBackupVerboseEnvVarDefaultTrue(t *testing.T) {
-	t.Parallel()
-	helmValues := model.DefaultNeo4jBackupValues
-	helmValues.DisableLookups = true
-	helmValues.Backup.Verbose = true
-
-	helmValues.Backup.SecretName = "demo"
-	helmValues.Backup.SecretKeyName = "key"
-	helmValues.Backup.CloudProvider = "aws"
-	helmValues.Backup.BucketName = "bucket"
-	helmValues.Backup.DatabaseAdminServiceName = "admin"
-	helmValues.Backup.Database = "neo4j"
-
-	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
-	assert.NoError(t, err)
-
-	cronjobs := manifests.OfType(&batchv1.CronJob{})
-	assert.Len(t, cronjobs, 1)
-
-	envVars := cronjobs[0].(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env
-	var found bool
-	for _, env := range envVars {
-		if env.Name == "VERBOSE" {
-			found = true
-			assert.Equal(t, "true", env.Value, "Expected VERBOSE to be true by default")
+			assert.Equal(t, "true", variable.Value)
 			break
 		}
 	}

@@ -211,7 +211,7 @@ func TestAuthLdapInvalidSecret(t *testing.T) {
 func TestBackupInvalidSecretKeyName(t *testing.T) {
 	t.Parallel()
 
-	releaseName := model.NewReleaseName("ldap-auth-wrong-key-" + TestRunIdentifier)
+	releaseName := model.NewReleaseName("backup-auth-wrong-key-" + TestRunIdentifier)
 	_, err := createNamespace(t, releaseName)
 	if err != nil {
 		return

@@ -112,13 +112,11 @@ spec:
                 - name: VERBOSE
                   value: {{ .Values.backup.verbose | toString | quote | default true }}
                 - name: COMPRESS
-                  value: {{ .Values.backup.compress | toString | quote | default true}}
+                  value: {{ .Values.backup.compress | toString | quote | default true }}
                 - name: AZURE_STORAGE_ACCOUNT
                   value: "{{ .Values.backup.azureStorageAccountName | default "" }}"
                 - name: BACKUP_TEMP_DIR
                   value: {{ .Values.backup.tempDir | default "" | quote }}
-                - name: FALLBACK_TO_FULL
-                  value: {{ .Values.backup.fallbackToFull | toString | quote | default true }}
                 - name: AZURE_BLOB_SERVICE_URL
                   value: "{{ .Values.backup.azureBlobServiceURL | default "" }}"
                 {{- if or .Values.backup.s3Endpoint .Values.backup.minioEndpoint }}

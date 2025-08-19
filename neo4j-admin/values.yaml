@@ -188,9 +188,6 @@ backup:
   verbose: true
   heapSize: ""
   compress: true
-  # fallbackToFull determines whether to fall back to a full backup if incremental backup fails
-  # This is particularly useful for automated backup systems where you want reliability over efficiency
-  fallbackToFull: true
 
   # Neo4j Native Cloud Storage Features
   # Enable differential backups - allows Neo4j to create differential backups directly to cloud storage
