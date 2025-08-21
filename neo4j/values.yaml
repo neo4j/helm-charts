@@ -281,8 +281,8 @@ services:
       podAnnotations:
         sidecar.istio.io/inject: "false" 
       image:
-        registry: docker.io
-        repository: bitnami/kubectl
+        registry: registry.k8s.io
+        repository: kubernetes/kubectl
         # Will default to use the Kubernetes server version where the chart is deployed, eg 1.22
         tag: ""
         digest: ""
