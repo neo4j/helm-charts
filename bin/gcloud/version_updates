@@ -5,22 +5,19 @@ set -o pipefail -o errtrace -o errexit -o nounset
 shopt -s inherit_errexit
 [[ -n "${TRACE:-}" ]] && set -o xtrace
 
-NEO4J_VERSION="${NEO4J_VERSION:?NEO4J_VERSION is required}"
+HELM_CHART_VERSION="${HELM_CHART_VERSION:?HELM_CHART_VERSION is required}"
+DOCKER_IMAGE_VERSION="${DOCKER_IMAGE_VERSION:?DOCKER_IMAGE_VERSION is required}"
 CURRENT_VERSION=$(cat neo4j/Chart.yaml | grep "appVersion" | awk -F ": " '{print $2}')
 CURRENT_CHART_VERSION=$(cat neo4j/Chart.yaml | grep "^version: " | awk -F ": " '{print $2}')
-echo "CURRENT_APPVERSION ${CURRENT_VERSION} CURRENT_CHART_VERSION ${CURRENT_CHART_VERSION} NEO4J_VERSION ${NEO4J_VERSION}"
+echo "CURRENT_APPVERSION ${CURRENT_VERSION} CURRENT_CHART_VERSION ${CURRENT_CHART_VERSION}"
+echo "NEW HELM_CHART_VERSION ${HELM_CHART_VERSION} DOCKER_IMAGE_VERSION ${DOCKER_IMAGE_VERSION}"
 
-# For calver format (YYYY.MM.0), convert to helm-compatible format (YYYY.M.0) for chart version
-if [[ ${NEO4J_VERSION} =~ ^[0-9]{4}\.[0-9]{2}\.[0-9]+$ ]]; then
-  # This is a calver version, convert it for chart version (YYYY.M.0)
-  CHART_VERSION=$(echo ${NEO4J_VERSION} | sed -E 's/\.0*([0-9]+)\./\.\1\./')
-  echo "Detected calver format. Using ${NEO4J_VERSION} for appVersion and ${CHART_VERSION} for chart version"
-else
-  echo "Error: Expected calver format (YYYY.MM.0) but got ${NEO4J_VERSION}"
-  exit 1
-fi
+# Use provided versions directly
+CHART_VERSION="${HELM_CHART_VERSION}"
+NEO4J_VERSION="${DOCKER_IMAGE_VERSION}"
+echo "Using chart version ${CHART_VERSION} and docker image version ${NEO4J_VERSION}"
 
-if [[ ${CURRENT_VERSION} != ${NEO4J_VERSION} ]]
+if [[ ${CURRENT_VERSION} != ${NEO4J_VERSION} || ${CURRENT_CHART_VERSION} != ${CHART_VERSION} ]]
 then
 	# Update appVersion to NEO4J_VERSION
 	sed -i "s/appVersion: ${CURRENT_VERSION}/appVersion: ${NEO4J_VERSION}/g" "neo4j/Chart.yaml"
@@ -80,6 +77,6 @@ then
 	  git add "${chart}/*"
 	done
 else
-	echo "Neo4j version is same !! Continuing with release process..."
+	echo "Both chart and docker image versions are the same !! Continuing with release process..."
 fi
 
