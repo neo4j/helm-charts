@@ -5,19 +5,14 @@ set -o pipefail -o errtrace -o errexit -o nounset
 shopt -s inherit_errexit
 [[ -n "${TRACE:-}" ]] && set -o xtrace
 
-NEO4J_VERSION="${NEO4J_VERSION:?NEO4J_VERSION is required}"
+HELM_CHART_VERSION="${HELM_CHART_VERSION:?HELM_CHART_VERSION is required}"
+DOCKER_IMAGE_VERSION="${DOCKER_IMAGE_VERSION:?DOCKER_IMAGE_VERSION is required}"
 # neo4j or neo4j-experimental
 HELM_REPO_NAME="${HELM_REPO_NAME:?HELM_REPO_NAME is required}"
 
-# For calver format (YYYY.MM.0), convert to helm-compatible format (YYYY.M.0) for chart version
-if [[ ${NEO4J_VERSION} =~ ^[0-9]{4}\.[0-9]{2}\.[0-9]+$ ]]; then
-  # This is a calver version, convert it for chart version (YYYY.M.0)
-  CHART_VERSION=$(echo ${NEO4J_VERSION} | sed -E 's/\.0*([0-9]+)\./\.\1\./')
-  echo "Detected calver format. Using ${NEO4J_VERSION} for appVersion and ${CHART_VERSION} for chart version"
-else
-  echo "Error: Expected calver format (YYYY.MM.0) but got ${NEO4J_VERSION}"
-  exit 1
-fi
+# Use the provided chart version directly
+CHART_VERSION="${HELM_CHART_VERSION}"
+echo "Using chart version ${CHART_VERSION} and docker image version ${DOCKER_IMAGE_VERSION}"
 
 echo "sleeping for 300 seconds"
 sleep 300
@@ -35,7 +30,7 @@ helm pull neo4j/neo4j-loadbalancer --version "${CHART_VERSION}" || echo "Failed 
 helm repo index . --merge index.yaml --url https://github.com/neo4j/helm-charts/releases/download/"${CHART_VERSION}"
 
 git add index.yaml
-git commit -m "Updating index.yaml with ${NEO4J_VERSION} entries (chart version ${CHART_VERSION})"
+git commit -m "Updating index.yaml with chart version ${CHART_VERSION} (docker image version ${DOCKER_IMAGE_VERSION})"
 git push
 git tag -m "Tagging ${CHART_VERSION}" -a "${CHART_VERSION}"
 git push --tags
