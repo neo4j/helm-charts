@@ -6,6 +6,7 @@
 {{- $backupEnabled := false }}
 {{- $httpEnabled := index $.Values.config "server.http.enabled" | default "true" | regexMatch "(?i)yes|true" }}
 {{- $httpsEnabled := index $.Values.config "server.https.enabled" | default "false" | regexMatch "(?i)yes|true" }}
+{{- $prometheusEnabled := index $.Values.config "server.metrics.prometheus.enabled" | default "" | regexMatch "(?i)yes|true" }}
 {{- if $isEnterprise }}
 {{- $backupEnabled = index $.Values.config "server.backup.enabled" | default "true" | regexMatch "(?i)yes|true" }}
 {{- end }}
@@ -124,6 +125,10 @@ spec:
             {{- if $backupEnabled }}
             - containerPort: 6362
               name: backup
+            {{- end }}
+            {{- if $prometheusEnabled }}
+            - containerPort: 2004
+              name: tcp-prometheus
             {{- end }}
           {{- with .Values.neo4j.resources }}
           resources:
