@@ -3,9 +3,14 @@ name: Execute Tests
 on:
   workflow_dispatch:
     inputs:
-      NEO4J_VERSION:
-        description: 'Neo4j version to be released'
+      HELM_CHART_VERSION:
+        description: 'Helm chart version to be released (e.g., 5.26.10)'
         type: string
+        required: true
+      DOCKER_IMAGE_VERSION:
+        description: 'Docker image version/Neo4j version to use (e.g., 5.26.10)'
+        type: string
+        required: true
       RELEASE:
         description: 'Release (True) or execute only tests (False)'
         type: boolean
@@ -189,7 +194,7 @@ jobs:
           tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ env.RUN_ID }}"
           provenance: false
           build-args: |
-            IMAGE=neo4j:${{ inputs.NEO4J_VERSION }}-enterprise
+            IMAGE=neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise
             DISTRIBUTION=debian
 
       - name: Build and push red hat backup image
@@ -201,7 +206,7 @@ jobs:
           tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ env.RUN_ID }}"
           provenance: false
           build-args: |
-            IMAGE=neo4j:${{ inputs.NEO4J_VERSION }}-enterprise-ubi9
+            IMAGE=neo4j:${{ inputs.DOCKER_IMAGE_VERSION}}-enterprise-ubi9
             DISTRIBUTION=redhat
 
   run-enterprise-tests:
@@ -255,7 +260,7 @@ jobs:
           #inputs.RELEASE does not hold value when workflow_dispatch is not called
           ISRELEASE=${{ inputs.RELEASE }}
           if [[ ${#ISRELEASE} != 0 ]]; then            
-            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}-enterprise"
+            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
           echo "printing kubeconfig path $KUBECONFIG"
@@ -313,7 +318,7 @@ jobs:
           #inputs.RELEASE does not hold value when workflow_dispatch is not called
           ISRELEASE=${{ inputs.RELEASE }}
           if [[ ${#ISRELEASE} != 0 ]]; then            
-            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}"
+            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.DOCKER_IMAGE_VERSION}}"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
           echo "printing kubeconfig path $KUBECONFIG"
@@ -372,7 +377,7 @@ jobs:
           #inputs.RELEASE does not hold value when workflow_dispatch is not called
           ISRELEASE=${{ inputs.RELEASE }}
           if [[ ${#ISRELEASE} != 0 ]]; then            
-            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}-enterprise"
+            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.DOCKER_IMAGE_VERSION}}-enterprise"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
@@ -430,7 +435,7 @@ jobs:
           #inputs.RELEASE does not hold value when workflow_dispatch is not called
           ISRELEASE=${{ inputs.RELEASE }}
           if [[ ${#ISRELEASE} != 0 ]]; then            
-            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}"
+            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
@@ -512,7 +517,7 @@ jobs:
         with:
           context: "{{defaultContext}}:neo4j-reverse-proxy"
           push: true
-          tags: "neo4j/helm-charts-reverse-proxy:${{ inputs.NEO4J_VERSION }}"
+          tags: "neo4j/helm-charts-reverse-proxy:${{ inputs.HELM_CHART_VERSION}}"
           provenance: false
 
       - name: Build and push operations image
@@ -520,7 +525,7 @@ jobs:
         with:
           context: "{{defaultContext}}:neo4j/neo4j-operations"
           push: true
-          tags: "neo4j/helm-charts-operations:${{ inputs.NEO4J_VERSION }}"
+          tags: "neo4j/helm-charts-operations:${{ inputs.HELM_CHART_VERSION}}"
           provenance: false
 
       - name: Build and push backup image
@@ -528,10 +533,10 @@ jobs:
         with:
           context: "{{defaultContext}}:neo4j-admin"
           push: true
-          tags: "neo4j/helm-charts-backup:${{ inputs.NEO4J_VERSION }}"
+          tags: "neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION }}"
           provenance: false
           build-args: |
-            IMAGE=neo4j:${{ inputs.NEO4J_VERSION }}-enterprise
+            IMAGE=neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise
             DISTRIBUTION=debian
 
       - name: Build and push red hat backup image
@@ -539,10 +544,10 @@ jobs:
         with:
           context: "{{defaultContext}}:neo4j-admin"
           push: true
-          tags: "neo4j/helm-charts-backup:${{ inputs.NEO4J_VERSION }}-ubi9"
+          tags: "neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION}}-ubi9"
           provenance: false
           build-args: |
-            IMAGE=neo4j:${{ inputs.NEO4J_VERSION }}-enterprise-ubi9
+            IMAGE=neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise-ubi9
             DISTRIBUTION=redhat
 
   packaging:
@@ -551,7 +556,8 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ inputs.RELEASE && github.ref_name == '5.26' && success() && (github.actor == 'bfeshti' || github.actor == 'riggi-alekaj') && needs.check-pr.outputs.should_run == 'true' }}
     env:
-      NEO4J_VERSION: ${{ inputs.NEO4J_VERSION }}
+      HELM_CHART_VERSION: ${{ inputs.HELM_CHART_VERSION }}
+      DOCKER_IMAGE_VERSION: ${{ inputs.DOCKER_IMAGE_VERSION }}
       HELM_REPO_NAME: ${{ vars.HELM_REPO_NAME }}
     container:
       image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
@@ -598,15 +604,15 @@ jobs:
       - name: Release Notes
         uses: softprops/action-gh-release@v1
         with:
-          name: v${{ inputs.NEO4J_VERSION }}
-          tag_name: ${{ inputs.NEO4J_VERSION }}
+          name: v${{ inputs.NHELM_CHART_VERSION }}
+          tag_name: ${{ inputs.HELM_CHART_VERSION }}
           token: ${{ secrets.GH_TOKEN }}
-          body: "- Update to Neo4j ${{ inputs.NEO4J_VERSION }} as the new baseline, see [Release notes](https://neo4j.com/release-notes/database/neo4j-5///) for details of changes"
+          body: "- Update to Neo4j ${{ inputs.DOCKER_IMAGE_VERSION }} as the new baseline, see [Release notes](https://neo4j.com/release-notes/database/neo4j-5///) for details of changes"
           make_latest: true
           files: |
-            neo4j-${{ inputs.NEO4J_VERSION }}.tgz
-            neo4j-admin-${{ inputs.NEO4J_VERSION }}.tgz
-            neo4j-reverse-proxy-${{ inputs.NEO4J_VERSION }}.tgz
-            neo4j-headless-service-${{ inputs.NEO4J_VERSION }}.tgz
-            neo4j-persistent-volume-${{ inputs.NEO4J_VERSION }}.tgz
-            neo4j-loadbalancer-${{ inputs.NEO4J_VERSION }}.tgz
+            neo4j-${{ inputs.HELM_CHART_VERSION }}.tgz
+            neo4j-admin-${{ inputs.HELM_CHART_VERSION }}.tgz
+            neo4j-reverse-proxy-${{ inputs.HELM_CHART_VERSION}}.tgz
+            neo4j-headless-service-${{ inputs.HELM_CHART_VERSION }}.tgz
+            neo4j-persistent-volume-${{ inputs.HELM_CHART_VERSION}}.tgz
+            neo4j-loadbalancer-${{ inputs.HELM_CHART_VERSION }}.tgz
