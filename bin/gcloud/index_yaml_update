@@ -20,7 +20,7 @@ helm repo update
 
 echo "Pulling 5.x helm charts"
 git add .
-git commit -m "Update chart versions to ${NEO4J_VERSION}"
+git commit -m "Update chart versions to ${CHART_VERSION}"
 git push
 
 echo "Pulling helm charts for version ${CHART_VERSION}"
