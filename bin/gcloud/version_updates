@@ -5,22 +5,58 @@ set -o pipefail -o errtrace -o errexit -o nounset
 shopt -s inherit_errexit
 [[ -n "${TRACE:-}" ]] && set -o xtrace
 
-NEO4J_VERSION="${NEO4J_VERSION:?NEO4J_VERSION is required}"
+HELM_CHART_VERSION="${HELM_CHART_VERSION:?HELM_CHART_VERSION is required}"
+DOCKER_IMAGE_VERSION="${DOCKER_IMAGE_VERSION:?DOCKER_IMAGE_VERSION is required}"
 CURRENT_VERSION=$(cat neo4j/Chart.yaml | grep "appVersion" | awk -F ": " '{print $2}')
-echo "CURRENT_VERSION ${CURRENT_VERSION} NEO4J_VERSION ${NEO4J_VERSION}"
+CURRENT_CHART_VERSION=$(cat neo4j/Chart.yaml | grep "^version: " | awk -F ": " '{print $2}')
+echo "CURRENT_APPVERSION ${CURRENT_VERSION} CURRENT_CHART_VERSION ${CURRENT_CHART_VERSION}"
+echo "NEW HELM_CHART_VERSION ${HELM_CHART_VERSION} DOCKER_IMAGE_VERSION ${DOCKER_IMAGE_VERSION}"
 
-if [[ ${CURRENT_VERSION} != ${NEO4J_VERSION} ]]
+CHART_VERSION="${HELM_CHART_VERSION}"
+NEO4J_VERSION="${DOCKER_IMAGE_VERSION}"
+echo "Using chart version ${CHART_VERSION} and docker image version ${NEO4J_VERSION}"
+
+if [[ ${CURRENT_VERSION} != ${NEO4J_VERSION} || ${CURRENT_CHART_VERSION} != ${CHART_VERSION} ]]
 then
-	sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j/Chart.yaml"
+	# Update appVersion to NEO4J_VERSION
+	sed -i "s/appVersion: ${CURRENT_VERSION}/appVersion: ${NEO4J_VERSION}/g" "neo4j/Chart.yaml"
+	# Update chart version to CHART_VERSION 
+	sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j/Chart.yaml"
+
 	# this update is for updating neo4j-operations image tag value which is same as the neo4j version being released
 	sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j/values.yaml"
-  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-headless-service/Chart.yaml"
-  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-persistent-volume/Chart.yaml"
-  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-admin/Chart.yaml"
-  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-admin/values.yaml"
-  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-reverse-proxy/Chart.yaml"
-  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-reverse-proxy/values.yaml"
-  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-loadbalancer/Chart.yaml"
+
+  	# Update headless service chart
+  	sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j-headless-service/Chart.yaml"
+
+	# Update persistent volume chart
+  	sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j-persistent-volume/Chart.yaml"
+	# Only update appVersion if it's not "-"
+  	if grep -q 'appVersion: "-"' "neo4j-persistent-volume/Chart.yaml"; then
+    	echo "Skipping appVersion update for neo4j-persistent-volume as it's set to '-'"
+  	else
+    	sed -i "s/appVersion: ${CURRENT_VERSION}/appVersion: ${NEO4J_VERSION}/g" "neo4j-persistent-volume/Chart.yaml"
+  	fi
+
+	# Update admin chart
+	sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j-admin/Chart.yaml"
+	sed -i "s/appVersion: ${CURRENT_VERSION}/appVersion: ${NEO4J_VERSION}/g" "neo4j-admin/Chart.yaml"
+	sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-admin/values.yaml"
+
+	# Update reverse proxy chart
+  	sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j-reverse-proxy/Chart.yaml"
+  	sed -i "s/appVersion: ${CURRENT_VERSION}/appVersion: ${NEO4J_VERSION}/g" "neo4j-reverse-proxy/Chart.yaml"
+  	sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-reverse-proxy/values.yaml"
+
+
+  	# Update loadbalancer chart
+  	sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j-loadbalancer/Chart.yaml"
+	 # Only update appVersion if it's not "-"
+  	if grep -q 'appVersion: "-"' "neo4j-loadbalancer/Chart.yaml"; then
+    	echo "Skipping appVersion update for neo4j-loadbalancer as it's set to '-'"
+  	else
+    	sed -i "s/appVersion: ${CURRENT_VERSION}/appVersion: ${NEO4J_VERSION}/g" "neo4j-loadbalancer/Chart.yaml"
+  	fi
 
 	HELM_CHARTS_LIST=("neo4j" "neo4j-headless-service" "neo4j-persistent-volume" "neo4j-admin" "neo4j-reverse-proxy" "neo4j-loadbalancer")
 	for chart in "${HELM_CHARTS_LIST[@]}"
@@ -32,7 +68,7 @@ then
 	  git add "${chart}/*"
 	done
 else
-	echo "Neo4j version is same !!"
+	echo "Both chart and docker image versions are the same !! Continuing with release process..."
   exit 1
 fi
 
