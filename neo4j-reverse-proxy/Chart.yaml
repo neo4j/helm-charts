@@ -1,7 +1,7 @@
 apiVersion: v1
 name: neo4j-reverse-proxy
 home: https://www.neo4j.com
-version: 5.26.10
+version: 5.26.11
 appVersion: 5.26.10
 description: Sets up an http server and a reverse proxy for bolt and http requests
 keywords:
