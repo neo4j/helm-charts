@@ -604,7 +604,7 @@ jobs:
       - name: Release Notes
         uses: softprops/action-gh-release@v1
         with:
-          name: v${{ inputs.NHELM_CHART_VERSION }}
+          name: v${{ inputs.HELM_CHART_VERSION }}
           tag_name: ${{ inputs.HELM_CHART_VERSION }}
           token: ${{ secrets.GH_TOKEN }}
           body: "- Update to Neo4j ${{ inputs.DOCKER_IMAGE_VERSION }} as the new baseline, see [Release notes](https://neo4j.com/release-notes/database/neo4j-5///) for details of changes"
