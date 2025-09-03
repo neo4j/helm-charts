@@ -41,8 +41,11 @@ func TestSecretMountsInGCloudK8s(t *testing.T) {
 	// Install Neo4j with secret mounts configuration
 	extraArgs := []string{}
 	extraArgs = append(extraArgs, model.DefaultNeo4jNameArg...)
+	extraArgs = append(extraArgs, resources.TestAntiAffinityRule.HelmArgs()...)
 	extraArgs = append(extraArgs, resources.SecretMounts.HelmArgs()...)
 	extraArgs = append(extraArgs, "--set", "neo4j.acceptLicenseAgreement=eval")
+	extraArgs = append(extraArgs, "--set", "volumes.data.mode=defaultStorageClass")
+	extraArgs = append(extraArgs, "--set", "disableLookups=true")
 
 	helmClient := model.NewHelmClient(model.DefaultNeo4jChartName, extraArgs...)
 	helmValues := model.DefaultEnterpriseValues
@@ -166,10 +169,20 @@ func verifySecretMountsInPod(t *testing.T, releaseName model.ReleaseName) {
 	assert.Eventually(t, func() bool {
 		pod, err := Clientset.CoreV1().Pods(string(namespace)).Get(context.Background(), podName, metav1.GetOptions{})
 		if err != nil {
+			t.Logf("Failed to get pod %s: %v", podName, err)
 			return false
 		}
 
+		t.Logf("Pod %s status: Phase=%s, Conditions=%d", podName, pod.Status.Phase, len(pod.Status.Conditions))
+
+		// Log container statuses for debugging
+		for _, containerStatus := range pod.Status.ContainerStatuses {
+			t.Logf("Container %s: Ready=%t, State=%+v", containerStatus.Name, containerStatus.Ready, containerStatus.State)
+		}
+
 		for _, condition := range pod.Status.Conditions {
+			t.Logf("Pod condition: Type=%s, Status=%s, Reason=%s, Message=%s",
+				condition.Type, condition.Status, condition.Reason, condition.Message)
 			if condition.Type == v1.PodReady && condition.Status == v1.ConditionTrue {
 				return true
 			}
@@ -217,6 +230,24 @@ func verifySecretMountsInPod(t *testing.T, releaseName model.ReleaseName) {
 // verifySecretMountPermissions verifies that the mounted secrets have correct permissions
 func verifySecretMountPermissions(t *testing.T, releaseName model.ReleaseName) {
 
+	namespace := releaseName.Namespace()
+	podName := releaseName.PodName()
+
+	// Wait for pod to be ready
+	assert.Eventually(t, func() bool {
+		pod, err := Clientset.CoreV1().Pods(string(namespace)).Get(context.Background(), podName, metav1.GetOptions{})
+		if err != nil {
+			return false
+		}
+
+		for _, condition := range pod.Status.Conditions {
+			if condition.Type == v1.PodReady && condition.Status == v1.ConditionTrue {
+				return true
+			}
+		}
+		return false
+	}, 5*time.Minute, 10*time.Second, "Pod should become ready")
+
 	// Test file permissions for different mount configurations
 	testCases := []struct {
 		path         string
@@ -250,6 +281,24 @@ func verifySecretMountPermissions(t *testing.T, releaseName model.ReleaseName) {
 
 // verifySecretMountContents verifies that the mounted secrets contain the expected data
 func verifySecretMountContents(t *testing.T, releaseName model.ReleaseName) {
+
+	namespace := releaseName.Namespace()
+	podName := releaseName.PodName()
+
+	// Wait for pod to be ready
+	assert.Eventually(t, func() bool {
+		pod, err := Clientset.CoreV1().Pods(string(namespace)).Get(context.Background(), podName, metav1.GetOptions{})
+		if err != nil {
+			return false
+		}
+
+		for _, condition := range pod.Status.Conditions {
+			if condition.Type == v1.PodReady && condition.Status == v1.ConditionTrue {
+				return true
+			}
+		}
+		return false
+	}, 5*time.Minute, 10*time.Second, "Pod should become ready")
 
 	// Test that secret contents are accessible
 	testCases := []struct {
