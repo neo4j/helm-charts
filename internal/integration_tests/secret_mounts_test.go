@@ -21,8 +21,14 @@ func TestSecretMountsInGCloudK8s(t *testing.T) {
 
 	t.Logf("Starting setup of '%s'", t.Name())
 
-	// Create test secrets before installing Neo4j
-	err := createTestSecrets(t, releaseName)
+	// Create namespace first
+	_, err := createNamespace(t, releaseName)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	// Create test secrets after namespace exists
+	err = createTestSecrets(t, releaseName)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -32,14 +38,26 @@ func TestSecretMountsInGCloudK8s(t *testing.T) {
 		cleanupTestSecrets(t, releaseName)
 	})
 
-	defaultHelmArgs := []string{}
-	defaultHelmArgs = append(defaultHelmArgs, model.DefaultNeo4jNameArg...)
-	defaultHelmArgs = append(defaultHelmArgs, resources.TestAntiAffinityRule.HelmArgs()...)
-	defaultHelmArgs = append(defaultHelmArgs, resources.SecretMounts.HelmArgs()...)
-	defaultHelmArgs = append(defaultHelmArgs, "--set", "neo4j.acceptLicenseAgreement=eval")
+	// Install Neo4j with secret mounts configuration
+	extraArgs := []string{}
+	extraArgs = append(extraArgs, model.DefaultNeo4jNameArg...)
+	extraArgs = append(extraArgs, resources.SecretMounts.HelmArgs()...)
+	extraArgs = append(extraArgs, "--set", "neo4j.acceptLicenseAgreement=eval")
 
-	_, err = installNeo4j(t, releaseName, chart, defaultHelmArgs...)
-	t.Cleanup(standaloneCleanup(t, releaseName))
+	helmClient := model.NewHelmClient(model.DefaultNeo4jChartName, extraArgs...)
+	helmValues := model.DefaultEnterpriseValues
+	helmValues.Neo4J.Edition = "enterprise"
+
+	namespace := string(releaseName.Namespace())
+	_, err = helmClient.Install(t, releaseName.String(), namespace, helmValues)
+
+	// Setup cleanup
+	t.Cleanup(func() {
+		_ = runAll(t, "helm", [][]string{
+			{"uninstall", releaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
+			{"delete", "namespace", namespace},
+		}, false)
+	})
 
 	if !assert.NoError(t, err) {
 		return
