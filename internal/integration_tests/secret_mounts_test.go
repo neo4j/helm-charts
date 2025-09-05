@@ -188,7 +188,7 @@ func verifySecretMountsInPod(t *testing.T, releaseName model.ReleaseName) {
 			}
 		}
 		return false
-	}, 5*time.Minute, 10*time.Second, "Pod should become ready")
+	}, 1*time.Minute, 10*time.Second, "Pod should become ready")
 
 	// Get the pod and verify volume mounts
 	pod, err := Clientset.CoreV1().Pods(string(namespace)).Get(context.Background(), podName, metav1.GetOptions{})
@@ -246,7 +246,7 @@ func verifySecretMountPermissions(t *testing.T, releaseName model.ReleaseName) {
 			}
 		}
 		return false
-	}, 5*time.Minute, 10*time.Second, "Pod should become ready")
+	}, 1*time.Minute, 10*time.Second, "Pod should become ready")
 
 	// Test file permissions for different mount configurations
 	testCases := []struct {
@@ -298,7 +298,7 @@ func verifySecretMountContents(t *testing.T, releaseName model.ReleaseName) {
 			}
 		}
 		return false
-	}, 5*time.Minute, 10*time.Second, "Pod should become ready")
+	}, 1*time.Minute, 10*time.Second, "Pod should become ready")
 
 	// Test that secret contents are accessible
 	testCases := []struct {
