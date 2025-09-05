@@ -54,13 +54,8 @@ func TestSecretMountsInGCloudK8s(t *testing.T) {
 	namespace := string(releaseName.Namespace())
 	_, err = helmClient.Install(t, releaseName.String(), namespace, helmValues)
 
-	// Setup cleanup
-	t.Cleanup(func() {
-		_ = runAll(t, "helm", [][]string{
-			{"uninstall", releaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
-			{"delete", "namespace", namespace},
-		}, false)
-	})
+	// cleanup
+	t.Cleanup(standaloneCleanup(t, releaseName))
 
 	if !assert.NoError(t, err) {
 		return
