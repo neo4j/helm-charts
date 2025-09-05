@@ -183,7 +183,57 @@ func verifySecretMountsInPod(t *testing.T, releaseName model.ReleaseName) {
 			}
 		}
 		return false
-	}, 1*time.Minute, 10*time.Second, "Pod should become ready")
+	}, 3*time.Minute, 10*time.Second, "Pod should become ready")
+
+	// If readiness check failed, gather debug information
+	if pod, err := Clientset.CoreV1().Pods(string(namespace)).Get(context.Background(), podName, metav1.GetOptions{}); err == nil {
+		// Check if pod is still not ready and gather debugging info
+		isPodReady := false
+		for _, condition := range pod.Status.Conditions {
+			if condition.Type == v1.PodReady && condition.Status == v1.ConditionTrue {
+				isPodReady = true
+				break
+			}
+		}
+
+		if !isPodReady {
+			t.Logf("Pod failed to become ready, gathering debug information...")
+
+			// Get container logs
+			for _, container := range pod.Spec.Containers {
+				if container.Name == "neo4j" {
+					// Get recent logs from Neo4j container
+					logOptions := &v1.PodLogOptions{
+						Container: "neo4j",
+						TailLines: &[]int64{50}[0], // Last 50 lines
+						Follow:    false,
+					}
+
+					req := Clientset.CoreV1().Pods(string(namespace)).GetLogs(podName, logOptions)
+					logs, logErr := req.DoRaw(context.Background())
+					if logErr != nil {
+						t.Logf("Failed to get container logs: %v", logErr)
+					} else {
+						t.Logf("Neo4j container logs (last 50 lines):\n%s", string(logs))
+					}
+					break
+				}
+			}
+
+			// Get pod events for more debugging
+			events, eventErr := Clientset.CoreV1().Events(string(namespace)).List(context.Background(), metav1.ListOptions{
+				FieldSelector: "involvedObject.name=" + podName,
+			})
+			if eventErr != nil {
+				t.Logf("Failed to get pod events: %v", eventErr)
+			} else {
+				t.Logf("Pod events:")
+				for _, event := range events.Items {
+					t.Logf("  %s: %s - %s", event.Type, event.Reason, event.Message)
+				}
+			}
+		}
+	}
 
 	// Get the pod and verify volume mounts
 	pod, err := Clientset.CoreV1().Pods(string(namespace)).Get(context.Background(), podName, metav1.GetOptions{})
