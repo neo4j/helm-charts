@@ -454,7 +454,20 @@ func createPriorityClass(t *testing.T, releaseName model.ReleaseName) (Closeable
 
 func run(t *testing.T, command string, args ...string) error {
 	t.Logf("running: %s %s\n", command, args)
-	out, err := exec.Command(command, args...).CombinedOutput()
+
+	// Add timeout context to prevent commands from hanging indefinitely
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, command, args...)
+	out, err := cmd.CombinedOutput()
+
+	// Handle timeout errors
+	if ctx.Err() == context.DeadlineExceeded {
+		t.Logf("Command timed out after 3 minutes: %s %s", command, args)
+		return fmt.Errorf("command timed out after 3 minutes: %s %v", command, args)
+	}
+
 	if out != nil {
 		t.Logf("output: %s\n", out)
 	}
