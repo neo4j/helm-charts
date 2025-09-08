@@ -203,7 +203,7 @@ func TestSeeduriS3SecretMounts(t *testing.T) {
 
 		assert.NotNil(t, s3Volume, "S3 credentials volume should be present")
 		assert.NotNil(t, s3Volume.Secret, "Volume should be a secret volume")
-		assert.Equal(t, "cloudian-s3-credentials", s3Volume.Secret.SecretName)
+		assert.Equal(t, "cloud-s3-credentials", s3Volume.Secret.SecretName)
 		assert.Equal(t, int32(384), *s3Volume.Secret.DefaultMode) // 0600 in decimal
 		assert.Len(t, s3Volume.Secret.Items, 4)                   // access-key-id, secret-access-key, endpoint, region
 
