@@ -17,7 +17,7 @@ func TestSecretMountsValidation(t *testing.T) {
 
 	doTestCase := func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
 		// Test invalid secretMounts configuration should fail
-		args := []string{"--set", "volumes.data.mode=defaultStorageClass", "--set", "disableLookups=true"}
+		args := []string{"--set", "neo4j.name=" + model.DefaultNeo4jName, "--set", "volumes.data.mode=defaultStorageClass", "--set", "disableLookups=true"}
 		if edition == "enterprise" {
 			args = append(args, "--set", "neo4j.acceptLicenseAgreement=eval")
 		}
@@ -41,7 +41,7 @@ func TestSecretMountsGeneration(t *testing.T) {
 	t.Parallel()
 
 	doTestCase := func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
-		args := []string{"--set", "volumes.data.mode=defaultStorageClass", "--set", "disableLookups=true"}
+		args := []string{"--set", "neo4j.name=" + model.DefaultNeo4jName, "--set", "volumes.data.mode=defaultStorageClass", "--set", "disableLookups=true"}
 		if edition == "enterprise" {
 			args = append(args, "--set", "neo4j.acceptLicenseAgreement=eval")
 		}
@@ -124,7 +124,7 @@ func TestEmptySecretMounts(t *testing.T) {
 	t.Parallel()
 
 	doTestCase := func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
-		args := []string{"--set", "volumes.data.mode=defaultStorageClass", "--set", "disableLookups=true"}
+		args := []string{"--set", "neo4j.name=" + model.DefaultNeo4jName, "--set", "volumes.data.mode=defaultStorageClass", "--set", "disableLookups=true"}
 		if edition == "enterprise" {
 			args = append(args, "--set", "neo4j.acceptLicenseAgreement=eval")
 		}
@@ -166,7 +166,7 @@ func TestSeeduriS3SecretMounts(t *testing.T) {
 			t.Skip("seedURI is only available in enterprise edition")
 		}
 
-		args := []string{"--set", "disableLookups=true"}
+		args := []string{"--set", "neo4j.name=" + model.DefaultNeo4jName, "--set", "disableLookups=true"}
 		manifest, err := model.HelmTemplateFromYamlFile(t, chart, resources.SeeduriS3SecretMounts, args...)
 		if !assert.NoError(t, err) {
 			return
@@ -230,7 +230,7 @@ func TestSecretMountsWithoutDisableLookups(t *testing.T) {
 	t.Parallel()
 
 	doTestCase := func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
-		args := []string{"--set", "volumes.data.mode=defaultStorageClass"}
+		args := []string{"--set", "neo4j.name=" + model.DefaultNeo4jName, "--set", "volumes.data.mode=defaultStorageClass"}
 		if edition == "enterprise" {
 			args = append(args, "--set", "neo4j.acceptLicenseAgreement=eval")
 		}
