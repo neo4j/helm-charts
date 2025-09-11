@@ -38,6 +38,12 @@ type Operations struct {
 	Image        string            `yaml:"image"`
 	Protocol     string            `yaml:"protocol"`
 	Labels       map[string]string `yaml:"labels"`
+	SSL          *OperationsSSL    `yaml:"ssl,omitempty"`
+}
+
+type OperationsSSL struct {
+	DisableHostnameVerification bool `yaml:"disableHostnameVerification"`
+	InsecureSkipVerify          bool `yaml:"insecureSkipVerify"`
 }
 
 type Analytics struct {
