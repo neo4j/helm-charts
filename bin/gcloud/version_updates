@@ -23,8 +23,8 @@ then
 	sed -i "s/appVersion: ${CURRENT_VERSION}/appVersion: ${NEO4J_VERSION}/g" "neo4j/Chart.yaml"
 	# Update chart version to CHART_VERSION 
 	sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j/Chart.yaml"
-	# this update is for updating neo4j-operations image tag value which is same as the neo4j version being released
-	sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j/values.yaml"
+	# this update is for updating neo4j-operations image
+	sed -i "s/${CURRENT_VERSION}/${CHART_VERSION}/g" "neo4j/values.yaml"
   
   # Update headless service chart
   sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j-headless-service/Chart.yaml"
@@ -47,12 +47,12 @@ then
   # Update admin chart
   sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j-admin/Chart.yaml"
   sed -i "s/appVersion: ${CURRENT_VERSION}/appVersion: ${NEO4J_VERSION}/g" "neo4j-admin/Chart.yaml"
-  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-admin/values.yaml"
+  sed -i "s/${CURRENT_VERSION}/${CHART_VERSION}/g" "neo4j-admin/values.yaml"
   
   # Update reverse proxy chart
   sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j-reverse-proxy/Chart.yaml"
   sed -i "s/appVersion: ${CURRENT_VERSION}/appVersion: ${NEO4J_VERSION}/g" "neo4j-reverse-proxy/Chart.yaml"
-  sed -i "s/${CURRENT_VERSION}/${NEO4J_VERSION}/g" "neo4j-reverse-proxy/values.yaml"
+  sed -i "s/${CURRENT_VERSION}/${CHART_VERSION}/g" "neo4j-reverse-proxy/values.yaml"
   
   # Update loadbalancer chart
   sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j-loadbalancer/Chart.yaml"
