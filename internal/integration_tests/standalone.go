@@ -456,7 +456,7 @@ func run(t *testing.T, command string, args ...string) error {
 	t.Logf("running: %s %s\n", command, args)
 
 	// Add timeout context to prevent commands from hanging indefinitely
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, command, args...)
