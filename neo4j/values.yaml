@@ -42,6 +42,13 @@ neo4j:
       # Note: Do not specify bolt protocol here...it will FAIL.
       protocol: "neo4j"
       labels: {}
+      # SSL/TLS configuration for operations pod connections
+      ssl:
+        # Set to true to disable hostname verification for TLS connections
+        # This should match the Neo4j server's dbms.ssl.policy.bolt.verify_hostname setting
+        disableHostnameVerification: false
+        # Set to true to skip all TLS certificate verification (not recommended for production)
+        insecureSkipVerify: false
 
   # set edition: "enterprise" to use Neo4j Enterprise Edition
   #
