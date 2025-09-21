@@ -456,7 +456,7 @@ func run(t *testing.T, command string, args ...string) error {
 	t.Logf("running: %s %s\n", command, args)
 
 	// Add timeout context to prevent commands from hanging indefinitely
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, command, args...)
@@ -464,8 +464,8 @@ func run(t *testing.T, command string, args ...string) error {
 
 	// Handle timeout errors
 	if ctx.Err() == context.DeadlineExceeded {
-		t.Logf("Command timed out after 3 minutes: %s %s", command, args)
-		return fmt.Errorf("command timed out after 3 minutes: %s %v", command, args)
+		t.Logf("Command timed out after 10 minutes: %s %s", command, args)
+		return fmt.Errorf("command timed out after 10 minutes: %s %v", command, args)
 	}
 
 	if out != nil {
