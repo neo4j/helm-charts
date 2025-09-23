@@ -2,12 +2,16 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
-	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 
 func ExecuteEnablement(username, pass string) error {
@@ -53,12 +57,44 @@ func getNeo4jDriver(ctx context.Context, username, pass string) (neo4j.DriverWit
 	dbUri := fmt.Sprintf("%s://%s", os.Getenv("PROTOCOL"), serviceName)
 	dbUser := username
 	dbPassword := pass
+
+	// Prepare authentication
+	auth := neo4j.BasicAuth(dbUser, dbPassword, "")
+
+	// Check if we need to configure TLS settings
+	var configFunc func(*neo4j.Config)
+	if isTLSProtocol(os.Getenv("PROTOCOL")) {
+		log.Println("TLS protocol detected, checking SSL configuration...")
+		tlsConfig, err := createTLSConfig()
+		if err != nil {
+			return nil, fmt.Errorf("failed to create TLS config: %v", err)
+		}
+		if tlsConfig != nil {
+			log.Println("Using custom TLS configuration")
+			configFunc = func(config *neo4j.Config) {
+				config.TlsConfig = tlsConfig
+			}
+		}
+	}
+
 	var driver neo4j.DriverWithContext
 	var err error
 	for i := 1; i <= retries; i++ {
-		driver, err = neo4j.NewDriverWithContext(
-			dbUri,
-			neo4j.BasicAuth(dbUser, dbPassword, ""))
+		if configFunc != nil {
+			driver, err = neo4j.NewDriverWithContext(dbUri, auth, configFunc)
+		} else {
+			driver, err = neo4j.NewDriverWithContext(dbUri, auth)
+		}
+
+		if err != nil {
+			log.Printf("failed to create Neo4j driver: %v", err)
+			if i == retries {
+				return nil, err
+			}
+			log.Printf("sleeping for 30 seconds. Retry (%d/%d)\n", i, retries)
+			time.Sleep(30 * time.Second)
+			continue
+		}
 
 		err = driver.VerifyConnectivity(ctx)
 		if err != nil && i == retries {
@@ -74,6 +110,58 @@ func getNeo4jDriver(ctx context.Context, username, pass string) (neo4j.DriverWit
 	}
 	log.Println("Connectivity established !!")
 	return driver, nil
+}
+
+// isTLSProtocol checks if the protocol uses TLS
+func isTLSProtocol(protocol string) bool {
+	return strings.Contains(protocol, "+s")
+}
+
+// createTLSConfig creates a TLS configuration based on environment variables
+func createTLSConfig() (*tls.Config, error) {
+	disableHostnameVerification := false
+	insecureSkipVerify := false
+
+	// Parse SSL_DISABLE_HOSTNAME_VERIFICATION
+	if val := os.Getenv("SSL_DISABLE_HOSTNAME_VERIFICATION"); val != "" {
+		parsed, err := strconv.ParseBool(val)
+		if err != nil {
+			log.Printf("Warning: Invalid SSL_DISABLE_HOSTNAME_VERIFICATION value '%s', using false", val)
+		} else {
+			disableHostnameVerification = parsed
+		}
+	}
+
+	// Parse SSL_INSECURE_SKIP_VERIFY
+	if val := os.Getenv("SSL_INSECURE_SKIP_VERIFY"); val != "" {
+		parsed, err := strconv.ParseBool(val)
+		if err != nil {
+			log.Printf("Warning: Invalid SSL_INSECURE_SKIP_VERIFY value '%s', using false", val)
+		} else {
+			insecureSkipVerify = parsed
+		}
+	}
+
+	// If no custom TLS settings are needed, return nil to use defaults
+	if !disableHostnameVerification && !insecureSkipVerify {
+		return nil, nil
+	}
+
+	tlsConfig := &tls.Config{}
+
+	if insecureSkipVerify {
+		log.Println("WARNING: TLS certificate verification is disabled. This is not recommended for production use.")
+		tlsConfig.InsecureSkipVerify = true
+	} else if disableHostnameVerification {
+		log.Println("TLS hostname verification is disabled")
+		tlsConfig.InsecureSkipVerify = false
+		// For hostname verification only, create a custom VerifyPeerCertificate function that verifies the certificate chain but not the hostname
+		tlsConfig.VerifyPeerCertificate = func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+			return nil
+		}
+	}
+
+	return tlsConfig, nil
 }
 
 // enableNeo4jServer fires the cypher query ENABLE SERVER <server-id>

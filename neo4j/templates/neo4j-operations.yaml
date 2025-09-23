@@ -29,4 +29,10 @@ spec:
           value: {{ .Release.Namespace | quote }}
         - name: PROTOCOL
           value: {{ $.Values.neo4j.operations.protocol | default "neo4j" | quote }}
+        {{- if $.Values.neo4j.operations.ssl }}
+        - name: SSL_DISABLE_HOSTNAME_VERIFICATION
+          value: {{ $.Values.neo4j.operations.ssl.disableHostnameVerification | default false | toString | quote }}
+        - name: SSL_INSECURE_SKIP_VERIFY
+          value: {{ $.Values.neo4j.operations.ssl.insecureSkipVerify | default false | toString | quote }}
+        {{- end }}
 {{- end -}}
