@@ -33,7 +33,7 @@
     {{- $separator := ":" -}}
     {{- $termination := printf "%s.%s" $.Capabilities.KubeVersion.Major (regexReplaceAll "\\D+" $.Capabilities.KubeVersion.Minor "") -}}
     {{- if not (empty (.tag | trim)) -}}
-        {{- $termination := .tag | toString -}}
+        {{- $termination = .tag | toString -}}
     {{- end -}}
     {{- if .digest }}
         {{- $separator = "@" -}}
