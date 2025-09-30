@@ -80,10 +80,8 @@ func getBackupCommandFlags(address string) []string {
 		flags = append(flags, fmt.Sprintf("--temp-path=%s", backupTempDir))
 	}
 
-	// Add heap-size flag for backup JVM memory configuration
-	if len(strings.TrimSpace(os.Getenv("HEAP_SIZE"))) > 0 {
-		flags = append(flags, fmt.Sprintf("--heap-size=%s", os.Getenv("HEAP_SIZE")))
-	}
+	// HEAP_SIZE environment variable is automatically used by Neo4j 2025.8.0+
+	// No need to pass --heap-size flag as it's no longer supported
 
 	if len(strings.TrimSpace(os.Getenv("PAGE_CACHE"))) > 0 {
 		flags = append(flags, fmt.Sprintf("--pagecache=%s", os.Getenv("PAGE_CACHE")))
@@ -125,10 +123,8 @@ func GetAggregateBackupCommandFlags(database string) []string {
 	flags = append(flags, fmt.Sprintf("--keep-old-backup=%s", os.Getenv("AGGREGATE_BACKUP_KEEPOLDBACKUP")))
 	flags = append(flags, fmt.Sprintf("--parallel-recovery=%s", os.Getenv("AGGREGATE_BACKUP_PARALLEL_RECOVERY")))
 
-	// Add heap-size flag for aggregate backup JVM memory configuration
-	if len(strings.TrimSpace(os.Getenv("HEAP_SIZE"))) > 0 {
-		flags = append(flags, fmt.Sprintf("--heap-size=%s", os.Getenv("HEAP_SIZE")))
-	}
+	// HEAP_SIZE environment variable is automatically used by Neo4j 2025.8.0+
+	// No need to pass --heap-size flag as it's no longer supported
 
 	if len(strings.TrimSpace(os.Getenv("PAGE_CACHE"))) > 0 {
 		flags = append(flags, fmt.Sprintf("--pagecache=%s", os.Getenv("PAGE_CACHE")))
