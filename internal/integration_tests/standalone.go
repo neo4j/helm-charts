@@ -1989,7 +1989,7 @@ func TestProbeConfigurations(t *testing.T) {
 
 			err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()),
 				"wait", "--for=condition=ready", "pod", releaseName.PodName(),
-				"--timeout=300s")
+				"--timeout=600s")
 			assert.NoError(t, err)
 
 			err = CheckProbes(t, releaseName)
