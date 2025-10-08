@@ -62,8 +62,63 @@ func CheckDatabaseConnectivity(hostPortList string) error {
 	return fmt.Errorf("connectivity cannot be established with any endpoint: %v", lastErr)
 }
 
+// importCustomCA imports the custom S3 CA certificate into a JVM truststore if S3_CA_CERT_PATH is set.
+func importCustomCA() error {
+	caPath := os.Getenv("S3_CA_CERT_PATH")
+	if caPath == "" {
+		log.Println("No custom S3 CA certificate path set, skipping truststore import.")
+		return nil
+	}
+
+	truststorePath := "/tmp/custom-truststore.jks"
+	truststorePass := os.Getenv("TRUSTSTORE_PASSWORD")
+	if truststorePass == "" {
+		truststorePass = "changeit" // Default for backward compatibility
+	}
+
+	// Check if keytool is available
+	if _, err := exec.LookPath("keytool"); err != nil {
+		return fmt.Errorf("keytool not found in PATH: %v", err)
+	}
+
+	// Import the CA certificate into the truststore
+	cmd := exec.Command("keytool",
+		"-importcert",
+		"-noprompt",
+		"-trustcacerts",
+		"-alias", "custom-s3-ca",
+		"-file", caPath,
+		"-keystore", truststorePath,
+		"-storepass", truststorePass,
+	)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to import CA certificate: %v\noutput: %s", err, string(output))
+	}
+
+	log.Printf("Successfully imported CA certificate from %s into truststore %s", caPath, truststorePath)
+
+	// Set JAVA_OPTS to use the custom truststore
+	javaOpts := fmt.Sprintf("-Djavax.net.ssl.trustStore=%s -Djavax.net.ssl.trustStorePassword=%s", truststorePath, truststorePass)
+	if existingOpts := os.Getenv("JAVA_OPTS"); existingOpts != "" {
+		javaOpts = existingOpts + " " + javaOpts
+	}
+	if err := os.Setenv("JAVA_OPTS", javaOpts); err != nil {
+		return fmt.Errorf("failed to set JAVA_OPTS: %v", err)
+	}
+
+	log.Printf("Set JAVA_OPTS: %s", javaOpts)
+	return nil
+}
+
 // PerformBackup performs the backup operation and returns the generated backup file name
 func PerformBackup(address string) ([]string, error) {
+	// Import custom CA if needed
+	if err := importCustomCA(); err != nil {
+		return nil, fmt.Errorf("failed to import custom CA: %v", err)
+	}
+
 	databases := strings.ReplaceAll(os.Getenv("DATABASE"), ",", " ")
 	flags := getBackupCommandFlags(address)
 	log.Printf("Printing backup flags %v", flags)
