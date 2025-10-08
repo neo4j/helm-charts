@@ -619,7 +619,7 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 
 	namespace := "default"
 	backupReleaseName := model.NewReleaseName("cluster-backup-aws-s3-tls" + TestRunIdentifier)
-	secretName := "awscred"
+	secretName := "awscred-tls"
 	caCertSecretName := "s3-ca-cert"
 
 	t.Cleanup(func() {
