@@ -29,6 +29,16 @@ helm pull neo4j/neo4j-loadbalancer --version "${CHART_VERSION}" || echo "Failed 
 
 helm repo index . --merge index.yaml --url https://github.com/neo4j/helm-charts/releases/download/"${CHART_VERSION}"
 
+# First, commit any pending Chart.yaml and values.yaml version updates
+if git diff --cached --quiet; then
+  echo "No staged version changes to commit"
+else
+  echo "Committing staged version changes"
+  git commit -m "Update chart versions to ${CHART_VERSION} and appVersion to ${DOCKER_IMAGE_VERSION}"
+  git push
+fi
+
+# Then commit index.yaml
 git add index.yaml
 git commit -m "Updating index.yaml with chart version ${CHART_VERSION} (docker image version ${DOCKER_IMAGE_VERSION})"
 git push
