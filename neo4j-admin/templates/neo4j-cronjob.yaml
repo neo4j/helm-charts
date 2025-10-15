@@ -171,6 +171,8 @@ spec:
                   value: {{ .Values.consistencyCheck.verbose | toString | quote | default true }}
                 - name: CONSISTENCY_CHECK_TEMP_DIR
                   value: {{ .Values.consistencyCheck.tempDir | default "" | quote }}
+                - name: CONSISTENCY_CHECK_TIMEOUT
+                  value: {{ include "neo4j.backup.validateAndSetTimeout" . | quote }}
                 - name: AGGREGATE_BACKUP_ENABLED
                   value: {{ .Values.backup.aggregate.enabled | toString | quote | default false }}
                 - name: AGGREGATE_BACKUP_VERBOSE

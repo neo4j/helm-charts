@@ -125,6 +125,7 @@ type ConsistencyCheck struct {
 	Threads             string `yaml:"threads,omitempty"`
 	Verbose             bool   `yaml:"verbose" default:"true"`
 	TempDir             string `yaml:"tempDir,omitempty"`
+	Timeout             string `yaml:"timeout,omitempty"`
 }
 
 type Toleration struct {
