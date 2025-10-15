@@ -167,6 +167,13 @@ consistencyCheck:
   maxOffHeapMemory: ""
   threads: ""
   verbose: true
+  # Timeout for consistency check operations
+  # Must be a valid Go duration format (supports compound durations and decimals)
+  # Examples: "30m", "1h", "90m", "2h", "2h30m", "1.5h", "4h"
+  # Helm validation will fail immediately for invalid formats
+  # Default: "30m" for cloud storage (aws/gcp/azure), no timeout for local storage
+  # For large databases, increase this value (e.g., "2h", "4h", "6h")
+  timeout: ""
 
 # Set to name of an existing Service Account to use if desired
 # Follow the following links for setting up a service account with workload identity
