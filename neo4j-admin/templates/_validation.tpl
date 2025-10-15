@@ -79,19 +79,15 @@
 {{- define "neo4j.backup.validateAndSetTimeout" -}}
     {{- $timeout := .Values.consistencyCheck.timeout | default "" -}}
     {{- if $timeout -}}
-        {{/* Validate timeout format using regex for Go duration format */}}
-        {{/* Supports compound durations like "2h30m" and decimal values like "1.5h" */}}
+        {{- /* Validate timeout format using regex for Go duration format */ -}}
+        {{- /* Supports compound durations like "2h30m" and decimal values like "1.5h" */ -}}
         {{- if not (regexMatch "^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$" $timeout) -}}
             {{- fail (printf "Invalid timeout format '%s'. Must be a valid Go duration (e.g., '30m', '1h', '2h30m', '1.5h', '4h')" $timeout) -}}
         {{- end -}}
-        {{/* Return the provided timeout */}}
-        {{- $timeout | trim -}}
+        {{- /* Return the provided timeout */ -}}
+        {{- $timeout -}}
     {{- else -}}
-        {{/* Apply conditional default based on cloudProvider */}}
-        {{- if .Values.backup.cloudProvider -}}
-            30m
-        {{- else -}}
-            {{/* No timeout for local storage */}}
-        {{- end -}}
+        {{- /* Apply conditional default based on cloudProvider */ -}}
+        {{- if .Values.backup.cloudProvider }}30m{{- else }}{{- /* No timeout for local storage */ -}}{{- end -}}
     {{- end -}}
 {{- end -}}
