@@ -2,6 +2,7 @@ package neo4j_admin
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -133,7 +134,33 @@ func PerformConsistencyCheck(database string) (string, error) {
 	fileName := fmt.Sprintf("%s-%s.backup", fileNameDB, timeStamp)
 	flags := getConsistencyCheckCommandFlags(fileName, database)
 	log.Printf("Printing consistency check flags %v", flags)
-	output, err := exec.Command("neo4j-admin", flags...).CombinedOutput()
+
+	// Set timeout for consistency checks - configurable via CONSISTENCY_CHECK_TIMEOUT environment variable
+	timeoutEnv := os.Getenv("CONSISTENCY_CHECK_TIMEOUT")
+	var output []byte
+	var err error
+
+	if timeoutEnv != "" {
+		// Parse and apply timeout
+		if timeout, parseErr := time.ParseDuration(timeoutEnv); parseErr != nil {
+			log.Printf("Warning: Invalid timeout format '%s', proceeding without timeout: %v", timeoutEnv, parseErr)
+			output, err = exec.Command("neo4j-admin", flags...).CombinedOutput()
+		} else {
+			log.Printf("Using configured timeout of %v for consistency check", timeout)
+			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+			defer cancel()
+
+			cmd := exec.CommandContext(ctx, "neo4j-admin", flags...)
+			output, err = cmd.CombinedOutput()
+
+			if ctx.Err() == context.DeadlineExceeded {
+				return "", fmt.Errorf("Consistency check timed out after %v for database %s", timeout, database)
+			}
+		}
+	} else {
+		// No timeout specified
+		output, err = exec.Command("neo4j-admin", flags...).CombinedOutput()
+	}
 	if err == nil {
 		log.Printf("No inconsistencies found for database %s !! No Inconsistency report generated.", database)
 		return "", nil

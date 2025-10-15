@@ -119,6 +119,7 @@ type ConsistencyCheck struct {
 	MaxOffHeapMemory    string `yaml:"maxOffHeapMemory,omitempty"`
 	Threads             string `yaml:"threads,omitempty"`
 	Verbose             bool   `yaml:"verbose" default:"true"`
+	Timeout             string `yaml:"timeout,omitempty"`
 }
 
 type Toleration struct {

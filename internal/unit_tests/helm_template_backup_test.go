@@ -706,3 +706,66 @@ func TestBackupAzureBlobServiceURLDefault(t *testing.T) {
 	assert.NotNil(t, azureBlobServiceURLEnv, "AZURE_BLOB_SERVICE_URL environment variable should be present")
 	assert.Equal(t, "", azureBlobServiceURLEnv.Value, "AZURE_BLOB_SERVICE_URL should be empty when not configured")
 }
+
+func TestConsistencyCheckTimeoutDefaultValue(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.Backup.SecretName = "demo"
+	helmValues.Backup.SecretKeyName = "credentials"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "test-bucket"
+	helmValues.Backup.DatabaseAdminServiceName = "admin"
+	helmValues.Backup.Database = "neo4j"
+	helmValues.ConsistencyCheck.Enable = true
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err)
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1)
+
+	envVars := cronjobs[0].(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env
+	var found bool
+	for _, env := range envVars {
+		if env.Name == "CONSISTENCY_CHECK_TIMEOUT" {
+			found = true
+			assert.Equal(t, "30m", env.Value, "Expected CONSISTENCY_CHECK_TIMEOUT to default to 30m for cloud storage")
+			break
+		}
+	}
+	assert.True(t, found, "CONSISTENCY_CHECK_TIMEOUT env var not found")
+}
+
+func TestConsistencyCheckTimeoutCustomValue(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.Backup.SecretName = "demo"
+	helmValues.Backup.SecretKeyName = "credentials"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "test-bucket"
+	helmValues.Backup.DatabaseAdminServiceName = "admin"
+	helmValues.Backup.Database = "neo4j"
+	helmValues.ConsistencyCheck.Enable = true
+	helmValues.ConsistencyCheck.Timeout = "2h"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err)
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1)
+
+	envVars := cronjobs[0].(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env
+	var found bool
+	for _, env := range envVars {
+		if env.Name == "CONSISTENCY_CHECK_TIMEOUT" {
+			found = true
+			assert.Equal(t, "2h", env.Value, "Expected CONSISTENCY_CHECK_TIMEOUT to be set to custom value 2h")
+			break
+		}
+	}
+	assert.True(t, found, "CONSISTENCY_CHECK_TIMEOUT env var not found")
+}
