@@ -23,6 +23,10 @@ git add .
 git commit -m "Update chart versions to ${CHART_VERSION}"
 git push
 
+# Create the tag on the current branch (5.26) BEFORE switching to dev
+git tag -m "Tagging ${CHART_VERSION}" -a "${CHART_VERSION}"
+git push --tags
+
 echo "Pulling helm charts for version ${CHART_VERSION}"
 helm pull neo4j/neo4j --version "${CHART_VERSION}" || echo "Failed to pull neo4j chart"
 helm pull neo4j/neo4j-admin --version "${CHART_VERSION}" || echo "Failed to pull neo4j-admin chart"
@@ -38,7 +42,5 @@ helm repo index . --merge index.yaml --url https://github.com/neo4j/helm-charts/
 git add index.yaml
 git commit -m "Updating index.yaml with chart version ${CHART_VERSION} (docker image version ${DOCKER_IMAGE_VERSION})"
 git push
-git tag -m "Tagging ${CHART_VERSION}" -a "${CHART_VERSION}"
-git push --tags
 # Restore back to original branch
 git checkout "${CURRENT_BRANCH}"
