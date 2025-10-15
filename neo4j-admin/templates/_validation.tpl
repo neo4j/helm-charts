@@ -85,7 +85,7 @@
             {{- fail (printf "Invalid timeout format '%s'. Must be a valid Go duration (e.g., '30m', '1h', '2h30m', '1.5h', '4h')" $timeout) -}}
         {{- end -}}
         {{/* Return the provided timeout */}}
-        {{- $timeout }}
+        {{- $timeout | trim -}}
     {{- else -}}
         {{/* Apply conditional default based on cloudProvider */}}
         {{- if .Values.backup.cloudProvider -}}
