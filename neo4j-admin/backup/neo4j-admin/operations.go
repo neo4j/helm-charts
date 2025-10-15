@@ -241,13 +241,42 @@ func PerformConsistencyCheck(database string, backupFileName string) (string, er
 	log.Printf("Backup file name: %s", fileName)
 	log.Printf("Cloud provider: %s", cloudProvider)
 
-	// Increase timeout to 30 minutes for cloud storage consistency checks
-	timeout := 30 * time.Minute
-	if cloudProvider != "" {
-		log.Printf("Using extended timeout of %v for cloud storage consistency check", timeout)
-	}
+	// Set timeout for consistency checks - configurable via CONSISTENCY_CHECK_TIMEOUT environment variable
+	// Empty string means no timeout (for local storage)
+	var ctx context.Context
+	var cancel context.CancelFunc
+	var timeoutDuration time.Duration
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	timeoutEnv := os.Getenv("CONSISTENCY_CHECK_TIMEOUT")
+	if timeoutEnv != "" {
+		// Parse and apply timeout
+		if parsedTimeout, err := time.ParseDuration(timeoutEnv); err != nil {
+			// Invalid format - use default 30m for cloud, no timeout for local
+			if cloudProvider != "" {
+				timeoutDuration = 30 * time.Minute
+				log.Printf("Warning: Invalid timeout format '%s', using default 30m: %v", timeoutEnv, err)
+				ctx, cancel = context.WithTimeout(context.Background(), timeoutDuration)
+			} else {
+				log.Printf("Warning: Invalid timeout format '%s', no timeout applied for local storage: %v", timeoutEnv, err)
+				ctx, cancel = context.WithCancel(context.Background())
+			}
+		} else {
+			// Valid timeout provided
+			timeoutDuration = parsedTimeout
+			log.Printf("Using configured timeout of %v for consistency check", timeoutDuration)
+			ctx, cancel = context.WithTimeout(context.Background(), timeoutDuration)
+		}
+	} else {
+		// No timeout specified - use default for cloud, none for local
+		if cloudProvider != "" {
+			timeoutDuration = 30 * time.Minute
+			log.Printf("Using default extended timeout of %v for cloud storage consistency check", timeoutDuration)
+			ctx, cancel = context.WithTimeout(context.Background(), timeoutDuration)
+		} else {
+			log.Printf("No timeout applied for local storage consistency check")
+			ctx, cancel = context.WithCancel(context.Background())
+		}
+	}
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "neo4j-admin", flags...)
@@ -314,7 +343,7 @@ func PerformConsistencyCheck(database string, backupFileName string) (string, er
 	log.Printf("Consistency check output: %s", outputBuffer.String())
 
 	if ctx.Err() == context.DeadlineExceeded {
-		return "", fmt.Errorf("Consistency check timed out after %v for database %s", timeout, database)
+		return "", fmt.Errorf("Consistency check timed out after %v for database %s", timeoutDuration, database)
 	}
 
 	if err == nil {
