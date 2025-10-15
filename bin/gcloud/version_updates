@@ -69,6 +69,6 @@ then
 	done
 else
 	echo "Both chart and docker image versions are the same !! Continuing with release process..."
-  exit 1
+  exit 0
 fi
 
