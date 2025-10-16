@@ -377,6 +377,94 @@ func TestEmptyBucketName(t *testing.T) {
 
 }
 
+// TestCustomS3EndpointConfiguration tests that custom S3 endpoint configuration is properly set
+func TestCustomS3EndpointConfiguration(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.Backup.SecretName = "demo"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "test-bucket"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+	helmValues.Backup.Database = "neo4j"
+
+	// Set custom S3 endpoint configuration
+	helmValues.Backup.S3Endpoint = "https://s3.example.com"
+	helmValues.Backup.S3ForcePathStyle = true
+	helmValues.Backup.S3Region = "us-east-1"
+	helmValues.Backup.S3SignatureVersion = "4"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while trying to install helm backup with custom S3 endpoint")
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
+	cronjob := cronjobs[0].(*batchv1.CronJob)
+
+	containers := cronjob.Spec.JobTemplate.Spec.Template.Spec.Containers
+	assert.Len(t, containers, 1, "there should be only one container present")
+	container := containers[0]
+
+	// Verify that the custom S3 endpoint environment variables are properly set
+	envVariables := container.Env
+
+	// Check for AWS_ENDPOINT_URL_S3
+	assert.Contains(t, envVariables, corev1.EnvVar{Name: "AWS_ENDPOINT_URL_S3", Value: "https://s3.example.com"},
+		"AWS_ENDPOINT_URL_S3 should be set to custom endpoint")
+
+	// Check for S3_FORCE_PATH_STYLE
+	assert.Contains(t, envVariables, corev1.EnvVar{Name: "S3_FORCE_PATH_STYLE", Value: "true"},
+		"S3_FORCE_PATH_STYLE should be set to true")
+
+	// Check for AWS_REGION
+	assert.Contains(t, envVariables, corev1.EnvVar{Name: "AWS_REGION", Value: "us-east-1"},
+		"AWS_REGION should be set to custom region")
+
+	// Check for AWS_DEFAULT_REGION
+	assert.Contains(t, envVariables, corev1.EnvVar{Name: "AWS_DEFAULT_REGION", Value: "us-east-1"},
+		"AWS_DEFAULT_REGION should be set to custom region")
+
+	// Check for S3_SIGNATURE_VERSION
+	assert.Contains(t, envVariables, corev1.EnvVar{Name: "S3_SIGNATURE_VERSION", Value: "4"},
+		"S3_SIGNATURE_VERSION should be set to 4")
+}
+
+// TestDefaultS3Configuration tests that default S3 configuration works without custom endpoint
+func TestDefaultS3Configuration(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.Backup.SecretName = "demo"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "test-bucket"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+	helmValues.Backup.Database = "neo4j"
+
+	// Don't set custom S3 endpoint - use default AWS S3
+	// helmValues.Backup.S3Endpoint = "" // This should be empty
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while trying to install helm backup with default S3 configuration")
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
+	cronjob := cronjobs[0].(*batchv1.CronJob)
+
+	containers := cronjob.Spec.JobTemplate.Spec.Template.Spec.Containers
+	assert.Len(t, containers, 1, "there should be only one container present")
+	container := containers[0]
+
+	// Verify that AWS_ENDPOINT_URL_S3 is NOT set when no custom endpoint is configured
+	envVariables := container.Env
+
+	for _, envVar := range envVariables {
+		assert.NotEqual(t, "AWS_ENDPOINT_URL_S3", envVar.Name,
+			"AWS_ENDPOINT_URL_S3 should not be set when using default AWS S3")
+	}
+}
+
 // TestOnPremScenario checks for any errors when backup is performed on onprem
 func TestOnPremScenario(t *testing.T) {
 	t.Parallel()

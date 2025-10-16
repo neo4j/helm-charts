@@ -407,7 +407,30 @@ func countLocalBackups(path, db string) (int, error) {
 }
 
 func countS3Backups(db, bucket, pathPrefix string) (int, error) {
-	sess, err := session.NewSession(&aws.Config{})
+	config := &aws.Config{}
+
+	// Check for custom S3 endpoint from environment variable
+	if endpoint := os.Getenv("AWS_ENDPOINT_URL_S3"); endpoint != "" {
+		config.Endpoint = aws.String(endpoint)
+		log.Printf("Using custom S3 endpoint: %s", endpoint)
+	}
+
+	// Set S3 force path style if configured
+	if forcePathStyle := os.Getenv("S3_FORCE_PATH_STYLE"); forcePathStyle == "true" {
+		config.S3ForcePathStyle = aws.Bool(true)
+		log.Printf("Using S3 force path style")
+	}
+
+	// Set region if configured
+	if region := os.Getenv("AWS_REGION"); region != "" {
+		config.Region = aws.String(region)
+		log.Printf("Using AWS region: %s", region)
+	} else if region := os.Getenv("AWS_DEFAULT_REGION"); region != "" {
+		config.Region = aws.String(region)
+		log.Printf("Using AWS default region: %s", region)
+	}
+
+	sess, err := session.NewSession(config)
 	if err != nil {
 		return 0, err
 	}
