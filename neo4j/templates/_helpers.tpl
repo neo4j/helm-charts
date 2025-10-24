@@ -124,9 +124,11 @@ E.g. by adding `--set podSpec.loadbalancer=include`
 {{ end -}}
 
 {{- define "neo4j.checkResources" -}}
-    {{- template "neo4j.resources.checkForEmptyResources" . -}}
-    {{- template "neo4j.resources.evaluateCPU" . -}}
-    {{- template "neo4j.resources.evaluateMemory" . -}}
+    {{- if not .Values.neo4j.developServer -}} 
+        {{- template "neo4j.resources.checkForEmptyResources" . -}}
+        {{- template "neo4j.resources.evaluateCPU" . -}}
+        {{- template "neo4j.resources.evaluateMemory" . -}}
+    {{- end -}} 
 {{- end -}}
 
 {{/* checks if the resources are empty or not */}}
