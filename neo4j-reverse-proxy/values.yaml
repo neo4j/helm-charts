@@ -15,6 +15,9 @@ reverseProxy:
   # When used against a cluster ensure the service being used is pointing to all the cluster instances.
   # This could be the loadbalancer from neo4j helm chart or the headless service installed via neo4j-headless-service helm chart
   serviceName: ""
+  # Namespace where the Neo4j service is running. If not specified, defaults to the namespace where the reverse proxy is installed.
+  # This allows installing the reverse proxy in one namespace while connecting to Neo4j in another namespace.
+  namespace: ""
   # default is set to cluster.local
   domain: "cluster.local"
 
