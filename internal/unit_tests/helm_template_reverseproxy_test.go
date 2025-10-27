@@ -2,10 +2,13 @@ package unit_tests
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/stretchr/testify/assert"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
-	"testing"
 )
 
 // TestReverseProxyIngressWithAnnotations checks whether ingress has the provided annotations or not
@@ -110,4 +113,64 @@ func TestReverseProxyIngressHostName(t *testing.T) {
 	assert.Len(t, ingressList, 1, fmt.Sprintf("number of ingress should be 1 , not equal with %d", len(ingressList)))
 	ingressHostName := ingressList[0].(*v1.Ingress).Spec.Rules[0].Host
 	assert.Equal(t, ingressHostName, "demo.com", "ingress hostname not matching")
+}
+
+// TestReverseProxyNamespaceParameter checks if namespace parameter is correctly passed to the deployment
+func TestReverseProxyNamespaceParameter(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jReverseProxyValues
+	helmValues.ReverseProxy.Namespace = "neo4j-production"
+	helmValues.ReverseProxy.ServiceName = "neo4j-service"
+	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while testing namespace parameter with reverse proxy helm chart")
+
+	deploymentList := manifests.OfType(&appsv1.Deployment{})
+	assert.Len(t, deploymentList, 1, fmt.Sprintf("number of deployments should be 1, not %d", len(deploymentList)))
+
+	deployment := deploymentList[0].(*appsv1.Deployment)
+	containers := deployment.Spec.Template.Spec.Containers
+	assert.Len(t, containers, 1, "should have exactly one container")
+
+	// Check if NAMESPACE env var is set to the custom namespace
+	var namespaceEnv *corev1.EnvVar
+	for _, env := range containers[0].Env {
+		if env.Name == "NAMESPACE" {
+			namespaceEnv = &env
+			break
+		}
+	}
+
+	assert.NotNil(t, namespaceEnv, "NAMESPACE environment variable should be set")
+	assert.Equal(t, "neo4j-production", namespaceEnv.Value, "NAMESPACE should be set to the custom namespace")
+}
+
+// TestReverseProxyNamespaceDefaultsToReleaseNamespace checks backward compatibility when namespace is not specified
+func TestReverseProxyNamespaceDefaultsToReleaseNamespace(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jReverseProxyValues
+	helmValues.ReverseProxy.Namespace = "" // explicitly empty to test default behavior
+	helmValues.ReverseProxy.ServiceName = "neo4j-service"
+	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues, "--namespace", "reverse-proxy-ns")
+	assert.NoError(t, err, "error seen while testing default namespace with reverse proxy helm chart")
+
+	deploymentList := manifests.OfType(&appsv1.Deployment{})
+	assert.Len(t, deploymentList, 1, fmt.Sprintf("number of deployments should be 1, not %d", len(deploymentList)))
+
+	deployment := deploymentList[0].(*appsv1.Deployment)
+	containers := deployment.Spec.Template.Spec.Containers
+	assert.Len(t, containers, 1, "should have exactly one container")
+
+	// Check if NAMESPACE env var defaults to the release namespace
+	var namespaceEnv *corev1.EnvVar
+	for _, env := range containers[0].Env {
+		if env.Name == "NAMESPACE" {
+			namespaceEnv = &env
+			break
+		}
+	}
+
+	assert.NotNil(t, namespaceEnv, "NAMESPACE environment variable should be set")
+	assert.Equal(t, "reverse-proxy-ns", namespaceEnv.Value, "NAMESPACE should default to the release namespace")
 }
