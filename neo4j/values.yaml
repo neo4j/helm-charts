@@ -191,6 +191,22 @@ additionalVolumeMounts: []
 #  - mountPath: "/config/neo4j1.conf"
 #    name: neo4j1-conf
 
+# Mount Kubernetes secrets into the Neo4j pod for use with seedURI operations
+secretMounts: {}
+#  # Example: Mount S3 credentials for seedURI restoration from private S3 buckets
+#  s3-credentials:
+#    secretName: "my-s3-secret"
+#    mountPath: "/var/secrets/s3"
+#    # Optional: specify individual keys from the secret to mount (if not specified, all keys are mounted)
+#    items:
+#      - key: "access-key"
+#        path: "access-key"
+#      - key: "secret-key"
+#        path: "secret-key"
+#    # Optional: set file permissions for mounted files (default: 0644)
+#    defaultMode: 0600
+
+
 # ldapPasswordFromSecret defines the secret which holds the password for ldap system account
 # Secret key name must be LDAP_PASS
 # This secret is accessible by Neo4j at the path defined in ldapPasswordMountPath

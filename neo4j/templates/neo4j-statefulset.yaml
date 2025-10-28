@@ -11,6 +11,7 @@
 {{- end }}
 {{- template "neo4j.volumes.validation" . -}}
 {{- template "neo4j.checkNodeSelectorLabels" . -}}
+{{- template "neo4j.secretMounts.validation" . -}}
 {{- template "neo4j.checkLicenseAgreement" . -}}
 {{- template "podSpec.checkLoadBalancerParam" . -}}
 {{- template "neo4j.checkResources" . -}}
@@ -152,6 +153,7 @@ spec:
             {{- include "neo4j.ldapVolumeMount" . | indent 12 }}
             {{- include "neo4j.volumeMounts" .Values.volumes | indent 12 }}
             {{- include "neo4j.ssl.volumeMountsFromSecrets" .Values.ssl | indent 12 }}
+            {{- include "neo4j.secretMounts.volumeMounts" . | indent 12 }}
             {{- if $offlineMaintenanceEnabled  }}
             {{- include "neo4j.maintenanceVolumeMounts" .Values.volumes | indent 12 }}
             {{- end }}
@@ -205,6 +207,7 @@ spec:
         {{- include "neo4j.apocCredentials.volume" . | indent 8 }}
         {{- include "neo4j.ldapVolume" . | indent 8 }}
         {{- with include "neo4j.ssl.volumesFromSecrets" .Values.ssl }}{{ nindent 8 .}}{{ end -}}
+        {{- include "neo4j.secretMounts.volumes" . | indent 8 }}
         {{- with include "neo4j.volumes" . }}{{ nindent 8 . }}{{ end -}}
   {{- $volumeClaimTemplates := include "neo4j.volumeClaimTemplates" . -}}
   {{- if $volumeClaimTemplates }}
