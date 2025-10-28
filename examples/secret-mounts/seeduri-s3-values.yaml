@@ -1,0 +1,45 @@
+# Example values.yaml for mounting S3 credentials for seedURI operations
+
+neo4j:
+  name: "my-neo4j"
+  edition: "enterprise" 
+  acceptLicenseAgreement: "eval"
+
+# Standard volume configuration
+volumes:
+  data:
+    mode: "defaultStorageClass"
+    defaultStorageClass:
+      accessModes:
+        - ReadWriteOnce
+      requests:
+        storage: 50Gi
+
+# Mount S3 credentials securely
+secretMounts:
+  s3-credentials:
+    secretName: "cloud-s3-credentials"
+    mountPath: "/var/secrets/s3"
+    items:
+      - key: "access-key-id"
+        path: "access-key"
+      - key: "secret-access-key"
+        path: "secret-key"
+      - key: "endpoint"
+        path: "endpoint"
+      - key: "region"
+        path: "region"
+    # Set restrictive permissions for security
+    defaultMode: 0600
+
+# Example Neo4j configuration
+config:
+  # Enable authentication
+  dbms.security.auth_enabled: "true"
+
+# Optional: Configure services as needed
+services:
+  neo4j:
+    enabled: true
+  admin:
+    enabled: true
