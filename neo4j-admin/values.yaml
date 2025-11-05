@@ -188,6 +188,12 @@ backup:
   verbose: true
   heapSize: ""
   compress: true
+  
+  # Remote address resolution flag (Neo4j 2025.09+)
+  # Controls how backup endpoints resolve remote addresses
+  # Set to true to enable, false to disable (default), or provide a specific mode value
+  # See: https://neo4j.com/docs/operations-manual/current/backup-restore/online-backup/#_using_remote_address_resolution
+  remoteAddressResolution: false
 
   # Neo4j Native Cloud Storage Features
   # Enable differential backups - allows Neo4j to create differential backups directly to cloud storage

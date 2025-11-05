@@ -91,6 +91,18 @@ func getBackupCommandFlags(address string) []string {
 		flags = append(flags, "--verbose")
 	}
 
+	// Support for remote address resolution flag introduced in Neo4j 2025.09
+	// If REMOTE_ADDRESS_RESOLUTION is set, pass it through to neo4j-admin.
+	// - If the value is exactly "true", add the flag without an explicit value (boolean flag)
+	// - Otherwise, pass the value as --remote-address-resolution=<value>
+	if rar := os.Getenv("REMOTE_ADDRESS_RESOLUTION"); len(strings.TrimSpace(rar)) > 0 {
+		if strings.EqualFold(strings.TrimSpace(rar), "true") {
+			flags = append(flags, "--remote-address-resolution")
+		} else {
+			flags = append(flags, fmt.Sprintf("--remote-address-resolution=%s", strings.TrimSpace(rar)))
+		}
+	}
+
 	for _, db := range strings.Split(os.Getenv("DATABASE"), ",") {
 		flags = append(flags, strings.TrimSpace(db))
 	}

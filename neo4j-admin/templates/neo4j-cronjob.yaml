@@ -113,6 +113,8 @@ spec:
                   value: {{ .Values.backup.verbose | toString | quote | default true }}
                 - name: COMPRESS
                   value: {{ .Values.backup.compress | toString | quote | default true }}
+                - name: REMOTE_ADDRESS_RESOLUTION
+                  value: {{ .Values.backup.remoteAddressResolution | toString | quote | default false }}
                 - name: AZURE_STORAGE_ACCOUNT
                   value: "{{ .Values.backup.azureStorageAccountName | default "" }}"
                 - name: BACKUP_TEMP_DIR
