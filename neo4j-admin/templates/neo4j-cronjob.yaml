@@ -60,11 +60,11 @@ spec:
               resources: {{- include "neo4j.resourcesAndLimits" . | nindent 16 }}
               env:
                 - name: DATABASE_SERVICE_NAME
-                  value: {{ .Values.backup.databaseAdminServiceName  | trim }}
+                  value: {{ .Values.backup.databaseAdminServiceName  | trim | quote }}
                 - name: DATABASE_SERVICE_IP
-                  value: {{ .Values.backup.databaseAdminServiceIP  | trim }}
+                  value: {{ .Values.backup.databaseAdminServiceIP  | trim | quote }}
                 - name: DATABASE_NAMESPACE
-                  value: {{ .Values.backup.databaseNamespace | default "default"  | trim }}
+                  value: {{ .Values.backup.databaseNamespace | default "default"  | trim | quote }}
                 - name: DATABASE_BACKUP_PORT
                   value: {{ .Values.backup.databaseBackupPort | default "6362" | trim | quote }}
                 - name: DATABASE_CLUSTER_DOMAIN
@@ -72,15 +72,15 @@ spec:
                 - name: DATABASE
                   value: {{ .Values.backup.database | default "*" | trim | quote }}
                 - name: CLOUD_PROVIDER
-                  value: {{ .Values.backup.cloudProvider | trim }}
+                  value: {{ .Values.backup.cloudProvider | trim | quote }}
                 - name: BUCKET_NAME
-                  value: {{ .Values.backup.bucketName | trim }}
+                  value: {{ .Values.backup.bucketName | trim | quote }}
                 - name: KEEP_BACKUP_FILES
                   value: {{ .Values.backup.keepBackupFiles | toString | quote | default true }}
                 - name: PAGE_CACHE
-                  value: {{ .Values.backup.pageCache | trim }}
+                  value: {{ .Values.backup.pageCache | trim | quote }}
                 - name: HEAP_SIZE
-                  value: {{ .Values.backup.heapSize | trim }}
+                  value: {{ .Values.backup.heapSize | trim | quote }}
                 - name: INCLUDE_METADATA
                   value: "{{ .Values.backup.includeMetadata | default "all" | trim }}"
                 - name: PARALLEL_RECOVERY
@@ -156,7 +156,7 @@ spec:
                 - name: CONSISTENCY_CHECK_INDEXES
                   value: {{ .Values.consistencyCheck.checkIndexes | toString | quote | default false }}
                 - name: CONSISTENCY_CHECK_DATABASE
-                  value: {{ .Values.consistencyCheck.database | default .Values.backup.database | trim }}
+                  value: {{ .Values.consistencyCheck.database | default .Values.backup.database | trim | quote }}
                 - name: CONSISTENCY_CHECK_GRAPH
                   value: {{ .Values.consistencyCheck.checkGraph | toString | quote | default false }}
                 - name: CONSISTENCY_CHECK_COUNTS
@@ -186,7 +186,7 @@ spec:
                 - name: AGGREGATE_BACKUP_DATABASE
                   value: "{{ .Values.backup.aggregate.database | default "*" | trim  }}"
                 - name: DATABASE_BACKUP_ENDPOINTS
-                  value: {{ .Values.backup.databaseBackupEndpoints | trim }}
+                  value: {{ .Values.backup.databaseBackupEndpoints | trim | quote }}
                 - name: AGGREGATE_BACKUP_TEMP_DIR
                   value: {{ .Values.backup.aggregate.tempDir | default "" | quote }}
               volumeMounts:
