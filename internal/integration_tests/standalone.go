@@ -800,6 +800,164 @@ func TestBackupCompressIntegration(t *testing.T, releaseName model.ReleaseName) 
 	return nil
 }
 
+// TestAggregateBackupWithWildcard tests aggregate backup functionality with wildcard database selector
+func TestAggregateBackupWithWildcard(t *testing.T, standaloneReleaseName model.ReleaseName) error {
+	if model.Neo4jEdition == "community" {
+		t.Skip()
+		return nil
+	}
+
+	namespace := string(standaloneReleaseName.Namespace())
+
+	// Step 1: Create initial backups for multiple databases (neo4j and system)
+	t.Log("Step 1: Creating initial backups for neo4j and system databases")
+	initialBackupReleaseName := model.NewReleaseName("wildcard-initial-backup-" + TestRunIdentifier)
+
+	t.Cleanup(func() {
+		_ = runAll(t, "helm", [][]string{
+			{"uninstall", initialBackupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
+		}, false)
+	})
+
+	// Install initial backup to create backup chains
+	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
+	initialHelmValues := model.DefaultNeo4jBackupValues
+	initialHelmValues.Backup = model.Backup{
+		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", standaloneReleaseName.String()),
+		DatabaseNamespace:        namespace,
+		Database:                 "neo4j,system", // Backup both databases
+		CloudProvider:            "",             // Local backup
+		KeepBackupFiles:          true,
+		Type:                     "FULL",
+		Verbose:                  true,
+	}
+	initialHelmValues.ConsistencyCheck.Enable = false
+
+	t.Logf("Installing initial backup chart to create backups for neo4j and system")
+	_, err := helmClient.Install(t, initialBackupReleaseName.String(), namespace, initialHelmValues)
+	if err != nil {
+		return fmt.Errorf("failed to install initial backup helm chart: %v", err)
+	}
+
+	// Wait for initial backup job to complete
+	time.Sleep(2 * time.Minute)
+
+	// Step 2: Create second backup to establish backup chains (needed for aggregation)
+	t.Log("Step 2: Creating second backup to establish backup chains")
+	secondBackupReleaseName := model.NewReleaseName("wildcard-second-backup-" + TestRunIdentifier)
+
+	t.Cleanup(func() {
+		_ = runAll(t, "helm", [][]string{
+			{"uninstall", secondBackupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
+		}, false)
+	})
+
+	secondHelmValues := model.DefaultNeo4jBackupValues
+	secondHelmValues.Backup = model.Backup{
+		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", standaloneReleaseName.String()),
+		DatabaseNamespace:        namespace,
+		Database:                 "neo4j,system",
+		CloudProvider:            "",
+		KeepBackupFiles:          true,
+		Type:                     "DIFF", // Differential backup to create chain
+		Verbose:                  true,
+	}
+	secondHelmValues.ConsistencyCheck.Enable = false
+
+	t.Logf("Installing second backup chart to create backup chains")
+	_, err = helmClient.Install(t, secondBackupReleaseName.String(), namespace, secondHelmValues)
+	if err != nil {
+		return fmt.Errorf("failed to install second backup helm chart: %v", err)
+	}
+
+	// Wait for second backup to complete
+	time.Sleep(2 * time.Minute)
+
+	// Step 3: Run aggregate backup with wildcard
+	t.Log("Step 3: Running aggregate backup with wildcard")
+	aggregateBackupReleaseName := model.NewReleaseName("wildcard-aggregate-backup-" + TestRunIdentifier)
+
+	t.Cleanup(func() {
+		_ = runAll(t, "helm", [][]string{
+			{"uninstall", aggregateBackupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
+		}, false)
+	})
+
+	aggregateHelmValues := model.DefaultNeo4jBackupValues
+	aggregateHelmValues.Backup = model.Backup{
+		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", standaloneReleaseName.String()),
+		DatabaseNamespace:        namespace,
+		Database:                 "*",
+		CloudProvider:            "",
+		KeepBackupFiles:          true,
+		Verbose:                  true,
+		AggregateBackup: model.AggregateBackup{
+			Enabled:          true,
+			Database:         "*",
+			FromPath:         "/backups",
+			KeepOldBackup:    false,
+			ParallelRecovery: false,
+			Verbose:          true,
+		},
+	}
+	aggregateHelmValues.ConsistencyCheck.Enable = false
+
+	t.Logf("Installing aggregate backup chart with wildcard database selector")
+	_, err = helmClient.Install(t, aggregateBackupReleaseName.String(), namespace, aggregateHelmValues)
+	if err != nil {
+		return fmt.Errorf("failed to install aggregate backup helm chart: %v", err)
+	}
+
+	// Wait for aggregate backup job to complete
+	time.Sleep(2 * time.Minute)
+
+	// Step 4: Verify the aggregate backup succeeded
+	t.Log("Step 4: Verifying aggregate backup with wildcard succeeded")
+
+	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error while retrieving pod list during aggregate backup operation: %v", err)
+	}
+
+	var aggregateBackupPodFound bool
+	for _, pod := range pods.Items {
+		if strings.Contains(pod.Name, "wildcard-aggregate-backup") {
+			aggregateBackupPodFound = true
+			t.Logf("Found aggregate backup pod: %s", pod.Name)
+
+			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
+			if err != nil {
+				return fmt.Errorf("error while getting aggregate backup pod logs: %v", err)
+			}
+			logOutput := string(out)
+
+			t.Logf("Aggregate backup pod logs:\n%s", logOutput)
+
+			// Verify wildcard was detected and handled
+			expectedLogEntries := []string{
+				"Wildcard '*' detected",
+				"passing to neo4j-admin for native wildcard handling",
+				"Aggregate backup completed successfully",
+			}
+
+			for _, expectedLog := range expectedLogEntries {
+				if !strings.Contains(logOutput, expectedLog) {
+					return fmt.Errorf("expected log entry '%s' not found in aggregate backup logs:\n%s", expectedLog, logOutput)
+				}
+			}
+
+			t.Log("Aggregate backup with wildcard completed successfully!")
+			break
+		}
+	}
+
+	if !aggregateBackupPodFound {
+		return fmt.Errorf("no aggregate backup pod found")
+	}
+
+	return nil
+}
+
 func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubTest, error) {
 	expectedConfiguration, err := (&model.Neo4jConfiguration{}).PopulateFromFile(Neo4jConfFile)
 	if err != nil {
@@ -860,6 +1018,10 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 		}},
 		{name: "Check Backup Compression", test: func(t *testing.T) {
 			assert.NoError(t, TestBackupCompressIntegration(t, name), "Backup compression should work correctly")
+		}},
+		{name: "Test Aggregate Backup With Wildcard", test: func(t *testing.T) {
+			t.Parallel()
+			assert.NoError(t, TestAggregateBackupWithWildcard(t, name), "Aggregate backup with wildcard should work correctly")
 		}},
 	}, nil
 }
