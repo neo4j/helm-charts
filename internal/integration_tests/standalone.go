@@ -819,14 +819,18 @@ func TestAggregateBackupWithWildcard(t *testing.T, standaloneReleaseName model.R
 		}, false)
 	})
 
-	// Install initial backup to create backup chains
+	// Use cloud storage so all backup jobs can share the same backup files
+	bucketName := model.BucketName
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
 	initialHelmValues := model.DefaultNeo4jBackupValues
 	initialHelmValues.Backup = model.Backup{
+		BucketName:               bucketName,
 		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", standaloneReleaseName.String()),
 		DatabaseNamespace:        namespace,
 		Database:                 "neo4j,system", // Backup both databases
-		CloudProvider:            "",             // Local backup
+		CloudProvider:            "gcp",
+		SecretName:               "gcpcred",
+		SecretKeyName:            "credentials",
 		KeepBackupFiles:          true,
 		Type:                     "FULL",
 		Verbose:                  true,
@@ -854,10 +858,13 @@ func TestAggregateBackupWithWildcard(t *testing.T, standaloneReleaseName model.R
 
 	secondHelmValues := model.DefaultNeo4jBackupValues
 	secondHelmValues.Backup = model.Backup{
+		BucketName:               bucketName,
 		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", standaloneReleaseName.String()),
 		DatabaseNamespace:        namespace,
 		Database:                 "neo4j,system",
-		CloudProvider:            "",
+		CloudProvider:            "gcp",
+		SecretName:               "gcpcred",
+		SecretKeyName:            "credentials",
 		KeepBackupFiles:          true,
 		Type:                     "DIFF", // Differential backup to create chain
 		Verbose:                  true,
@@ -885,16 +892,19 @@ func TestAggregateBackupWithWildcard(t *testing.T, standaloneReleaseName model.R
 
 	aggregateHelmValues := model.DefaultNeo4jBackupValues
 	aggregateHelmValues.Backup = model.Backup{
+		BucketName:               bucketName,
 		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", standaloneReleaseName.String()),
 		DatabaseNamespace:        namespace,
 		Database:                 "*",
-		CloudProvider:            "",
+		CloudProvider:            "gcp",
+		SecretName:               "gcpcred",
+		SecretKeyName:            "credentials",
 		KeepBackupFiles:          true,
 		Verbose:                  true,
 		AggregateBackup: model.AggregateBackup{
 			Enabled:          true,
 			Database:         "*",
-			FromPath:         "/backups",
+			FromPath:         "", // Empty means use cloud bucket path
 			KeepOldBackup:    false,
 			ParallelRecovery: false,
 			Verbose:          true,
