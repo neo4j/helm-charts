@@ -142,6 +142,26 @@ func TestAggregateBackupLogStreaming(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
+	// Create backup directory with mock backup files
+	backupDir := fmt.Sprintf("%s/backups", tmpDir)
+	err = os.MkdirAll(backupDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create backup dir: %v", err)
+	}
+
+	// Create at least 2 backup files so aggregate is triggered (count > 1)
+	mockBackups := []string{
+		"neo4j-2024-01-01T10-00-00.backup",
+		"neo4j-2024-01-02T10-00-00.backup",
+	}
+	for _, backup := range mockBackups {
+		filePath := fmt.Sprintf("%s/%s", backupDir, backup)
+		err := os.WriteFile(filePath, []byte("mock backup data"), 0644)
+		if err != nil {
+			t.Fatalf("Failed to create mock backup file %s: %v", backup, err)
+		}
+	}
+
 	scriptPath := fmt.Sprintf("%s/neo4j-admin", tmpDir)
 	script := `#!/bin/bash
 if [ "$1" = "backup" ] && [ "$2" = "aggregate" ]; then

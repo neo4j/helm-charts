@@ -552,14 +552,19 @@ func PerformAggregateBackup() error {
 			continue
 		}
 
-		// Check if aggregation is needed
-		count, err := getBackupCount(db, fromPath)
-		if err != nil {
-			return fmt.Errorf("failed to check backup count for database %s: %v", db, err)
-		}
-		if count <= 1 {
-			log.Printf("Skipping aggregation for database %s as there are only %d backups (no chain to aggregate)", db, count)
-			continue
+		// For wildcards, skip the backup count check and let neo4j-admin handle database discovery
+		if db == "*" {
+			log.Printf("Wildcard '*' detected, passing to neo4j-admin for native wildcard handling")
+		} else {
+			// For explicit database names, check if aggregation is needed
+			count, err := getBackupCount(db, fromPath)
+			if err != nil {
+				return fmt.Errorf("failed to check backup count for database %s: %v", db, err)
+			}
+			if count <= 1 {
+				log.Printf("Skipping aggregation for database %s as there are only %d backups (no chain to aggregate)", db, count)
+				continue
+			}
 		}
 
 		flags := GetAggregateBackupCommandFlags(db)
