@@ -14,8 +14,17 @@ RESOURCE_PREFIX="${RESOURCE_PREFIX:-ghactions}"
 
 # If a specific cluster name is provided, use it; otherwise use the prefix pattern
 if [ -n "${CLOUDSDK_CONTAINER_CLUSTER:-}" ]; then
-    echo "Deleting specific cluster: ${CLOUDSDK_CONTAINER_CLUSTER}"
-    gcloud container clusters delete --quiet --zone="${CLOUDSDK_COMPUTE_ZONE}" "${CLOUDSDK_CONTAINER_CLUSTER}" || true
+    echo "Checking if cluster ${CLOUDSDK_CONTAINER_CLUSTER} exists..."
+    CLUSTER_EXISTS=$(gcloud container clusters describe "${CLOUDSDK_CONTAINER_CLUSTER}" \
+        --zone="${CLOUDSDK_COMPUTE_ZONE}" \
+        --format="value(name)" 2>/dev/null || echo "")
+    
+    if [ -z "${CLUSTER_EXISTS}" ]; then
+        echo "Cluster ${CLOUDSDK_CONTAINER_CLUSTER} does not exist. Nothing to delete."
+    else
+        echo "Deleting cluster: ${CLOUDSDK_CONTAINER_CLUSTER}"
+        gcloud container clusters delete --quiet --zone="${CLOUDSDK_COMPUTE_ZONE}" "${CLOUDSDK_CONTAINER_CLUSTER}" || true
+    fi
 else
     echo "No specific cluster name provided. Looking for clusters with prefix: ${RESOURCE_PREFIX}"
     gcloud container clusters list --format="get(name)" --filter="name ~ ^${RESOURCE_PREFIX}-.*" | while read -r cluster; do
