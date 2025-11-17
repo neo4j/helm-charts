@@ -1,0 +1,41 @@
+name: Create Persistent Test Cluster
+
+on:
+  schedule:
+    # Runs Monday-Friday at 8am CET (7am UTC)
+    - cron: '0 7 * * 1-5'
+  workflow_dispatch:
+
+env:
+  GCLOUD_SERVICE_KEY: ${{ secrets.GCLOUD_SERVICE_KEY }}
+  CLOUDSDK_CORE_PROJECT: ${{ secrets.CLOUDSDK_CORE_PROJECT }}
+  CLOUDSDK_COMPUTE_ZONE: "europe-west2-b"
+  CLOUDSDK_COMPUTE_REGION: "europe-west2"
+  PERSISTENT_CLUSTER_NAME: helmchart-test-cluster
+
+permissions:
+  contents: read
+
+jobs:
+  create-cluster:
+    name: Create Persistent GKE Cluster
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate Service Account
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
+
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+        with:
+          version: '>= 363.0.0'
+
+      - name: Check Cluster Status and Create if Needed
+        run: |
+          export CLOUDSDK_CONTAINER_CLUSTER=${PERSISTENT_CLUSTER_NAME}
+          ./bin/gcloud/check_cluster_status
+
