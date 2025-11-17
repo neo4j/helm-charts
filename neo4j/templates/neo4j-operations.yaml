@@ -11,6 +11,7 @@ metadata:
 spec:
   restartPolicy: Never
   serviceAccountName: {{ include "neo4j.serviceAccountName" . }}
+  {{- include "neo4j.imagePullSecrets" .Values.image.imagePullSecrets | indent 2 }}
   containers:
     - name: {{ include "neo4j.fullname" . }}-operations
       image: {{ $.Values.neo4j.operations.image }}
