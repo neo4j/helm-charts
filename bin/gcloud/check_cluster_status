@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+# This script checks if a persistent GKE cluster exists and creates it if not
+# The cluster is deleted daily on specific time windows, so if the pipeline is triggered during one of those windows, it will be created
+
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+# Required env vars
+CLOUDSDK_CORE_PROJECT="${CLOUDSDK_CORE_PROJECT:?CLOUDSDK_CORE_PROJECT is required}"
+CLOUDSDK_CONTAINER_CLUSTER="${CLOUDSDK_CONTAINER_CLUSTER:-helmchart-test-cluster}"
+CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
+
+# Check if cluster exists
+echo "Checking if cluster ${CLOUDSDK_CONTAINER_CLUSTER} exists..."
+CLUSTER_EXISTS=$(gcloud container clusters describe "${CLOUDSDK_CONTAINER_CLUSTER}" \
+    --zone="${CLOUDSDK_COMPUTE_ZONE}" \
+    --format="value(name)" 2>/dev/null || echo "")
+
+if [ -z "${CLUSTER_EXISTS}" ]; then
+    echo "Cluster ${CLOUDSDK_CONTAINER_CLUSTER} does not exist. Creating it..."
+    
+    # Get the directory where this script is located
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    
+    # Call the create_cluster script (it already configures kubectl)
+    "${SCRIPT_DIR}/create_cluster"
+    
+    echo "Cluster ${CLOUDSDK_CONTAINER_CLUSTER} created successfully"
+else
+    echo "Cluster ${CLOUDSDK_CONTAINER_CLUSTER} already exists"
+    
+    # Configure kubectl
+    echo "Configuring kubectl for cluster ${CLOUDSDK_CONTAINER_CLUSTER}..."
+    gcloud container clusters get-credentials "${CLOUDSDK_CONTAINER_CLUSTER}" \
+        --zone="${CLOUDSDK_COMPUTE_ZONE}"
+    
+    echo "kubectl configured for $(kubectl config current-context)"
+fi
+
+echo "Cluster ${CLOUDSDK_CONTAINER_CLUSTER} is ready for use"
+
