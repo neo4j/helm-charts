@@ -38,6 +38,16 @@ reverseProxy:
     fsGroup: 7474
     fsGroupChangePolicy: "Always"
 
+  # Pod labels for security policies and workload identification
+  podLabels: {}
+  #  app: "reverse-proxy"
+  #  environment: "production"
+
+  # Node selector for workload segregation
+  # please ensure the respective labels are present on one of nodes or else helm charts will throw an error
+  nodeSelector: {}
+  #  label1: "value1"
+  #  label2: "value2"
 
   # This assumes ingress-nginx controller or haproxy-ingress-controller is already installed in your kubernetes cluster.
   # You can install ingress-nginx by following instructions on this link https://github.com/kubernetes/ingress-nginx/blob/main/docs/deploy/index.md#quick-start
