@@ -2616,3 +2616,74 @@ func TestCleanupJobLabels(t *testing.T) {
 		assert.Equal(t, model.DefaultHelmTemplateReleaseName.String(), saLabels["helm.neo4j.com/instance"], "incorrect service account instance label")
 	}))
 }
+
+// TestCleanupJobImagePullSecrets tests that imagePullSecrets are correctly set in the cleanup job
+func TestCleanupJobImagePullSecrets(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		if edition != "enterprise" {
+			return // Skip test for non-enterprise edition since cleanup job is enterprise-only
+		}
+
+		helmValues := model.DefaultEnterpriseValues
+		helmValues.DisableLookups = true
+		helmValues.Image.ImagePullSecrets = []string{"my-pull-secret", "another-secret"}
+
+		manifest, err := model.HelmTemplate(t, chart, []string{
+			"--set", "neo4j.name=" + model.DefaultNeo4jName,
+			"--set", "neo4j.minimumClusterSize=3",
+			"--set", "neo4j.edition=enterprise",
+			"--set", "neo4j.acceptLicenseAgreement=yes",
+			"--set", "services.neo4j.cleanup.enabled=true",
+			"--set", "disableLookups=true",
+			"--set", "image.imagePullSecrets[0]=my-pull-secret",
+			"--set", "image.imagePullSecrets[1]=another-secret",
+			"--set", "volumes.data.mode=selector",
+		})
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		cleanupJob := manifest.OfTypeWithName(&batchv1.Job{}, fmt.Sprintf("%s-cleanup", model.DefaultHelmTemplateReleaseName))
+		if !assert.NotNil(t, cleanupJob, "cleanup job not found") {
+			return
+		}
+
+		pullSecrets := cleanupJob.(*batchv1.Job).Spec.Template.Spec.ImagePullSecrets
+		assert.Len(t, pullSecrets, 2, "should have 2 imagePullSecrets")
+		assert.Equal(t, "my-pull-secret", pullSecrets[0].Name)
+		assert.Equal(t, "another-secret", pullSecrets[1].Name)
+	}))
+}
+
+// TestCleanupJobImagePullSecretsEmpty tests that empty imagePullSecrets are handled correctly in cleanup job
+func TestCleanupJobImagePullSecretsEmpty(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		if edition != "enterprise" {
+			return // Skip test for non-enterprise edition since cleanup job is enterprise-only
+		}
+
+		manifest, err := model.HelmTemplate(t, chart, []string{
+			"--set", "neo4j.name=" + model.DefaultNeo4jName,
+			"--set", "neo4j.minimumClusterSize=3",
+			"--set", "neo4j.edition=enterprise",
+			"--set", "neo4j.acceptLicenseAgreement=yes",
+			"--set", "services.neo4j.cleanup.enabled=true",
+			"--set", "volumes.data.mode=selector",
+		})
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		cleanupJob := manifest.OfTypeWithName(&batchv1.Job{}, fmt.Sprintf("%s-cleanup", model.DefaultHelmTemplateReleaseName))
+		if !assert.NotNil(t, cleanupJob, "cleanup job not found") {
+			return
+		}
+
+		pullSecrets := cleanupJob.(*batchv1.Job).Spec.Template.Spec.ImagePullSecrets
+		assert.Nil(t, pullSecrets, "imagePullSecrets should be nil when empty")
+	}))
+}
