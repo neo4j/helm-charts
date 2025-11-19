@@ -31,6 +31,7 @@ spec:
         helm.neo4j.com/instance: "{{ include "neo4j.fullname" . }}"
     spec:
       serviceAccountName: "{{ include "neo4j.fullname" . }}-cleanup"
+      {{- include "neo4j.imagePullSecrets" .Values.image.imagePullSecrets | indent 6 }}
       containers:
         - name: kubectl
           image: "{{ include "cleanup.image" . }}"

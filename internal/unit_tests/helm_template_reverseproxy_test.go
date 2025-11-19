@@ -292,3 +292,43 @@ func TestReverseProxyEmptyPodLabelsAndNodeSelector(t *testing.T) {
 	nodeSelector := deployment.Spec.Template.Spec.NodeSelector
 	assert.Nil(t, nodeSelector, "nodeSelector should not be present when empty")
 }
+
+// TestReverseProxyImagePullSecrets tests that imagePullSecrets are correctly set in the reverse proxy deployment
+func TestReverseProxyImagePullSecrets(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jReverseProxyValues
+	helmValues.ReverseProxy.ImagePullSecrets = []string{"my-pull-secret", "another-secret"}
+	helmValues.ReverseProxy.ServiceName = "neo4j-service"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while testing imagePullSecrets with reverse proxy helm chart")
+
+	deploymentList := manifests.OfType(&appsv1.Deployment{})
+	assert.Len(t, deploymentList, 1, fmt.Sprintf("number of deployments should be 1, not %d", len(deploymentList)))
+
+	deployment := deploymentList[0].(*appsv1.Deployment)
+	pullSecrets := deployment.Spec.Template.Spec.ImagePullSecrets
+	assert.Len(t, pullSecrets, 2, "should have 2 imagePullSecrets")
+	assert.Equal(t, "my-pull-secret", pullSecrets[0].Name)
+	assert.Equal(t, "another-secret", pullSecrets[1].Name)
+}
+
+// TestReverseProxyImagePullSecretsEmpty tests that empty imagePullSecrets are handled correctly
+func TestReverseProxyImagePullSecretsEmpty(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jReverseProxyValues
+	helmValues.ReverseProxy.ImagePullSecrets = []string{}
+	helmValues.ReverseProxy.ServiceName = "neo4j-service"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while testing empty imagePullSecrets with reverse proxy helm chart")
+
+	deploymentList := manifests.OfType(&appsv1.Deployment{})
+	assert.Len(t, deploymentList, 1, fmt.Sprintf("number of deployments should be 1, not %d", len(deploymentList)))
+
+	deployment := deploymentList[0].(*appsv1.Deployment)
+	pullSecrets := deployment.Spec.Template.Spec.ImagePullSecrets
+	assert.Nil(t, pullSecrets, "imagePullSecrets should be nil when empty")
+}

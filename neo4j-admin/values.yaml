@@ -194,6 +194,10 @@ backup:
   # This creates backup chains where subsequent backups only store changes from previous backup
   preferDiffAsParent: false
   
+  # Neo4j 2025.09+ feature: Enable remote address resolution for backup operations
+  # This flag controls how remote addresses are resolved during backup operations
+  remoteAddressResolution: false
+  
   # Optional temporary directory for backup process when using cloud storage
   # If not specified, Neo4j will use a temporary directory inside the current working directory
   # This is strongly recommended when backing up to cloud storage to avoid disk space issues

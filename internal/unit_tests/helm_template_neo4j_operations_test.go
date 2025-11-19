@@ -172,3 +172,67 @@ func TestNeo4jOperationsEnableServerForStandalone(t *testing.T) {
 	assert.Nil(t, operationsRole, "operations role should not be present for standalone")
 
 }
+
+// TestNeo4jOperationsImagePullSecrets tests that imagePullSecrets are correctly set in the operations pod
+func TestNeo4jOperationsImagePullSecrets(t *testing.T) {
+	t.Parallel()
+
+	clusterSize := 3
+	helmValues := model.DefaultEnterpriseValues
+	helmValues.DisableLookups = true
+	helmValues.Neo4J.MinimumClusterSize = clusterSize
+	helmValues.Image.ImagePullSecrets = []string{"my-pull-secret", "another-secret"}
+	operations := model.Operations{
+		EnableServer: true,
+		Image:        "demo:123",
+		Protocol:     "neo4j",
+	}
+	helmValues.Neo4J.Operations = operations
+
+	manifest, err := model.HelmTemplateFromStruct(t, model.HelmChart, helmValues)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	operationsPod := manifest.OfTypeWithName(
+		&v1.Pod{},
+		fmt.Sprintf("%s-operations", model.DefaultHelmTemplateReleaseName.String()),
+	).(*v1.Pod)
+	assert.NotNil(t, operationsPod, "operations pod not found")
+
+	pullSecrets := operationsPod.Spec.ImagePullSecrets
+	assert.Len(t, pullSecrets, 2, "should have 2 imagePullSecrets")
+	assert.Equal(t, "my-pull-secret", pullSecrets[0].Name)
+	assert.Equal(t, "another-secret", pullSecrets[1].Name)
+}
+
+// TestNeo4jOperationsImagePullSecretsEmpty tests that empty imagePullSecrets are handled correctly
+func TestNeo4jOperationsImagePullSecretsEmpty(t *testing.T) {
+	t.Parallel()
+
+	clusterSize := 3
+	helmValues := model.DefaultEnterpriseValues
+	helmValues.DisableLookups = true
+	helmValues.Neo4J.MinimumClusterSize = clusterSize
+	helmValues.Image.ImagePullSecrets = []string{}
+	operations := model.Operations{
+		EnableServer: true,
+		Image:        "demo:123",
+		Protocol:     "neo4j",
+	}
+	helmValues.Neo4J.Operations = operations
+
+	manifest, err := model.HelmTemplateFromStruct(t, model.HelmChart, helmValues)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	operationsPod := manifest.OfTypeWithName(
+		&v1.Pod{},
+		fmt.Sprintf("%s-operations", model.DefaultHelmTemplateReleaseName.String()),
+	).(*v1.Pod)
+	assert.NotNil(t, operationsPod, "operations pod not found")
+
+	pullSecrets := operationsPod.Spec.ImagePullSecrets
+	assert.Nil(t, pullSecrets, "imagePullSecrets should be nil when empty")
+}

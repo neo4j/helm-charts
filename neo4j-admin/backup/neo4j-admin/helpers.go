@@ -74,6 +74,11 @@ func getBackupCommandFlags(address string) []string {
 		flags = append(flags, "--prefer-diff-as-parent")
 	}
 
+	// Add remote-address-resolution flag for Neo4j 2025.09+
+	if os.Getenv("REMOTE_ADDRESS_RESOLUTION") == "true" {
+		flags = append(flags, "--remote-address-resolution")
+	}
+
 	// Add temp-path flag for backup operations, especially important for cloud storage
 	// to avoid disk space issues on the local filesystem where Neo4j is installed
 	if backupTempDir := os.Getenv("BACKUP_TEMP_DIR"); backupTempDir != "" {
