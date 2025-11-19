@@ -50,3 +50,17 @@ tls: {{ toYaml $.Values.reverseProxy.ingress.tls.config | nindent 2 }}
 host: {{ $.Values.reverseProxy.ingress.host | quote }}
 {{- end }}
 {{- end -}}
+
+{{- define "neo4j.labels" -}}
+    {{- with . -}}
+        {{- range $name, $value := . }}
+{{ $name }}: "{{ $value }}"
+        {{- end -}}
+    {{- end -}}
+{{- end }}
+
+{{- define "neo4j.nodeSelector" -}}
+{{- if and (not (kindIs "invalid" .Values.reverseProxy.nodeSelector) ) (not (empty .Values.reverseProxy.nodeSelector) ) }}
+nodeSelector: {{ .Values.reverseProxy.nodeSelector | toYaml | nindent 2 }}
+{{- end }}
+{{- end }}

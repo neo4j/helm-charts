@@ -7,12 +7,14 @@ type Neo4jReverseProxyValues struct {
 }
 
 type ReverseProxy struct {
-	Image            string   `yaml:"image,omitempty"`
-	ImagePullSecrets []string `yaml:"imagePullSecrets,omitempty"`
-	ServiceName      string   `yaml:"serviceName,omitempty"`
-	Namespace        string   `yaml:"namespace,omitempty"`
-	Domain           string   `yaml:"domain,omitempty"`
-	Ingress          Ingress  `yaml:"ingress,omitempty"`
+	Image            string            `yaml:"image,omitempty"`
+	ImagePullSecrets []string          `yaml:"imagePullSecrets,omitempty"`
+	ServiceName      string            `yaml:"serviceName,omitempty"`
+	Namespace        string            `yaml:"namespace,omitempty"`
+	Domain           string            `yaml:"domain,omitempty"`
+	Ingress          Ingress           `yaml:"ingress,omitempty"`
+	PodLabels        map[string]string `yaml:"podLabels,omitempty"`
+	NodeSelector     map[string]string `yaml:"nodeSelector,omitempty"`
 }
 
 type Ingress struct {

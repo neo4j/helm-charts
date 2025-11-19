@@ -175,6 +175,124 @@ func TestReverseProxyNamespaceDefaultsToReleaseNamespace(t *testing.T) {
 	assert.Equal(t, "reverse-proxy-ns", namespaceEnv.Value, "NAMESPACE should default to the release namespace")
 }
 
+// TestReverseProxyPodLabels checks if pod labels are correctly set on the deployment pod template
+func TestReverseProxyPodLabels(t *testing.T) {
+	t.Parallel()
+
+	podLabels := map[string]string{
+		"app":         "reverse-proxy",
+		"environment": "production",
+		"team":        "platform",
+	}
+	helmValues := model.DefaultNeo4jReverseProxyValues
+	helmValues.ReverseProxy.ServiceName = "neo4j-service"
+	helmValues.ReverseProxy.PodLabels = podLabels
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while testing pod labels with reverse proxy helm chart")
+
+	deploymentList := manifests.OfType(&appsv1.Deployment{})
+	assert.Len(t, deploymentList, 1, fmt.Sprintf("number of deployments should be 1, not %d", len(deploymentList)))
+
+	deployment := deploymentList[0].(*appsv1.Deployment)
+	podTemplateLabels := deployment.Spec.Template.ObjectMeta.Labels
+
+	// Check that all provided pod labels are present
+	for key, expectedValue := range podLabels {
+		assert.Contains(t, podTemplateLabels, key, fmt.Sprintf("pod label %s should be present", key))
+		assert.Equal(t, expectedValue, podTemplateLabels[key], fmt.Sprintf("pod label %s value should match", key))
+	}
+}
+
+// TestReverseProxyNodeSelector checks if nodeSelector is correctly set on the deployment pod spec
+func TestReverseProxyNodeSelector(t *testing.T) {
+	t.Parallel()
+
+	nodeSelectorLabels := map[string]string{
+		"label1": "value1",
+		"label2": "value2",
+	}
+	helmValues := model.DefaultNeo4jReverseProxyValues
+	helmValues.ReverseProxy.ServiceName = "neo4j-service"
+	helmValues.ReverseProxy.NodeSelector = nodeSelectorLabels
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while testing nodeSelector with reverse proxy helm chart")
+
+	deploymentList := manifests.OfType(&appsv1.Deployment{})
+	assert.Len(t, deploymentList, 1, fmt.Sprintf("number of deployments should be 1, not %d", len(deploymentList)))
+
+	deployment := deploymentList[0].(*appsv1.Deployment)
+	nodeSelector := deployment.Spec.Template.Spec.NodeSelector
+
+	assert.NotNil(t, nodeSelector, "nodeSelector should be present")
+	assert.Equal(t, nodeSelectorLabels, nodeSelector, "nodeSelector labels should match")
+}
+
+// TestReverseProxyPodLabelsAndNodeSelectorTogether checks if both podLabels and nodeSelector work together
+func TestReverseProxyPodLabelsAndNodeSelectorTogether(t *testing.T) {
+	t.Parallel()
+
+	podLabels := map[string]string{
+		"app":         "reverse-proxy",
+		"environment": "production",
+	}
+	nodeSelectorLabels := map[string]string{
+		"workload-type": "reverse-proxy",
+		"zone":          "us-east-1",
+	}
+	helmValues := model.DefaultNeo4jReverseProxyValues
+	helmValues.ReverseProxy.ServiceName = "neo4j-service"
+	helmValues.ReverseProxy.PodLabels = podLabels
+	helmValues.ReverseProxy.NodeSelector = nodeSelectorLabels
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while testing podLabels and nodeSelector together with reverse proxy helm chart")
+
+	deploymentList := manifests.OfType(&appsv1.Deployment{})
+	assert.Len(t, deploymentList, 1, fmt.Sprintf("number of deployments should be 1, not %d", len(deploymentList)))
+
+	deployment := deploymentList[0].(*appsv1.Deployment)
+
+	// Check pod labels
+	podTemplateLabels := deployment.Spec.Template.ObjectMeta.Labels
+	for key, expectedValue := range podLabels {
+		assert.Contains(t, podTemplateLabels, key, fmt.Sprintf("pod label %s should be present", key))
+		assert.Equal(t, expectedValue, podTemplateLabels[key], fmt.Sprintf("pod label %s value should match", key))
+	}
+
+	// Check nodeSelector
+	nodeSelector := deployment.Spec.Template.Spec.NodeSelector
+	assert.NotNil(t, nodeSelector, "nodeSelector should be present")
+	assert.Equal(t, nodeSelectorLabels, nodeSelector, "nodeSelector labels should match")
+}
+
+// TestReverseProxyEmptyPodLabelsAndNodeSelector checks that empty values don't break the template
+func TestReverseProxyEmptyPodLabelsAndNodeSelector(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jReverseProxyValues
+	helmValues.ReverseProxy.ServiceName = "neo4j-service"
+	helmValues.ReverseProxy.PodLabels = map[string]string{}
+	helmValues.ReverseProxy.NodeSelector = map[string]string{}
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while testing empty podLabels and nodeSelector with reverse proxy helm chart")
+
+	deploymentList := manifests.OfType(&appsv1.Deployment{})
+	assert.Len(t, deploymentList, 1, fmt.Sprintf("number of deployments should be 1, not %d", len(deploymentList)))
+
+	deployment := deploymentList[0].(*appsv1.Deployment)
+
+	// Pod should still have the default label
+	podTemplateLabels := deployment.Spec.Template.ObjectMeta.Labels
+	assert.Contains(t, podTemplateLabels, "name", "pod should have default name label")
+
+	// NodeSelector should not be present when empty
+	nodeSelector := deployment.Spec.Template.Spec.NodeSelector
+	assert.Nil(t, nodeSelector, "nodeSelector should not be present when empty")
+}
+
 // TestReverseProxyImagePullSecrets tests that imagePullSecrets are correctly set in the reverse proxy deployment
 func TestReverseProxyImagePullSecrets(t *testing.T) {
 	t.Parallel()

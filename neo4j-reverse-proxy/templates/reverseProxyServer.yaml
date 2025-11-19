@@ -16,8 +16,10 @@ spec:
       name: {{ include "neo4j.fullname" . }}-reverseproxy
       labels:
         name: {{ include "neo4j.fullname" . }}-reverseproxy
+        {{- include "neo4j.labels" $.Values.reverseProxy.podLabels | indent 8 }}
     spec:
       securityContext: {{ toYaml .Values.reverseProxy.podSecurityContext | nindent 8 }}
+      {{- include "neo4j.nodeSelector" . | nindent 6 }}
       {{- if .Values.reverseProxy.imagePullSecrets }}
       imagePullSecrets:
       {{- range .Values.reverseProxy.imagePullSecrets }}
