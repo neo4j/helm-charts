@@ -25,8 +25,11 @@ then
 	sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j/Chart.yaml"
 	# this update is for updating neo4j-operations image
 	# Extract the actual version from neo4j/values.yaml to handle cases where it differs from Chart.yaml
-	NEO4J_VALUES_VERSION=$(grep -oP 'neo4j/helm-charts-operations:\K[0-9]+\.[0-9]+\.[0-9]+' "neo4j/values.yaml" || echo "${CURRENT_VERSION}")
-	sed -i "s/${NEO4J_VALUES_VERSION}/${CHART_VERSION}/g" "neo4j/values.yaml"
+	# Include optional -X suffix to match full version strings like 2025.10.1-1
+	NEO4J_VALUES_VERSION=$(grep -oP 'neo4j/helm-charts-operations:\K[0-9]+\.[0-9]+\.[0-9]+(-[0-9]+)?' "neo4j/values.yaml" || echo "${CURRENT_VERSION}")
+	# Escape dots in version for sed literal matching
+	NEO4J_VALUES_VERSION_ESCAPED=$(echo "${NEO4J_VALUES_VERSION}" | sed 's/\./\\./g')
+	sed -i "s/neo4j\/helm-charts-operations:${NEO4J_VALUES_VERSION_ESCAPED}/neo4j\/helm-charts-operations:${CHART_VERSION}/g" "neo4j/values.yaml"
   
   # Update headless service chart
   sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j-headless-service/Chart.yaml"
@@ -50,15 +53,21 @@ then
   sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j-admin/Chart.yaml"
   sed -i "s/appVersion: ${CURRENT_VERSION}/appVersion: ${NEO4J_VERSION}/g" "neo4j-admin/Chart.yaml"
   # Extract the actual version from neo4j-admin/values.yaml to handle cases where it differs from Chart.yaml
-  ADMIN_VALUES_VERSION=$(grep -oP 'imageTag: "\K[0-9]+\.[0-9]+\.[0-9]+' "neo4j-admin/values.yaml" || echo "${CURRENT_VERSION}")
-  sed -i "s/${ADMIN_VALUES_VERSION}/${CHART_VERSION}/g" "neo4j-admin/values.yaml"
+  # Include optional -X suffix to match full version strings like 2025.10.1-1
+  ADMIN_VALUES_VERSION=$(grep -oP 'imageTag: "\K[0-9]+\.[0-9]+\.[0-9]+(-[0-9]+)?' "neo4j-admin/values.yaml" || echo "${CURRENT_VERSION}")
+  # Escape dots in version for sed literal matching
+  ADMIN_VALUES_VERSION_ESCAPED=$(echo "${ADMIN_VALUES_VERSION}" | sed 's/\./\\./g')
+  sed -i "s/imageTag: \"${ADMIN_VALUES_VERSION_ESCAPED}\"/imageTag: \"${CHART_VERSION}\"/g" "neo4j-admin/values.yaml"
   
   # Update reverse proxy chart
   sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j-reverse-proxy/Chart.yaml"
   sed -i "s/appVersion: ${CURRENT_VERSION}/appVersion: ${NEO4J_VERSION}/g" "neo4j-reverse-proxy/Chart.yaml"
   # Extract the actual version from neo4j-reverse-proxy/values.yaml to handle cases where it differs from Chart.yaml
-  PROXY_VALUES_VERSION=$(grep -oP 'neo4j/helm-charts-reverse-proxy:\K[0-9]+\.[0-9]+\.[0-9]+' "neo4j-reverse-proxy/values.yaml" || echo "${CURRENT_VERSION}")
-  sed -i "s/${PROXY_VALUES_VERSION}/${CHART_VERSION}/g" "neo4j-reverse-proxy/values.yaml"
+  # Include optional -X suffix to match full version strings like 2025.10.1-1
+  PROXY_VALUES_VERSION=$(grep -oP 'neo4j/helm-charts-reverse-proxy:\K[0-9]+\.[0-9]+\.[0-9]+(-[0-9]+)?' "neo4j-reverse-proxy/values.yaml" || echo "${CURRENT_VERSION}")
+  # Escape dots in version for sed literal matching
+  PROXY_VALUES_VERSION_ESCAPED=$(echo "${PROXY_VALUES_VERSION}" | sed 's/\./\\./g')
+  sed -i "s/neo4j\/helm-charts-reverse-proxy:${PROXY_VALUES_VERSION_ESCAPED}/neo4j\/helm-charts-reverse-proxy:${CHART_VERSION}/g" "neo4j-reverse-proxy/values.yaml"
   
   # Update loadbalancer chart
   sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j-loadbalancer/Chart.yaml"
