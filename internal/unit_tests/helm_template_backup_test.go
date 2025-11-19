@@ -905,6 +905,102 @@ func TestBackupVerboseEnvVarFalse(t *testing.T) {
 	assert.True(t, found, "VERBOSE env var not found")
 }
 
+// TestBackupRemoteAddressResolutionEnvVarTrue checks that the RemoteAddressResolution value is set to true correctly
+func TestBackupRemoteAddressResolutionEnvVarTrue(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "test-bucket"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+	helmValues.Backup.RemoteAddressResolution = true
+	helmValues.ServiceAccountName = "demo"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while performing backup with remoteAddressResolution")
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
+
+	envVariables := cronjobs[0].(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env
+	var found bool
+	for _, variable := range envVariables {
+		if variable.Name == "REMOTE_ADDRESS_RESOLUTION" {
+			found = true
+			assert.Equal(t, "true", variable.Value, "Expected REMOTE_ADDRESS_RESOLUTION to be true when explicitly enabled")
+			break
+		}
+	}
+	assert.True(t, found, "REMOTE_ADDRESS_RESOLUTION env var not found")
+}
+
+// TestBackupRemoteAddressResolutionEnvVarFalse checks that the RemoteAddressResolution value is set to false when explicitly set as such
+func TestBackupRemoteAddressResolutionEnvVarFalse(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.Backup.RemoteAddressResolution = false
+
+	helmValues.Backup.SecretName = "demo"
+	helmValues.Backup.SecretKeyName = "key"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "bucket"
+	helmValues.Backup.DatabaseAdminServiceName = "admin"
+	helmValues.Backup.Database = "neo4j"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err)
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1)
+
+	envVars := cronjobs[0].(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env
+	var found bool
+	for _, env := range envVars {
+		if env.Name == "REMOTE_ADDRESS_RESOLUTION" {
+			found = true
+			assert.Equal(t, "false", env.Value, "Expected REMOTE_ADDRESS_RESOLUTION to be false when explicitly disabled")
+			break
+		}
+	}
+	assert.True(t, found, "REMOTE_ADDRESS_RESOLUTION env var not found")
+}
+
+// TestBackupRemoteAddressResolutionEnvVarDefaultFalse checks that the RemoteAddressResolution value defaults to false
+func TestBackupRemoteAddressResolutionEnvVarDefaultFalse(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	// RemoteAddressResolution is not explicitly set, should default to false
+
+	helmValues.Backup.SecretName = "demo"
+	helmValues.Backup.SecretKeyName = "key"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "bucket"
+	helmValues.Backup.DatabaseAdminServiceName = "admin"
+	helmValues.Backup.Database = "neo4j"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err)
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1)
+
+	envVars := cronjobs[0].(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env
+	var found bool
+	for _, env := range envVars {
+		if env.Name == "REMOTE_ADDRESS_RESOLUTION" {
+			found = true
+			assert.Equal(t, "false", env.Value, "Expected REMOTE_ADDRESS_RESOLUTION to default to false")
+			break
+		}
+	}
+	assert.True(t, found, "REMOTE_ADDRESS_RESOLUTION env var not found")
+}
+
 // TestBackupKeepBackupFilesEnvVarDefaultTrue checks that the KeepBackupFiles value is set to true correctly
 func TestBackupKeepBackupFilesEnvVarDefaultTrue(t *testing.T) {
 	t.Parallel()

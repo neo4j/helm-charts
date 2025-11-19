@@ -102,6 +102,7 @@ type Backup struct {
 	AggregateBackup              AggregateBackup `yaml:"aggregate,omitempty"`
 	Compress                     bool            `yaml:"compress" default:"true"`
 	TempDir                      string          `yaml:"tempDir,omitempty"`
+	RemoteAddressResolution      bool            `yaml:"remoteAddressResolution" default:"false"`
 }
 
 type AggregateBackup struct {
