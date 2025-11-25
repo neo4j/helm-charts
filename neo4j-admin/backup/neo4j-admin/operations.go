@@ -496,7 +496,12 @@ func countAzureBackups(db, account, containerPath string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	serviceURL := fmt.Sprintf("https://%s.blob.core.windows.net", storageAccount)
+	// Use AZURE_BLOB_SERVICE_URL if provided (for GovCloud support), otherwise default to commercial Azure
+	blobServiceURL := os.Getenv("AZURE_BLOB_SERVICE_URL")
+	if blobServiceURL == "" {
+		blobServiceURL = "blob.core.windows.net"
+	}
+	serviceURL := fmt.Sprintf("https://%s.%s", storageAccount, blobServiceURL)
 	client, err := azblob.NewClient(serviceURL, cred, nil)
 	if err != nil {
 		return 0, err
