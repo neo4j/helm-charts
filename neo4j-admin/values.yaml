@@ -172,8 +172,10 @@ backup:
   # this to be provided when you are using workload identity integration for azure
   azureStorageAccountName: ""
   # Azure blob service URL for different Azure clouds
-  # Default: "blob.core.windows.net" (Azure Commercial)
+  # This configures both the Go SDK client and Neo4j's native backup via dbms.integrations.cloud_storage.azb.blob_endpoint_suffix
+  # Default: "" (uses Neo4j default which is "blob.core.windows.net" for Azure Commercial)
   # Azure Government: "blob.core.usgovcloudapi.net"
+  # See: https://neo4j.com/docs/operations-manual/current/configuration/configuration-settings/
   azureBlobServiceURL: ""
   #setting this to true will not delete the backup files generated at the /backup mount
   keepBackupFiles: true

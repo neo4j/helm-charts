@@ -121,6 +121,10 @@ spec:
                   value: {{ .Values.backup.tempDir | default "" | quote }}
                 - name: AZURE_BLOB_SERVICE_URL
                   value: "{{ .Values.backup.azureBlobServiceURL | default "" }}"
+                {{- if .Values.backup.azureBlobServiceURL }}
+                - name: NEO4J_dbms_integrations_cloud__storage_azb_blob__endpoint__suffix
+                  value: "{{ .Values.backup.azureBlobServiceURL }}"
+                {{- end }}
                 {{- if or .Values.backup.s3Endpoint .Values.backup.minioEndpoint }}
                 - name: AWS_ENDPOINT_URL_S3
                   value: "{{ .Values.backup.s3Endpoint | default .Values.backup.minioEndpoint }}"
