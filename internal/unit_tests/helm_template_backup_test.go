@@ -1622,3 +1622,82 @@ func TestConsistencyCheckTimeoutCustomValue(t *testing.T) {
 	}
 	assert.True(t, found, "CONSISTENCY_CHECK_TIMEOUT env var not found")
 }
+
+// TestAzureBlobServiceURLConfiguration tests that Azure blob service URL configuration is properly set
+func TestAzureBlobServiceURLConfiguration(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.Backup.AzureStorageAccountName = "testaccount"
+	helmValues.Backup.CloudProvider = "azure"
+	helmValues.Backup.BucketName = "test-container"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+	helmValues.Backup.Database = "neo4j"
+	helmValues.ServiceAccountName = "azure-sa"
+
+	// Set custom Azure blob service URL for Azure Government Cloud
+	helmValues.Backup.AzureBlobServiceURL = "blob.core.usgovcloudapi.net"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while trying to install helm backup with Azure blob service URL")
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
+	cronjob := cronjobs[0].(*batchv1.CronJob)
+
+	containers := cronjob.Spec.JobTemplate.Spec.Template.Spec.Containers
+	assert.Len(t, containers, 1, "there should be only one container present")
+	container := containers[0]
+
+	// Verify that the Azure blob service URL environment variables are properly set
+	envVariables := container.Env
+
+	// Check for AZURE_BLOB_SERVICE_URL (used by Go SDK client)
+	assert.Contains(t, envVariables, corev1.EnvVar{Name: "AZURE_BLOB_SERVICE_URL", Value: "blob.core.usgovcloudapi.net"},
+		"AZURE_BLOB_SERVICE_URL should be set to custom endpoint")
+
+	// Check for NEO4J_dbms_integrations_cloud__storage_azb_blob__endpoint__suffix (used by Neo4j native backup)
+	assert.Contains(t, envVariables, corev1.EnvVar{Name: "NEO4J_dbms_integrations_cloud__storage_azb_blob__endpoint__suffix", Value: "blob.core.usgovcloudapi.net"},
+		"NEO4J_dbms_integrations_cloud__storage_azb_blob__endpoint__suffix should be set to custom endpoint")
+}
+
+// TestAzureBlobServiceURLDefaultConfiguration tests that default Azure blob service URL works without custom endpoint
+func TestAzureBlobServiceURLDefaultConfiguration(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.Backup.AzureStorageAccountName = "testaccount"
+	helmValues.Backup.CloudProvider = "azure"
+	helmValues.Backup.BucketName = "test-container"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+	helmValues.Backup.Database = "neo4j"
+	helmValues.ServiceAccountName = "azure-sa"
+
+	// Don't set custom Azure blob service URL - should use default
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while trying to install helm backup with default Azure configuration")
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
+	cronjob := cronjobs[0].(*batchv1.CronJob)
+
+	containers := cronjob.Spec.JobTemplate.Spec.Template.Spec.Containers
+	assert.Len(t, containers, 1, "there should be only one container present")
+	container := containers[0]
+
+	// Verify that AZURE_BLOB_SERVICE_URL is set to empty string (will use default)
+	envVariables := container.Env
+
+	// AZURE_BLOB_SERVICE_URL should be present but empty
+	for _, envVar := range envVariables {
+		if envVar.Name == "AZURE_BLOB_SERVICE_URL" {
+			assert.Equal(t, "", envVar.Value, "AZURE_BLOB_SERVICE_URL should be empty when using default")
+		}
+		// NEO4J_dbms_integrations_cloud__storage_azb_blob__endpoint__suffix should NOT be present when no custom URL is set
+		assert.NotEqual(t, "NEO4J_dbms_integrations_cloud__storage_azb_blob__endpoint__suffix", envVar.Name,
+			"NEO4J_dbms_integrations_cloud__storage_azb_blob__endpoint__suffix should not be set when using default")
+	}
+}
