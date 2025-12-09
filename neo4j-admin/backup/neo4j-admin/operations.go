@@ -62,12 +62,17 @@ func CheckDatabaseConnectivity(hostPortList string) error {
 	return fmt.Errorf("connectivity cannot be established with any endpoint: %v", lastErr)
 }
 
-// importCustomCA imports the custom S3 CA certificate into a JVM truststore if S3_CA_CERT_PATH is set.
+// importCustomCA imports the custom S3 CA certificate into a JVM truststore and updates system CA certificates
+// if S3_CA_CERT_PATH is set. This should now support both JSSE-based clients (via JKS truststore) and CRT-based clients
 func importCustomCA() error {
 	caPath := os.Getenv("S3_CA_CERT_PATH")
 	if caPath == "" {
 		log.Println("No custom S3 CA certificate path set, skipping truststore import.")
 		return nil
+	}
+
+	if err := updateSystemCACertificates(caPath); err != nil {
+		log.Printf("Warning: Failed to update system CA certificates (CRT clients may fail): %v", err)
 	}
 
 	truststorePath := "/tmp/custom-truststore.jks"
@@ -78,37 +83,83 @@ func importCustomCA() error {
 
 	// Check if keytool is available
 	if _, err := exec.LookPath("keytool"); err != nil {
-		return fmt.Errorf("keytool not found in PATH: %v", err)
+		log.Printf("Warning: keytool not found in PATH, skipping JKS truststore import: %v", err)
+		// Continue - system certs may be sufficient for CRT clients
+	} else {
+		// Import the CA certificate into the truststore
+		cmd := exec.Command("keytool",
+			"-importcert",
+			"-noprompt",
+			"-trustcacerts",
+			"-alias", "custom-s3-ca",
+			"-file", caPath,
+			"-keystore", truststorePath,
+			"-storepass", truststorePass,
+		)
+
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Printf("Warning: Failed to import CA certificate into JKS truststore: %v\noutput: %s", err, string(output))
+		} else {
+			log.Printf("Successfully imported CA certificate from %s into truststore %s", caPath, truststorePath)
+
+			// Set JAVA_OPTS to use the custom truststore
+			javaOpts := fmt.Sprintf("-Djavax.net.ssl.trustStore=%s -Djavax.net.ssl.trustStorePassword=%s", truststorePath, truststorePass)
+			if existingOpts := os.Getenv("JAVA_OPTS"); existingOpts != "" {
+				javaOpts = existingOpts + " " + javaOpts
+			}
+			if err := os.Setenv("JAVA_OPTS", javaOpts); err != nil {
+				log.Printf("Warning: Failed to set JAVA_OPTS: %v", err)
+			} else {
+				log.Printf("Set JAVA_OPTS: %s", javaOpts)
+			}
+		}
 	}
 
-	// Import the CA certificate into the truststore
-	cmd := exec.Command("keytool",
-		"-importcert",
-		"-noprompt",
-		"-trustcacerts",
-		"-alias", "custom-s3-ca",
-		"-file", caPath,
-		"-keystore", truststorePath,
-		"-storepass", truststorePass,
-	)
+	return nil
+}
 
+// updateSystemCACertificates copies the custom CA certificate to the system certificate directory
+// and runs update-ca-certificates to make it available to CRT-based clients.
+func updateSystemCACertificates(caPath string) error {
+	// Check if the CA file exists
+	if _, err := os.Stat(caPath); os.IsNotExist(err) {
+		return fmt.Errorf("CA certificate file not found at %s", caPath)
+	}
+
+	// Check if update-ca-certificates is available
+	if _, err := exec.LookPath("update-ca-certificates"); err != nil {
+		return fmt.Errorf("update-ca-certificates not found in PATH (required for CRT client support): %v", err)
+	}
+
+	// Copy CA certificate to system certificate directory
+	systemCertPath := "/usr/local/share/ca-certificates/custom-s3-ca.crt"
+	sourceFile, err := os.Open(caPath)
+	if err != nil {
+		return fmt.Errorf("failed to open CA certificate file: %v", err)
+	}
+	defer sourceFile.Close()
+
+	destFile, err := os.Create(systemCertPath)
+	if err != nil {
+		return fmt.Errorf("failed to create system certificate file (may require root permissions): %v", err)
+	}
+	defer destFile.Close()
+
+	_, err = destFile.ReadFrom(sourceFile)
+	if err != nil {
+		return fmt.Errorf("failed to copy CA certificate: %v", err)
+	}
+
+	// Run update-ca-certificates to update the system trust store
+	cmd := exec.Command("update-ca-certificates")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to import CA certificate: %v\noutput: %s", err, string(output))
+		return fmt.Errorf("failed to update system CA certificates: %v\noutput: %s", err, string(output))
 	}
 
-	log.Printf("Successfully imported CA certificate from %s into truststore %s", caPath, truststorePath)
-
-	// Set JAVA_OPTS to use the custom truststore
-	javaOpts := fmt.Sprintf("-Djavax.net.ssl.trustStore=%s -Djavax.net.ssl.trustStorePassword=%s", truststorePath, truststorePass)
-	if existingOpts := os.Getenv("JAVA_OPTS"); existingOpts != "" {
-		javaOpts = existingOpts + " " + javaOpts
-	}
-	if err := os.Setenv("JAVA_OPTS", javaOpts); err != nil {
-		return fmt.Errorf("failed to set JAVA_OPTS: %v", err)
-	}
-
-	log.Printf("Set JAVA_OPTS: %s", javaOpts)
+	log.Printf("Successfully updated system CA certificates with custom S3 CA from %s", caPath)
+	log.Printf("update-ca-certificates output: %s", string(output))
 	return nil
 }
 
