@@ -1093,6 +1093,18 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 
 	t.Logf("Using namespace: %s for AWS backup test", namespace)
 
+	// Use defer to ensure bucket cleanup happens even if function panics or returns early
+	bucketCreated := false
+	defer func() {
+		if bucketCreated {
+			if err := deleteAWSBucket(os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"), "us-east-1", backupBucketName); err != nil {
+				t.Logf("WARNING: Failed to delete AWS bucket %s during cleanup: %v", backupBucketName, err)
+			} else {
+				t.Logf("Successfully deleted AWS bucket %s", backupBucketName)
+			}
+		}
+	}()
+
 	t.Cleanup(func() {
 		_ = runAll(t, "kubectl", [][]string{
 			{"delete", "secret", "awscred", "--namespace", namespace, "--ignore-not-found"},
@@ -1100,7 +1112,11 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 		_ = runAll(t, "helm", [][]string{
 			{"uninstall", backupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
 		}, false)
-		_ = deleteAWSBucket(os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"), "us-east-1", backupBucketName)
+		if bucketCreated {
+			if err := deleteAWSBucket(os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"), "us-east-1", backupBucketName); err != nil {
+				t.Logf("WARNING: Failed to delete AWS bucket %s during test cleanup: %v", backupBucketName, err)
+			}
+		}
 	})
 
 	_, err := Clientset.CoreV1().Secrets(namespace).Get(context.TODO(), "awscred", metav1.GetOptions{})
@@ -1141,6 +1157,8 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 	if err != nil {
 		return fmt.Errorf("failed to create AWS bucket: %v", err)
 	}
+	bucketCreated = true
+	t.Logf("Successfully created AWS bucket %s", backupBucketName)
 
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
 	helmValues := model.DefaultNeo4jBackupValues
@@ -2015,6 +2033,10 @@ func createAWSBucket(accessKey string, secretKey string, region string, bucketNa
 }
 
 func deleteAWSBucket(accessKey string, secretKey string, region string, bucketName string) error {
+	if accessKey == "" || secretKey == "" {
+		return fmt.Errorf("AWS credentials not provided, cannot delete bucket %s", bucketName)
+	}
+
 	credProvider := credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")
 
 	// Load the AWS configuration with the custom credentials provider
@@ -2030,6 +2052,17 @@ func deleteAWSBucket(accessKey string, secretKey string, region string, bucketNa
 	// Create an S3 client
 	client := s3.NewFromConfig(cfg)
 
+	// Check if bucket exists first
+	_, err = client.HeadBucket(context.TODO(), &s3.HeadBucketInput{
+		Bucket: aws.String(bucketName),
+	})
+	if err != nil {
+		// Bucket doesn't exist or we can't access it - this is fine, consider it already cleaned up
+		log.Printf("Bucket %s does not exist or is not accessible (may already be deleted): %v\n", bucketName, err)
+		return nil
+	}
+
+	// Delete all objects in the bucket
 	paginator := s3.NewListObjectsV2Paginator(client, &s3.ListObjectsV2Input{
 		Bucket: &bucketName,
 	})
@@ -2040,17 +2073,19 @@ func deleteAWSBucket(accessKey string, secretKey string, region string, bucketNa
 			return fmt.Errorf("failed to list objects: %v", err)
 		}
 
-		var objectIds []types.ObjectIdentifier
-		for _, object := range page.Contents {
-			objectIds = append(objectIds, types.ObjectIdentifier{Key: object.Key})
-		}
+		if len(page.Contents) > 0 {
+			var objectIds []types.ObjectIdentifier
+			for _, object := range page.Contents {
+				objectIds = append(objectIds, types.ObjectIdentifier{Key: object.Key})
+			}
 
-		_, err = client.DeleteObjects(context.TODO(), &s3.DeleteObjectsInput{
-			Bucket: &bucketName,
-			Delete: &types.Delete{Objects: objectIds},
-		})
-		if err != nil {
-			return fmt.Errorf("failed to delete objects: %v", err)
+			_, err = client.DeleteObjects(context.TODO(), &s3.DeleteObjectsInput{
+				Bucket: &bucketName,
+				Delete: &types.Delete{Objects: objectIds},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to delete objects: %v", err)
+			}
 		}
 	}
 
