@@ -91,6 +91,12 @@ backup:
   # the /backups mount can point to a persistentVolume based on the definition set in tempVolume
   cloudProvider: ""
 
+  # Path where backups will be written within the mounted volume
+  # Default: /backups (writes to the root of the mounted volume)
+  # To match neo4j db chart's /backups mount with subPath, set this to /backups/backups
+  # This allows configuring the backup directory to align with how the neo4j db chart mounts volumes
+  backupPath: "/backups"
+
   # name of the kubernetes secret containing the respective cloud provider credentials
   # Ensure you have read,write access to the mentioned bucket
   # For AWS :

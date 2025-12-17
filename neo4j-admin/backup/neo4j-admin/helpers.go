@@ -16,6 +16,12 @@ func getBackupPath() string {
 	return "/backups"
 }
 
+// GetBackupPath returns the configured backup path or the default /backups
+// This is exported for use in other packages
+func GetBackupPath() string {
+	return getBackupPath()
+}
+
 // getBackupCommandFlags returns a slice of string containing all the flags to be passed with the neo4j-admin backup command
 func getBackupCommandFlags(address string) []string {
 	flags := []string{"database", "backup"}

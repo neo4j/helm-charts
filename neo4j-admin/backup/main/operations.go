@@ -183,7 +183,8 @@ func startupOperations() {
 	err = neo4jAdmin.CheckDatabaseConnectivity(address)
 	handleError(err)
 
-	os.Setenv("LOCATION", "/backups")
+	backupPath := neo4jAdmin.GetBackupPath()
+	os.Setenv("LOCATION", backupPath)
 }
 
 func handleError(err error) {
@@ -216,16 +217,19 @@ func generateAddress() (string, error) {
 
 func deleteBackupFiles(backupFileNames, consistencyCheckReports []string) error {
 	if value, present := os.LookupEnv("KEEP_BACKUP_FILES"); present && value == "false" {
+		backupPath := neo4jAdmin.GetBackupPath()
 		for _, backupFileName := range backupFileNames {
-			log.Printf("Deleting file /backups/%s", backupFileName)
-			err := os.Remove(fmt.Sprintf("/backups/%s", backupFileName))
+			filePath := fmt.Sprintf("%s/%s", backupPath, backupFileName)
+			log.Printf("Deleting file %s", filePath)
+			err := os.Remove(filePath)
 			if err != nil {
 				return err
 			}
 		}
 		for _, consistencyCheckReportName := range consistencyCheckReports {
-			log.Printf("Deleting file /backups/%s", consistencyCheckReportName)
-			err := os.Remove(fmt.Sprintf("/backups/%s", consistencyCheckReportName))
+			filePath := fmt.Sprintf("%s/%s", backupPath, consistencyCheckReportName)
+			log.Printf("Deleting file %s", filePath)
+			err := os.Remove(filePath)
 			if err != nil {
 				return err
 			}

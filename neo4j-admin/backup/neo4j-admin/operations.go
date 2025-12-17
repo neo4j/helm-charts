@@ -171,8 +171,9 @@ func PerformConsistencyCheck(database string) (string, error) {
 		log.Printf("Inconsistencies found for database %s. Exit code was %d\n", database, me.ExitCode())
 		log.Printf("Consistency Check Completed !!")
 
-		tarFileName := fmt.Sprintf("/backups/%s.report.tar.gz", fileName)
-		directoryName := fmt.Sprintf("/backups/%s.report", fileName)
+		backupPath := getBackupPath()
+		tarFileName := fmt.Sprintf("%s/%s.report.tar.gz", backupPath, fileName)
+		directoryName := fmt.Sprintf("%s/%s.report", backupPath, fileName)
 		log.Printf("tarfileName %s directoryName %s", tarFileName, directoryName)
 		_, err = exec.Command("tar", "-czvf", tarFileName, directoryName, "--absolute-names").CombinedOutput()
 		if err != nil {
