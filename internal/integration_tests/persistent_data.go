@@ -4,12 +4,34 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/neo4j/helm-charts/internal/model"
 	"testing"
+
+	"github.com/neo4j/helm-charts/internal/model"
 )
 
 func ResourcesCleanup(t *testing.T, releaseName model.ReleaseName) error {
-	return run(t, "helm", "uninstall", releaseName.String(), "--namespace", string(releaseName.Namespace()), "--wait", "--timeout=3m")
+	namespace := string(releaseName.Namespace())
+
+	// First, do the helm uninstall
+	err := run(t, "helm", "uninstall", releaseName.String(), "--namespace", namespace, "--wait", "--timeout=3m")
+	if err != nil {
+		return err
+	}
+
+	// Clean up the load balancer service and endpoint that might be left behind
+	// due to helm.sh/resource-policy: keep annotation when clustering is enabled
+	loadBalancerServiceName := fmt.Sprintf("%s-lb-neo4j", model.DefaultNeo4jName)
+
+	// Delete the service if it exists (it might have resource-policy: keep)
+	_ = run(t, "kubectl", "delete", "service", loadBalancerServiceName, "--namespace", namespace, "--ignore-not-found=true")
+
+	// Delete the endpoint if it exists
+	_ = run(t, "kubectl", "delete", "endpoints", loadBalancerServiceName, "--namespace", namespace, "--ignore-not-found=true")
+
+	// Wait a moment for resources to be fully deleted
+	time.Sleep(2 * time.Second)
+
+	return nil
 }
 
 func ResourcesReinstall(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChartBuilder) error {
@@ -17,13 +39,13 @@ func ResourcesReinstall(t *testing.T, releaseName model.ReleaseName, chart model
 	// Clean up the load balancer service and endpoint that might be left behind
 	// due to helm.sh/resource-policy: keep annotation when clustering is enabled
 	loadBalancerServiceName := fmt.Sprintf("%s-lb-neo4j", model.DefaultNeo4jName)
-	
+
 	// Delete the service if it exists (it might have resource-policy: keep)
 	_ = run(t, "kubectl", "delete", "service", loadBalancerServiceName, "--namespace", namespace, "--ignore-not-found=true")
-	
+
 	// Delete the endpoint if it exists (Kubernetes creates this automatically for services)
 	_ = run(t, "kubectl", "delete", "endpoints", loadBalancerServiceName, "--namespace", namespace, "--ignore-not-found=true")
-	
+
 	// Wait a moment for resources to be fully deleted
 	time.Sleep(2 * time.Second)
 
