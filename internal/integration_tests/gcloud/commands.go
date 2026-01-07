@@ -1,17 +1,27 @@
 package gcloud
 
 import (
-	. "github.com/neo4j/helm-charts/internal/helpers"
-	"github.com/neo4j/helm-charts/internal/model"
+	"sync"
+
 	"os/exec"
 	"strings"
 	"testing"
 	"time"
+
+	. "github.com/neo4j/helm-charts/internal/helpers"
+	"github.com/neo4j/helm-charts/internal/model"
+)
+
+var (
+	credentialMutex sync.Mutex
 )
 
 func InstallGcloud(t *testing.T, zone Zone, project Project, releaseName model.ReleaseName) (Closeable, *model.PersistentDiskName, error) {
 
+	// Synchronize credential fetching to prevent race conditions
+	credentialMutex.Lock()
 	err := run(t, "gcloud", "container", "clusters", "get-credentials", string(CurrentCluster()))
+	credentialMutex.Unlock()
 	if err != nil {
 		return nil, nil, err
 	}
