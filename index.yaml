@@ -345,6 +345,29 @@ entries:
     - https://github.com/neo4j/helm-charts/releases/download/2025.2.0/neo4j-2025.2.0.tgz
     version: 2025.2.0
   - apiVersion: v1
+    appVersion: 5.26.19
+    created: "2026-01-09T08:15:05.396120141Z"
+    description: Neo4j is the world's leading graph database
+    digest: 1a09f6b6128c68d40e561de23d8d47b0504f6ced5b3c6c0322edbb9894f1ff70
+    home: https://www.neo4j.com
+    icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
+    keywords:
+    - graph
+    - database
+    - cypher
+    maintainers:
+    - email: bledi.feshti@neotechnology.com
+      name: bfeshti
+    - email: rigert.alekaj@neo4j.com
+      name: Rigert Alekaj
+    name: neo4j
+    sources:
+    - https://github.com/neo4j/neo4j
+    - https://github.com/neo4j/docker-neo4j
+    urls:
+    - https://github.com/neo4j/helm-charts/releases/download/5.26.19/neo4j-5.26.19.tgz
+    version: 5.26.19
+  - apiVersion: v1
     appVersion: 5.26.18
     created: "2025-12-08T09:13:12.853833778Z"
     description: Neo4j is the world's leading graph database
@@ -1634,6 +1657,29 @@ entries:
     urls:
     - https://github.com/neo4j/helm-charts/releases/download/2025.2.0/neo4j-admin-2025.2.0.tgz
     version: 2025.2.0
+  - apiVersion: v1
+    appVersion: 5.26.19
+    created: "2026-01-09T08:15:05.396991286Z"
+    description: Neo4j is the world's leading graph database
+    digest: bcd8be1507a183a0521ff4c099698369f170eba036b1203d8e861b4be489bcfa
+    home: https://www.neo4j.com
+    icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
+    keywords:
+    - graph
+    - database
+    - cypher
+    maintainers:
+    - email: bledi.feshti@neotechnology.com
+      name: bfeshti
+    - email: rigert.alekaj@neo4j.com
+      name: Rigert Alekaj
+    name: neo4j-admin
+    sources:
+    - https://github.com/neo4j/neo4j
+    - https://github.com/neo4j/docker-neo4j
+    urls:
+    - https://github.com/neo4j/helm-charts/releases/download/5.26.19/neo4j-admin-5.26.19.tgz
+    version: 5.26.19
   - apiVersion: v1
     appVersion: 5.26.18
     created: "2025-12-08T09:13:12.854691175Z"
@@ -6402,6 +6448,29 @@ entries:
     version: 2025.2.0
   - apiVersion: v1
     appVersion: '-'
+    created: "2026-01-09T08:15:05.397510133Z"
+    description: Neo4j is the world's leading graph database
+    digest: a11bbfa413a4417f4db6ad973ddb69d6803fc792415f5b16689c930f36104fc7
+    home: https://www.neo4j.com
+    icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
+    keywords:
+    - graph
+    - database
+    - cypher
+    maintainers:
+    - email: bledi.feshti@neotechnology.com
+      name: bfeshti
+    - email: rigert.alekaj@neo4j.com
+      name: Rigert Alekaj
+    name: neo4j-headless-service
+    sources:
+    - https://github.com/neo4j/neo4j
+    - https://github.com/neo4j/docker-neo4j
+    urls:
+    - https://github.com/neo4j/helm-charts/releases/download/5.26.19/neo4j-headless-service-5.26.19.tgz
+    version: 5.26.19
+  - apiVersion: v1
+    appVersion: '-'
     created: "2025-12-08T09:13:12.855041607Z"
     description: Neo4j is the world's leading graph database
     digest: 5f6f0e9ef23a1eea485dc9a732e3e7da3c89827e022aa0edac9c3f71c1a7f1f5
@@ -7720,6 +7789,29 @@ entries:
     version: 2025.2.0
   - apiVersion: v1
     appVersion: '-'
+    created: "2026-01-09T08:15:05.39781966Z"
+    description: Neo4j is the world's leading graph database
+    digest: f423ba85806932a706c1acd5316f6e0836db1c03c62f4703783bb74b8323b67b
+    home: https://www.neo4j.com
+    icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
+    keywords:
+    - graph
+    - database
+    - cypher
+    maintainers:
+    - email: bledi.feshti@neotechnology.com
+      name: bfeshti
+    - email: rigert.alekaj@neo4j.com
+      name: Rigert Alekaj
+    name: neo4j-loadbalancer
+    sources:
+    - https://github.com/neo4j/neo4j
+    - https://github.com/neo4j/docker-neo4j
+    urls:
+    - https://github.com/neo4j/helm-charts/releases/download/5.26.19/neo4j-loadbalancer-5.26.19.tgz
+    version: 5.26.19
+  - apiVersion: v1
+    appVersion: '-'
     created: "2025-12-08T09:13:12.855345593Z"
     description: Neo4j is the world's leading graph database
     digest: 0791b2e67aa64c64e79cb275b87deb543616af70c21f6117095e96c9a11cec78
@@ -8783,6 +8875,29 @@ entries:
     urls:
     - https://github.com/neo4j/helm-charts/releases/download/2025.2.0/neo4j-persistent-volume-2025.2.0.tgz
     version: 2025.2.0
+  - apiVersion: v1
+    appVersion: '-'
+    created: "2026-01-09T08:15:05.398089333Z"
+    description: Sets up persistent disks suitable for a Neo4j Helm installation
+    digest: f4447eb50619a121b8129217ddc3f476dbe34acbd6655b4440166b98d0237504
+    home: https://www.neo4j.com
+    icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
+    keywords:
+    - graph
+    - database
+    - cypher
+    maintainers:
+    - email: bledi.feshti@neotechnology.com
+      name: bfeshti
+    - email: rigert.alekaj@neo4j.com
+      name: Rigert Alekaj
+    name: neo4j-persistent-volume
+    sources:
+    - https://github.com/neo4j/neo4j
+    - https://github.com/neo4j/docker-neo4j
+    urls:
+    - https://github.com/neo4j/helm-charts/releases/download/5.26.19/neo4j-persistent-volume-5.26.19.tgz
+    version: 5.26.19
   - apiVersion: v1
     appVersion: '-'
     created: "2025-12-08T09:13:12.855637076Z"
@@ -10101,6 +10216,29 @@ entries:
     urls:
     - https://github.com/neo4j/helm-charts/releases/download/2025.2.0/neo4j-reverse-proxy-2025.2.0.tgz
     version: 2025.2.0
+  - apiVersion: v1
+    appVersion: 5.26.19
+    created: "2026-01-09T08:15:05.398529905Z"
+    description: Sets up an http server and a reverse proxy for bolt and http requests
+    digest: bf39f7dddcc6026113c8e8b2400d696d1adea6457146afa3193d9a6a015de602
+    home: https://www.neo4j.com
+    icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
+    keywords:
+    - graph
+    - database
+    - cypher
+    maintainers:
+    - email: bledi.feshti@neotechnology.com
+      name: bfeshti
+    - email: rigert.alekaj@neo4j.com
+      name: Rigert Alekaj
+    name: neo4j-reverse-proxy
+    sources:
+    - https://github.com/neo4j/neo4j
+    - https://github.com/neo4j/docker-neo4j
+    urls:
+    - https://github.com/neo4j/helm-charts/releases/download/5.26.19/neo4j-reverse-proxy-5.26.19.tgz
+    version: 5.26.19
   - apiVersion: v1
     appVersion: 5.26.18
     created: "2025-12-08T09:13:12.856251119Z"
@@ -12029,4 +12167,4 @@ entries:
     urls:
     - https://github.com/neo4j/helm-charts/releases/download/4.3.2/neo4j-standalone-4.3.2.tgz
     version: 4.3.2
-generated: "2025-12-08T09:13:12.851332721Z"
+generated: "2026-01-09T08:15:05.393583362Z"
