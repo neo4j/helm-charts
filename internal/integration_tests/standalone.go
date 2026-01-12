@@ -1828,13 +1828,22 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 	helmValues.ReverseProxy.Namespace = namespace
 
 	// Clean up any existing ingress resources that might conflict
-	t.Logf("Cleaning up any existing reverse proxy ingresses that might conflict...")
+	// The nginx ingress controller validates host "_" and path "/" uniqueness cluster-wide
+	// clean up ingresses from previous test runs
+	t.Logf("Cleaning up any existing reverse proxy ingresses from previous test runs that might conflict...")
 	ingressList, err := Clientset.NetworkingV1().Ingresses("").List(context.Background(), metav1.ListOptions{})
 	if err == nil {
 		gracePeriod := int64(0)
+		currentTestRunPrefix := fmt.Sprintf("rp-%s-", TestRunIdentifier)
 		for _, ingress := range ingressList.Items {
-			// Delete any reverse proxy ingress that uses wildcard host and root path
-			if strings.Contains(ingress.Name, "reverseproxy-ingress") || strings.Contains(ingress.Name, "rp-") {
+			// Only process reverse proxy ingresses
+			if strings.Contains(ingress.Name, "reverseproxy-ingress") && strings.HasPrefix(ingress.Name, "rp-") {
+				if strings.HasPrefix(ingress.Name, currentTestRunPrefix) {
+					// This ingress belongs to the current test run, skip it
+					t.Logf("Skipping ingress from current test run: %s/%s", ingress.Namespace, ingress.Name)
+					continue
+				}
+
 				// Check if it has the conflicting host/path combination
 				if len(ingress.Spec.Rules) > 0 {
 					rule := ingress.Spec.Rules[0]
@@ -1842,7 +1851,7 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 					if (rule.Host == "" || rule.Host == "_") && len(rule.HTTP.Paths) > 0 {
 						for _, path := range rule.HTTP.Paths {
 							if path.Path == "/" {
-								t.Logf("Deleting conflicting ingress: %s/%s", ingress.Namespace, ingress.Name)
+								t.Logf("Deleting conflicting ingress from previous test run: %s/%s", ingress.Namespace, ingress.Name)
 								_ = Clientset.NetworkingV1().Ingresses(ingress.Namespace).Delete(context.Background(), ingress.Name, metav1.DeleteOptions{
 									GracePeriodSeconds: &gracePeriod,
 								})
