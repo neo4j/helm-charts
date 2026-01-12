@@ -19,6 +19,11 @@ on:
     branches:
       - dev
 
+# Concurrency control only one test run at a time
+concurrency:
+  group: test-execution
+  cancel-in-progress: false
+
 env:
   GCLOUD_SERVICE_KEY: ${{ secrets.GCLOUD_SERVICE_KEY }}
   CLOUDSDK_CORE_PROJECT: ${{ secrets.CLOUDSDK_CORE_PROJECT }}
