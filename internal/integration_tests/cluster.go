@@ -39,7 +39,8 @@ func labelNodes(t *testing.T, namespace string) error {
 
 	for index, node := range nodesList.Items {
 		labelName := fmt.Sprintf("testLabel=%s-%d", namespace, index+1)
-		err = run(t, "kubectl", "label", "nodes", node.ObjectMeta.Name, labelName)
+		// Use --overwrite to handle cases where labels exist from previous test runs that didn't clean up properly
+		err = run(t, "kubectl", "label", "nodes", node.ObjectMeta.Name, labelName, "--overwrite")
 		if err != nil {
 			errors = multierror.Append(errors, err)
 			t.Logf("Node Label failed for %s: %v", node.ObjectMeta.Name, err)
