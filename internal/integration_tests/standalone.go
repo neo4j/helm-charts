@@ -1827,7 +1827,37 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 	helmValues.ReverseProxy.ServiceName = fmt.Sprintf("%s-admin", standaloneReleaseName.String())
 	helmValues.ReverseProxy.Namespace = namespace
 
-	err := run(t, "helm", "upgrade", "--install", "ingress-nginx", "ingress-nginx", "--repo", "https://kubernetes.github.io/ingress-nginx", "--namespace", "ingress-nginx", "--create-namespace")
+	// Clean up any existing ingress resources that might conflict
+	t.Logf("Cleaning up any existing reverse proxy ingresses that might conflict...")
+	ingressList, err := Clientset.NetworkingV1().Ingresses("").List(context.Background(), metav1.ListOptions{})
+	if err == nil {
+		gracePeriod := int64(0)
+		for _, ingress := range ingressList.Items {
+			// Delete any reverse proxy ingress that uses wildcard host and root path
+			if strings.Contains(ingress.Name, "reverseproxy-ingress") || strings.Contains(ingress.Name, "rp-") {
+				// Check if it has the conflicting host/path combination
+				if len(ingress.Spec.Rules) > 0 {
+					rule := ingress.Spec.Rules[0]
+					// If host is empty or "_" and path is "/", it will conflict
+					if (rule.Host == "" || rule.Host == "_") && len(rule.HTTP.Paths) > 0 {
+						for _, path := range rule.HTTP.Paths {
+							if path.Path == "/" {
+								t.Logf("Deleting conflicting ingress: %s/%s", ingress.Namespace, ingress.Name)
+								_ = Clientset.NetworkingV1().Ingresses(ingress.Namespace).Delete(context.Background(), ingress.Name, metav1.DeleteOptions{
+									GracePeriodSeconds: &gracePeriod,
+								})
+								break
+							}
+						}
+					}
+				}
+			}
+		}
+		// Wait a bit for ingress deletions to propagate
+		time.Sleep(5 * time.Second)
+	}
+
+	err = run(t, "helm", "upgrade", "--install", "ingress-nginx", "ingress-nginx", "--repo", "https://kubernetes.github.io/ingress-nginx", "--namespace", "ingress-nginx", "--create-namespace")
 	assert.NoError(t, err)
 	time.Sleep(1 * time.Minute)
 
