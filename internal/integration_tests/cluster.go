@@ -1281,22 +1281,79 @@ func checkHeadlessServiceEndpoints(t *testing.T, service model.ReleaseName) erro
 	//get the list of pods which match the headless service selectors
 	headlessServiceSelectors := labels.Set(headlessService.Spec.Selector)
 	listOptions := metav1.ListOptions{LabelSelector: headlessServiceSelectors.AsSelector().String()}
-	pods, err := Clientset.CoreV1().Pods(string(service.Namespace())).List(context.TODO(), listOptions)
-	if !assert.NoError(t, err) {
-		return fmt.Errorf("cannot get pods matching with headless service selector")
+
+	// Wait for all pods to be ready before comparing endpoints
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	var pods *corev1.PodList
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timeout waiting for all pods to be ready")
+		case <-ticker.C:
+			var listErr error
+			pods, listErr = Clientset.CoreV1().Pods(string(service.Namespace())).List(context.TODO(), listOptions)
+			if listErr != nil {
+				return fmt.Errorf("cannot get pods matching with headless service selector: %v", listErr)
+			}
+
+			if len(pods.Items) == 0 {
+				continue // Wait for pods to appear
+			}
+
+			// Check if all pods are ready
+			allPodsReady := true
+			for _, pod := range pods.Items {
+				isReady := false
+				for _, condition := range pod.Status.Conditions {
+					if condition.Type == corev1.PodReady && condition.Status == corev1.ConditionTrue {
+						isReady = true
+						break
+					}
+				}
+				if !isReady || pod.Status.PodIP == "" {
+					allPodsReady = false
+					break
+				}
+			}
+
+			if allPodsReady {
+				var endpointsErr error
+				endpoints, endpointsErr = Clientset.CoreV1().Endpoints(string(service.Namespace())).Get(context.TODO(), serviceName, metav1.GetOptions{})
+				if endpointsErr != nil {
+					return fmt.Errorf("failed to get headless service endpoints after pods ready: %v", endpointsErr)
+				}
+				// Rebuild endpoint IPs list
+				endPointIPs = []string{}
+				if len(endpoints.Subsets) > 0 && len(endpoints.Subsets[0].Addresses) > 0 {
+					for _, endpointAddress := range endpoints.Subsets[0].Addresses {
+						endPointIPs = append(endPointIPs, endpointAddress.IP)
+					}
+				}
+				goto compareEndpoints
+			}
+		}
 	}
 
+compareEndpoints:
 	if !assert.NotEmpty(t, pods) {
 		return fmt.Errorf("pods list matching headless service selector cannot be empty")
 	}
 
 	//get the list of podIPs matching the headless service selector
+	// All pods should be ready at this point
 	var podIPs []string
 	for _, pod := range pods.Items {
-		podIPs = append(podIPs, pod.Status.PodIP)
+		if pod.Status.PodIP != "" {
+			podIPs = append(podIPs, pod.Status.PodIP)
+		}
 	}
 
 	//compare podIps and headlessService endPoint IPs ...both should match
+	// All pods should be ready, so all should be in endpoints
 	if !assert.ElementsMatch(t, podIPs, endPointIPs) {
 		return fmt.Errorf("podIPs %v and endPointIps %v do not match", podIPs, endPointIPs)
 	}
