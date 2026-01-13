@@ -191,7 +191,13 @@ func clusterTestCleanup(t *testing.T, clusterReleaseName model.ReleaseName, core
 
 			_ = runAll(t, "kubectl", [][]string{
 				{"delete", "pvc", "--all", "--namespace", namespace, "--force", "--grace-period=0", "--ignore-not-found"},
-				{"delete", "pv", "--all", "--force", "--grace-period=0", "--ignore-not-found"},
+			}, false)
+
+			// Delete only the PVs for this specific test's cores, not all PVs in the cluster
+			_ = runAll(t, "kubectl", [][]string{
+				{"delete", "pv", fmt.Sprintf("%s-pv", core1.name.String()), "--force", "--grace-period=0", "--ignore-not-found"},
+				{"delete", "pv", fmt.Sprintf("%s-pv", core2.name.String()), "--force", "--grace-period=0", "--ignore-not-found"},
+				{"delete", "pv", fmt.Sprintf("%s-pv", core3.name.String()), "--force", "--grace-period=0", "--ignore-not-found"},
 			}, false)
 
 			_ = runAll(t, "kubectl", [][]string{
