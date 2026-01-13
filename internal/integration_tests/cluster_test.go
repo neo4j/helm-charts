@@ -28,9 +28,6 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
 	namespace := string(clusterReleaseName.Namespace())
 	err := labelNodes(t, namespace)
-	addCloseable(func() error {
-		return removeLabelFromNodes(t)
-	})
 	if !assert.NoError(t, err) {
 		return
 	}
