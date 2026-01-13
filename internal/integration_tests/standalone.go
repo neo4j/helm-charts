@@ -254,7 +254,7 @@ func proxyBolt(t *testing.T, releaseName model.ReleaseName, connectToPod bool) (
 
 	program := "kubectl"
 
-	// Wait for pod to be ready before port-forwarding
+	// Wait for pod to be ready before port-forwarding (need readiness for Neo4j to accept connections)
 	if connectToPod {
 		err := waitForPodReady(releaseName.Namespace(), releaseName.PodName(), 5*time.Minute)
 		if err != nil {
@@ -1901,7 +1901,7 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 	assert.NoError(t, err, "reverse proxy pod not ready")
 
 	cmd := []string{"ls", "-lst", "/reverse-proxy"}
-	stdoutCmd, _, err := ExecInPodWithWait(standaloneReleaseName, cmd, reverseProxyPodName, false, 0)
+	stdoutCmd, _, err := ExecInPodWithWait(standaloneReleaseName, cmd, reverseProxyPodName, false, false, 0)
 	assert.NoError(t, err, "cannot exec in reverse proxy pod")
 	assert.NotContains(t, stdoutCmd, "root")
 	assert.Contains(t, stdoutCmd, "neo4j")

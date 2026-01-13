@@ -289,7 +289,55 @@ func CheckExecInPod(t *testing.T, releaseName model.ReleaseName) error {
 	return err
 }
 
+// waitForPodRunning waits for a pod to be in Running state with at least one container running
+// This is sufficient for exec operations that don't require readiness probes to pass
+func waitForPodRunning(namespace model.Namespace, podName string, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			pod, err := Clientset.CoreV1().Pods(string(namespace)).Get(context.Background(), podName, v1.GetOptions{})
+			if err != nil {
+				return fmt.Errorf("timeout waiting for pod %s/%s to be running: %v", namespace, podName, err)
+			}
+			return fmt.Errorf("timeout waiting for pod %s/%s to be running. Current phase: %s, Conditions: %v",
+				namespace, podName, pod.Status.Phase, pod.Status.Conditions)
+		case <-ticker.C:
+			pod, err := Clientset.CoreV1().Pods(string(namespace)).Get(context.Background(), podName, v1.GetOptions{})
+			if err != nil {
+				// Pod might not exist yet, continue waiting
+				continue
+			}
+
+			// Check if pod is running
+			if pod.Status.Phase != coreV1.PodRunning {
+				continue
+			}
+
+			// Check if at least one container is running (not necessarily ready)
+			// For exec operations, we just need the container to be running
+			hasRunningContainer := false
+			for _, containerStatus := range pod.Status.ContainerStatuses {
+				if containerStatus.State.Running != nil {
+					hasRunningContainer = true
+					break
+				}
+			}
+
+			if hasRunningContainer && len(pod.Status.ContainerStatuses) > 0 {
+				return nil
+			}
+		}
+	}
+}
+
 // waitForPodReady waits for a pod to be in Running state with all containers ready
+// This requires readiness probes to pass, which is needed for operations that require Neo4j to be fully ready
 func waitForPodReady(namespace model.Namespace, podName string, timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -335,21 +383,33 @@ func waitForPodReady(namespace model.Namespace, podName string, timeout time.Dur
 }
 
 func ExecInPod(releaseName model.ReleaseName, cmd []string, podName string) (string, string, error) {
-	return ExecInPodWithWait(releaseName, cmd, podName, true, 5*time.Minute)
+	return ExecInPodWithWait(releaseName, cmd, podName, true, false, 5*time.Minute)
 }
 
-// ExecInPodWithWait executes a command in a pod, optionally waiting for pod readiness
-func ExecInPodWithWait(releaseName model.ReleaseName, cmd []string, podName string, waitForReady bool, timeout time.Duration) (string, string, error) {
+// ExecInPodWithWait executes a command in a pod, optionally waiting for pod readiness or running state
+// waitForReady: if true, waits for pod before executing; if false, executes immediately
+// requireReadiness: if true and waitForReady is true, waits for readiness probe to pass; if false, waits only for container to be running
+func ExecInPodWithWait(releaseName model.ReleaseName, cmd []string, podName string, waitForReady bool, requireReadiness bool, timeout time.Duration) (string, string, error) {
 	name := releaseName.PodName()
 	if podName != "" {
 		name = podName
 	}
 
-	// Wait for pod to be ready before executing command
+	// Wait for pod before executing command
 	if waitForReady {
-		err := waitForPodReady(releaseName.Namespace(), name, timeout)
-		if err != nil {
-			return "", "", fmt.Errorf("pod %s/%s not ready: %v", releaseName.Namespace(), name, err)
+		var err error
+		if requireReadiness {
+			// Wait for readiness probe to pass (for operations that need Neo4j to be fully ready)
+			err = waitForPodReady(releaseName.Namespace(), name, timeout)
+			if err != nil {
+				return "", "", fmt.Errorf("pod %s/%s not ready: %v", releaseName.Namespace(), name, err)
+			}
+		} else {
+			// Wait only for container to be running (for simple operations like ls, cat, etc.)
+			err = waitForPodRunning(releaseName.Namespace(), name, timeout)
+			if err != nil {
+				return "", "", fmt.Errorf("pod %s/%s not running: %v", releaseName.Namespace(), name, err)
+			}
 		}
 	}
 
