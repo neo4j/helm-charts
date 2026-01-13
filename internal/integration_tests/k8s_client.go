@@ -289,11 +289,70 @@ func CheckExecInPod(t *testing.T, releaseName model.ReleaseName) error {
 	return err
 }
 
+// waitForPodReady waits for a pod to be in Running state with all containers ready
+func waitForPodReady(namespace model.Namespace, podName string, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			pod, err := Clientset.CoreV1().Pods(string(namespace)).Get(context.Background(), podName, v1.GetOptions{})
+			if err != nil {
+				return fmt.Errorf("timeout waiting for pod %s/%s to be ready: %v", namespace, podName, err)
+			}
+			return fmt.Errorf("timeout waiting for pod %s/%s to be ready. Current phase: %s, Conditions: %v",
+				namespace, podName, pod.Status.Phase, pod.Status.Conditions)
+		case <-ticker.C:
+			pod, err := Clientset.CoreV1().Pods(string(namespace)).Get(context.Background(), podName, v1.GetOptions{})
+			if err != nil {
+				// Pod might not exist yet, continue waiting
+				continue
+			}
+
+			// Check if pod is running
+			if pod.Status.Phase != coreV1.PodRunning {
+				continue
+			}
+
+			// Check if all containers are ready
+			allContainersReady := true
+			for _, containerStatus := range pod.Status.ContainerStatuses {
+				if !containerStatus.Ready {
+					allContainersReady = false
+					break
+				}
+			}
+
+			if allContainersReady && len(pod.Status.ContainerStatuses) > 0 {
+				return nil
+			}
+		}
+	}
+}
+
 func ExecInPod(releaseName model.ReleaseName, cmd []string, podName string) (string, string, error) {
+	return ExecInPodWithWait(releaseName, cmd, podName, true, 5*time.Minute)
+}
+
+// ExecInPodWithWait executes a command in a pod, optionally waiting for pod readiness
+func ExecInPodWithWait(releaseName model.ReleaseName, cmd []string, podName string, waitForReady bool, timeout time.Duration) (string, string, error) {
 	name := releaseName.PodName()
 	if podName != "" {
 		name = podName
 	}
+
+	// Wait for pod to be ready before executing command
+	if waitForReady {
+		err := waitForPodReady(releaseName.Namespace(), name, timeout)
+		if err != nil {
+			return "", "", fmt.Errorf("pod %s/%s not ready: %v", releaseName.Namespace(), name, err)
+		}
+	}
+
 	var (
 		stdout bytes.Buffer
 		stderr bytes.Buffer
