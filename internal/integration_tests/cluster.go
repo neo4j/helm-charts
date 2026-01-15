@@ -47,26 +47,45 @@ func labelNodes(t *testing.T, namespace string) error {
 		}
 	}
 
-	// Wait a moment for labels to propagate to the Kubernetes API
-	time.Sleep(2 * time.Second)
-	verifyCount := 0
-	maxVerify := 3
-	if len(nodesList.Items) < maxVerify {
-		maxVerify = len(nodesList.Items)
-	}
-	for i := 0; i < maxVerify; i++ {
-		expectedLabel := fmt.Sprintf("testLabel=%s-%d", namespace, i+1)
-		_, verifyErr := getNodeWithLabel(expectedLabel)
-		if verifyErr != nil {
-			errors = multierror.Append(errors, fmt.Errorf("label verification failed for %s: %v", expectedLabel, verifyErr))
-			t.Logf("Warning: Label verification failed for %s: %v", expectedLabel, verifyErr)
-		} else {
-			verifyCount++
-		}
-	}
+	// Wait for labels to propagate to the Kubernetes API and verify they exist
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
 
-	if verifyCount == 0 && len(nodesList.Items) > 0 {
-		return fmt.Errorf("none of the labels could be verified - labels may not have been applied correctly")
+	allLabelsVerified := false
+	for !allLabelsVerified {
+		select {
+		case <-ctx.Done():
+			// Timeout - check which labels are missing
+			missingLabels := []string{}
+			for i := 0; i < len(nodesList.Items); i++ {
+				expectedLabel := fmt.Sprintf("testLabel=%s-%d", namespace, i+1)
+				_, verifyErr := getNodeWithLabel(expectedLabel)
+				if verifyErr != nil {
+					missingLabels = append(missingLabels, expectedLabel)
+				}
+			}
+			if len(missingLabels) > 0 {
+				return fmt.Errorf("timeout waiting for labels to be applied. Missing labels: %v", missingLabels)
+			}
+			allLabelsVerified = true
+		case <-ticker.C:
+			// Check if all labels are now present
+			allPresent := true
+			for i := 0; i < len(nodesList.Items); i++ {
+				expectedLabel := fmt.Sprintf("testLabel=%s-%d", namespace, i+1)
+				_, verifyErr := getNodeWithLabel(expectedLabel)
+				if verifyErr != nil {
+					allPresent = false
+					break
+				}
+			}
+			if allPresent {
+				allLabelsVerified = true
+				t.Logf("All %d node labels verified successfully", len(nodesList.Items))
+			}
+		}
 	}
 
 	return errors.ErrorOrNil()
@@ -1102,14 +1121,33 @@ func checkNodeSelectorLabel(t *testing.T, releaseName model.ReleaseName, labelNa
 
 	var nodeSelectorNode *corev1.Node
 	var labelErr error
+	attempts := 0
 	for {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("timeout waiting for node with label %s: %v", labelName, labelErr)
+			// Before failing, list all nodes and their testLabel labels for debugging
+			nodes, listErr := getNodesList()
+			if listErr == nil {
+				t.Logf("Debug: Available nodes and their testLabel values:")
+				for _, node := range nodes.Items {
+					if val, present := node.ObjectMeta.Labels["testLabel"]; present {
+						t.Logf("  Node %s: testLabel=%s", node.Name, val)
+					} else {
+						t.Logf("  Node %s: no testLabel", node.Name)
+					}
+				}
+			}
+			return fmt.Errorf("timeout waiting for node with label %s after %d attempts: %v", labelName, attempts, labelErr)
 		case <-ticker.C:
+			attempts++
 			nodeSelectorNode, labelErr = getNodeWithLabel(labelName)
 			if labelErr == nil && nodeSelectorNode != nil {
+				t.Logf("Found node %s with label %s", nodeSelectorNode.Name, labelName)
 				goto labelFound
+			}
+			if attempts%5 == 0 {
+				// Log every 5th attempt to avoid spam
+				t.Logf("Still waiting for label %s (attempt %d): %v", labelName, attempts, labelErr)
 			}
 		}
 	}
