@@ -34,6 +34,7 @@ import (
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -1907,8 +1908,29 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 	assert.Contains(t, stdoutCmd, "neo4j")
 
 	ingressName := fmt.Sprintf("%s-reverseproxy-ingress", reverseProxyReleaseName.String())
-	ingress, err := Clientset.NetworkingV1().Ingresses(namespace).Get(context.Background(), ingressName, metav1.GetOptions{})
-	assert.NoError(t, err, "cannot retrieve reverse proxy ingress")
+
+	// Wait for ingress to be created
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	var ingress *networkingv1.Ingress
+	var ingressErr error
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timeout waiting for ingress %s to be created: %v", ingressName, ingressErr)
+		case <-ticker.C:
+			ingress, ingressErr = Clientset.NetworkingV1().Ingresses(namespace).Get(context.Background(), ingressName, metav1.GetOptions{})
+			if ingressErr == nil && ingress != nil {
+				goto ingressFound
+			}
+		}
+	}
+
+ingressFound:
+	assert.NoError(t, ingressErr, "cannot retrieve reverse proxy ingress")
 	assert.NotNil(t, ingress, "empty reverse proxy ingress found")
 	ingressIP := ingress.Status.LoadBalancer.Ingress[0].IP
 	assert.NotEmpty(t, ingressIP, "no ingress ip found")
