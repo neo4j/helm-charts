@@ -88,7 +88,8 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	subTests = append(subTests, nodeSelectorTests(core1.Name())...)
+	// Pass the same namespace that was used for labeling nodes to ensure consistency
+	subTests = append(subTests, nodeSelectorTests(core1.Name(), namespace)...)
 	subTests = append(subTests, headLessServiceTests(headlessService.Name())...)
 	runSubTests(t, subTests)
 

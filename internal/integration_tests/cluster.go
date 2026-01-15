@@ -1051,8 +1051,7 @@ func imagePullSecretTests(t *testing.T, name model.ReleaseName) error {
 }
 
 // nodeSelectorTests runs tests related to nodeSelector feature
-func nodeSelectorTests(name model.ReleaseName) []SubTest {
-	namespace := string(name.Namespace())
+func nodeSelectorTests(name model.ReleaseName, namespace string) []SubTest {
 	return []SubTest{
 		{name: fmt.Sprintf("Check cluster core 1 is assigned with label %s", model.NodeSelectorLabel(namespace)), test: func(t *testing.T) {
 			t.Parallel()
