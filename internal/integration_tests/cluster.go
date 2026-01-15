@@ -47,6 +47,28 @@ func labelNodes(t *testing.T, namespace string) error {
 		}
 	}
 
+	// Wait a moment for labels to propagate to the Kubernetes API
+	time.Sleep(2 * time.Second)
+	verifyCount := 0
+	maxVerify := 3
+	if len(nodesList.Items) < maxVerify {
+		maxVerify = len(nodesList.Items)
+	}
+	for i := 0; i < maxVerify; i++ {
+		expectedLabel := fmt.Sprintf("testLabel=%s-%d", namespace, i+1)
+		_, verifyErr := getNodeWithLabel(expectedLabel)
+		if verifyErr != nil {
+			errors = multierror.Append(errors, fmt.Errorf("label verification failed for %s: %v", expectedLabel, verifyErr))
+			t.Logf("Warning: Label verification failed for %s: %v", expectedLabel, verifyErr)
+		} else {
+			verifyCount++
+		}
+	}
+
+	if verifyCount == 0 && len(nodesList.Items) > 0 {
+		return fmt.Errorf("none of the labels could be verified - labels may not have been applied correctly")
+	}
+
 	return errors.ErrorOrNil()
 }
 
@@ -1072,9 +1094,29 @@ func checkCoreImageName(t *testing.T, releaseName model.ReleaseName) error {
 // checkNodeSelectorLabel checks whether the given pod is associated with the correct node or not
 func checkNodeSelectorLabel(t *testing.T, releaseName model.ReleaseName, labelName string) error {
 
-	nodeSelectorNode, err := getNodeWithLabel(labelName)
-	if !assert.NoError(t, err) {
-		return err
+	// Wait for the label to appear - labels may take a moment to propagate
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	var nodeSelectorNode *corev1.Node
+	var labelErr error
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timeout waiting for node with label %s: %v", labelName, labelErr)
+		case <-ticker.C:
+			nodeSelectorNode, labelErr = getNodeWithLabel(labelName)
+			if labelErr == nil && nodeSelectorNode != nil {
+				goto labelFound
+			}
+		}
+	}
+
+labelFound:
+	if !assert.NoError(t, labelErr) {
+		return labelErr
 	}
 	pod, err := getSpecificPod(releaseName.Namespace(), releaseName.PodName())
 	if !assert.NoError(t, err) {
