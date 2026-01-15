@@ -1,0 +1,42 @@
+name: Delete Persistent Test Cluster
+
+on:
+  schedule:
+    # Runs every day at 6pm CET (5pm UTC) and 1AM CET (midnight UTC)
+    - cron: '0 17 * * *'  # 6pm CET (5pm UTC)
+    - cron: '0 0 * * *'   # 1AM CET (midnight UTC)
+  workflow_dispatch:
+
+env:
+  GCLOUD_SERVICE_KEY: ${{ secrets.GCLOUD_SERVICE_KEY }}
+  CLOUDSDK_CORE_PROJECT: ${{ secrets.CLOUDSDK_CORE_PROJECT }}
+  CLOUDSDK_COMPUTE_ZONE: "europe-west2-b"
+  CLOUDSDK_COMPUTE_REGION: "europe-west2"
+  PERSISTENT_CLUSTER_NAME: helmchart-test-cluster
+
+permissions:
+  contents: read
+
+jobs:
+  delete-cluster:
+    name: Delete Persistent GKE Cluster
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate Service Account
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
+
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+        with:
+          version: '>= 363.0.0'
+
+      - name: Delete Cluster if Exists
+        run: |
+          export CLOUDSDK_CONTAINER_CLUSTER=${PERSISTENT_CLUSTER_NAME}
+          ./bin/gcloud/delete_cluster
+

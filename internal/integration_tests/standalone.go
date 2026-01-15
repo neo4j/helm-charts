@@ -34,6 +34,7 @@ import (
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -253,6 +254,14 @@ func proxyBolt(t *testing.T, releaseName model.ReleaseName, connectToPod bool) (
 	localBoltPort := 9100 + atomic.AddInt32(&portOffset, 1)
 
 	program := "kubectl"
+
+	// Wait for pod to be ready before port-forwarding (need readiness for Neo4j to accept connections)
+	if connectToPod {
+		err := waitForPodReady(releaseName.Namespace(), releaseName.PodName(), 5*time.Minute)
+		if err != nil {
+			return localBoltPort, nil, fmt.Errorf("pod %s/%s not ready for port-forward: %v", releaseName.Namespace(), releaseName.PodName(), err)
+		}
+	}
 
 	args := []string{"--namespace", string(releaseName.Namespace()), "port-forward", fmt.Sprintf("pod/%s", releaseName.PodName()), fmt.Sprintf("%d:7474", localHttpPort), fmt.Sprintf("%d:7687", localBoltPort)}
 	if !connectToPod {
@@ -1845,12 +1854,78 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 	helmValues.ReverseProxy.ServiceName = fmt.Sprintf("%s-admin", standaloneReleaseName.String())
 	helmValues.ReverseProxy.Namespace = namespace
 
-	err := run(t, "helm", "upgrade", "--install", "ingress-nginx", "ingress-nginx", "--repo", "https://kubernetes.github.io/ingress-nginx", "--namespace", "ingress-nginx", "--create-namespace")
+	// Clean up any existing ingress resources that might conflict
+	// The nginx ingress controller validates host "_" and path "/" uniqueness cluster-wide
+	// clean up ingresses from previous test runs
+	t.Logf("Cleaning up any existing reverse proxy ingresses from previous test runs that might conflict...")
+	ingressList, err := Clientset.NetworkingV1().Ingresses("").List(context.Background(), metav1.ListOptions{})
+	if err == nil {
+		gracePeriod := int64(0)
+		currentTestRunPrefix := fmt.Sprintf("rp-%s-", TestRunIdentifier)
+		for _, ingress := range ingressList.Items {
+			// Only process reverse proxy ingresses
+			if strings.Contains(ingress.Name, "reverseproxy-ingress") && strings.HasPrefix(ingress.Name, "rp-") {
+				if strings.HasPrefix(ingress.Name, currentTestRunPrefix) {
+					// This ingress belongs to the current test run, skip it
+					t.Logf("Skipping ingress from current test run: %s/%s", ingress.Namespace, ingress.Name)
+					continue
+				}
+
+				// Check if it has the conflicting host/path combination
+				if len(ingress.Spec.Rules) > 0 {
+					rule := ingress.Spec.Rules[0]
+					// If host is empty or "_" and path is "/", it will conflict
+					if (rule.Host == "" || rule.Host == "_") && len(rule.HTTP.Paths) > 0 {
+						for _, path := range rule.HTTP.Paths {
+							if path.Path == "/" {
+								t.Logf("Deleting conflicting ingress from previous test run: %s/%s", ingress.Namespace, ingress.Name)
+								_ = Clientset.NetworkingV1().Ingresses(ingress.Namespace).Delete(context.Background(), ingress.Name, metav1.DeleteOptions{
+									GracePeriodSeconds: &gracePeriod,
+								})
+								break
+							}
+						}
+					}
+				}
+			}
+		}
+		// Wait a bit for ingress deletions to propagate
+		time.Sleep(5 * time.Second)
+	}
+
+	err = run(t, "helm", "upgrade", "--install", "ingress-nginx", "ingress-nginx", "--repo", "https://kubernetes.github.io/ingress-nginx", "--namespace", "ingress-nginx", "--create-namespace")
 	assert.NoError(t, err)
 	time.Sleep(1 * time.Minute)
 
-	_, err = helmClient.Install(t, reverseProxyReleaseName.String(), namespace, helmValues)
+	installOutput, err := helmClient.Install(t, reverseProxyReleaseName.String(), namespace, helmValues)
+	if err != nil {
+		// Check for ingress-related errors in the output
+		if strings.Contains(installOutput, "ingress") || strings.Contains(installOutput, "admission webhook") {
+			t.Logf("Helm install output suggests ingress issue: %s", installOutput)
+		}
+		return fmt.Errorf("helm install failed: %v, output: %s", err, installOutput)
+	}
 	assert.NoError(t, err)
+	t.Logf("Helm install output: %s", installOutput)
+
+	// Verify helm release is actually deployed
+	err = run(t, "helm", "status", reverseProxyReleaseName.String(), "--namespace", namespace)
+	if err != nil {
+		return fmt.Errorf("helm release status check failed: %v", err)
+	}
+
+	// Check if ingress is in the helm manifest (to verify it should be created)
+	manifestOutput, manifestErr := exec.Command("helm", "get", "manifest", reverseProxyReleaseName.String(), "--namespace", namespace).CombinedOutput()
+	if manifestErr == nil {
+		if strings.Contains(string(manifestOutput), "kind: Ingress") {
+			t.Logf("Ingress found in helm manifest")
+		} else {
+			t.Logf("Warning: Ingress NOT found in helm manifest. Manifest: %s", string(manifestOutput))
+			return fmt.Errorf("ingress not found in helm manifest - ingress.enabled might be false or template condition failed")
+		}
+	} else {
+		t.Logf("Could not get helm manifest: %v", manifestErr)
+	}
 
 	time.Sleep(1 * time.Minute)
 
@@ -1866,15 +1941,56 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 	assert.NotNil(t, pods, "no reverse proxy pods found")
 	assert.Equal(t, len(pods.Items), 1, "more than 1 reverse proxy pods found")
 
+	// Wait for reverse proxy pod to be ready before executing commands
+	reverseProxyPodName := pods.Items[0].Name
+	err = waitForPodReady(model.Namespace(namespace), reverseProxyPodName, 5*time.Minute)
+	assert.NoError(t, err, "reverse proxy pod not ready")
+
 	cmd := []string{"ls", "-lst", "/reverse-proxy"}
-	stdoutCmd, _, err := ExecInPod(standaloneReleaseName, cmd, pods.Items[0].Name)
+	stdoutCmd, _, err := ExecInPodWithWait(standaloneReleaseName, cmd, reverseProxyPodName, false, false, 0)
 	assert.NoError(t, err, "cannot exec in reverse proxy pod")
 	assert.NotContains(t, stdoutCmd, "root")
 	assert.Contains(t, stdoutCmd, "neo4j")
 
 	ingressName := fmt.Sprintf("%s-reverseproxy-ingress", reverseProxyReleaseName.String())
-	ingress, err := Clientset.NetworkingV1().Ingresses(namespace).Get(context.Background(), ingressName, metav1.GetOptions{})
-	assert.NoError(t, err, "cannot retrieve reverse proxy ingress")
+
+	// Wait for ingress to be created
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	var ingress *networkingv1.Ingress
+	var ingressErr error
+	for {
+		select {
+		case <-ctx.Done():
+			// Before failing, check if there are any events or errors
+			events, eventErr := Clientset.CoreV1().Events(namespace).List(context.Background(), metav1.ListOptions{
+				FieldSelector: fmt.Sprintf("involvedObject.name=%s", ingressName),
+			})
+			if eventErr == nil && len(events.Items) > 0 {
+				t.Logf("Events related to ingress %s:", ingressName)
+				for _, event := range events.Items {
+					t.Logf("  %s: %s - %s", event.Type, event.Reason, event.Message)
+				}
+			}
+			//check helm release status
+			statusOutput, statusErr := exec.Command("helm", "status", reverseProxyReleaseName.String(), "--namespace", namespace).CombinedOutput()
+			if statusErr == nil {
+				t.Logf("Helm release status: %s", string(statusOutput))
+			}
+			return fmt.Errorf("timeout waiting for ingress %s to be created: %v", ingressName, ingressErr)
+		case <-ticker.C:
+			ingress, ingressErr = Clientset.NetworkingV1().Ingresses(namespace).Get(context.Background(), ingressName, metav1.GetOptions{})
+			if ingressErr == nil && ingress != nil {
+				goto ingressFound
+			}
+		}
+	}
+
+ingressFound:
+	assert.NoError(t, ingressErr, "cannot retrieve reverse proxy ingress")
 	assert.NotNil(t, ingress, "empty reverse proxy ingress found")
 	ingressIP := ingress.Status.LoadBalancer.Ingress[0].IP
 	assert.NotEmpty(t, ingressIP, "no ingress ip found")

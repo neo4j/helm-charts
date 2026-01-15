@@ -19,6 +19,11 @@ on:
     branches:
       - dev
 
+# Concurrency control only one test run at a time
+concurrency:
+  group: test-execution
+  cancel-in-progress: false
+
 env:
   GCLOUD_SERVICE_KEY: ${{ secrets.GCLOUD_SERVICE_KEY }}
   CLOUDSDK_CORE_PROJECT: ${{ secrets.CLOUDSDK_CORE_PROJECT }}
@@ -40,6 +45,7 @@ env:
   IPS_EMAIL: ${{ secrets.IPS_EMAIL }}
 
   RESOURCE_PREFIX: ghactions
+  PERSISTENT_CLUSTER_NAME: helmchart-test-cluster
 
 permissions:
   pull-requests: read
@@ -82,13 +88,11 @@ jobs:
       - name: Run Cleanup
         run: ./bin/gcloud/cleanup_resources
 
-  gke-setup:
-    name: Debian GKE Creation
+  gke-check:
+    name: Check and Start Persistent GKE Cluster
     needs: [cleanup, check-pr]
     if: needs.check-pr.outputs.should_run == 'true'
     runs-on: ubuntu-latest
-    env:
-      RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -98,35 +102,17 @@ jobs:
         with:
           credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
 
-      - name: Create GKE Cluster
-        run: |
-          export CLOUDSDK_CONTAINER_CLUSTER=${RESOURCE_PREFIX}-${RUN_ID}
-          ./bin/gcloud/create_cluster
-    outputs:
-      CLOUDSDK_CONTAINER_CLUSTER: "${{ env.RESOURCE_PREFIX }}-${{ env.RUN_ID }}"
-
-  gke-setup-redhat:
-    name: RedHat GKE Creation
-    needs: [cleanup, check-pr]
-    if: needs.check-pr.outputs.should_run == 'true'
-    runs-on: ubuntu-latest
-    env:
-      RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Authenticate Service Account
-        uses: 'google-github-actions/auth@v2'
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
         with:
-          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
+          version: '>= 363.0.0'
 
-      - name: Create GKE Cluster
+      - name: Check Cluster Status and Start if Needed
         run: |
-          export CLOUDSDK_CONTAINER_CLUSTER=${RESOURCE_PREFIX}-redhat-${RUN_ID}
-          ./bin/gcloud/create_cluster
+          export CLOUDSDK_CONTAINER_CLUSTER=${PERSISTENT_CLUSTER_NAME}
+          ./bin/gcloud/check_cluster_status
     outputs:
-      CLOUDSDK_CONTAINER_CLUSTER_REDHAT: "${{ env.RESOURCE_PREFIX }}-redhat-${{ env.RUN_ID }}"
+      CLOUDSDK_CONTAINER_CLUSTER: "${{ env.PERSISTENT_CLUSTER_NAME }}"
 
   build-reverseproxy-backup:
     name: ReverseProxy and Backup Docker Image build
@@ -212,13 +198,13 @@ jobs:
 
   run-enterprise-tests:
     name: Debian Enterprise tests
-    needs: [gke-setup, build-reverseproxy-backup, check-pr]
+    needs: [gke-check, build-reverseproxy-backup, check-pr]
     if: needs.check-pr.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       NEO4J_EDITION: "enterprise"
-      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-check.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
       NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-2025-dev"
       NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ github.run_id }}-${{ github.run_attempt }}"
       NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ github.run_id }}-${{ github.run_attempt }}"
@@ -240,7 +226,7 @@ jobs:
       - id: 'get-credentials'
         uses: 'google-github-actions/get-gke-credentials@v2'
         with:
-          cluster_name: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+          cluster_name: ${{ needs.gke-check.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
           location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
 
       - name: 'Set up Cloud SDK'
@@ -270,13 +256,13 @@ jobs:
 
   run-community-tests:
     name: Debian Community Tests
-    needs: [gke-setup, build-reverseproxy-backup, check-pr]
+    needs: [gke-check, build-reverseproxy-backup, check-pr]
     if: needs.check-pr.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       NEO4J_EDITION: "community"
-      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-check.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
       NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:community-2025-dev"
       NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ github.run_id }}-${{ github.run_attempt }}"
       NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ github.run_id }}-${{ github.run_attempt }}"
@@ -298,7 +284,7 @@ jobs:
       - id: 'get-credentials'
         uses: 'google-github-actions/get-gke-credentials@v2'
         with:
-          cluster_name: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+          cluster_name: ${{ needs.gke-check.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
           location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
 
       - name: 'Set up Cloud SDK'
@@ -328,13 +314,13 @@ jobs:
 
   run-enterprise-tests-redhat:
     name: RedHat Enterprise Tests
-    needs: [gke-setup-redhat, build-reverseproxy-backup, check-pr]
+    needs: [gke-check, build-reverseproxy-backup, check-pr]
     if: needs.check-pr.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       NEO4J_EDITION: "enterprise"
-      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
+      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-check.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
       NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-2025-dev-ubi9"
       NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ github.run_id }}-${{ github.run_attempt }}"
       NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ github.run_id }}-${{ github.run_attempt }}"
@@ -386,13 +372,13 @@ jobs:
 
   run-community-tests-redhat:
     name: RedHat Community Tests
-    needs: [gke-setup-redhat, build-reverseproxy-backup, check-pr]
+    needs: [gke-check, build-reverseproxy-backup, check-pr]
     if: needs.check-pr.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       NEO4J_EDITION: "community"
-      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
+      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-check.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
       NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:community-2025-dev-ubi9"
       NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ github.run_id }}-${{ github.run_attempt }}"
       NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ github.run_id }}-${{ github.run_attempt }}"
@@ -441,62 +427,6 @@ jobs:
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-
-  gke-delete:
-    name: Debian GKE Cluster Deletion
-    runs-on: ubuntu-latest
-    if: always() && needs.check-pr.outputs.should_run == 'true'
-    env:
-      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
-    needs:
-      - run-enterprise-tests
-      - run-community-tests
-      - gke-setup
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - id: 'gcloud-auth'
-        uses: 'google-github-actions/auth@v2'
-        with:
-          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
-
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
-        with:
-          version: '>= 363.0.0'
-
-      - name: Delete GKE Cluster
-        run: |
-          ./bin/gcloud/delete_cluster
-
-  gke-delete-redhat:
-    name: RedHat GKE Cluster Deletion
-    runs-on: ubuntu-latest
-    if: always() && needs.check-pr.outputs.should_run == 'true'
-    env:
-      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
-    needs:
-      - run-enterprise-tests-redhat
-      - run-community-tests-redhat
-      - gke-setup-redhat
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - id: 'gcloud-auth'
-        uses: 'google-github-actions/auth@v2'
-        with:
-          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
-
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
-        with:
-          version: '>= 363.0.0'
-
-      - name: Delete GKE Cluster
-        run: |
-          ./bin/gcloud/delete_cluster
 
   build-reverseproxy-backup-release-image:
     name: ReverseProxy and Backup Docker Image build

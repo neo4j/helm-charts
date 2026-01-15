@@ -66,8 +66,9 @@ func standaloneCleanup(t *testing.T, releaseName model.ReleaseName) func() {
 				{"delete", "pvc", "--all", "--namespace", namespace, "--force", "--grace-period=0", "--ignore-not-found"},
 			}, false)
 
+			// Delete only the PV for this specific test, not all PVs in the cluster
 			_ = runAll(t, "kubectl", [][]string{
-				{"delete", "pv", "--all", "--force", "--grace-period=0", "--ignore-not-found"},
+				{"delete", "pv", fmt.Sprintf("%s-pv", releaseName.String()), "--force", "--grace-period=0", "--ignore-not-found"},
 			}, false)
 
 			_ = runAll(t, "kubectl", [][]string{

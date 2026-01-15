@@ -39,10 +39,52 @@ func labelNodes(t *testing.T, namespace string) error {
 
 	for index, node := range nodesList.Items {
 		labelName := fmt.Sprintf("testLabel=%s-%d", namespace, index+1)
-		err = run(t, "kubectl", "label", "nodes", node.ObjectMeta.Name, labelName)
+		// Use --overwrite to handle cases where labels exist from previous test runs that didn't clean up properly
+		err = run(t, "kubectl", "label", "nodes", node.ObjectMeta.Name, labelName, "--overwrite")
 		if err != nil {
 			errors = multierror.Append(errors, err)
 			t.Logf("Node Label failed for %s: %v", node.ObjectMeta.Name, err)
+		}
+	}
+
+	// Wait for labels to propagate to the Kubernetes API and verify they exist
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	allLabelsVerified := false
+	for !allLabelsVerified {
+		select {
+		case <-ctx.Done():
+			// Timeout - check which labels are missing
+			missingLabels := []string{}
+			for i := 0; i < len(nodesList.Items); i++ {
+				expectedLabel := fmt.Sprintf("testLabel=%s-%d", namespace, i+1)
+				_, verifyErr := getNodeWithLabel(expectedLabel)
+				if verifyErr != nil {
+					missingLabels = append(missingLabels, expectedLabel)
+				}
+			}
+			if len(missingLabels) > 0 {
+				return fmt.Errorf("timeout waiting for labels to be applied. Missing labels: %v", missingLabels)
+			}
+			allLabelsVerified = true
+		case <-ticker.C:
+			// Check if all labels are now present
+			allPresent := true
+			for i := 0; i < len(nodesList.Items); i++ {
+				expectedLabel := fmt.Sprintf("testLabel=%s-%d", namespace, i+1)
+				_, verifyErr := getNodeWithLabel(expectedLabel)
+				if verifyErr != nil {
+					allPresent = false
+					break
+				}
+			}
+			if allPresent {
+				allLabelsVerified = true
+				t.Logf("All %d node labels verified successfully", len(nodesList.Items))
+			}
 		}
 	}
 
@@ -61,8 +103,8 @@ func removeLabelFromNodes(t *testing.T) error {
 	for _, node := range nodesList.Items {
 		err = run(t, "kubectl", "label", "nodes", node.ObjectMeta.Name, "testLabel-")
 		if err != nil {
-			errors = multierror.Append(errors, err)
-			t.Logf("Node Label removal failed for %s: %v", node.ObjectMeta.Name, err)
+			// Log but don't treat as error
+			t.Logf("Note: Label removal for %s returned error (may be expected if label doesn't exist): %v", node.ObjectMeta.Name, err)
 		}
 	}
 
@@ -1009,8 +1051,7 @@ func imagePullSecretTests(t *testing.T, name model.ReleaseName) error {
 }
 
 // nodeSelectorTests runs tests related to nodeSelector feature
-func nodeSelectorTests(name model.ReleaseName) []SubTest {
-	namespace := string(name.Namespace())
+func nodeSelectorTests(name model.ReleaseName, namespace string) []SubTest {
 	return []SubTest{
 		{name: fmt.Sprintf("Check cluster core 1 is assigned with label %s", model.NodeSelectorLabel(namespace)), test: func(t *testing.T) {
 			t.Parallel()
@@ -1071,9 +1112,48 @@ func checkCoreImageName(t *testing.T, releaseName model.ReleaseName) error {
 // checkNodeSelectorLabel checks whether the given pod is associated with the correct node or not
 func checkNodeSelectorLabel(t *testing.T, releaseName model.ReleaseName, labelName string) error {
 
-	nodeSelectorNode, err := getNodeWithLabel(labelName)
-	if !assert.NoError(t, err) {
-		return err
+	// Wait for the label to appear - labels may take a moment to propagate
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	var nodeSelectorNode *corev1.Node
+	var labelErr error
+	attempts := 0
+	for {
+		select {
+		case <-ctx.Done():
+			// Before failing, list all nodes and their testLabel labels for debugging
+			nodes, listErr := getNodesList()
+			if listErr == nil {
+				t.Logf("Debug: Available nodes and their testLabel values:")
+				for _, node := range nodes.Items {
+					if val, present := node.ObjectMeta.Labels["testLabel"]; present {
+						t.Logf("  Node %s: testLabel=%s", node.Name, val)
+					} else {
+						t.Logf("  Node %s: no testLabel", node.Name)
+					}
+				}
+			}
+			return fmt.Errorf("timeout waiting for node with label %s after %d attempts: %v", labelName, attempts, labelErr)
+		case <-ticker.C:
+			attempts++
+			nodeSelectorNode, labelErr = getNodeWithLabel(labelName)
+			if labelErr == nil && nodeSelectorNode != nil {
+				t.Logf("Found node %s with label %s", nodeSelectorNode.Name, labelName)
+				goto labelFound
+			}
+			if attempts%5 == 0 {
+				// Log every 5th attempt to avoid spam
+				t.Logf("Still waiting for label %s (attempt %d): %v", labelName, attempts, labelErr)
+			}
+		}
+	}
+
+labelFound:
+	if !assert.NoError(t, labelErr) {
+		return labelErr
 	}
 	pod, err := getSpecificPod(releaseName.Namespace(), releaseName.PodName())
 	if !assert.NoError(t, err) {
@@ -1280,22 +1360,79 @@ func checkHeadlessServiceEndpoints(t *testing.T, service model.ReleaseName) erro
 	//get the list of pods which match the headless service selectors
 	headlessServiceSelectors := labels.Set(headlessService.Spec.Selector)
 	listOptions := metav1.ListOptions{LabelSelector: headlessServiceSelectors.AsSelector().String()}
-	pods, err := Clientset.CoreV1().Pods(string(service.Namespace())).List(context.TODO(), listOptions)
-	if !assert.NoError(t, err) {
-		return fmt.Errorf("cannot get pods matching with headless service selector")
+
+	// Wait for all pods to be ready before comparing endpoints
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	var pods *corev1.PodList
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timeout waiting for all pods to be ready")
+		case <-ticker.C:
+			var listErr error
+			pods, listErr = Clientset.CoreV1().Pods(string(service.Namespace())).List(context.TODO(), listOptions)
+			if listErr != nil {
+				return fmt.Errorf("cannot get pods matching with headless service selector: %v", listErr)
+			}
+
+			if len(pods.Items) == 0 {
+				continue // Wait for pods to appear
+			}
+
+			// Check if all pods are ready
+			allPodsReady := true
+			for _, pod := range pods.Items {
+				isReady := false
+				for _, condition := range pod.Status.Conditions {
+					if condition.Type == corev1.PodReady && condition.Status == corev1.ConditionTrue {
+						isReady = true
+						break
+					}
+				}
+				if !isReady || pod.Status.PodIP == "" {
+					allPodsReady = false
+					break
+				}
+			}
+
+			if allPodsReady {
+				var endpointsErr error
+				endpoints, endpointsErr = Clientset.CoreV1().Endpoints(string(service.Namespace())).Get(context.TODO(), serviceName, metav1.GetOptions{})
+				if endpointsErr != nil {
+					return fmt.Errorf("failed to get headless service endpoints after pods ready: %v", endpointsErr)
+				}
+				// Rebuild endpoint IPs list
+				endPointIPs = []string{}
+				if len(endpoints.Subsets) > 0 && len(endpoints.Subsets[0].Addresses) > 0 {
+					for _, endpointAddress := range endpoints.Subsets[0].Addresses {
+						endPointIPs = append(endPointIPs, endpointAddress.IP)
+					}
+				}
+				goto compareEndpoints
+			}
+		}
 	}
 
+compareEndpoints:
 	if !assert.NotEmpty(t, pods) {
 		return fmt.Errorf("pods list matching headless service selector cannot be empty")
 	}
 
 	//get the list of podIPs matching the headless service selector
+	// All pods should be ready at this point
 	var podIPs []string
 	for _, pod := range pods.Items {
-		podIPs = append(podIPs, pod.Status.PodIP)
+		if pod.Status.PodIP != "" {
+			podIPs = append(podIPs, pod.Status.PodIP)
+		}
 	}
 
 	//compare podIps and headlessService endPoint IPs ...both should match
+	// All pods should be ready, so all should be in endpoints
 	if !assert.ElementsMatch(t, podIPs, endPointIPs) {
 		return fmt.Errorf("podIPs %v and endPointIps %v do not match", podIPs, endPointIPs)
 	}
