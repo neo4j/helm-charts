@@ -1879,8 +1879,35 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 	assert.NoError(t, err)
 	time.Sleep(1 * time.Minute)
 
-	_, err = helmClient.Install(t, reverseProxyReleaseName.String(), namespace, helmValues)
+	installOutput, err := helmClient.Install(t, reverseProxyReleaseName.String(), namespace, helmValues)
+	if err != nil {
+		// Check for ingress-related errors in the output
+		if strings.Contains(installOutput, "ingress") || strings.Contains(installOutput, "admission webhook") {
+			t.Logf("Helm install output suggests ingress issue: %s", installOutput)
+		}
+		return fmt.Errorf("helm install failed: %v, output: %s", err, installOutput)
+	}
 	assert.NoError(t, err)
+	t.Logf("Helm install output: %s", installOutput)
+
+	// Verify helm release is actually deployed
+	err = run(t, "helm", "status", reverseProxyReleaseName.String(), "--namespace", namespace)
+	if err != nil {
+		return fmt.Errorf("helm release status check failed: %v", err)
+	}
+
+	// Check if ingress is in the helm manifest (to verify it should be created)
+	manifestOutput, manifestErr := exec.Command("helm", "get", "manifest", reverseProxyReleaseName.String(), "--namespace", namespace).CombinedOutput()
+	if manifestErr == nil {
+		if strings.Contains(string(manifestOutput), "kind: Ingress") {
+			t.Logf("Ingress found in helm manifest")
+		} else {
+			t.Logf("Warning: Ingress NOT found in helm manifest. Manifest: %s", string(manifestOutput))
+			return fmt.Errorf("ingress not found in helm manifest - ingress.enabled might be false or template condition failed")
+		}
+	} else {
+		t.Logf("Could not get helm manifest: %v", manifestErr)
+	}
 
 	time.Sleep(1 * time.Minute)
 
@@ -1920,6 +1947,21 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 	for {
 		select {
 		case <-ctx.Done():
+			// Before failing, check if there are any events or errors
+			events, eventErr := Clientset.CoreV1().Events(namespace).List(context.Background(), metav1.ListOptions{
+				FieldSelector: fmt.Sprintf("involvedObject.name=%s", ingressName),
+			})
+			if eventErr == nil && len(events.Items) > 0 {
+				t.Logf("Events related to ingress %s:", ingressName)
+				for _, event := range events.Items {
+					t.Logf("  %s: %s - %s", event.Type, event.Reason, event.Message)
+				}
+			}
+			//check helm release status
+			statusOutput, statusErr := exec.Command("helm", "status", reverseProxyReleaseName.String(), "--namespace", namespace).CombinedOutput()
+			if statusErr == nil {
+				t.Logf("Helm release status: %s", string(statusOutput))
+			}
 			return fmt.Errorf("timeout waiting for ingress %s to be created: %v", ingressName, ingressErr)
 		case <-ticker.C:
 			ingress, ingressErr = Clientset.NetworkingV1().Ingresses(namespace).Get(context.Background(), ingressName, metav1.GetOptions{})
