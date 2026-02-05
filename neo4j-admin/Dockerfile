@@ -1,15 +1,16 @@
 ARG IMAGE
-FROM golang:1.23.8-bullseye as build
+FROM golang:1.24.0-bullseye AS build
 RUN apt-get update && apt-get install -y curl && apt-get remove -y python* && apt-get autoremove -y && apt-get clean
 WORKDIR backup
 COPY backup/main main/
 COPY backup/neo4j-admin neo4j-admin/
 COPY backup/go.mod go.mod
-RUN go mod tidy && go mod download && go mod verify
+COPY backup/go.sum go.sum
+RUN go mod download && go mod verify
 RUN env GOOS=linux GOARCH=amd64 go build -v -o backup_linux main/*
 
 ARG IMAGE
-FROM ${IMAGE} as final
+FROM ${IMAGE} AS final
 ARG DISTRIBUTION
 RUN \
     if [ "${DISTRIBUTION}" = "debian" ]; then  \
