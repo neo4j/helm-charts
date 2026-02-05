@@ -1,7 +1,7 @@
 apiVersion: v2
 name: neo4j-cluster-headless-service
 home: https://www.neo4j.com
-version: 4.4.46
+version: 4.4.48
 appVersion: "-"
 description: Neo4j is the world's leading graph database
 keywords:
@@ -17,5 +17,5 @@ maintainers:
     email: bledi.feshti@neotechnology.com
 dependencies:
   - name: neo4j-shared-templates
-    version: "4.4.46"
+    version: "4.4.48"
     repository: "file://../neo4j-shared-templates"
