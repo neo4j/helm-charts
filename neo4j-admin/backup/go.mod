@@ -1,6 +1,8 @@
 module github.com/neo4j/helm-charts/neo4j-admin/backup
 
-go 1.23.8
+go 1.24.0
+
+toolchain go1.24.4
 
 require (
 	cloud.google.com/go/storage v1.50.0
@@ -13,7 +15,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.76.0
 	github.com/aws/smithy-go v1.22.2
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/net v0.38.0
+	golang.org/x/net v0.48.0
 	google.golang.org/api v0.220.0
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
 )
@@ -71,11 +73,11 @@ require (
 	go.opentelemetry.io/otel/sdk v1.34.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.34.0 // indirect
 	go.opentelemetry.io/otel/trace v1.34.0 // indirect
-	golang.org/x/crypto v0.36.0 // indirect
+	golang.org/x/crypto v0.47.0 // indirect
 	golang.org/x/oauth2 v0.27.0 // indirect
-	golang.org/x/sync v0.12.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
-	golang.org/x/text v0.23.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/time v0.10.0 // indirect
 	google.golang.org/genproto v0.0.0-20250204164813-702378808489 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250204164813-702378808489 // indirect
