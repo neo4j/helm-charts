@@ -103,7 +103,7 @@ jobs:
           tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ env.CURRENT_DATE }}-v4.4"
           provenance: false
           build-args: |            
-            IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-v4.4
+            IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:4.4-enterprise-debian-nightly
             DISTRIBUTION=debian
 
       - name: Build and push backup image
@@ -128,7 +128,7 @@ jobs:
     env:
       NEO4J_EDITION: "enterprise"
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
-      NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-v4.4"
+      NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:4.4-enterprise-debian-nightly"
       NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}-v4.4"
       NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ needs.current-date.outputs.CURRENT_DATE }}-v4.4"
     container:
@@ -187,7 +187,7 @@ jobs:
       NEO4J_EDITION: "community"
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
       NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}-v4.4"
-      NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:community-v4.4"
+      NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:4.4-community-debian-nightly"
       NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ needs.current-date.outputs.CURRENT_DATE }}-v4.4"
     container:
       image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
