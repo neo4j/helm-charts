@@ -171,7 +171,7 @@ jobs:
           tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ env.RUN_ID }}"
           provenance: false
           build-args: |
-            IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-2025-dev
+            IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:2025-enterprise-debian-nightly-bundle
             DISTRIBUTION=debian
 
       - name: Build and push red hat backup image
@@ -183,7 +183,7 @@ jobs:
           tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ env.RUN_ID }}"
           provenance: false
           build-args: |
-            IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-2025-dev-ubi9
+            IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:2025-enterprise-redhat-nightly-bundle
             DISTRIBUTION=redhat
 
       - name: Build and push backup image
@@ -219,7 +219,7 @@ jobs:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       NEO4J_EDITION: "enterprise"
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
-      NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-2025-dev"
+      NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:2025-enterprise-debian-nightly-bundle"
       NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ github.run_id }}-${{ github.run_attempt }}"
       NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ github.run_id }}-${{ github.run_attempt }}"
       NEO4J_OPERATIONS_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ github.run_id }}-${{ github.run_attempt }}"
@@ -277,7 +277,7 @@ jobs:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       NEO4J_EDITION: "community"
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
-      NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:community-2025-dev"
+      NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:2025-community-debian-nightly-bundle"
       NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ github.run_id }}-${{ github.run_attempt }}"
       NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ github.run_id }}-${{ github.run_attempt }}"
       NEO4J_OPERATIONS_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ github.run_id }}-${{ github.run_attempt }}"
@@ -335,7 +335,7 @@ jobs:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       NEO4J_EDITION: "enterprise"
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
-      NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:enterprise-2025-dev-ubi9"
+      NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:2025-enterprise-redhat-nightly-bundle"
       NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ github.run_id }}-${{ github.run_attempt }}"
       NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ github.run_id }}-${{ github.run_attempt }}"
       NEO4J_OPERATIONS_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ github.run_id }}-${{ github.run_attempt }}"
@@ -393,7 +393,7 @@ jobs:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       NEO4J_EDITION: "community"
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
-      NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:community-2025-dev-ubi9"
+      NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:2025-community-redhat-nightly-bundle"
       NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ github.run_id }}-${{ github.run_attempt }}"
       NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ github.run_id }}-${{ github.run_attempt }}"
       NEO4J_OPERATIONS_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ github.run_id }}-${{ github.run_attempt }}"
