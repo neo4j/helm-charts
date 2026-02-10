@@ -29,7 +29,7 @@ then
 	NEO4J_VALUES_VERSION=$(grep -oP 'neo4j/helm-charts-operations:\K[0-9]+\.[0-9]+\.[0-9]+(-[0-9]+)?' "neo4j/values.yaml" || echo "${CURRENT_VERSION}")
 	# Escape dots in version for sed literal matching
 	NEO4J_VALUES_VERSION_ESCAPED=$(echo "${NEO4J_VALUES_VERSION}" | sed 's/\./\\./g')
-	sed -i "s/neo4j\/helm-charts-operations:${NEO4J_VALUES_VERSION_ESCAPED}/neo4j\/helm-charts-operations:${CHART_VERSION}/g" "neo4j/values.yaml"
+	sed -i "s/neo4j\/helm-charts-operations:${NEO4J_VALUES_VERSION_ESCAPED}/neo4j\/helm-charts-operations:${NEO4J_VERSION}/g" "neo4j/values.yaml"
   
   # Update headless service chart
   sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j-headless-service/Chart.yaml"
@@ -67,7 +67,7 @@ then
   PROXY_VALUES_VERSION=$(grep -oP 'neo4j/helm-charts-reverse-proxy:\K[0-9]+\.[0-9]+\.[0-9]+(-[0-9]+)?' "neo4j-reverse-proxy/values.yaml" || echo "${CURRENT_VERSION}")
   # Escape dots in version for sed literal matching
   PROXY_VALUES_VERSION_ESCAPED=$(echo "${PROXY_VALUES_VERSION}" | sed 's/\./\\./g')
-  sed -i "s/neo4j\/helm-charts-reverse-proxy:${PROXY_VALUES_VERSION_ESCAPED}/neo4j\/helm-charts-reverse-proxy:${CHART_VERSION}/g" "neo4j-reverse-proxy/values.yaml"
+  sed -i "s/neo4j\/helm-charts-reverse-proxy:${PROXY_VALUES_VERSION_ESCAPED}/neo4j\/helm-charts-reverse-proxy:${NEO4J_VERSION}/g" "neo4j-reverse-proxy/values.yaml"
   
   # Update loadbalancer chart
   sed -i "s/^version: .*/version: ${CHART_VERSION}/g" "neo4j-loadbalancer/Chart.yaml"
