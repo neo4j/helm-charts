@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -232,9 +233,302 @@ exit 1
 		}
 	}
 
-	// Verify that timestamps are spread out by roughly 1 second each
-	for i := 1; i < len(timestamps); i++ {
-		diff := timestamps[i].Sub(timestamps[i-1]).Seconds()
-		assert.InDelta(t, 1.0, diff, 0.5) // Allow 0.5s variance for system delays
+		// Verify that timestamps are spread out by roughly 1 second each
+		for i := 1; i < len(timestamps); i++ {
+			diff := timestamps[i].Sub(timestamps[i-1]).Seconds()
+			assert.InDelta(t, 1.0, diff, 0.5) // Allow 0.5s variance for system delays
+		}
+}
+
+func TestGetCloudStoragePath(t *testing.T) {
+	tests := []struct {
+		name           string
+		cloudProvider  string
+		bucketName     string
+		storageAccount string
+		expectedPath   string
+	}{
+		// AWS S3 tests
+		{
+			name:          "AWS S3 - simple bucket name",
+			cloudProvider: "aws",
+			bucketName:    "my-bucket",
+			expectedPath:  "s3://my-bucket/",
+		},
+		{
+			name:          "AWS S3 - bucket with path prefix",
+			cloudProvider: "aws",
+			bucketName:    "my-bucket/backups",
+			expectedPath:  "s3://my-bucket/backups/",
+		},
+		{
+			name:          "AWS S3 - bucket with nested path prefix",
+			cloudProvider: "aws",
+			bucketName:    "my-bucket/folder1/folder2",
+			expectedPath:  "s3://my-bucket/folder1/folder2/",
+		},
+		{
+			name:          "AWS S3 - bucket with leading slash",
+			cloudProvider: "aws",
+			bucketName:    "/my-bucket/backups",
+			expectedPath:  "s3://my-bucket/backups/",
+		},
+		{
+			name:          "AWS S3 - bucket with trailing slash",
+			cloudProvider: "aws",
+			bucketName:    "my-bucket/backups/",
+			expectedPath:  "s3://my-bucket/backups/",
+		},
+		{
+			name:          "AWS S3 - bucket with both leading and trailing slashes",
+			cloudProvider: "aws",
+			bucketName:    "/my-bucket/backups/",
+			expectedPath:  "s3://my-bucket/backups/",
+		},
+		// GCP GCS tests
+		{
+			name:          "GCP GCS - simple bucket name",
+			cloudProvider: "gcp",
+			bucketName:    "my-bucket",
+			expectedPath:  "gs://my-bucket/",
+		},
+		{
+			name:          "GCP GCS - bucket with path prefix",
+			cloudProvider: "gcp",
+			bucketName:    "my-bucket/backups",
+			expectedPath:  "gs://my-bucket/backups/",
+		},
+		{
+			name:          "GCP GCS - bucket with nested path prefix",
+			cloudProvider: "gcp",
+			bucketName:    "my-bucket/folder1/folder2",
+			expectedPath:  "gs://my-bucket/folder1/folder2/",
+		},
+		// Azure Blob Storage tests - without storage account
+		{
+			name:          "Azure - simple container name without storage account",
+			cloudProvider: "azure",
+			bucketName:    "my-container",
+			expectedPath:  "azb://my-container/",
+		},
+		{
+			name:          "Azure - container with path prefix without storage account",
+			cloudProvider: "azure",
+			bucketName:    "my-container/backups",
+			expectedPath:  "azb://my-container/backups/",
+		},
+		// Azure Blob Storage tests - with storage account
+		{
+			name:           "Azure - simple container name with storage account",
+			cloudProvider:  "azure",
+			bucketName:     "my-container",
+			storageAccount: "mystorageaccount",
+			expectedPath:   "azb://mystorageaccount/my-container/",
+		},
+		{
+			name:           "Azure - container with path prefix with storage account",
+			cloudProvider:  "azure",
+			bucketName:     "my-container/backups",
+			storageAccount: "mystorageaccount",
+			expectedPath:   "azb://mystorageaccount/my-container/backups/",
+		},
+		{
+			name:           "Azure - container with nested path prefix with storage account",
+			cloudProvider:  "azure",
+			bucketName:     "my-container/folder1/folder2",
+			storageAccount: "mystorageaccount",
+			expectedPath:   "azb://mystorageaccount/my-container/folder1/folder2/",
+		},
+		// Edge cases
+		{
+			name:          "Empty cloud provider - should fallback to local path",
+			cloudProvider: "",
+			bucketName:    "my-bucket",
+			expectedPath:  "/backups", // Default backup path
+		},
+		{
+			name:          "Unknown cloud provider - should fallback to local path",
+			cloudProvider: "unknown",
+			bucketName:    "my-bucket",
+			expectedPath:  "/backups", // Default backup path
+		},
+		{
+			name:          "Empty bucket name",
+			cloudProvider: "aws",
+			bucketName:    "",
+			expectedPath:  "s3:///",
+		},
 	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Save original environment variables
+			origCloudProvider := os.Getenv("CLOUD_PROVIDER")
+			origBucketName := os.Getenv("BUCKET_NAME")
+			origStorageAccount := os.Getenv("AZURE_STORAGE_ACCOUNT")
+			origBackupPath := os.Getenv("BACKUP_PATH")
+
+			// Clean up environment variables
+			defer func() {
+				if origCloudProvider != "" {
+					os.Setenv("CLOUD_PROVIDER", origCloudProvider)
+				} else {
+					os.Unsetenv("CLOUD_PROVIDER")
+				}
+				if origBucketName != "" {
+					os.Setenv("BUCKET_NAME", origBucketName)
+				} else {
+					os.Unsetenv("BUCKET_NAME")
+				}
+				if origStorageAccount != "" {
+					os.Setenv("AZURE_STORAGE_ACCOUNT", origStorageAccount)
+				} else {
+					os.Unsetenv("AZURE_STORAGE_ACCOUNT")
+				}
+				if origBackupPath != "" {
+					os.Setenv("BACKUP_PATH", origBackupPath)
+				} else {
+					os.Unsetenv("BACKUP_PATH")
+				}
+			}()
+
+			// Set test environment variables
+			if tt.cloudProvider != "" {
+				os.Setenv("CLOUD_PROVIDER", tt.cloudProvider)
+			} else {
+				os.Unsetenv("CLOUD_PROVIDER")
+			}
+			os.Setenv("BUCKET_NAME", tt.bucketName)
+			if tt.storageAccount != "" {
+				os.Setenv("AZURE_STORAGE_ACCOUNT", tt.storageAccount)
+			} else {
+				os.Unsetenv("AZURE_STORAGE_ACCOUNT")
+			}
+			os.Unsetenv("BACKUP_PATH") // Use default backup path
+
+			// Call the function
+			result := getCloudStoragePath()
+
+			// Assert the result
+			assert.Equal(t, tt.expectedPath, result, "getCloudStoragePath() should return the expected path")
+		})
+	}
+}
+
+// TestGetCloudStoragePathBackwardCompatibility ensures that existing behavior is preserved
+func TestGetCloudStoragePathBackwardCompatibility(t *testing.T) {
+	tests := []struct {
+		name          string
+		cloudProvider string
+		bucketName    string
+		expectedPath  string
+		description   string
+	}{
+		{
+			name:          "AWS S3 - backward compatible simple bucket",
+			cloudProvider: "aws",
+			bucketName:    "my-bucket",
+			expectedPath:  "s3://my-bucket/",
+			description:   "Simple bucket names should work as before",
+		},
+		{
+			name:          "GCP GCS - backward compatible simple bucket",
+			cloudProvider: "gcp",
+			bucketName:    "my-bucket",
+			expectedPath:  "gs://my-bucket/",
+			description:   "Simple bucket names should work as before",
+		},
+		{
+			name:          "Azure - backward compatible simple container",
+			cloudProvider: "azure",
+			bucketName:    "my-container",
+			expectedPath:  "azb://my-container/",
+			description:   "Simple container names should work as before",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Save original environment variables
+			origCloudProvider := os.Getenv("CLOUD_PROVIDER")
+			origBucketName := os.Getenv("BUCKET_NAME")
+			origStorageAccount := os.Getenv("AZURE_STORAGE_ACCOUNT")
+
+			// Clean up environment variables
+			defer func() {
+				if origCloudProvider != "" {
+					os.Setenv("CLOUD_PROVIDER", origCloudProvider)
+				} else {
+					os.Unsetenv("CLOUD_PROVIDER")
+				}
+				if origBucketName != "" {
+					os.Setenv("BUCKET_NAME", origBucketName)
+				} else {
+					os.Unsetenv("BUCKET_NAME")
+				}
+				if origStorageAccount != "" {
+					os.Setenv("AZURE_STORAGE_ACCOUNT", origStorageAccount)
+				} else {
+					os.Unsetenv("AZURE_STORAGE_ACCOUNT")
+				}
+			}()
+
+			// Set test environment variables
+			os.Setenv("CLOUD_PROVIDER", tt.cloudProvider)
+			os.Setenv("BUCKET_NAME", tt.bucketName)
+			os.Unsetenv("AZURE_STORAGE_ACCOUNT")
+			os.Unsetenv("BACKUP_PATH")
+
+			// Call the function
+			result := getCloudStoragePath()
+
+			// Assert the result matches expected backward-compatible behavior
+			assert.Equal(t, tt.expectedPath, result, tt.description)
+		})
+	}
+}
+
+// TestGetCloudStoragePathCustomerScenario tests the exact customer scenario
+func TestGetCloudStoragePathCustomerScenario(t *testing.T) {
+	// Save original environment variables
+	origCloudProvider := os.Getenv("CLOUD_PROVIDER")
+	origBucketName := os.Getenv("BUCKET_NAME")
+
+	// Clean up environment variables
+	defer func() {
+		if origCloudProvider != "" {
+			os.Setenv("CLOUD_PROVIDER", origCloudProvider)
+		} else {
+			os.Unsetenv("CLOUD_PROVIDER")
+		}
+		if origBucketName != "" {
+			os.Setenv("BUCKET_NAME", origBucketName)
+		} else {
+			os.Unsetenv("BUCKET_NAME")
+		}
+	}()
+
+	// Simulate customer scenario: BUCKET_NAME/BACKUP_FOLDER
+	os.Setenv("CLOUD_PROVIDER", "aws")
+	os.Setenv("BUCKET_NAME", "BUCKET_NAME/BACKUP_FOLDER")
+
+	result := getCloudStoragePath()
+
+	// Should parse correctly: bucket="BUCKET_NAME", pathPrefix="BACKUP_FOLDER"
+	expected := "s3://BUCKET_NAME/BACKUP_FOLDER/"
+	assert.Equal(t, expected, result, "Customer scenario should parse bucket name and path prefix correctly")
+
+	// Verify that this path can be parsed back correctly by URL parser
+	// (simulating what getBackupCount does)
+	parsedURL, err := url.Parse(result)
+	assert.NoError(t, err, "Resulting path should be a valid URL")
+	assert.Equal(t, "s3", parsedURL.Scheme, "URL scheme should be s3")
+	assert.Equal(t, "BUCKET_NAME", parsedURL.Host, "URL host should be the bucket name")
+	assert.Equal(t, "/BACKUP_FOLDER/", parsedURL.Path, "URL path should be the path prefix")
+
+	// Verify pathPrefix extraction for getBackupCount/countS3Backups flow
+	// pathPrefix must not have trailing slash to avoid "backups//neo4j-" prefix
+	pathPrefix := strings.Trim(strings.TrimPrefix(parsedURL.Path, "/"), "/")
+	assert.Equal(t, "BACKUP_FOLDER", pathPrefix, "Path prefix should be trimmed for S3 ListObjectsV2 prefix")
+	assert.NotContains(t, pathPrefix, "//", "Path prefix should not produce double slashes when combined with db name")
 }

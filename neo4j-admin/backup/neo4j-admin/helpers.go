@@ -17,22 +17,61 @@ func getBackupPath() string {
 }
 
 // getCloudStoragePath returns the appropriate cloud storage path for Neo4j backup
+// Supports bucket names with path prefixes (e.g., "bucket-name/folder/path")
+// The path prefix will be included in the cloud storage URL
+// Note: S3/GCS/Azure don't require folders to be created - they're just path prefixes
 func getCloudStoragePath() string {
 	cloudProvider := os.Getenv("CLOUD_PROVIDER")
 	bucketName := os.Getenv("BUCKET_NAME")
 
+	// Split bucket name and path prefix if bucket name contains '/'
+	// Example: "my-bucket/backups" -> bucket="my-bucket", pathPrefix="backups"
+	// Example: "my-bucket/folder1/folder2" -> bucket="my-bucket", pathPrefix="folder1/folder2"
+	// Example: "/my-bucket/backups" -> bucket="my-bucket", pathPrefix="backups" (leading slash handled)
+	var actualBucketName string
+	var pathPrefix string
+	
+	// Trim leading/trailing slashes first to normalize input
+	bucketName = strings.Trim(bucketName, "/")
+	
+	if strings.Contains(bucketName, "/") {
+		parts := strings.SplitN(bucketName, "/", 2)
+		actualBucketName = parts[0]
+		pathPrefix = strings.Trim(parts[1], "/")
+		// If bucket name is empty after splitting, use the original bucketName (invalid input case)
+		if actualBucketName == "" {
+			actualBucketName = bucketName
+			pathPrefix = ""
+		}
+	} else {
+		actualBucketName = bucketName
+		pathPrefix = ""
+	}
+
 	switch cloudProvider {
 	case "aws":
-		return fmt.Sprintf("s3://%s/", bucketName)
+		if pathPrefix != "" {
+			return fmt.Sprintf("s3://%s/%s/", actualBucketName, pathPrefix)
+		}
+		return fmt.Sprintf("s3://%s/", actualBucketName)
 	case "gcp":
-		return fmt.Sprintf("gs://%s/", bucketName)
+		if pathPrefix != "" {
+			return fmt.Sprintf("gs://%s/%s/", actualBucketName, pathPrefix)
+		}
+		return fmt.Sprintf("gs://%s/", actualBucketName)
 	case "azure":
 		storageAccount := os.Getenv("AZURE_STORAGE_ACCOUNT")
 		if storageAccount == "" {
 			// Fallback to bucket name if storage account not specified
-			return fmt.Sprintf("azb://%s/", bucketName)
+			if pathPrefix != "" {
+				return fmt.Sprintf("azb://%s/%s/", actualBucketName, pathPrefix)
+			}
+			return fmt.Sprintf("azb://%s/", actualBucketName)
 		}
-		return fmt.Sprintf("azb://%s/%s/", storageAccount, bucketName)
+		if pathPrefix != "" {
+			return fmt.Sprintf("azb://%s/%s/%s/", storageAccount, actualBucketName, pathPrefix)
+		}
+		return fmt.Sprintf("azb://%s/%s/", storageAccount, actualBucketName)
 	default:
 		// Fallback to local path for on-premises or unknown providers
 		return getBackupPath()

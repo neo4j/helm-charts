@@ -6,6 +6,9 @@ Configuration:
 - Backup Schedule: {{ $.Values.neo4j.jobSchedule | default "* * * * *" }}
 - Cloud Provider: {{ .Values.backup.cloudProvider | default "None (local backup)" }}
 - Bucket Name: {{ .Values.backup.bucketName | default "None" }}
+{{- if and .Values.backup.bucketName (contains "/" .Values.backup.bucketName) }}
+  (Path prefix supported: backups will be written to {{ .Values.backup.bucketName }}/)
+{{- end }}
 - Database: {{ .Values.backup.database | default "*" }}
 - Backup Type: {{ .Values.backup.type | default "AUTO" }}
 - Compress: {{ .Values.backup.compress | default true }}
