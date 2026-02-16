@@ -44,6 +44,11 @@ backup:
   # Ensure the bucket is already existing in the respective cloud provider
   # In case of azure the bucket is the container name in the storage account
   # bucket: azure-storage-container
+  #
+  # Path prefix (folder) within the bucket: use '/' separator
+  # Example: "my-bucket/backups" uses bucket "my-bucket" and path prefix "backups"
+  # Backups are written to s3://my-bucket/backups/ (or equivalent for GCP/Azure)
+  # No manual folder creation needed - cloud storage uses path prefixes in object keys
   bucketName: ""
 
   # Specify multiple backup endpoints as comma-separated string

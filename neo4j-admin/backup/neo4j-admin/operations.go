@@ -428,13 +428,17 @@ func getBackupCount(db string, fromPath string) (int, error) {
 		return 0, err
 	}
 
+	// Trim leading and trailing slashes from path - count functions add their own separator
+	// e.g. "/backups/" -> "backups" to avoid "backups//neo4j-" prefix that wouldn't match "backups/neo4j-*.backup"
+	pathPrefix := strings.Trim(strings.TrimPrefix(u.Path, "/"), "/")
+
 	switch u.Scheme {
 	case "s3":
-		return countS3Backups(db, u.Host, strings.TrimPrefix(u.Path, "/"))
+		return countS3Backups(db, u.Host, pathPrefix)
 	case "gs":
-		return countGCSBackups(db, u.Host, strings.TrimPrefix(u.Path, "/"))
+		return countGCSBackups(db, u.Host, pathPrefix)
 	case "azb":
-		return countAzureBackups(db, u.Host, strings.TrimPrefix(u.Path, "/"))
+		return countAzureBackups(db, u.Host, pathPrefix)
 	default:
 		// local path
 		return countLocalBackups(fromPath, db)
@@ -709,7 +713,7 @@ func PerformAggregateBackup() error {
 			}
 			log.Printf("%s", backupFileNames)
 		}
-		log.Printf(outputBuffer.String())
+		log.Printf("%s", outputBuffer.String())
 	}
 	return nil
 }
