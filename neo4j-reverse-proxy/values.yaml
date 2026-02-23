@@ -42,6 +42,15 @@ reverseProxy:
     fsGroup: 7474
     fsGroupChangePolicy: "Always"
 
+  # Resources used by the container
+  resources: {}
+  #  request:
+  #    cpu:
+  #    memory:
+  #  limits:
+  #    cpu:
+  #    memory:
+
   # Pod labels for security policies and workload identification
   podLabels: {}
   #  app: "reverse-proxy"
