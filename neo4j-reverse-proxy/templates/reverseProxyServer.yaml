@@ -42,6 +42,15 @@ spec:
               value: {{ $.Values.reverseProxy.domain | default "cluster.local" }}
             - name: NAMESPACE
               value: {{ $.Values.reverseProxy.namespace | default .Release.Namespace }}
+          {{ - with .Values.reverseProxy.resources }}
+          resources:
+            {{ - if hasKey . "requests" | or (hasKey . "limits") }}
+            {{ - omit . "cpu" "memory" | toYaml | nindent 12 }}
+            {{ - else }}
+            requests: {{ . | toYaml | nindent 14 }}
+            limits: {{ . | toYaml | nindent 14 }}
+            {{ - end }}
+          {{ - end }}
 ---
 apiVersion: v1
 kind: Service
