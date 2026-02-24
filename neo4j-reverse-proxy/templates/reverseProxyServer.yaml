@@ -44,7 +44,7 @@ spec:
               value: {{ $.Values.reverseProxy.namespace | default .Release.Namespace }}
           {{- with .Values.reverseProxy.resources }}
           resources:
-            {{- if hasKey . "requests" | or (hasKey . "limits") }}
+            {{- if or (hasKey . "limits") (hasKey . "requests") }}
             {{- omit . "cpu" "memory" | toYaml | nindent 12 }}
             {{- else }}
             requests: {{ . | toYaml | nindent 14 }}
