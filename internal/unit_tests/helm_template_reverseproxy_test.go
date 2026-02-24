@@ -314,6 +314,65 @@ func TestReverseProxyImagePullSecrets(t *testing.T) {
 	assert.Equal(t, "another-secret", pullSecrets[1].Name)
 }
 
+// TestReverseProxyResources tests that resource requests and limits are correctly set on the deployment container
+func TestReverseProxyResources(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jReverseProxyValues
+	helmValues.ReverseProxy.ServiceName = "neo4j-service"
+	helmValues.ReverseProxy.Resources = model.ReverseProxyResources{
+		Requests: model.ReverseProxyRequests{
+			CPU:    "200m",
+			Memory: "256Mi",
+		},
+		Limits: model.ReverseProxyLimits{
+			CPU:    "1000m",
+			Memory: "512Mi",
+		},
+	}
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while testing resources with reverse proxy helm chart")
+
+	deploymentList := manifests.OfType(&appsv1.Deployment{})
+	assert.Len(t, deploymentList, 1, fmt.Sprintf("number of deployments should be 1, not %d", len(deploymentList)))
+
+	deployment := deploymentList[0].(*appsv1.Deployment)
+	containers := deployment.Spec.Template.Spec.Containers
+	assert.Len(t, containers, 1, "should have exactly one container")
+
+	resources := containers[0].Resources
+	assert.Equal(t, "200m", resources.Requests.Cpu().String(), "CPU request should match")
+	assert.Equal(t, "256Mi", resources.Requests.Memory().String(), "Memory request should match")
+	assert.Equal(t, "1000m", resources.Limits.Cpu().String(), "CPU limit should match")
+	assert.Equal(t, "512Mi", resources.Limits.Memory().String(), "Memory limit should match")
+}
+
+// TestReverseProxyDefaultResources tests that default resource values from values.yaml are applied
+func TestReverseProxyDefaultResources(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jReverseProxyValues
+	helmValues.ReverseProxy.ServiceName = "neo4j-service"
+	// No explicit resources set — chart defaults should apply
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while testing default resources with reverse proxy helm chart")
+
+	deploymentList := manifests.OfType(&appsv1.Deployment{})
+	assert.Len(t, deploymentList, 1, fmt.Sprintf("number of deployments should be 1, not %d", len(deploymentList)))
+
+	deployment := deploymentList[0].(*appsv1.Deployment)
+	containers := deployment.Spec.Template.Spec.Containers
+	assert.Len(t, containers, 1, "should have exactly one container")
+
+	resources := containers[0].Resources
+	assert.NotNil(t, resources.Requests, "resource requests should be set by default")
+	assert.NotNil(t, resources.Limits, "resource limits should be set by default")
+	assert.False(t, resources.Requests.Cpu().IsZero(), "default CPU request should not be zero")
+	assert.False(t, resources.Limits.Cpu().IsZero(), "default CPU limit should not be zero")
+}
+
 // TestReverseProxyImagePullSecretsEmpty tests that empty imagePullSecrets are handled correctly
 func TestReverseProxyImagePullSecretsEmpty(t *testing.T) {
 	t.Parallel()

@@ -33,7 +33,7 @@ reverseProxy:
     runAsGroup: 7474
     capabilities:
       drop:
-        - all
+        - ALL
 
   podSecurityContext:
     runAsNonRoot: true
