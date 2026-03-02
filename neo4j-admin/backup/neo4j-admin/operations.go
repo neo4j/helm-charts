@@ -702,18 +702,26 @@ func PerformAggregateBackup() error {
 
 		// Wait for the command to complete
 		err = cmd.Wait()
+		output := outputBuffer.String()
+		noAggregationNeeded := strings.Contains(strings.ToLower(output), "no aggregation needed") ||
+			strings.Contains(strings.ToLower(output), "no need to aggregate")
 		if err != nil {
-			return fmt.Errorf("Aggregate Backup Failed for database %s !! output = %s \n err = %v", db, outputBuffer.String(), err)
+			if noAggregationNeeded {
+				log.Printf("No aggregation needed for database %s, treating as success", db)
+				log.Printf("%s", output)
+				continue
+			}
+			return fmt.Errorf("Aggregate Backup Failed for database %s !! output = %s \n err = %v", db, output, err)
 		}
 		log.Printf("Aggregate backup completed successfully for database %s", db)
-		if !strings.Contains(outputBuffer.String(), "no need to aggregate") {
-			backupFileNames, err := retrieveAggregatedBackupFileNames(outputBuffer.String())
+		if !noAggregationNeeded {
+			backupFileNames, err := retrieveAggregatedBackupFileNames(output)
 			if err != nil {
 				return err
 			}
 			log.Printf("%s", backupFileNames)
 		}
-		log.Printf("%s", outputBuffer.String())
+		log.Printf("%s", output)
 	}
 	return nil
 }
