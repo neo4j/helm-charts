@@ -6,6 +6,7 @@ import (
 
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/stretchr/testify/assert"
+	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	v12 "k8s.io/api/rbac/v1"
 )
@@ -32,15 +33,16 @@ func TestNeo4jOperationsEnableServer(t *testing.T) {
 		return
 	}
 
-	operationsPod := manifest.OfTypeWithName(
-		&v1.Pod{},
+	operationsJob := manifest.OfTypeWithName(
+		&batchv1.Job{},
 		fmt.Sprintf("%s-operations", model.DefaultHelmTemplateReleaseName.String()),
-	).(*v1.Pod)
-	assert.NotNil(t, operationsPod, "operations pod not found")
-	assert.Equal(t, operationsPod.Spec.RestartPolicy, v1.RestartPolicyNever)
-	assert.Len(t, operationsPod.Spec.Containers, 1)
+	).(*batchv1.Job)
+	assert.NotNil(t, operationsJob, "operations job not found")
+	podSpec := operationsJob.Spec.Template.Spec
+	assert.Equal(t, podSpec.RestartPolicy, v1.RestartPolicyNever)
+	assert.Len(t, podSpec.Containers, 1)
 	envVarNames := make(map[string]bool)
-	for _, envVar := range operationsPod.Spec.Containers[0].Env {
+	for _, envVar := range podSpec.Containers[0].Env {
 		envVarNames[envVar.Name] = true
 	}
 
@@ -50,7 +52,7 @@ func TestNeo4jOperationsEnableServer(t *testing.T) {
 		assert.True(t, envVarNames[required], "Required environment variable %s not found", required)
 	}
 
-	for _, envVar := range operationsPod.Spec.Containers[0].Env {
+	for _, envVar := range podSpec.Containers[0].Env {
 		switch envVar.Name {
 		case "RELEASE_NAME", "NAMESPACE", "SECRETNAME", "PROTOCOL":
 		case "SSL_DISABLE_HOSTNAME_VERIFICATION", "SSL_INSECURE_SKIP_VERIFY":
@@ -59,7 +61,7 @@ func TestNeo4jOperationsEnableServer(t *testing.T) {
 		}
 	}
 
-	for _, envVar := range operationsPod.Spec.Containers[0].Env {
+	for _, envVar := range podSpec.Containers[0].Env {
 		switch envVar.Name {
 		case "RELEASE_NAME":
 			assert.Equal(t, envVar.Value, model.DefaultHelmTemplateReleaseName.String())
@@ -71,32 +73,33 @@ func TestNeo4jOperationsEnableServer(t *testing.T) {
 			assert.Equal(t, envVar.Value, "neo4j")
 		}
 	}
-	assert.Contains(t, operationsPod.ObjectMeta.Labels, "testkey")
+	assert.Contains(t, operationsJob.ObjectMeta.Labels, "testkey")
 
 	operationsRole := manifest.OfTypeWithName(
 		&v12.Role{},
-		fmt.Sprintf("%s-secrets-reader", model.DefaultHelmTemplateReleaseName.String()),
+		fmt.Sprintf("%s-operations", model.DefaultHelmTemplateReleaseName.String()),
 	).(*v12.Role)
 	assert.NotNil(t, operationsRole, "operations role not found")
 	assert.Len(t, operationsRole.Rules, 1)
-	assert.Equal(t, operationsRole.Rules[0].Verbs, []string{"get", "watch", "list"})
+	assert.Equal(t, operationsRole.Rules[0].Verbs, []string{"get"})
 	assert.Equal(t, operationsRole.Rules[0].Resources, []string{"secrets"})
+	assert.NotEmpty(t, operationsRole.Rules[0].ResourceNames, "operations role should have resourceNames for least-privilege")
 
-	serviceAccount := manifest.OfTypeWithName(
+	operationsServiceAccount := manifest.OfTypeWithName(
 		&v1.ServiceAccount{},
-		model.DefaultHelmTemplateReleaseName.String(),
+		fmt.Sprintf("%s-operations", model.DefaultHelmTemplateReleaseName.String()),
 	).(*v1.ServiceAccount)
-	assert.NotNil(t, serviceAccount, "serviceaccount not found")
+	assert.NotNil(t, operationsServiceAccount, "operations serviceaccount not found")
 
 	operationsRoleBinding := manifest.OfTypeWithName(
 		&v12.RoleBinding{},
-		fmt.Sprintf("%s-secrets-binding", model.DefaultHelmTemplateReleaseName.String()),
+		fmt.Sprintf("%s-operations", model.DefaultHelmTemplateReleaseName.String()),
 	).(*v12.RoleBinding)
 	assert.NotNil(t, operationsRoleBinding, "operations role binding not found")
 	assert.Equal(t, operationsRoleBinding.RoleRef.Name, operationsRole.Name)
 	assert.Len(t, operationsRoleBinding.Subjects, 1)
 	assert.Equal(t, operationsRoleBinding.Subjects[0].Kind, "ServiceAccount")
-	assert.Equal(t, operationsRoleBinding.Subjects[0].Name, serviceAccount.Name)
+	assert.Equal(t, operationsRoleBinding.Subjects[0].Name, operationsServiceAccount.Name)
 
 }
 
@@ -125,15 +128,15 @@ func TestNeo4jOperationsWithSSLConfiguration(t *testing.T) {
 		return
 	}
 
-	operationsPod := manifest.OfTypeWithName(
-		&v1.Pod{},
+	operationsJob := manifest.OfTypeWithName(
+		&batchv1.Job{},
 		fmt.Sprintf("%s-operations", model.DefaultHelmTemplateReleaseName.String()),
-	).(*v1.Pod)
-	assert.NotNil(t, operationsPod, "operations pod not found")
+	).(*batchv1.Job)
+	assert.NotNil(t, operationsJob, "operations job not found")
 
 	// Check for SSL environment variables
 	envVars := make(map[string]string)
-	for _, envVar := range operationsPod.Spec.Containers[0].Env {
+	for _, envVar := range operationsJob.Spec.Template.Spec.Containers[0].Env {
 		envVars[envVar.Name] = envVar.Value
 	}
 
@@ -159,15 +162,15 @@ func TestNeo4jOperationsEnableServerForStandalone(t *testing.T) {
 		return
 	}
 
-	operationsPod := manifest.OfTypeWithName(
-		&v1.Pod{},
+	operationsJob := manifest.OfTypeWithName(
+		&batchv1.Job{},
 		fmt.Sprintf("%s-operations", model.DefaultHelmTemplateReleaseName.String()),
 	)
-	assert.Nil(t, operationsPod, "operations pod should not be present for standalone")
+	assert.Nil(t, operationsJob, "operations job should not be present for standalone")
 
 	operationsRole := manifest.OfTypeWithName(
 		&v12.Role{},
-		fmt.Sprintf("%s-secrets-reader", model.DefaultHelmTemplateReleaseName.String()),
+		fmt.Sprintf("%s-operations", model.DefaultHelmTemplateReleaseName.String()),
 	)
 	assert.Nil(t, operationsRole, "operations role should not be present for standalone")
 
@@ -194,13 +197,13 @@ func TestNeo4jOperationsImagePullSecrets(t *testing.T) {
 		return
 	}
 
-	operationsPod := manifest.OfTypeWithName(
-		&v1.Pod{},
+	operationsJob := manifest.OfTypeWithName(
+		&batchv1.Job{},
 		fmt.Sprintf("%s-operations", model.DefaultHelmTemplateReleaseName.String()),
-	).(*v1.Pod)
-	assert.NotNil(t, operationsPod, "operations pod not found")
+	).(*batchv1.Job)
+	assert.NotNil(t, operationsJob, "operations job not found")
 
-	pullSecrets := operationsPod.Spec.ImagePullSecrets
+	pullSecrets := operationsJob.Spec.Template.Spec.ImagePullSecrets
 	assert.Len(t, pullSecrets, 2, "should have 2 imagePullSecrets")
 	assert.Equal(t, "my-pull-secret", pullSecrets[0].Name)
 	assert.Equal(t, "another-secret", pullSecrets[1].Name)
@@ -227,12 +230,12 @@ func TestNeo4jOperationsImagePullSecretsEmpty(t *testing.T) {
 		return
 	}
 
-	operationsPod := manifest.OfTypeWithName(
-		&v1.Pod{},
+	operationsJob := manifest.OfTypeWithName(
+		&batchv1.Job{},
 		fmt.Sprintf("%s-operations", model.DefaultHelmTemplateReleaseName.String()),
-	).(*v1.Pod)
-	assert.NotNil(t, operationsPod, "operations pod not found")
+	).(*batchv1.Job)
+	assert.NotNil(t, operationsJob, "operations job not found")
 
-	pullSecrets := operationsPod.Spec.ImagePullSecrets
+	pullSecrets := operationsJob.Spec.Template.Spec.ImagePullSecrets
 	assert.Nil(t, pullSecrets, "imagePullSecrets should be nil when empty")
 }
