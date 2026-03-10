@@ -1,39 +1,99 @@
 {{- $clusterEnabled := eq (include "neo4j.isClusterEnabled" .) "true" }}
 
 {{- if and (not (kindIs "invalid" $.Values.neo4j.operations)) $.Values.neo4j.operations.enableServer $clusterEnabled -}}
-apiVersion: v1
-kind: Pod
+# Job is used instead of a standalone Pod so that the created Pod has ownerReferences.
+# This satisfies Kyverno policies (e.g. require-valid-owner-reference) that require pods
+# to be owned by Deployment, ReplicaSet, Job, StatefulSet, DaemonSet, etc.
+# Uses a dedicated ServiceAccount with least-privilege RBAC (get on auth secret only).
+apiVersion: batch/v1
+kind: Job
 metadata:
   name: {{ include "neo4j.fullname" . }}-operations
   labels:
     app: "neo4j-operations"
     {{- include "neo4j.labels" $.Values.neo4j.operations | indent 4 }}
 spec:
-  restartPolicy: Never
-  serviceAccountName: {{ include "neo4j.serviceAccountName" . }}
-  {{- include "neo4j.imagePullSecrets" .Values.image.imagePullSecrets | indent 2 }}
-  containers:
-    - name: {{ include "neo4j.fullname" . }}-operations
-      image: {{ $.Values.neo4j.operations.image }}
-      imagePullPolicy: "Always"
-      env:
-        - name: RELEASE_NAME
-          value: {{ include "neo4j.fullname" . | quote }}
-        {{- if and (not (kindIs "invalid" $.Values.neo4j.passwordFromSecret)) (not (empty $.Values.neo4j.passwordFromSecret)) }}
-        - name: SECRETNAME
-          value: {{ $.Values.neo4j.passwordFromSecret | quote }}
-        {{- else }}
-        - name: SECRETNAME
-          value: {{ include "neo4j.name" . | printf "%s-auth" | quote }}
-        {{- end }}
-        - name: NAMESPACE
-          value: {{ .Release.Namespace | quote }}
-        - name: PROTOCOL
-          value: {{ $.Values.neo4j.operations.protocol | default "neo4j" | quote }}
-        {{- if $.Values.neo4j.operations.ssl }}
-        - name: SSL_DISABLE_HOSTNAME_VERIFICATION
-          value: {{ $.Values.neo4j.operations.ssl.disableHostnameVerification | default false | toString | quote }}
-        - name: SSL_INSECURE_SKIP_VERIFY
-          value: {{ $.Values.neo4j.operations.ssl.insecureSkipVerify | default false | toString | quote }}
-        {{- end }}
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: "neo4j-operations"
+        {{- include "neo4j.labels" $.Values.neo4j.operations | indent 8 }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "neo4j.fullname" . }}-operations
+      {{- with .Values.securityContext }}
+      securityContext: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- include "neo4j.imagePullSecrets" .Values.image.imagePullSecrets | indent 6 }}
+      containers:
+        - name: {{ include "neo4j.fullname" . }}-operations
+          image: {{ $.Values.neo4j.operations.image }}
+          imagePullPolicy: {{ $.Values.neo4j.operations.imagePullPolicy | default "Always" }}
+          {{- with $.Values.containerSecurityContext }}
+          securityContext: {{ toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $.Values.neo4j.operations.resources }}
+          resources: {{ toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+            - name: RELEASE_NAME
+              value: {{ include "neo4j.fullname" . | quote }}
+            {{- if and (not (kindIs "invalid" $.Values.neo4j.passwordFromSecret)) (not (empty $.Values.neo4j.passwordFromSecret)) }}
+            - name: SECRETNAME
+              value: {{ $.Values.neo4j.passwordFromSecret | quote }}
+            {{- else }}
+            - name: SECRETNAME
+              value: {{ include "neo4j.name" . | printf "%s-auth" | quote }}
+            {{- end }}
+            - name: NAMESPACE
+              value: {{ .Release.Namespace | quote }}
+            - name: PROTOCOL
+              value: {{ $.Values.neo4j.operations.protocol | default "neo4j" | quote }}
+            {{- if $.Values.neo4j.operations.ssl }}
+            - name: SSL_DISABLE_HOSTNAME_VERIFICATION
+              value: {{ $.Values.neo4j.operations.ssl.disableHostnameVerification | default false | toString | quote }}
+            - name: SSL_INSECURE_SKIP_VERIFY
+              value: {{ $.Values.neo4j.operations.ssl.insecureSkipVerify | default false | toString | quote }}
+            {{- end }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: {{ .Release.Namespace | quote }}
+  name: {{ include "neo4j.fullname" . }}-operations
+  labels:
+    app: "neo4j-operations"
+    {{- include "neo4j.labels" $.Values.neo4j.operations | indent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: {{ .Release.Namespace | quote }}
+  name: {{ include "neo4j.fullname" . }}-operations
+  labels:
+    app: "neo4j-operations"
+    {{- include "neo4j.labels" $.Values.neo4j.operations | indent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: [{{ include "neo4j.secretName" . | quote }}]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: {{ .Release.Namespace | quote }}
+  name: {{ include "neo4j.fullname" . }}-operations
+  labels:
+    app: "neo4j-operations"
+    {{- include "neo4j.labels" $.Values.neo4j.operations | indent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "neo4j.fullname" . }}-operations
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: {{ include "neo4j.fullname" . }}-operations
+  apiGroup: rbac.authorization.k8s.io
 {{- end -}}
