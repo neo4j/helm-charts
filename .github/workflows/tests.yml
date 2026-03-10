@@ -253,6 +253,9 @@ jobs:
         run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
 
       - name: Run Enterprise Integration and Unit tests
+        env:
+          ISRELEASE_INPUT: ${{ inputs.RELEASE }}
+          DOCKER_IMAGE_VERSION_INPUT: ${{ inputs.DOCKER_IMAGE_VERSION }}
         run: |
           mkdir -p .kube
           cat ${KUBECONFIG} > .kube/config
@@ -260,9 +263,9 @@ jobs:
           export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"          
           export IPS_PASS=$(gcloud auth print-access-token)
           #inputs.RELEASE does not hold value when workflow_dispatch is not called
-          ISRELEASE=${{ inputs.RELEASE }}
+          ISRELEASE="$ISRELEASE_INPUT"
           if [[ ${#ISRELEASE} != 0 ]]; then            
-            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise"
+            export NEO4J_DOCKER_IMG="neo4j:$DOCKER_IMAGE_VERSION_INPUT-enterprise"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
           echo "printing kubeconfig path $KUBECONFIG"
@@ -312,6 +315,9 @@ jobs:
         run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
 
       - name: Run Community Integration and Unit tests
+        env:
+          ISRELEASE_INPUT: ${{ inputs.RELEASE }}
+          DOCKER_IMAGE_VERSION_INPUT: ${{ inputs.DOCKER_IMAGE_VERSION }}
         run: |
           mkdir -p .kube
           cat ${KUBECONFIG} > .kube/config
@@ -319,9 +325,9 @@ jobs:
           export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"          
           export IPS_PASS=$(gcloud auth print-access-token)
           #inputs.RELEASE does not hold value when workflow_dispatch is not called
-          ISRELEASE=${{ inputs.RELEASE }}
+          ISRELEASE="$ISRELEASE_INPUT"
           if [[ ${#ISRELEASE} != 0 ]]; then            
-            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}"
+            export NEO4J_DOCKER_IMG="neo4j:$DOCKER_IMAGE_VERSION_INPUT"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
           echo "printing kubeconfig path $KUBECONFIG"
@@ -371,6 +377,9 @@ jobs:
         run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
 
       - name: Run Enterprise Integration and Unit tests for Red Hat
+        env:
+          ISRELEASE_INPUT: ${{ inputs.RELEASE }}
+          DOCKER_IMAGE_VERSION_INPUT: ${{ inputs.DOCKER_IMAGE_VERSION }}
         run: |
           mkdir -p .kube
           cat ${KUBECONFIG} > .kube/config
@@ -379,9 +388,9 @@ jobs:
           echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)          
           #inputs.RELEASE does not hold value when workflow_dispatch is not called
-          ISRELEASE=${{ inputs.RELEASE }}
+          ISRELEASE="$ISRELEASE_INPUT"
           if [[ ${#ISRELEASE} != 0 ]]; then            
-            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise"
+            export NEO4J_DOCKER_IMG="neo4j:$DOCKER_IMAGE_VERSION_INPUT-enterprise"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
@@ -430,6 +439,9 @@ jobs:
         run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
 
       - name: Run Community Integration and Unit tests for Red Hat
+        env:
+          ISRELEASE_INPUT: ${{ inputs.RELEASE }}
+          DOCKER_IMAGE_VERSION_INPUT: ${{ inputs.DOCKER_IMAGE_VERSION }}
         run: |
           mkdir -p .kube
           cat ${KUBECONFIG} > .kube/config
@@ -438,9 +450,9 @@ jobs:
           echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)
           #inputs.RELEASE does not hold value when workflow_dispatch is not called
-          ISRELEASE=${{ inputs.RELEASE }}
+          ISRELEASE="$ISRELEASE_INPUT"
           if [[ ${#ISRELEASE} != 0 ]]; then            
-            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}"
+            export NEO4J_DOCKER_IMG="neo4j:$DOCKER_IMAGE_VERSION_INPUT"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
