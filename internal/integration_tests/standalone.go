@@ -474,6 +474,35 @@ func run(t *testing.T, command string, args ...string) error {
 	return err
 }
 
+func runWithRetry(t *testing.T, maxRetries int, command string, args ...string) error {
+	var err error
+	for i := 0; i < maxRetries; i++ {
+		err = run(t, command, args...)
+		if err == nil {
+			return nil
+		}
+		if i < maxRetries-1 {
+			delay := time.Duration(1<<uint(i)) * 5 * time.Second
+			t.Logf("Command failed (attempt %d/%d), retrying in %v: %s %v: %v", i+1, maxRetries, delay, command, args, err)
+			time.Sleep(delay)
+		}
+	}
+	return fmt.Errorf("command failed after %d attempts: %s %v: %w", maxRetries, command, args, err)
+}
+
+func waitForPodsTerminated(t *testing.T, namespace string, timeout time.Duration) {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		err := run(t, "kubectl", "get", "pods", "--namespace", namespace, "--no-headers")
+		if err != nil {
+			return
+		}
+		t.Logf("Waiting for pods in namespace %s to terminate...", namespace)
+		time.Sleep(5 * time.Second)
+	}
+	t.Logf("Timed out waiting for pods in namespace %s to terminate after %v", namespace, timeout)
+}
+
 func AsCloseable(closeables []Closeable) Closeable {
 	return func() error {
 		var combinedErrors error
