@@ -490,6 +490,20 @@ func runWithRetry(t *testing.T, maxRetries int, command string, args ...string) 
 	return fmt.Errorf("command failed after %d attempts: %s %v: %w", maxRetries, command, args, err)
 }
 
+func kubectlLogs(t *testing.T, podName string, namespace string) (string, error) {
+	var out []byte
+	var err error
+	for attempt := 0; attempt < 3; attempt++ {
+		out, err = exec.Command("kubectl", "logs", podName, "--namespace", namespace).CombinedOutput()
+		if err == nil {
+			return string(out), nil
+		}
+		t.Logf("Failed to get logs for pod %s (attempt %d/3): %v", podName, attempt+1, err)
+		time.Sleep(10 * time.Second)
+	}
+	return "", fmt.Errorf("failed to get logs for pod %s after 3 attempts: %w", podName, err)
+}
+
 func waitForPodsTerminated(t *testing.T, namespace string, timeout time.Duration) {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
@@ -730,11 +744,10 @@ func TestBackupLogStreamingIntegration(t *testing.T, releaseName model.ReleaseNa
 	for _, pod := range pods.Items {
 		if strings.Contains(pod.Name, "standalone-backup-logs") {
 			found = true
-			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
+			logOutput, err = kubectlLogs(t, pod.Name, namespace)
 			if err != nil {
-				return fmt.Errorf("error while getting backup pod logs: %v", err)
+				return err
 			}
-			logOutput = string(out)
 			break
 		}
 	}
@@ -805,11 +818,10 @@ func TestBackupCompressIntegration(t *testing.T, releaseName model.ReleaseName) 
 	for _, pod := range pods.Items {
 		if strings.Contains(pod.Name, "standalone-backup-compress") {
 			found = true
-			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
+			logOutput, err = kubectlLogs(t, pod.Name, namespace)
 			if err != nil {
-				return fmt.Errorf("error while getting backup pod logs: %v", err)
+				return err
 			}
-			logOutput = string(out)
 			break
 		}
 	}
@@ -967,11 +979,10 @@ func TestAggregateBackupWithWildcard(t *testing.T, standaloneReleaseName model.R
 			aggregateBackupPodFound = true
 			t.Logf("Found aggregate backup pod: %s", pod.Name)
 
-			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
+			logOutput, err := kubectlLogs(t, pod.Name, namespace)
 			if err != nil {
-				return fmt.Errorf("error while getting aggregate backup pod logs: %v", err)
+				return err
 			}
-			logOutput := string(out)
 
 			t.Logf("Aggregate backup pod logs:\n%s", logOutput)
 
@@ -1295,17 +1306,10 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 			t.Logf("Found Azure backup pod: %s", pod.Name)
 			t.Logf("Pod status: %s", pod.Status.Phase)
 
-			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
+			logOutput, err := kubectlLogs(t, pod.Name, namespace)
 			if err != nil {
-				t.Logf("Failed to get Azure backup pod logs: %v", err)
-				return fmt.Errorf("error while getting azure backup pod logs: %v", err)
+				return err
 			}
-			if out == nil {
-				t.Log("Azure backup pod logs are empty")
-				return fmt.Errorf("azure backup logs cannot be retrieved")
-			}
-
-			logOutput := string(out)
 			t.Logf("Azure backup pod logs:\n%s", logOutput)
 
 			// Check for connectivity and initialization logs
@@ -1409,17 +1413,10 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 			t.Logf("Found GCP backup pod: %s", pod.Name)
 			t.Logf("Pod status: %s", pod.Status.Phase)
 
-			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
+			logOutput, err := kubectlLogs(t, pod.Name, namespace)
 			if err != nil {
-				t.Logf("Failed to get GCP backup pod logs: %v", err)
-				return fmt.Errorf("error while getting gcp backup pod logs: %v", err)
+				return err
 			}
-			if out == nil {
-				t.Log("GCP backup pod logs are empty")
-				return fmt.Errorf("gcp backup logs cannot be retrieved")
-			}
-
-			logOutput := string(out)
 			t.Logf("GCP backup pod logs:\n%s", logOutput)
 
 			// Check for connectivity and initialization logs
@@ -1559,14 +1556,12 @@ func installNeo4jBackupLocalWithConsistencyCheck(t *testing.T, standaloneRelease
 				t.Logf("Found local backup pod: %s", pod.Name)
 				t.Logf("Pod status: %s", pod.Status.Phase)
 
-				out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
-				if err != nil {
-					t.Logf("Failed to get local backup pod logs: %v", err)
+				var logsErr error
+				logOutput, logsErr = kubectlLogs(t, pod.Name, namespace)
+				if logsErr != nil {
 					time.Sleep(30 * time.Second)
 					continue
 				}
-
-				logOutput = string(out)
 				t.Logf("Local backup pod logs (partial):\n%s", logOutput[:min(len(logOutput), 500)])
 
 				// Check if backup completed successfully
@@ -1684,14 +1679,12 @@ func installNeo4jBackupGCPCloudStorage(t *testing.T, standaloneReleaseName model
 				t.Logf("Found GCP backup pod: %s", pod.Name)
 				t.Logf("Pod status: %s", pod.Status.Phase)
 
-				out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
-				if err != nil {
-					t.Logf("Failed to get GCP backup pod logs: %v", err)
+				var logsErr error
+				logOutput, logsErr = kubectlLogs(t, pod.Name, namespace)
+				if logsErr != nil {
 					time.Sleep(30 * time.Second)
 					continue
 				}
-
-				logOutput = string(out)
 				t.Logf("GCP backup pod logs (partial):\n%s", logOutput[:min(len(logOutput), 500)])
 
 				// Check for required log entries
@@ -1836,19 +1829,13 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t *testing.T, standalone
 	for _, pod := range pods.Items {
 		if strings.Contains(pod.Name, "gcp-workload") {
 			found = true
-			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
-			assert.NoError(t, err, "error while getting gcp workload backup pod logs")
-			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
-			logOutput := string(out)
-			// Check for connectivity and initialization logs
+			logOutput, logsErr := kubectlLogs(t, pod.Name, namespace)
+			assert.NoError(t, logsErr, "error while getting gcp workload backup pod logs")
 			assert.Contains(t, logOutput, "Connectivity established with Database")
-
 			assert.Contains(t, logOutput, "Printing backup flags")
-			// Check backup command parameters
 			assert.Contains(t, logOutput, "--include-metadata=all")
 			assert.Contains(t, logOutput, "--type=FULL")
 			assert.Contains(t, logOutput, "neo4j system")
-			// Check that backup completed successfully
 			assert.Contains(t, logOutput, "Backup completed successfully")
 			break
 		}

@@ -205,11 +205,10 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t *testing.T, 
 	for _, pod := range pods.Items {
 		if strings.Contains(pod.Name, "gcp-workload") {
 			found = true
-			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
-			assert.NoError(t, err, "error while getting gcp workload backup pod logs")
-			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
-			assert.Contains(t, string(out), "Backup completed successfully")
-			assert.NotContains(t, string(out), "Deleting file")
+			logOutput, logsErr := kubectlLogs(t, pod.Name, namespace)
+			assert.NoError(t, logsErr, "error while getting gcp workload backup pod logs")
+			assert.Contains(t, logOutput, "Backup completed successfully")
+			assert.NotContains(t, logOutput, "Deleting file")
 			break
 		}
 	}
@@ -279,14 +278,12 @@ func InstallNeo4jBackupAWSLocalWithConsistencyCheck(t *testing.T, releaseName mo
 		for _, pod := range pods.Items {
 			if strings.Contains(pod.Name, "cluster-backup-local") {
 				found = true
-				out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
-				if err != nil {
-					t.Logf("Error getting pod logs: %v", err)
+				var logsErr error
+				logOutput, logsErr = kubectlLogs(t, pod.Name, namespace)
+				if logsErr != nil {
 					time.Sleep(30 * time.Second)
 					continue
 				}
-
-				logOutput = string(out)
 
 				// Check if backup completed successfully
 				if !strings.Contains(logOutput, "Backup completed successfully") {
@@ -430,14 +427,12 @@ func InstallNeo4jBackupAWSCloudStorage(t *testing.T, releaseName model.ReleaseNa
 		for _, pod := range pods.Items {
 			if strings.Contains(pod.Name, "cluster-backup-aws") {
 				found = true
-				out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
-				if err != nil {
-					t.Logf("Error getting pod logs: %v", err)
+				var logsErr error
+				logOutput, logsErr = kubectlLogs(t, pod.Name, namespace)
+				if logsErr != nil {
 					time.Sleep(30 * time.Second)
 					continue
 				}
-
-				logOutput = string(out)
 
 				// Check if backup completed successfully
 				if strings.Contains(logOutput, "Backup completed successfully") {
@@ -983,14 +978,13 @@ func CheckNeo4jOperationsPod(t *testing.T, releaseName model.ReleaseName) error 
 		return fmt.Errorf("pod phase %v is not succeeded", pod.Status.Phase)
 	}
 
-	out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", string(releaseName.Namespace())).CombinedOutput()
+	logOutput, err := kubectlLogs(t, pod.Name, string(releaseName.Namespace()))
 	if err != nil {
-		t.Logf("error while fetching operations pod logs")
 		return err
 	}
-	stringOutput := strings.ToLower(string(out))
+	stringOutput := strings.ToLower(logOutput)
 	if !strings.Contains(stringOutput, "server is already enabled") {
-		return fmt.Errorf("operations pod does not contain valid logs \n logs := %s", string(out))
+		return fmt.Errorf("operations pod does not contain valid logs \n logs := %s", logOutput)
 	}
 	return nil
 }
@@ -1382,10 +1376,9 @@ func TestBackupMultipleEndpointsE2E(t *testing.T) {
 	for _, pod := range pods.Items {
 		if strings.Contains(pod.Name, releaseName.String()) {
 			found = true
-			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
-			assert.NoError(t, err, "error getting backup pod logs")
-			assert.NotNil(t, out, "backup logs cannot be retrieved")
-			assert.Contains(t, string(out), "Backup Completed")
+			logOutput, logsErr := kubectlLogs(t, pod.Name, namespace)
+			assert.NoError(t, logsErr, "error getting backup pod logs")
+			assert.Contains(t, logOutput, "Backup Completed")
 			break
 		}
 	}
