@@ -1,4 +1,4 @@
-FROM golang:1.23.8-alpine AS build
+FROM golang:1.24.13-alpine AS build
 WORKDIR /go/reverse-proxy
 COPY reverse-proxy/operations operations/
 COPY reverse-proxy/proxy proxy/
@@ -7,7 +7,7 @@ COPY reverse-proxy/main.go main.go
 RUN go mod download && go mod verify \
     && go build -v -o reverseproxy_linux main.go
 
-FROM alpine:3.21.3 AS run
+FROM alpine:3.21.6 AS run
 RUN addgroup --gid 7474 --system neo4j \
     && adduser --uid 7474 --system --no-create-home neo4j
 WORKDIR /reverse-proxy
