@@ -962,51 +962,68 @@ func TestAggregateBackupWithWildcard(t *testing.T, standaloneReleaseName model.R
 		return fmt.Errorf("failed to install aggregate backup helm chart: %v", err)
 	}
 
-	// Wait for aggregate backup job to complete
-	time.Sleep(2 * time.Minute)
+	// Step 4: Poll for aggregate backup completion
+	t.Log("Step 4: Waiting for aggregate backup with wildcard to complete")
 
-	// Step 4: Verify the aggregate backup succeeded
-	t.Log("Step 4: Verifying aggregate backup with wildcard succeeded")
-
-	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
-	if err != nil {
-		return fmt.Errorf("error while retrieving pod list during aggregate backup operation: %v", err)
-	}
-
+	deadline := time.Now().Add(8 * time.Minute)
 	var aggregateBackupPodFound bool
-	for _, pod := range pods.Items {
-		if strings.Contains(pod.Name, "wildcard-aggregate-backup") {
-			aggregateBackupPodFound = true
-			t.Logf("Found aggregate backup pod: %s", pod.Name)
 
-			logOutput, err := kubectlLogs(t, pod.Name, namespace)
-			if err != nil {
-				return err
-			}
-
-			t.Logf("Aggregate backup pod logs:\n%s", logOutput)
-
-			// Verify wildcard was detected and handled
-			expectedLogEntries := []string{
-				"Wildcard '*' detected",
-				"passing to neo4j-admin for native wildcard handling",
-				"Aggregate backup completed successfully",
-			}
-
-			for _, expectedLog := range expectedLogEntries {
-				if !strings.Contains(logOutput, expectedLog) {
-					return fmt.Errorf("expected log entry '%s' not found in aggregate backup logs:\n%s", expectedLog, logOutput)
-				}
-			}
-
-			t.Log("Aggregate backup with wildcard completed successfully!")
-			break
+	for time.Now().Before(deadline) {
+		pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
+		if err != nil {
+			t.Logf("Error retrieving pod list: %v", err)
+			time.Sleep(30 * time.Second)
+			continue
 		}
+
+		for _, pod := range pods.Items {
+			if strings.Contains(pod.Name, "wildcard-aggregate-backup") {
+				aggregateBackupPodFound = true
+				t.Logf("Found aggregate backup pod: %s (status: %s)", pod.Name, pod.Status.Phase)
+
+				logOutput, logsErr := kubectlLogs(t, pod.Name, namespace)
+				if logsErr != nil {
+					time.Sleep(30 * time.Second)
+					continue
+				}
+
+				if !strings.Contains(logOutput, "Aggregate backup completed successfully") {
+					t.Log("Aggregate backup not yet completed, waiting...")
+					time.Sleep(30 * time.Second)
+					continue
+				}
+
+				t.Logf("Aggregate backup pod logs:\n%s", logOutput)
+
+				expectedLogEntries := []string{
+					"Wildcard '*' detected",
+					"passing to neo4j-admin for native wildcard handling",
+					"Aggregate backup completed successfully",
+				}
+
+				for _, expectedLog := range expectedLogEntries {
+					if !strings.Contains(logOutput, expectedLog) {
+						return fmt.Errorf("expected log entry '%s' not found in aggregate backup logs:\n%s", expectedLog, logOutput)
+					}
+				}
+
+				t.Log("Aggregate backup with wildcard completed successfully!")
+				goto aggregateDone
+			}
+		}
+
+		if !aggregateBackupPodFound {
+			t.Log("Aggregate backup pod not yet created, waiting...")
+		}
+		time.Sleep(30 * time.Second)
 	}
 
 	if !aggregateBackupPodFound {
-		return fmt.Errorf("no aggregate backup pod found")
+		return fmt.Errorf("no aggregate backup pod found after polling")
 	}
+	return fmt.Errorf("aggregate backup did not complete within timeout")
+
+aggregateDone:
 
 	return nil
 }
@@ -1974,7 +1991,7 @@ func introduceInconsistency(t *testing.T, releaseName model.ReleaseName) error {
 	cmd := []string{
 		"bash",
 		"-c",
-		"cp /var/lib/neo4j/data/databases/neo4j/block.relationship.xd.db /tmp/block.relationship.xd.db && echo '' > /var/lib/neo4j/data/databases/neo4j/block.relationship.xd.db",
+		"cp /var/lib/neo4j/data/databases/neo4j/block.relationship.xd.db /var/lib/neo4j/data/block.relationship.xd.db.bak && echo '' > /var/lib/neo4j/data/databases/neo4j/block.relationship.xd.db",
 	}
 	stdout, stderr, err := ExecInPod(releaseName, cmd, "")
 	if err != nil {
@@ -1999,11 +2016,11 @@ func revertInconsistency(releaseName model.ReleaseName) error {
 	cmd := []string{
 		"bash",
 		"-c",
-		"mv /tmp/block.relationship.xd.db /var/lib/neo4j/data/databases/neo4j/block.relationship.xd.db",
+		"mv /var/lib/neo4j/data/block.relationship.xd.db.bak /var/lib/neo4j/data/databases/neo4j/block.relationship.xd.db",
 	}
 	stdout, stderr, err := ExecInPod(releaseName, cmd, "")
 	if err != nil {
-		return fmt.Errorf("error seen while executing command `mv /tmp/block.relationship.xd.db /var/lib/neo4j/data/databases/neo4j/block.relationship.xd.db' ,\n err :- %v", err)
+		return fmt.Errorf("error seen while executing command `mv /var/lib/neo4j/data/block.relationship.xd.db.bak /var/lib/neo4j/data/databases/neo4j/block.relationship.xd.db' ,\n err :- %v", err)
 	}
 	if strings.TrimSpace(stderr) != "" {
 		return fmt.Errorf("stderr is not empty while reverting inconsistency%v\n", stderr)
