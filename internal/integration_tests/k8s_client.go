@@ -294,36 +294,38 @@ func ExecInPod(releaseName model.ReleaseName, cmd []string, podName string) (str
 	if podName != "" {
 		name = podName
 	}
-	var (
-		stdout bytes.Buffer
-		stderr bytes.Buffer
-	)
-	req := Clientset.CoreV1().RESTClient().Post().Resource("pods").Name(name).
-		Namespace(string(releaseName.Namespace())).SubResource("exec")
-	option := &coreV1.PodExecOptions{
-		Command: cmd,
-		Stdin:   false,
-		Stdout:  true,
-		Stderr:  true,
-		TTY:     false,
+
+	var lastErr error
+	for attempt := 0; attempt < 6; attempt++ {
+		var stdout, stderr bytes.Buffer
+		req := Clientset.CoreV1().RESTClient().Post().Resource("pods").Name(name).
+			Namespace(string(releaseName.Namespace())).SubResource("exec")
+		option := &coreV1.PodExecOptions{
+			Command: cmd,
+			Stdin:   false,
+			Stdout:  true,
+			Stderr:  true,
+			TTY:     false,
+		}
+		req.VersionedParams(option, scheme.ParameterCodec)
+		executor, err := remotecommand.NewSPDYExecutor(Config, "POST", req.URL())
+		if err != nil {
+			return "", "", err
+		}
+		err = executor.Stream(remotecommand.StreamOptions{
+			Stdout: &stdout,
+			Stderr: &stderr,
+		})
+		if err != nil {
+			if strings.Contains(err.Error(), "container not found") {
+				lastErr = err
+				time.Sleep(10 * time.Second)
+				continue
+			}
+			return "", "", err
+		}
+		s := strings.TrimSuffix(stdout.String(), "\n")
+		return s, stderr.String(), nil
 	}
-	req.VersionedParams(
-		option,
-		scheme.ParameterCodec,
-	)
-	exec, err := remotecommand.NewSPDYExecutor(Config, "POST", req.URL())
-	if err != nil {
-		return "", "", err
-	}
-	err = exec.Stream(remotecommand.StreamOptions{
-		Stdout: &stdout,
-		Stderr: &stderr,
-	})
-	if err != nil {
-		return "", "", err
-	}
-	s := stdout.String()
-	s = strings.TrimSuffix(s, "\n")
-	e := stderr.String()
-	return s, e, nil
+	return "", "", fmt.Errorf("ExecInPod failed after 6 attempts: %w", lastErr)
 }
