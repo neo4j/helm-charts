@@ -936,10 +936,17 @@ func TestAggregateBackupWithWildcard(t *testing.T, standaloneReleaseName model.R
 		return fmt.Errorf("failed to install initial backup helm chart: %v", err)
 	}
 
-	_, _, initialPollErr := waitForBackupPodCompletion(t, namespace, "wildcard-initial-backup", "Backup completed successfully", 8*time.Minute)
+	_, _, initialPollErr := waitForBackupPodCompletion(t, namespace, "wildcard-initial-backup", "Cloud backup completed successfully", 8*time.Minute)
 	if initialPollErr != nil {
 		return fmt.Errorf("initial backup did not complete: %v", initialPollErr)
 	}
+
+	// Uninstall step 1 CronJob to prevent it from firing new FULL backups
+	// that would interfere with the DIFF backup in step 2
+	t.Log("Uninstalling initial backup CronJob before proceeding to step 2")
+	_ = runAll(t, "helm", [][]string{
+		{"uninstall", initialBackupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
+	}, false)
 
 	// Step 2: Create second backup to establish backup chains (needed for aggregation)
 	t.Log("Step 2: Creating second backup to establish backup chains")
@@ -972,10 +979,16 @@ func TestAggregateBackupWithWildcard(t *testing.T, standaloneReleaseName model.R
 		return fmt.Errorf("failed to install second backup helm chart: %v", err)
 	}
 
-	_, _, secondPollErr := waitForBackupPodCompletion(t, namespace, "wildcard-second-backup", "Backup completed successfully", 8*time.Minute)
+	_, _, secondPollErr := waitForBackupPodCompletion(t, namespace, "wildcard-second-backup", "Cloud backup completed successfully", 8*time.Minute)
 	if secondPollErr != nil {
 		return fmt.Errorf("second backup did not complete: %v", secondPollErr)
 	}
+
+	// Uninstall step 2 CronJob to prevent interference with the aggregate backup
+	t.Log("Uninstalling second backup CronJob before proceeding to step 3")
+	_ = runAll(t, "helm", [][]string{
+		{"uninstall", secondBackupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
+	}, false)
 
 	// Step 3: Run aggregate backup with wildcard
 	t.Log("Step 3: Running aggregate backup with wildcard")
@@ -1001,7 +1014,7 @@ func TestAggregateBackupWithWildcard(t *testing.T, standaloneReleaseName model.R
 		AggregateBackup: model.AggregateBackup{
 			Enabled:          true,
 			Database:         "*",
-			FromPath:         "", // Empty means use cloud bucket path
+			FromPath:         fmt.Sprintf("gs://%s/", bucketName),
 			KeepOldBackup:    false,
 			ParallelRecovery: false,
 			Verbose:          true,
