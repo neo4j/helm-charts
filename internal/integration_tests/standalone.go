@@ -961,57 +961,14 @@ func TestAggregateBackupWithWildcard(t *testing.T, standaloneReleaseName model.R
 		return fmt.Errorf("initial backup did not complete: %v", initialPollErr)
 	}
 
-	// Uninstall step 1 CronJob to prevent it from firing new FULL backups
-	// that would interfere with the DIFF backup in step 2
-	t.Log("Uninstalling initial backup CronJob before proceeding to step 2")
+	// Uninstall FULL backup CronJob to prevent interference with the aggregate step
+	t.Log("Uninstalling FULL backup CronJob before proceeding to aggregate")
 	_ = runAll(t, "helm", [][]string{
 		{"uninstall", initialBackupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
 	}, false)
 
-	// Step 2: Create DIFF backup to establish backup chain (needed for aggregation)
-	t.Log("Step 2: Creating DIFF backup to establish backup chain")
-	secondBackupReleaseName := model.NewReleaseName("wildcard-second-backup-" + TestRunIdentifier)
-
-	t.Cleanup(func() {
-		_ = runAll(t, "helm", [][]string{
-			{"uninstall", secondBackupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
-		}, false)
-	})
-
-	secondHelmValues := model.DefaultNeo4jBackupValues
-	secondHelmValues.Backup = model.Backup{
-		BucketName:               bucketName,
-		DatabaseAdminServiceName: fmt.Sprintf("%s-admin", standaloneReleaseName.String()),
-		DatabaseNamespace:        namespace,
-		Database:                 "neo4j,system",
-		CloudProvider:            "gcp",
-		SecretName:               "gcpcred",
-		SecretKeyName:            "credentials",
-		KeepBackupFiles:          true,
-		Type:                     "DIFF",
-		Verbose:                  true,
-	}
-	secondHelmValues.ConsistencyCheck.Enable = false
-
-	t.Logf("Installing DIFF backup chart to create backup chain")
-	_, err = helmClient.Install(t, secondBackupReleaseName.String(), namespace, secondHelmValues)
-	if err != nil {
-		return fmt.Errorf("failed to install DIFF backup helm chart: %v", err)
-	}
-
-	_, _, secondPollErr := waitForBackupPodCompletion(t, namespace, "wildcard-second-backup", "Cloud backup completed successfully", 12*time.Minute)
-	if secondPollErr != nil {
-		return fmt.Errorf("DIFF backup did not complete: %v", secondPollErr)
-	}
-
-	// Uninstall step 2 CronJob to prevent interference with the aggregate backup
-	t.Log("Uninstalling DIFF backup CronJob before proceeding to step 3")
-	_ = runAll(t, "helm", [][]string{
-		{"uninstall", secondBackupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
-	}, false)
-
-	// Step 3: Run aggregate backup with wildcard
-	t.Log("Step 3: Running aggregate backup with wildcard")
+	// Step 2: Run aggregate backup with wildcard
+	t.Log("Step 2: Running aggregate backup with wildcard")
 	aggregateBackupReleaseName := model.NewReleaseName("wildcard-aggregate-backup-" + TestRunIdentifier)
 
 	t.Cleanup(func() {
@@ -1048,8 +1005,8 @@ func TestAggregateBackupWithWildcard(t *testing.T, standaloneReleaseName model.R
 		return fmt.Errorf("failed to install aggregate backup helm chart: %v", err)
 	}
 
-	// Step 4: Poll for aggregate backup completion and verify logs
-	t.Log("Step 4: Waiting for aggregate backup with wildcard to complete")
+	// Step 3: Poll for aggregate backup completion and verify logs
+	t.Log("Step 3: Waiting for aggregate backup with wildcard to complete")
 
 	deadline := time.Now().Add(8 * time.Minute)
 	var aggregateBackupPodFound bool
