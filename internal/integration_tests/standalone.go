@@ -730,43 +730,53 @@ func TestBackupLogStreamingIntegration(t *testing.T, releaseName model.ReleaseNa
 		return fmt.Errorf("helm install failed: %v", err)
 	}
 
-	// Wait for backup job to complete
-	time.Sleep(2 * time.Minute)
+	// Poll for backup job completion
+	t.Log("Waiting for backup log streaming job to complete")
 
-	// Get all pods in the namespace
-	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
-	if err != nil {
-		return fmt.Errorf("error while retrieving pod list during backup operation: %v", err)
-	}
+	deadline := time.Now().Add(8 * time.Minute)
+	var backupPodFound bool
 
-	var found bool
-	var logOutput string
-	for _, pod := range pods.Items {
-		if strings.Contains(pod.Name, "standalone-backup-logs") {
-			found = true
-			logOutput, err = kubectlLogs(t, pod.Name, namespace)
-			if err != nil {
-				return err
+	for time.Now().Before(deadline) {
+		pods, listErr := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
+		if listErr != nil {
+			t.Logf("Error retrieving pod list: %v", listErr)
+			time.Sleep(30 * time.Second)
+			continue
+		}
+
+		for _, pod := range pods.Items {
+			if strings.Contains(pod.Name, "standalone-backup-logs") {
+				backupPodFound = true
+				t.Logf("Found backup log streaming pod: %s (status: %s)", pod.Name, pod.Status.Phase)
+
+				logOutput, logsErr := kubectlLogs(t, pod.Name, namespace)
+				if logsErr != nil {
+					time.Sleep(30 * time.Second)
+					continue
+				}
+
+				if !strings.Contains(logOutput, "Backup completed successfully") {
+					t.Log("Backup not yet completed, waiting...")
+					time.Sleep(30 * time.Second)
+					continue
+				}
+
+				t.Logf("Backup log streaming pod logs:\n%s", logOutput)
+				t.Log("Backup log streaming completed successfully!")
+				return nil
 			}
-			break
 		}
-	}
-	if !found {
-		return fmt.Errorf("no backup pod found")
-	}
 
-	// Verify log content
-	expectedLogEntries := []string{
-		"Backup completed successfully",
-	}
-
-	for _, expectedLog := range expectedLogEntries {
-		if !strings.Contains(logOutput, expectedLog) {
-			return fmt.Errorf("expected log entry '%s' not found in logs", expectedLog)
+		if !backupPodFound {
+			t.Log("Backup log streaming pod not yet created, waiting...")
 		}
+		time.Sleep(30 * time.Second)
 	}
 
-	return nil
+	if !backupPodFound {
+		return fmt.Errorf("no backup pod found after polling")
+	}
+	return fmt.Errorf("backup did not complete within timeout")
 }
 
 func TestBackupCompressIntegration(t *testing.T, releaseName model.ReleaseName) error {
