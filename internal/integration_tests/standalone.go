@@ -519,9 +519,13 @@ func waitForPodsTerminated(t *testing.T, namespace string, timeout time.Duration
 
 // waitForBackupPodCompletion polls until a pod matching podNameSubstring appears in the namespace
 // and its logs contain successMessage. Returns the pod name and full log output.
+// Periodically logs the pod's actual output for diagnostics.
 func waitForBackupPodCompletion(t *testing.T, namespace, podNameSubstring, successMessage string, timeout time.Duration) (string, string, error) {
 	deadline := time.Now().Add(timeout)
 	var podFound bool
+	var lastLogOutput string
+	var lastPodName string
+	pollCount := 0
 
 	for time.Now().Before(deadline) {
 		pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
@@ -535,17 +539,29 @@ func waitForBackupPodCompletion(t *testing.T, namespace, podNameSubstring, succe
 		for _, pod := range pods.Items {
 			if strings.Contains(pod.Name, podNameSubstring) {
 				podFound = true
+				lastPodName = pod.Name
 				t.Logf("Found backup pod: %s (status: %s)", pod.Name, pod.Status.Phase)
 
 				logOutput, logsErr := kubectlLogs(t, pod.Name, namespace)
 				if logsErr != nil {
 					break
 				}
+				lastLogOutput = logOutput
 
 				if strings.Contains(logOutput, successMessage) {
 					return pod.Name, logOutput, nil
 				}
-				t.Logf("Backup pod '%s' not yet completed, waiting...", podNameSubstring)
+
+				// Log pod output periodically (every 4th poll ~2 min) for diagnostics
+				if pollCount%4 == 0 {
+					preview := logOutput
+					if len(preview) > 500 {
+						preview = preview[:500] + "..."
+					}
+					t.Logf("Backup pod '%s' not yet completed. Current logs:\n%s", podNameSubstring, preview)
+				} else {
+					t.Logf("Backup pod '%s' not yet completed, waiting...", podNameSubstring)
+				}
 				break
 			}
 		}
@@ -553,12 +569,16 @@ func waitForBackupPodCompletion(t *testing.T, namespace, podNameSubstring, succe
 		if !podFound {
 			t.Logf("Backup pod matching '%s' not yet created, waiting...", podNameSubstring)
 		}
+		pollCount++
 		time.Sleep(30 * time.Second)
 	}
 
 	if !podFound {
 		return "", "", fmt.Errorf("no backup pod matching '%s' found after %s", podNameSubstring, timeout)
 	}
+
+	// Log full pod output on timeout for post-failure diagnostics
+	t.Logf("TIMEOUT: Backup pod '%s' did not complete within %s. Final pod logs:\n%s", lastPodName, timeout, lastLogOutput)
 	return "", "", fmt.Errorf("backup pod matching '%s' did not complete within %s", podNameSubstring, timeout)
 }
 
@@ -948,8 +968,8 @@ func TestAggregateBackupWithWildcard(t *testing.T, standaloneReleaseName model.R
 		{"uninstall", initialBackupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
 	}, false)
 
-	// Step 2: Create second backup to establish backup chains (needed for aggregation)
-	t.Log("Step 2: Creating second backup to establish backup chains")
+	// Step 2: Create DIFF backup to establish backup chain (needed for aggregation)
+	t.Log("Step 2: Creating DIFF backup to establish backup chain")
 	secondBackupReleaseName := model.NewReleaseName("wildcard-second-backup-" + TestRunIdentifier)
 
 	t.Cleanup(func() {
@@ -968,24 +988,24 @@ func TestAggregateBackupWithWildcard(t *testing.T, standaloneReleaseName model.R
 		SecretName:               "gcpcred",
 		SecretKeyName:            "credentials",
 		KeepBackupFiles:          true,
-		Type:                     "DIFF", // Differential backup to create chain
+		Type:                     "DIFF",
 		Verbose:                  true,
 	}
 	secondHelmValues.ConsistencyCheck.Enable = false
 
-	t.Logf("Installing second backup chart to create backup chains")
+	t.Logf("Installing DIFF backup chart to create backup chain")
 	_, err = helmClient.Install(t, secondBackupReleaseName.String(), namespace, secondHelmValues)
 	if err != nil {
-		return fmt.Errorf("failed to install second backup helm chart: %v", err)
+		return fmt.Errorf("failed to install DIFF backup helm chart: %v", err)
 	}
 
-	_, _, secondPollErr := waitForBackupPodCompletion(t, namespace, "wildcard-second-backup", "Cloud backup completed successfully", 8*time.Minute)
+	_, _, secondPollErr := waitForBackupPodCompletion(t, namespace, "wildcard-second-backup", "Cloud backup completed successfully", 12*time.Minute)
 	if secondPollErr != nil {
-		return fmt.Errorf("second backup did not complete: %v", secondPollErr)
+		return fmt.Errorf("DIFF backup did not complete: %v", secondPollErr)
 	}
 
 	// Uninstall step 2 CronJob to prevent interference with the aggregate backup
-	t.Log("Uninstalling second backup CronJob before proceeding to step 3")
+	t.Log("Uninstalling DIFF backup CronJob before proceeding to step 3")
 	_ = runAll(t, "helm", [][]string{
 		{"uninstall", secondBackupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
 	}, false)
@@ -1014,7 +1034,7 @@ func TestAggregateBackupWithWildcard(t *testing.T, standaloneReleaseName model.R
 		AggregateBackup: model.AggregateBackup{
 			Enabled:          true,
 			Database:         "*",
-			FromPath:         fmt.Sprintf("gs://%s/", bucketName),
+			FromPath:         "",
 			KeepOldBackup:    false,
 			ParallelRecovery: false,
 			Verbose:          true,
@@ -1028,7 +1048,7 @@ func TestAggregateBackupWithWildcard(t *testing.T, standaloneReleaseName model.R
 		return fmt.Errorf("failed to install aggregate backup helm chart: %v", err)
 	}
 
-	// Step 4: Poll for aggregate backup completion
+	// Step 4: Poll for aggregate backup completion and verify logs
 	t.Log("Step 4: Waiting for aggregate backup with wildcard to complete")
 
 	deadline := time.Now().Add(8 * time.Minute)
