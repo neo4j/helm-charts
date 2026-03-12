@@ -172,27 +172,32 @@ func clusterTestCleanup(t *testing.T, clusterReleaseName model.ReleaseName, core
 		err := run(t, "kubectl", "get", "namespace", namespace)
 		if err == nil {
 			for _, core := range []clusterCore{core1, core2, core3} {
-				_ = run(t, "kubectl", "get", "statefulset", core.name.String(), "--namespace", namespace)
-				if err == nil {
+				stsErr := run(t, "kubectl", "get", "statefulset", core.name.String(), "--namespace", namespace)
+				if stsErr == nil {
 					_ = runAll(t, "kubectl", [][]string{
 						{"scale", "statefulset", core.name.String(), "--namespace", namespace, "--replicas=0"},
 					}, false)
 				}
 			}
 
-			time.Sleep(30 * time.Second)
+			waitForPodsTerminated(t, namespace, 60*time.Second)
 
 			_ = runAll(t, "helm", [][]string{
 				{"uninstall", core1.name.String(), core2.name.String(), core3.name.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
 				{"uninstall", clusterReleaseName.String() + "-headless", "--wait", "--timeout", "1m", "--namespace", namespace},
 			}, false)
 
-			time.Sleep(10 * time.Second)
-
 			_ = runAll(t, "kubectl", [][]string{
 				{"delete", "pvc", "--all", "--namespace", namespace, "--force", "--grace-period=0", "--ignore-not-found"},
-				{"delete", "pv", "--all", "--force", "--grace-period=0", "--ignore-not-found"},
 			}, false)
+
+			pvDeleteCmds := [][]string{}
+			for _, core := range []clusterCore{core1, core2, core3} {
+				pvDeleteCmds = append(pvDeleteCmds, []string{
+					"delete", "pv", fmt.Sprintf("%s-pv", core.name.String()), "--force", "--grace-period=0", "--ignore-not-found",
+				})
+			}
+			_ = runAll(t, "kubectl", pvDeleteCmds, false)
 
 			_ = runAll(t, "kubectl", [][]string{
 				{"delete", "namespace", namespace, "--force", "--grace-period=0", "--ignore-not-found"},

@@ -215,6 +215,7 @@ jobs:
     needs: [gke-setup, build-reverseproxy-backup, check-pr]
     if: needs.check-pr.outputs.should_run == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 50
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       NEO4J_EDITION: "enterprise"
@@ -273,6 +274,7 @@ jobs:
     needs: [gke-setup, build-reverseproxy-backup, check-pr]
     if: needs.check-pr.outputs.should_run == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 50
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       NEO4J_EDITION: "community"
@@ -331,6 +333,7 @@ jobs:
     needs: [gke-setup-redhat, build-reverseproxy-backup, check-pr]
     if: needs.check-pr.outputs.should_run == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 50
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       NEO4J_EDITION: "enterprise"
@@ -389,6 +392,7 @@ jobs:
     needs: [gke-setup-redhat, build-reverseproxy-backup, check-pr]
     if: needs.check-pr.outputs.should_run == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 50
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       NEO4J_EDITION: "community"
