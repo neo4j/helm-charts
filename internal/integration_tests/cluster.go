@@ -193,26 +193,15 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t *testing.T, 
 	_, err = helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
 
-	time.Sleep(2 * time.Minute)
 	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
 	assert.NoError(t, err, "cannot retrieve gcp backup cronjob")
 	assert.Equal(t, cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule, fmt.Sprintf("gcp cronjob schedule %s not matching with the schedule defined in values.yaml %s", cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule))
 
-	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
-	assert.NoError(t, err, "error while retrieving pod list during gcp backup operation")
-
-	var found bool
-	for _, pod := range pods.Items {
-		if strings.Contains(pod.Name, "gcp-workload") {
-			found = true
-			logOutput, logsErr := kubectlLogs(t, pod.Name, namespace)
-			assert.NoError(t, logsErr, "error while getting gcp workload backup pod logs")
-			assert.Contains(t, logOutput, "Backup completed successfully")
-			assert.NotContains(t, logOutput, "Deleting file")
-			break
-		}
+	_, logOutput, pollErr := waitForBackupPodCompletion(t, namespace, "gcp-workload", "Backup completed successfully", 8*time.Minute)
+	assert.NoError(t, pollErr, "gcp workload backup did not complete")
+	if pollErr == nil {
+		assert.NotContains(t, logOutput, "Deleting file")
 	}
-	assert.Equal(t, true, found, "no gcp workload backup pod found")
 
 	return nil
 }
@@ -253,7 +242,6 @@ func InstallNeo4jBackupAWSLocalWithConsistencyCheck(t *testing.T, releaseName mo
 	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
 
-	time.Sleep(2 * time.Minute)
 	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
 	assert.NoError(t, err, "cannot retrieve local backup cronjob")
 	assert.Equal(t, cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule, fmt.Sprintf("local backup cronjob schedule %s not matching with the schedule defined in values.yaml %s", cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule))
@@ -402,7 +390,6 @@ func InstallNeo4jBackupAWSCloudStorage(t *testing.T, releaseName model.ReleaseNa
 	_, err = helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
 
-	time.Sleep(2 * time.Minute)
 	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
 	assert.NoError(t, err, "cannot retrieve aws cloud backup cronjob")
 	assert.Equal(t, cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule, fmt.Sprintf("aws cloud backup cronjob schedule %s not matching with the schedule defined in values.yaml %s", cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule))
@@ -547,8 +534,6 @@ func InstallNeo4jBackupAWSHelmChartViaS3(t *testing.T, releaseName model.Release
 		return fmt.Errorf("helm install failed: %v", err)
 	}
 
-	time.Sleep(2 * time.Minute)
-
 	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("cannot retrieve aws backup cronjob: %v", err)
@@ -559,48 +544,37 @@ func InstallNeo4jBackupAWSHelmChartViaS3(t *testing.T, releaseName model.Release
 			cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule)
 	}
 
-	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
-	if err != nil {
-		return fmt.Errorf("error while retrieving pod list during aws backup operation: %v", err)
+	pod, podErr := waitForPodByName(t, namespace, "cluster-backup-aws-s3", 8*time.Minute)
+	if podErr != nil {
+		return podErr
 	}
 
-	var found bool
-	for _, pod := range pods.Items {
-		if strings.Contains(pod.Name, "cluster-backup-aws-s3") {
-			found = true
-			// Verify that the new S3 parameters are correctly set
-			for _, container := range pod.Spec.Containers {
-				s3ForcePathStyleFound := false
-				s3RegionFound := false
-				s3SignatureVersionFound := false
+	for _, container := range pod.Spec.Containers {
+		s3ForcePathStyleFound := false
+		s3RegionFound := false
+		s3SignatureVersionFound := false
 
-				for _, env := range container.Env {
-					if env.Name == "S3_FORCE_PATH_STYLE" && env.Value == "true" {
-						s3ForcePathStyleFound = true
-					}
-					if env.Name == "AWS_REGION" && env.Value == "us-east-1" {
-						s3RegionFound = true
-					}
-					if env.Name == "S3_SIGNATURE_VERSION" && env.Value == "4" {
-						s3SignatureVersionFound = true
-					}
-				}
-
-				if !s3ForcePathStyleFound {
-					return fmt.Errorf("S3_FORCE_PATH_STYLE environment variable not found or not set to true")
-				}
-				if !s3RegionFound {
-					return fmt.Errorf("AWS_REGION environment variable not found or not set to us-east-1")
-				}
-				if !s3SignatureVersionFound {
-					return fmt.Errorf("S3_SIGNATURE_VERSION environment variable not found or not set to 4")
-				}
+		for _, env := range container.Env {
+			if env.Name == "S3_FORCE_PATH_STYLE" && env.Value == "true" {
+				s3ForcePathStyleFound = true
 			}
-			break
+			if env.Name == "AWS_REGION" && env.Value == "us-east-1" {
+				s3RegionFound = true
+			}
+			if env.Name == "S3_SIGNATURE_VERSION" && env.Value == "4" {
+				s3SignatureVersionFound = true
+			}
 		}
-	}
-	if !found {
-		return fmt.Errorf("no aws s3 backup pod found")
+
+		if !s3ForcePathStyleFound {
+			return fmt.Errorf("S3_FORCE_PATH_STYLE environment variable not found or not set to true")
+		}
+		if !s3RegionFound {
+			return fmt.Errorf("AWS_REGION environment variable not found or not set to us-east-1")
+		}
+		if !s3SignatureVersionFound {
+			return fmt.Errorf("S3_SIGNATURE_VERSION environment variable not found or not set to 4")
+		}
 	}
 
 	return nil
@@ -734,8 +708,6 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 		return fmt.Errorf("helm install failed: %v", err)
 	}
 
-	time.Sleep(2 * time.Minute)
-
 	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("cannot retrieve aws backup cronjob: %v", err)
@@ -746,65 +718,52 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 			cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule)
 	}
 
-	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
-	if err != nil {
-		return fmt.Errorf("error while retrieving pod list during aws backup operation: %v", err)
+	pod, podErr := waitForPodByName(t, namespace, "cluster-backup-aws-s3-tls", 8*time.Minute)
+	if podErr != nil {
+		return podErr
 	}
 
-	var found bool
-	for _, pod := range pods.Items {
-		if strings.Contains(pod.Name, "cluster-backup-aws-s3-tls") {
-			found = true
-			// Verify that the CA certificate is mounted
-			for _, container := range pod.Spec.Containers {
-				for _, volumeMount := range container.VolumeMounts {
-					if volumeMount.Name == "s3-ca-cert" {
-						if volumeMount.MountPath != "/s3-ca-cert" {
-							return fmt.Errorf("expected CA certificate mount path to be /s3-ca-cert but got %s", volumeMount.MountPath)
-						}
-					}
-				}
-				// Verify that CA certificate path is set correctly
-				for _, env := range container.Env {
-					if env.Name == "S3_CA_CERT_PATH" {
-						if env.Value != "/s3-ca-cert/ca.crt" {
-							return fmt.Errorf("expected S3_CA_CERT_PATH to be /s3-ca-cert/ca.crt but got %s", env.Value)
-						}
-					}
-				}
-
-				// Verify that the new S3 parameters are correctly set
-				s3ForcePathStyleFound := false
-				s3RegionFound := false
-				s3SignatureVersionFound := false
-
-				for _, env := range container.Env {
-					if env.Name == "S3_FORCE_PATH_STYLE" && env.Value == "true" {
-						s3ForcePathStyleFound = true
-					}
-					if env.Name == "AWS_REGION" && env.Value == "us-east-1" {
-						s3RegionFound = true
-					}
-					if env.Name == "S3_SIGNATURE_VERSION" && env.Value == "4" {
-						s3SignatureVersionFound = true
-					}
-				}
-
-				if !s3ForcePathStyleFound {
-					return fmt.Errorf("S3_FORCE_PATH_STYLE environment variable not found or not set to true")
-				}
-				if !s3RegionFound {
-					return fmt.Errorf("AWS_REGION environment variable not found or not set to us-east-1")
-				}
-				if !s3SignatureVersionFound {
-					return fmt.Errorf("S3_SIGNATURE_VERSION environment variable not found or not set to 4")
+	for _, container := range pod.Spec.Containers {
+		for _, volumeMount := range container.VolumeMounts {
+			if volumeMount.Name == "s3-ca-cert" {
+				if volumeMount.MountPath != "/s3-ca-cert" {
+					return fmt.Errorf("expected CA certificate mount path to be /s3-ca-cert but got %s", volumeMount.MountPath)
 				}
 			}
-			break
 		}
-	}
-	if !found {
-		return fmt.Errorf("no aws s3 tls backup pod found")
+		for _, env := range container.Env {
+			if env.Name == "S3_CA_CERT_PATH" {
+				if env.Value != "/s3-ca-cert/ca.crt" {
+					return fmt.Errorf("expected S3_CA_CERT_PATH to be /s3-ca-cert/ca.crt but got %s", env.Value)
+				}
+			}
+		}
+
+		s3ForcePathStyleFound := false
+		s3RegionFound := false
+		s3SignatureVersionFound := false
+
+		for _, env := range container.Env {
+			if env.Name == "S3_FORCE_PATH_STYLE" && env.Value == "true" {
+				s3ForcePathStyleFound = true
+			}
+			if env.Name == "AWS_REGION" && env.Value == "us-east-1" {
+				s3RegionFound = true
+			}
+			if env.Name == "S3_SIGNATURE_VERSION" && env.Value == "4" {
+				s3SignatureVersionFound = true
+			}
+		}
+
+		if !s3ForcePathStyleFound {
+			return fmt.Errorf("S3_FORCE_PATH_STYLE environment variable not found or not set to true")
+		}
+		if !s3RegionFound {
+			return fmt.Errorf("AWS_REGION environment variable not found or not set to us-east-1")
+		}
+		if !s3SignatureVersionFound {
+			return fmt.Errorf("S3_SIGNATURE_VERSION environment variable not found or not set to 4")
+		}
 	}
 
 	return nil
@@ -885,8 +844,6 @@ func InstallBackupViaTempDir(t *testing.T, releaseName model.ReleaseName) error 
 		return fmt.Errorf("helm install failed: %v", err)
 	}
 
-	time.Sleep(2 * time.Minute)
-
 	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("cannot retrieve aws backup cronjob: %v", err)
@@ -897,31 +854,19 @@ func InstallBackupViaTempDir(t *testing.T, releaseName model.ReleaseName) error 
 			cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule)
 	}
 
-	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
-	if err != nil {
-		return fmt.Errorf("error while retrieving pod list during aws backup operation: %v", err)
+	pod, podErr := waitForPodByName(t, namespace, backupReleaseName.String(), 8*time.Minute)
+	if podErr != nil {
+		return podErr
 	}
 
-	var found bool
-	for _, pod := range pods.Items {
-		if strings.Contains(pod.Name, backupReleaseName.String()) {
-			found = true
-			// Verify that the backup job used the custom tempdir
-			for _, container := range pod.Spec.Containers {
-				for _, env := range container.Env {
-					if env.Name == "AGGREGATE_BACKUP_TEMP_DIR" {
-						if env.Value != customTempDir {
-							return fmt.Errorf("expected AGGREGATE_BACKUP_TEMP_DIR to be %s but got %s", customTempDir, env.Value)
-						}
-					}
+	for _, container := range pod.Spec.Containers {
+		for _, env := range container.Env {
+			if env.Name == "AGGREGATE_BACKUP_TEMP_DIR" {
+				if env.Value != customTempDir {
+					return fmt.Errorf("expected AGGREGATE_BACKUP_TEMP_DIR to be %s but got %s", customTempDir, env.Value)
 				}
 			}
-			break
 		}
-	}
-
-	if !found {
-		return fmt.Errorf("no backup pod found")
 	}
 
 	return nil
@@ -1358,7 +1303,6 @@ func TestBackupMultipleEndpointsE2E(t *testing.T) {
 	_, err = helmClient.Install(t, releaseName.String(), namespace, helmValues)
 	assert.NoError(t, err, "error installing helm chart with multiple backup endpoints")
 
-	time.Sleep(2 * time.Minute)
 	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), releaseName.String(), metav1.GetOptions{})
 	assert.NoError(t, err, "cannot retrieve cronjob for multiple backup endpoints")
 
@@ -1368,21 +1312,8 @@ func TestBackupMultipleEndpointsE2E(t *testing.T) {
 		Value: backupEndpoints,
 	}, "backup endpoints not set correctly in cronjob")
 
-	// Verify backup functionality
-	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
-	assert.NoError(t, err, "error while retrieving pod list")
-
-	var found bool
-	for _, pod := range pods.Items {
-		if strings.Contains(pod.Name, releaseName.String()) {
-			found = true
-			logOutput, logsErr := kubectlLogs(t, pod.Name, namespace)
-			assert.NoError(t, logsErr, "error getting backup pod logs")
-			assert.Contains(t, logOutput, "Backup Completed")
-			break
-		}
-	}
-	assert.True(t, found, "no backup pod found")
+	_, _, pollErr := waitForBackupPodCompletion(t, namespace, releaseName.String(), "Backup Completed", 8*time.Minute)
+	assert.NoError(t, pollErr, "backup with multiple endpoints did not complete")
 }
 
 func TestClusterProbeConfigurations(t *testing.T) {

@@ -517,6 +517,73 @@ func waitForPodsTerminated(t *testing.T, namespace string, timeout time.Duration
 	t.Logf("Timed out waiting for pods in namespace %s to terminate after %v", namespace, timeout)
 }
 
+// waitForBackupPodCompletion polls until a pod matching podNameSubstring appears in the namespace
+// and its logs contain successMessage. Returns the pod name and full log output.
+func waitForBackupPodCompletion(t *testing.T, namespace, podNameSubstring, successMessage string, timeout time.Duration) (string, string, error) {
+	deadline := time.Now().Add(timeout)
+	var podFound bool
+
+	for time.Now().Before(deadline) {
+		pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
+		if err != nil {
+			t.Logf("Error retrieving pod list: %v", err)
+			time.Sleep(30 * time.Second)
+			continue
+		}
+
+		podFound = false
+		for _, pod := range pods.Items {
+			if strings.Contains(pod.Name, podNameSubstring) {
+				podFound = true
+				t.Logf("Found backup pod: %s (status: %s)", pod.Name, pod.Status.Phase)
+
+				logOutput, logsErr := kubectlLogs(t, pod.Name, namespace)
+				if logsErr != nil {
+					break
+				}
+
+				if strings.Contains(logOutput, successMessage) {
+					return pod.Name, logOutput, nil
+				}
+				t.Logf("Backup pod '%s' not yet completed, waiting...", podNameSubstring)
+				break
+			}
+		}
+
+		if !podFound {
+			t.Logf("Backup pod matching '%s' not yet created, waiting...", podNameSubstring)
+		}
+		time.Sleep(30 * time.Second)
+	}
+
+	if !podFound {
+		return "", "", fmt.Errorf("no backup pod matching '%s' found after %s", podNameSubstring, timeout)
+	}
+	return "", "", fmt.Errorf("backup pod matching '%s' did not complete within %s", podNameSubstring, timeout)
+}
+
+// waitForPodByName polls until a pod matching podNameSubstring appears in the namespace.
+// Use this when only pod spec checks (env vars, mounts) are needed, not log assertions.
+func waitForPodByName(t *testing.T, namespace, podNameSubstring string, timeout time.Duration) (v1.Pod, error) {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
+		if err != nil {
+			t.Logf("Error retrieving pod list: %v", err)
+			time.Sleep(30 * time.Second)
+			continue
+		}
+		for _, pod := range pods.Items {
+			if strings.Contains(pod.Name, podNameSubstring) {
+				return pod, nil
+			}
+		}
+		t.Logf("Pod matching '%s' not yet created, waiting...", podNameSubstring)
+		time.Sleep(30 * time.Second)
+	}
+	return v1.Pod{}, fmt.Errorf("no pod matching '%s' found after %s", podNameSubstring, timeout)
+}
+
 func AsCloseable(closeables []Closeable) Closeable {
 	return func() error {
 		var combinedErrors error
@@ -814,41 +881,13 @@ func TestBackupCompressIntegration(t *testing.T, releaseName model.ReleaseName) 
 		return fmt.Errorf("helm install failed: %v", err)
 	}
 
-	// Wait for backup job to complete
-	time.Sleep(2 * time.Minute)
-
-	// Get all pods in the namespace
-	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
-	if err != nil {
-		return fmt.Errorf("error while retrieving pod list during backup operation: %v", err)
+	_, logOutput, pollErr := waitForBackupPodCompletion(t, namespace, "standalone-backup-compress", "Backup completed successfully", 8*time.Minute)
+	if pollErr != nil {
+		return pollErr
 	}
 
-	var found bool
-	var logOutput string
-	for _, pod := range pods.Items {
-		if strings.Contains(pod.Name, "standalone-backup-compress") {
-			found = true
-			logOutput, err = kubectlLogs(t, pod.Name, namespace)
-			if err != nil {
-				return err
-			}
-			break
-		}
-	}
-	if !found {
-		return fmt.Errorf("no backup pod found")
-	}
-
-	// Verify log content for compression enabled
-	expectedLogEntries := []string{
-		"Backup completed successfully",
-		"--compress=true",
-	}
-
-	for _, expectedLog := range expectedLogEntries {
-		if !strings.Contains(logOutput, expectedLog) {
-			return fmt.Errorf("expected log entry '%s' not found in logs:\n%s", expectedLog, logOutput)
-		}
+	if !strings.Contains(logOutput, "--compress=true") {
+		return fmt.Errorf("expected log entry '--compress=true' not found in logs:\n%s", logOutput)
 	}
 
 	return nil
@@ -897,8 +936,10 @@ func TestAggregateBackupWithWildcard(t *testing.T, standaloneReleaseName model.R
 		return fmt.Errorf("failed to install initial backup helm chart: %v", err)
 	}
 
-	// Wait for initial backup job to complete
-	time.Sleep(2 * time.Minute)
+	_, _, initialPollErr := waitForBackupPodCompletion(t, namespace, "wildcard-initial-backup", "Backup completed successfully", 8*time.Minute)
+	if initialPollErr != nil {
+		return fmt.Errorf("initial backup did not complete: %v", initialPollErr)
+	}
 
 	// Step 2: Create second backup to establish backup chains (needed for aggregation)
 	t.Log("Step 2: Creating second backup to establish backup chains")
@@ -931,8 +972,10 @@ func TestAggregateBackupWithWildcard(t *testing.T, standaloneReleaseName model.R
 		return fmt.Errorf("failed to install second backup helm chart: %v", err)
 	}
 
-	// Wait for second backup to complete
-	time.Sleep(2 * time.Minute)
+	_, _, secondPollErr := waitForBackupPodCompletion(t, namespace, "wildcard-second-backup", "Backup completed successfully", 8*time.Minute)
+	if secondPollErr != nil {
+		return fmt.Errorf("second backup did not complete: %v", secondPollErr)
+	}
 
 	// Step 3: Run aggregate backup with wildcard
 	t.Log("Step 3: Running aggregate backup with wildcard")
@@ -1413,9 +1456,6 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 		return err
 	}
 
-	t.Log("Waiting for GCP backup job to complete")
-	time.Sleep(2 * time.Minute)
-
 	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
 	if err != nil {
 		t.Logf("Failed to get GCP backup cronjob: %v", err)
@@ -1426,50 +1466,23 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 		return fmt.Errorf("gcp cronjob schedule %s not matching with the schedule defined in values.yaml %s", cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule)
 	}
 
-	t.Log("Getting GCP backup pod logs")
-	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
-	if err != nil {
-		t.Logf("Failed to list pods: %v", err)
-		return fmt.Errorf("error while retrieving pod list during gcp backup operation: %v", err)
+	_, logOutput, pollErr := waitForBackupPodCompletion(t, namespace, "standalone-backup-gcp", "Cloud backup completed successfully", 8*time.Minute)
+	if pollErr != nil {
+		return pollErr
 	}
 
-	var found bool
-	for _, pod := range pods.Items {
-		if strings.Contains(pod.Name, "standalone-backup-gcp") {
-			found = true
-			t.Logf("Found GCP backup pod: %s", pod.Name)
-			t.Logf("Pod status: %s", pod.Status.Phase)
-
-			logOutput, err := kubectlLogs(t, pod.Name, namespace)
-			if err != nil {
-				return err
-			}
-			t.Logf("GCP backup pod logs:\n%s", logOutput)
-
-			// Check for connectivity and initialization logs
-			requiredLogs := []string{
-				"Connectivity established with Database",
-				"Printing backup flags",
-				"--include-metadata=all",
-				"--type=FULL",
-				"neo4j system",
-				"Backup completed successfully",
-				"Cloud backup completed successfully",
-			}
-
-			for _, requiredLog := range requiredLogs {
-				if !strings.Contains(logOutput, requiredLog) {
-					t.Logf("Required log entry not found in GCP backup: %s", requiredLog)
-					return fmt.Errorf("required log entry not found in GCP backup: %s", requiredLog)
-				}
-			}
-			break
+	requiredLogs := []string{
+		"Connectivity established with Database",
+		"Printing backup flags",
+		"--include-metadata=all",
+		"--type=FULL",
+		"neo4j system",
+		"Backup completed successfully",
+	}
+	for _, requiredLog := range requiredLogs {
+		if !strings.Contains(logOutput, requiredLog) {
+			return fmt.Errorf("required log entry not found in GCP backup: %s", requiredLog)
 		}
-	}
-
-	if !found {
-		t.Log("No GCP backup pod found")
-		return fmt.Errorf("no gcp backup pod found")
 	}
 
 	t.Log("GCP backup test completed successfully")
@@ -1548,9 +1561,6 @@ func installNeo4jBackupLocalWithConsistencyCheck(t *testing.T, standaloneRelease
 		t.Logf("Failed to install local backup helm chart: %v", err)
 		return err
 	}
-
-	t.Log("Waiting for local backup job to complete")
-	time.Sleep(2 * time.Minute)
 
 	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
 	if err != nil {
@@ -1671,9 +1681,6 @@ func installNeo4jBackupGCPCloudStorage(t *testing.T, standaloneReleaseName model
 		t.Logf("Failed to install GCP backup helm chart: %v", err)
 		return err
 	}
-
-	t.Log("Waiting for GCP backup job to complete")
-	time.Sleep(2 * time.Minute)
 
 	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
 	if err != nil {
@@ -1844,30 +1851,19 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t *testing.T, standalone
 		return err
 	}
 
-	time.Sleep(2 * time.Minute)
 	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
 	assert.NoError(t, err, "cannot retrieve gcp backup cronjob")
 	assert.Equal(t, cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule, fmt.Sprintf("gcp cronjob schedule %s not matching with the schedule defined in values.yaml %s", cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule))
 
-	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
-	assert.NoError(t, err, "error while retrieving pod list during gcp backup operation")
-
-	var found bool
-	for _, pod := range pods.Items {
-		if strings.Contains(pod.Name, "gcp-workload") {
-			found = true
-			logOutput, logsErr := kubectlLogs(t, pod.Name, namespace)
-			assert.NoError(t, logsErr, "error while getting gcp workload backup pod logs")
-			assert.Contains(t, logOutput, "Connectivity established with Database")
-			assert.Contains(t, logOutput, "Printing backup flags")
-			assert.Contains(t, logOutput, "--include-metadata=all")
-			assert.Contains(t, logOutput, "--type=FULL")
-			assert.Contains(t, logOutput, "neo4j system")
-			assert.Contains(t, logOutput, "Backup completed successfully")
-			break
-		}
+	_, logOutput, pollErr := waitForBackupPodCompletion(t, namespace, "gcp-workload", "Backup completed successfully", 8*time.Minute)
+	assert.NoError(t, pollErr, "gcp workload backup did not complete")
+	if pollErr == nil {
+		assert.Contains(t, logOutput, "Connectivity established with Database")
+		assert.Contains(t, logOutput, "Printing backup flags")
+		assert.Contains(t, logOutput, "--include-metadata=all")
+		assert.Contains(t, logOutput, "--type=FULL")
+		assert.Contains(t, logOutput, "neo4j system")
 	}
-	assert.Equal(t, true, found, "no gcp workload backup pod found")
 
 	return nil
 }
