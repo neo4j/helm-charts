@@ -173,15 +173,24 @@ func checkDataBaseExists(t *testing.T, releaseName model.ReleaseName, databaseNa
 // It's a way to check if apoc plugin is loaded and the customized apoc config is loaded or not
 func checkApocConfig(t *testing.T, releaseName model.ReleaseName) error {
 
-	results, err := runQuery(t, releaseName, "CALL apoc.create.node([\"Person\", \"Actor\"], {name: \"Tom Hanks\"});", nil, false)
-	if !assert.NoError(t, err) {
-		t.Logf("%v", err)
-		return fmt.Errorf("error seen while firing apoc cypher \n err := %v", err)
+	var lastErr error
+	for i := 0; i < 3; i++ {
+		results, err := runQuery(t, releaseName, "CALL apoc.create.node([\"Person\", \"Actor\"], {name: \"Tom Hanks\"});", nil, false)
+		if err != nil {
+			if strings.Contains(err.Error(), "NotALeader") {
+				t.Logf("Attempt %d: Hit non-leader node, retrying...", i+1)
+				time.Sleep(10 * time.Second)
+				lastErr = err
+				continue
+			}
+			return fmt.Errorf("error seen while firing apoc cypher \n err := %v", err)
+		}
+		if len(results) == 0 {
+			return fmt.Errorf("no results received from cypher query")
+		}
+		return nil
 	}
-	if !assert.NotEqual(t, len(results), 0) {
-		return fmt.Errorf("no results received from cypher query")
-	}
-	return nil
+	return fmt.Errorf("apoc query failed after 3 attempts: %v", lastErr)
 }
 
 // checkNodeCount runs the cypher query to get the number of nodes on a cluster core
