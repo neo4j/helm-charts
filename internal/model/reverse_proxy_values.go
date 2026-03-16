@@ -15,6 +15,7 @@ type ReverseProxy struct {
 	Ingress          Ingress           `yaml:"ingress,omitempty"`
 	PodLabels        map[string]string `yaml:"podLabels,omitempty"`
 	NodeSelector     map[string]string `yaml:"nodeSelector,omitempty"`
+	Tolerations      []Toleration      `yaml:"tolerations,omitempty"`
 }
 
 type Ingress struct {

@@ -293,6 +293,87 @@ func TestReverseProxyEmptyPodLabelsAndNodeSelector(t *testing.T) {
 	assert.Nil(t, nodeSelector, "nodeSelector should not be present when empty")
 }
 
+// TestReverseProxyTolerations checks if tolerations are correctly set on the deployment pod spec
+func TestReverseProxyTolerations(t *testing.T) {
+	t.Parallel()
+
+	dummyToleration := model.Toleration{
+		Key:      "dedicated",
+		Operator: "Equal",
+		Value:    "reverse-proxy",
+		Effect:   "NoSchedule",
+	}
+	helmValues := model.DefaultNeo4jReverseProxyValues
+	helmValues.ReverseProxy.ServiceName = "neo4j-service"
+	helmValues.ReverseProxy.Tolerations = []model.Toleration{dummyToleration}
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while testing tolerations with reverse proxy helm chart")
+
+	deploymentList := manifests.OfType(&appsv1.Deployment{})
+	assert.Len(t, deploymentList, 1, fmt.Sprintf("number of deployments should be 1, not %d", len(deploymentList)))
+
+	deployment := deploymentList[0].(*appsv1.Deployment)
+	tolerations := deployment.Spec.Template.Spec.Tolerations
+	assert.Len(t, tolerations, 1, "should have exactly one toleration")
+	assert.Equal(t, dummyToleration.Key, tolerations[0].Key, "toleration key should match")
+	assert.Equal(t, dummyToleration.Operator, string(tolerations[0].Operator), "toleration operator should match")
+	assert.Equal(t, dummyToleration.Value, tolerations[0].Value, "toleration value should match")
+	assert.Equal(t, dummyToleration.Effect, string(tolerations[0].Effect), "toleration effect should match")
+}
+
+// TestReverseProxyEmptyTolerations checks that empty tolerations don't break the template
+func TestReverseProxyEmptyTolerations(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jReverseProxyValues
+	helmValues.ReverseProxy.ServiceName = "neo4j-service"
+	helmValues.ReverseProxy.Tolerations = []model.Toleration{}
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while testing empty tolerations with reverse proxy helm chart")
+
+	deploymentList := manifests.OfType(&appsv1.Deployment{})
+	assert.Len(t, deploymentList, 1, fmt.Sprintf("number of deployments should be 1, not %d", len(deploymentList)))
+
+	deployment := deploymentList[0].(*appsv1.Deployment)
+	tolerations := deployment.Spec.Template.Spec.Tolerations
+	assert.Nil(t, tolerations, "tolerations should not be present when empty")
+}
+
+// TestReverseProxyTolerationsWithNodeSelector checks if both tolerations and nodeSelector work together
+func TestReverseProxyTolerationsWithNodeSelector(t *testing.T) {
+	t.Parallel()
+
+	dummyToleration := model.Toleration{
+		Key:      "dedicated",
+		Operator: "Equal",
+		Value:    "reverse-proxy",
+		Effect:   "NoSchedule",
+	}
+	nodeSelectorLabels := map[string]string{
+		"workload-type": "reverse-proxy",
+	}
+	helmValues := model.DefaultNeo4jReverseProxyValues
+	helmValues.ReverseProxy.ServiceName = "neo4j-service"
+	helmValues.ReverseProxy.Tolerations = []model.Toleration{dummyToleration}
+	helmValues.ReverseProxy.NodeSelector = nodeSelectorLabels
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while testing tolerations with nodeSelector on reverse proxy helm chart")
+
+	deploymentList := manifests.OfType(&appsv1.Deployment{})
+	assert.Len(t, deploymentList, 1, fmt.Sprintf("number of deployments should be 1, not %d", len(deploymentList)))
+
+	deployment := deploymentList[0].(*appsv1.Deployment)
+	tolerations := deployment.Spec.Template.Spec.Tolerations
+	assert.Len(t, tolerations, 1, "should have exactly one toleration")
+
+	nodeSelector := deployment.Spec.Template.Spec.NodeSelector
+	assert.NotNil(t, nodeSelector, "nodeSelector should be present")
+	assert.Equal(t, nodeSelectorLabels, nodeSelector, "nodeSelector labels should match")
+}
+
 // TestReverseProxyImagePullSecrets tests that imagePullSecrets are correctly set in the reverse proxy deployment
 func TestReverseProxyImagePullSecrets(t *testing.T) {
 	t.Parallel()
