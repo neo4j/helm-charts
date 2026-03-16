@@ -333,6 +333,30 @@ affinity: {}
 #                  - S2
 #          topologyKey: topology.kubernetes.io/zone
 
+# Additional environment variables for the backup container
+# Follows the standard Kubernetes env var format
+# Supports value, valueFrom.secretKeyRef, valueFrom.configMapKeyRef, etc.
+extraEnvVars: []
+#  - name: AWS_CA_BUNDLE
+#    value: "/custom-ca/ca-bundle.crt"
+#  - name: MY_SECRET_VAR
+#    valueFrom:
+#      secretKeyRef:
+#        name: my-secret
+#        key: secret-key
+
+# Additional volumes to mount on the backup pod
+extraVolumes: []
+#  - name: custom-ca
+#    secret:
+#      secretName: my-ca-cert-secret
+
+# Additional volume mounts for the backup container
+extraVolumeMounts: []
+#  - name: custom-ca
+#    mountPath: /custom-ca
+#    readOnly: true
+
 #Add tolerations to the Neo4j pod
 tolerations: []
 #  - key: "key1"

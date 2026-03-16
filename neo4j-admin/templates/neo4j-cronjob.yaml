@@ -195,6 +195,9 @@ spec:
                   value: {{ .Values.backup.databaseBackupEndpoints | trim | quote }}
                 - name: AGGREGATE_BACKUP_TEMP_DIR
                   value: {{ .Values.backup.aggregate.tempDir | default "" | quote }}
+                {{- with .Values.extraEnvVars }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
               volumeMounts:
                 {{- if .Values.backup.secretName }}
                 - name: credentials
@@ -208,6 +211,9 @@ spec:
                 {{- end }}
                 - name: "backup"
                   mountPath: "/backups"
+                {{- with .Values.extraVolumeMounts }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
               securityContext: {{ .Values.containerSecurityContext | toYaml | nindent 16 }}
           volumes:
             {{- if .Values.backup.secretName }}
@@ -232,5 +238,8 @@ spec:
 {{- else }}
   {{- printf "emptyDir: {}" | nindent 14 }}
 {{- end }}
+            {{- with .Values.extraVolumes }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
 
 

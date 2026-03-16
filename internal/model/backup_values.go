@@ -13,8 +13,11 @@ type Neo4jBackupValues struct {
 	ContainerSecurityContext ContainerSecurityContext `yaml:"containerSecurityContext,omitempty"`
 	NodeSelector             map[string]string        `yaml:"nodeSelector,omitempty"`
 	Resources                Neo4jBackupResources     `yaml:"resources,omitempty"`
-	Tolerations              []Toleration             `yaml:"tolerations,omitempty"`
-	Affinity                 Affinity                 `yaml:"affinity,omitempty"`
+	Tolerations              []Toleration               `yaml:"tolerations,omitempty"`
+	Affinity                 Affinity                   `yaml:"affinity,omitempty"`
+	ExtraEnvVars             []map[string]interface{}   `yaml:"extraEnvVars,omitempty"`
+	ExtraVolumes             []map[string]interface{}   `yaml:"extraVolumes,omitempty"`
+	ExtraVolumeMounts        []map[string]interface{}   `yaml:"extraVolumeMounts,omitempty"`
 }
 
 type Neo4jBackupResources struct {
