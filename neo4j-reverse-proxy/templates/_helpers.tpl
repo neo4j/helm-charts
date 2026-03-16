@@ -64,3 +64,9 @@ host: {{ $.Values.reverseProxy.ingress.host | quote }}
 nodeSelector: {{ .Values.reverseProxy.nodeSelector | toYaml | nindent 2 }}
 {{- end }}
 {{- end }}
+
+{{- define "neo4j.tolerations" -}}
+{{- if and (not (kindIs "invalid" .Values.reverseProxy.tolerations)) (not (empty .Values.reverseProxy.tolerations)) }}
+tolerations: {{ .Values.reverseProxy.tolerations | toYaml | nindent 2 }}
+{{- end }}
+{{- end }}
