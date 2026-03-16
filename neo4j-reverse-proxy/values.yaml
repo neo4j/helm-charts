@@ -53,6 +53,13 @@ reverseProxy:
   #  label1: "value1"
   #  label2: "value2"
 
+  # Tolerations for pod scheduling on tainted nodes
+  tolerations: []
+#    - key: "key1"
+#      operator: "Equal"
+#      value: "value1"
+#      effect: "NoSchedule"
+
   # This assumes ingress-nginx controller or haproxy-ingress-controller is already installed in your kubernetes cluster.
   # You can install ingress-nginx by following instructions on this link https://github.com/kubernetes/ingress-nginx/blob/main/docs/deploy/index.md#quick-start
   # You can install haproxy-ingress by following instructions on this link https://haproxy-ingress.github.io/docs/getting-started/
