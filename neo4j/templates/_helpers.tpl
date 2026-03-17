@@ -189,7 +189,7 @@ E.g. by adding `--set podSpec.loadbalancer=include`
 {{- define "neo4j.resources.evaluateCPU" -}}
 
     {{/* check regex here :- https://regex101.com/r/wJsFcO/1 */}}
-    {{ $cpuRegex := "(^\\d+)((\\.?[^\\.a-zA-Z])?)([0-9]*m?$)" }}
+    {{- $cpuRegex := "(^\\d+)((\\.?[^\\.a-zA-Z])?)([0-9]*m?$)" }}
 
     {{- $cpu := .Values.neo4j.resources.requests.cpu | toString }}
 
@@ -215,7 +215,7 @@ E.g. by adding `--set podSpec.loadbalancer=include`
 
 {{- define "neo4j.resources.evaluateMemory" -}}
     {{/* check regex here :- https://regex101.com/r/68NEQV/1 */}}
-    {{ $memoryRegex := "(^\\d+)((\\.?[^\\.a-zA-Z\\s])?)(\\d*)(([EkMGTP]?|[EKMGTP]i?|e[+-]?\\d*[EKMGTP]?)$)" -}}
+    {{- $memoryRegex := "(^\\d+)((\\.?[^\\.a-zA-Z\\s])?)(\\d*)(([EkMGTP]?|[EKMGTP]i?|e[+-]?\\d*[EKMGTP]?)$)" -}}
 
     {{- $memory := .Values.neo4j.resources.requests.memory | toString }}
 
@@ -233,7 +233,7 @@ E.g. by adding `--set podSpec.loadbalancer=include`
 
     {{/* Mininum 2Gi or 2Gb, Converting the value type to Gb or Gi */}}
 
-    {{/* 1kilo = 0.000001G */}}
+    {{- /* 1kilo = 0.000001G */}}
     {{- if or (contains "K" $memory) (contains "k" $memory) -}}
         {{ $memoryFloat = divf ($memory | replace "K" "" | float64) 1000000 -}}
 
