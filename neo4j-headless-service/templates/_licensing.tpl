@@ -1,17 +1,17 @@
-{{- define "neo4j.checkLicenseAgreement" }}
+{{- define "neo4j.headlessService.checkLicenseAgreement" }}
 {{- $isEnterprise := required "neo4j.edition must be specified" .Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
 {{- if $isEnterprise }}
   {{- if not (kindIs "string" .Values.neo4j.acceptLicenseAgreement) | or (not .Values.neo4j.acceptLicenseAgreement) }}
-  {{- include "neo4j.licenseAgreementMessage" .Values.neo4j.acceptLicenseAgreement | fail }}
+  {{- include "neo4j.headlessService.licenseAgreementMessage" .Values.neo4j.acceptLicenseAgreement | fail }}
   {{- else }}
   {{- if and (ne .Values.neo4j.acceptLicenseAgreement "yes") (ne .Values.neo4j.acceptLicenseAgreement "eval") }}
-    {{- include "neo4j.licenseAgreementMessage" .Values.neo4j.acceptLicenseAgreement | fail }}
+    {{- include "neo4j.headlessService.licenseAgreementMessage" .Values.neo4j.acceptLicenseAgreement | fail }}
   {{- end }}
   {{- end }}
 {{- end }}
 {{- end }}
 
-{{- define "neo4j.licenseAgreementMessage" }}
+{{- define "neo4j.headlessService.licenseAgreementMessage" }}
 
 In order to use Neo4j Enterprise Edition you must have a Neo4j license agreement.
 More information is available at: https://neo4j.com/licensing/
