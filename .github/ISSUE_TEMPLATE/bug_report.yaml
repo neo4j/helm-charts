@@ -31,69 +31,22 @@ body:
       label: Chart Name
       description: What chart are you running ?
       options:
-        - Neo4j Cluster (v4.4.x)
-        - Neo4j Standalone (v4.4.x)
-        - Neo4j Read Replica (v4.4.x)
-        - Neo4j Headless Service (v4.4.x)
-        - Neo4j Cluster LoadBalancer (v4.4.x)
+        - Neo4j Cluster
+        - Neo4j Standalone
+        - Neo4j Read Replica
+        - Neo4j Headless Service
+        - Neo4j Cluster LoadBalancer
         - Neo4j
         - Neo4j Admin
         - Neo4j Reverse Proxy
         - Neo4j LoadBalancer 
     validations:
       required: true      
-  - type: dropdown
+  - type: textarea
     id: version
     attributes:
       label: Chart Version
-      description: What version of our charts are you running?
-      options:
-        - 5.12.0
-        - 5.11.0
-        - 5.10.0
-        - 5.9.0
-        - 5.8.0
-        - 5.7.0
-        - 5.6.0
-        - 5.5.0
-        - 5.4.0
-        - 5.3.0
-        - 5.2.0
-        - 5.1.0        
-        - 4.4.26
-        - 4.4.25
-        - 4.4.24
-        - 4.4.23
-        - 4.4.22
-        - 4.4.21
-        - 4.4.20
-        - 4.4.19
-        - 4.4.18
-        - 4.4.17
-        - 4.4.16        
-        - 4.4.15
-        - 4.4.14
-        - 4.4.13       
-        - 4.4.12
-        - 4.4.11
-        - 4.4.10
-        - 4.4.9
-        - 4.4.8
-        - 4.4.7
-        - 4.4.6
-        - 4.4.5
-        - 4.4.4
-        - 4.4.3
-        - 4.4.2
-        - 4.4.1
-        - 4.4.0        
-        - 4.3.9 (Standalone only)
-        - 4.3.8 (Standalone only)
-        - 4.3.7 (Standalone only)
-        - 4.3.6 (Standalone only)
-        - 4.3.5 (Standalone only)
-        - 4.3.3 (Standalone only)
-        - 4.3.2 (Standalone only)        
+      description: What version of helm-charts are you running?
     validations:
       required: true
   - type: dropdown
