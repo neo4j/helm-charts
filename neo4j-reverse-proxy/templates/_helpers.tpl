@@ -1,4 +1,4 @@
-{{- define "neo4j.fullname" -}}
+{{- define "neo4j.reverseProxy.fullname" -}}
     {{- if .Values.fullnameOverride -}}
         {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
     {{- else -}}
@@ -15,7 +15,7 @@
     {{- end -}}
 {{- end -}}
 
-{{- define "neo4j.annotations" -}}
+{{- define "neo4j.reverseProxy.annotations" -}}
     {{- if not (empty .) }}
 annotations:
         {{- with . -}}
@@ -41,7 +41,7 @@ tls: {{ toYaml $.Values.reverseProxy.ingress.tls.config | nindent 2 }}
 {{- end -}}
 
 {{- define "neo4j.reverseProxy.ingressName" -}}
-{{- $ingressName := printf "%s-reverseproxy-ingress" (include "neo4j.fullname" .) -}}
+{{- $ingressName := printf "%s-reverseproxy-ingress" (include "neo4j.reverseProxy.fullname" .) -}}
 {{- printf "$(kubectl get ingress/%s -n %s -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"  $ingressName .Release.Namespace -}}
 {{- end -}}
 
@@ -51,7 +51,7 @@ host: {{ $.Values.reverseProxy.ingress.host | quote }}
 {{- end }}
 {{- end -}}
 
-{{- define "neo4j.labels" -}}
+{{- define "neo4j.reverseProxy.labels" -}}
     {{- with . -}}
         {{- range $name, $value := . }}
 {{ $name }}: "{{ $value }}"
@@ -59,13 +59,13 @@ host: {{ $.Values.reverseProxy.ingress.host | quote }}
     {{- end -}}
 {{- end }}
 
-{{- define "neo4j.nodeSelector" -}}
+{{- define "neo4j.reverseProxy.nodeSelector" -}}
 {{- if and (not (kindIs "invalid" .Values.reverseProxy.nodeSelector) ) (not (empty .Values.reverseProxy.nodeSelector) ) }}
 nodeSelector: {{ .Values.reverseProxy.nodeSelector | toYaml | nindent 2 }}
 {{- end }}
 {{- end }}
 
-{{- define "neo4j.tolerations" -}}
+{{- define "neo4j.reverseProxy.tolerations" -}}
 {{- if and (not (kindIs "invalid" .Values.reverseProxy.tolerations)) (not (empty .Values.reverseProxy.tolerations)) }}
 tolerations: {{ .Values.reverseProxy.tolerations | toYaml | nindent 2 }}
 {{- end }}
