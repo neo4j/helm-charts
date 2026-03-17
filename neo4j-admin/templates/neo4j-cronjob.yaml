@@ -1,25 +1,25 @@
-{{- template "neo4j.backup.checkDatabaseIPAndServiceName" . -}}
-{{- template "neo4j.backup.checkAzureStorageAccountName" . -}}
-{{- template "neo4j.backup.checkIfSecretExistsOrNot" . -}}
-{{- template "neo4j.backup.checkBucketName" . -}}
-{{- template "neo4j.backup.checkServiceAccountName" . -}}
-{{- template "neo4j.checkNodeSelectorLabels" . -}}
+{{- template "neo4j.admin.backup.checkDatabaseIPAndServiceName" . -}}
+{{- template "neo4j.admin.backup.checkAzureStorageAccountName" . -}}
+{{- template "neo4j.admin.backup.checkIfSecretExistsOrNot" . -}}
+{{- template "neo4j.admin.backup.checkBucketName" . -}}
+{{- template "neo4j.admin.backup.checkServiceAccountName" . -}}
+{{- template "neo4j.admin.checkNodeSelectorLabels" . -}}
 {{- if and .Values.backup.s3CASecretName (not .Values.backup.s3CASecretKey) }}
 {{- fail "If backup.s3CASecretName is specified, backup.s3CASecretKey must also be specified" }}
 {{- end }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: "{{ include "neo4j.fullname" . }}"
+  name: "{{ include "neo4j.admin.fullname" . }}"
   labels:
     app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
-    app.kubernetes.io/instance: {{ include "neo4j.fullname" . | quote }}
+    app.kubernetes.io/instance: {{ include "neo4j.admin.fullname" . | quote }}
     {{- if and (not (kindIs "invalid" .Values.backup.aggregate)) .Values.backup.aggregate.enabled }}
     app.kubernetes.io/component: aggregate-backup
     {{- else }}
     app.kubernetes.io/component: backup
     {{- end }}
-    {{- include "neo4j.labels" $.Values.neo4j.labels | indent 4 }}
+    {{- include "neo4j.admin.labels" $.Values.neo4j.labels | indent 4 }}
 spec:
   schedule: {{ $.Values.neo4j.jobSchedule | default "* * * * *" | quote }}
   concurrencyPolicy: Forbid
@@ -31,9 +31,9 @@ spec:
       template:
         metadata:
           annotations:
-            {{- include "neo4j.annotations" $.Values.neo4j.podAnnotations | indent 12 }}
+            {{- include "neo4j.admin.annotations" $.Values.neo4j.podAnnotations | indent 12 }}
           labels:
-            {{- include "neo4j.labels" $.Values.neo4j.podLabels | indent 12 }}
+            {{- include "neo4j.admin.labels" $.Values.neo4j.podLabels | indent 12 }}
         spec:
           {{- if .Values.serviceAccountName }}
           serviceAccountName: {{ .Values.serviceAccountName }}
@@ -48,16 +48,16 @@ spec:
           {{- end }}
           {{- end }}
           securityContext: {{ .Values.securityContext | toYaml  | nindent 12 }}
-          {{- include "neo4j.tolerations" .Values.tolerations | nindent 10 }}
-          {{- include "neo4j.affinity" .Values.affinity| nindent 10 }}
-          {{- include "neo4j.nodeSelector" . }}
+          {{- include "neo4j.admin.tolerations" .Values.tolerations | nindent 10 }}
+          {{- include "neo4j.admin.affinity" .Values.affinity| nindent 10 }}
+          {{- include "neo4j.admin.nodeSelector" . }}
           containers:
             - name: graph-backup
               {{- $registry := .Values.neo4j.registry | default "" }}
               {{- $image_prefix := ternary (printf "%s/" $registry) "" (ne $registry "") }}
               image: {{ $image_prefix }}{{ .Values.neo4j.image }}:{{ .Values.neo4j.imageTag }}
               imagePullPolicy: Always
-              resources: {{- include "neo4j.resourcesAndLimits" . | nindent 16 }}
+              resources: {{- include "neo4j.admin.resourcesAndLimits" . | nindent 16 }}
               env:
                 - name: DATABASE_SERVICE_NAME
                   value: {{ .Values.backup.databaseAdminServiceName  | trim | quote }}
@@ -178,7 +178,7 @@ spec:
                 - name: CONSISTENCY_CHECK_TEMP_DIR
                   value: {{ .Values.consistencyCheck.tempDir | default "" | quote }}
                 - name: CONSISTENCY_CHECK_TIMEOUT
-                  value: {{ include "neo4j.backup.validateAndSetTimeout" . | quote }}
+                  value: {{ include "neo4j.admin.backup.validateAndSetTimeout" . | quote }}
                 - name: AGGREGATE_BACKUP_ENABLED
                   value: {{ .Values.backup.aggregate.enabled | toString | quote | default false }}
                 - name: AGGREGATE_BACKUP_VERBOSE

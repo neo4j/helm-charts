@@ -1,8 +1,8 @@
-{{- define "neo4j.backup.checkIfSecretExistsOrNot" -}}
+{{- define "neo4j.admin.backup.checkIfSecretExistsOrNot" -}}
     {{- if (.Values.backup.secretName | trim) -}}
         {{- if (not .Values.disableLookups) -}}
 
-            {{- include "neo4j.backup.checkIfSecretKeyNameExistsOrNot" . -}}
+            {{- include "neo4j.admin.backup.checkIfSecretKeyNameExistsOrNot" . -}}
             {{- $secret := (lookup "v1" "Secret" .Release.Namespace .Values.backup.secretName) }}
             {{- $secretExists := $secret | all }}
 
@@ -15,7 +15,7 @@
     {{- end -}}
 {{- end -}}
 
-{{- define "neo4j.backup.checkAzureStorageAccountName" -}}
+{{- define "neo4j.admin.backup.checkAzureStorageAccountName" -}}
     {{- if eq .Values.backup.cloudProvider "azure" }}
         {{- if and (or (empty .Values.backup.secretName) (empty .Values.backup.secretKeyName)) (empty .Values.backup.azureStorageAccountName) -}}
             {{ fail (printf "Both secretName|secretKeyName and azureStorageAccountName key cannot be empty. Please set one of them via --set backup.secretName or --set backup.azureStorageAccountName") }}
@@ -28,7 +28,7 @@
 {{- end -}}
 
 {{/*check for secretKeyName existence only when secretName is provided*/}}
-{{- define "neo4j.backup.checkIfSecretKeyNameExistsOrNot" -}}
+{{- define "neo4j.admin.backup.checkIfSecretKeyNameExistsOrNot" -}}
    {{- if .Values.backup.secretName -}}
     {{- if kindIs "invalid" .Values.backup.secretKeyName -}}
         {{- fail (printf "Missing secretKeyName !!") -}}
@@ -40,14 +40,14 @@
 {{- end -}}
 
 {{/* checks if serviceAccountName is provided or not  when secretName is missing */}}
-{{- define "neo4j.backup.checkServiceAccountName" -}}
+{{- define "neo4j.admin.backup.checkServiceAccountName" -}}
     {{- if and (empty .Values.serviceAccountName) (empty .Values.backup.secretName) (not (empty .Values.backup.cloudProvider)) -}}
         {{ fail (printf "Please provide either secretName or serviceAccountName. Both cannot be empty. Please set only one of them via --set backup.secretName or --set serviceAccountName") }}
     {{- end -}}
 {{- end -}}
 
 {{/* checks if serviceAccountName is provided or not  when secretName is missing */}}
-{{- define "neo4j.backup.checkBucketName" -}}
+{{- define "neo4j.admin.backup.checkBucketName" -}}
     {{- if or (kindIs "invalid" .Values.backup.aggregate) (not .Values.backup.aggregate.enabled) -}}
         {{- if .Values.backup.cloudProvider -}}
             {{- if empty .Values.backup.bucketName -}}
@@ -57,7 +57,7 @@
     {{- end -}}
 {{- end -}}
 
-{{- define "neo4j.backup.checkDatabaseIPAndServiceName" -}}
+{{- define "neo4j.admin.backup.checkDatabaseIPAndServiceName" -}}
 
     {{- if or (kindIs "invalid" .Values.backup.aggregate) (not .Values.backup.aggregate.enabled) -}}
         {{- if and (kindIs "invalid" .Values.backup.databaseAdminServiceName) (kindIs "invalid" .Values.backup.databaseAdminServiceIP) (kindIs "invalid" .Values.backup.databaseBackupEndpoints) -}}
@@ -76,7 +76,7 @@
 {{- end -}}
 
 {{/* Validate and set default timeout for consistency check */}}
-{{- define "neo4j.backup.validateAndSetTimeout" -}}
+{{- define "neo4j.admin.backup.validateAndSetTimeout" -}}
     {{- $timeout := .Values.consistencyCheck.timeout | default "" -}}
     {{- if $timeout -}}
         {{- /* Validate timeout format using regex for Go duration format */ -}}
