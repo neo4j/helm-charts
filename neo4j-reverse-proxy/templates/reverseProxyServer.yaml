@@ -2,25 +2,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "neo4j.fullname" . }}-reverseproxy-dep
+  name: {{ include "neo4j.reverseProxy.fullname" . }}-reverseproxy-dep
   labels:
-    name: {{ include "neo4j.fullname" . }}-reverseproxy-dep
+    name: {{ include "neo4j.reverseProxy.fullname" . }}-reverseproxy-dep
   namespace: "{{ .Release.Namespace }}"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      name: {{ include "neo4j.fullname" . }}-reverseproxy
+      name: {{ include "neo4j.reverseProxy.fullname" . }}-reverseproxy
   template:
     metadata:
-      name: {{ include "neo4j.fullname" . }}-reverseproxy
+      name: {{ include "neo4j.reverseProxy.fullname" . }}-reverseproxy
       labels:
-        name: {{ include "neo4j.fullname" . }}-reverseproxy
-        {{- include "neo4j.labels" $.Values.reverseProxy.podLabels | indent 8 }}
+        name: {{ include "neo4j.reverseProxy.fullname" . }}-reverseproxy
+        {{- include "neo4j.reverseProxy.labels" $.Values.reverseProxy.podLabels | indent 8 }}
     spec:
       securityContext: {{ toYaml .Values.reverseProxy.podSecurityContext | nindent 8 }}
-      {{- include "neo4j.nodeSelector" . | nindent 6 }}
-      {{- include "neo4j.tolerations" . | nindent 6 }}
+      {{- include "neo4j.reverseProxy.nodeSelector" . | nindent 6 }}
+      {{- include "neo4j.reverseProxy.tolerations" . | nindent 6 }}
       {{- if .Values.reverseProxy.imagePullSecrets }}
       imagePullSecrets:
       {{- range .Values.reverseProxy.imagePullSecrets }}
@@ -28,7 +28,7 @@ spec:
       {{- end }}
       {{- end }}
       containers:
-        - name: {{ include "neo4j.fullname" . }}-reverseproxy
+        - name: {{ include "neo4j.reverseProxy.fullname" . }}-reverseproxy
           image: {{ $.Values.reverseProxy.image }}
           imagePullPolicy: Always
           securityContext: {{ toYaml .Values.reverseProxy.containerSecurityContext | nindent 12 }}
@@ -58,12 +58,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "neo4j.fullname" . }}-reverseproxy-service
+  name: {{ include "neo4j.reverseProxy.fullname" . }}-reverseproxy-service
   namespace: "{{ .Release.Namespace }}"
 spec:
   type: ClusterIP
   selector:
-    name: {{ include "neo4j.fullname" . }}-reverseproxy
+    name: {{ include "neo4j.reverseProxy.fullname" . }}-reverseproxy
   ports:
     - protocol: TCP
       port: {{ $port }}
