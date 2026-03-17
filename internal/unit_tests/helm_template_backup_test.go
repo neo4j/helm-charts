@@ -1701,3 +1701,184 @@ func TestAzureBlobServiceURLDefaultConfiguration(t *testing.T) {
 			"NEO4J_dbms_integrations_cloud__storage_azb_blob__endpoint__suffix should not be set when using default")
 	}
 }
+
+// TestBackupExtraEnvVars tests that extraEnvVars are correctly injected into the backup container
+func TestBackupExtraEnvVars(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.Backup.SecretName = "demo"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "demo-bucket"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+	helmValues.Backup.Database = "neo4j"
+	helmValues.ExtraEnvVars = []map[string]interface{}{
+		{"name": "AWS_CA_BUNDLE", "value": "/custom-ca/ca-bundle.crt"},
+		{"name": "CUSTOM_VAR", "value": "custom-value"},
+	}
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while trying to install helm backup with extraEnvVars")
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
+	cronjob := cronjobs[0].(*batchv1.CronJob)
+
+	container := cronjob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
+	envVariables := container.Env
+
+	assert.Contains(t, envVariables, corev1.EnvVar{Name: "AWS_CA_BUNDLE", Value: "/custom-ca/ca-bundle.crt"},
+		"AWS_CA_BUNDLE should be present in container env vars")
+	assert.Contains(t, envVariables, corev1.EnvVar{Name: "CUSTOM_VAR", Value: "custom-value"},
+		"CUSTOM_VAR should be present in container env vars")
+}
+
+// TestBackupExtraVolumesAndMounts tests that extraVolumes and extraVolumeMounts are correctly applied
+func TestBackupExtraVolumesAndMounts(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.Backup.SecretName = "demo"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "demo-bucket"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+	helmValues.Backup.Database = "neo4j"
+	helmValues.ExtraVolumes = []map[string]interface{}{
+		{
+			"name": "custom-ca",
+			"secret": map[string]interface{}{
+				"secretName": "my-ca-cert-secret",
+			},
+		},
+	}
+	helmValues.ExtraVolumeMounts = []map[string]interface{}{
+		{
+			"name":      "custom-ca",
+			"mountPath": "/custom-ca",
+			"readOnly":  true,
+		},
+	}
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while trying to install helm backup with extraVolumes and extraVolumeMounts")
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
+	cronjob := cronjobs[0].(*batchv1.CronJob)
+
+	container := cronjob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
+	volumeMounts := container.VolumeMounts
+
+	var foundMount bool
+	for _, vm := range volumeMounts {
+		if vm.Name == "custom-ca" {
+			foundMount = true
+			assert.Equal(t, "/custom-ca", vm.MountPath)
+			assert.True(t, vm.ReadOnly)
+			break
+		}
+	}
+	assert.True(t, foundMount, "custom-ca volume mount should be present")
+
+	volumes := cronjob.Spec.JobTemplate.Spec.Template.Spec.Volumes
+	var foundVolume bool
+	for _, v := range volumes {
+		if v.Name == "custom-ca" {
+			foundVolume = true
+			assert.NotNil(t, v.Secret, "custom-ca volume should be a secret volume")
+			assert.Equal(t, "my-ca-cert-secret", v.Secret.SecretName)
+			break
+		}
+	}
+	assert.True(t, foundVolume, "custom-ca volume should be present")
+}
+
+// TestBackupAwsCABundleViaExtraEnvVars tests the full AWS_CA_BUNDLE use case with extraEnvVars, extraVolumes, and extraVolumeMounts
+func TestBackupAwsCABundleViaExtraEnvVars(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.Backup.SecretName = "aws-creds"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "my-backup-bucket"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+	helmValues.Backup.Database = "neo4j"
+	helmValues.ExtraEnvVars = []map[string]interface{}{
+		{"name": "AWS_CA_BUNDLE", "value": "/custom-ca/ca-bundle.crt"},
+	}
+	helmValues.ExtraVolumes = []map[string]interface{}{
+		{
+			"name": "custom-ca",
+			"secret": map[string]interface{}{
+				"secretName": "my-ca-cert-secret",
+			},
+		},
+	}
+	helmValues.ExtraVolumeMounts = []map[string]interface{}{
+		{
+			"name":      "custom-ca",
+			"mountPath": "/custom-ca",
+			"readOnly":  true,
+		},
+	}
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while trying to install helm backup with AWS_CA_BUNDLE configuration")
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
+	cronjob := cronjobs[0].(*batchv1.CronJob)
+
+	container := cronjob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
+
+	assert.Contains(t, container.Env, corev1.EnvVar{Name: "AWS_CA_BUNDLE", Value: "/custom-ca/ca-bundle.crt"},
+		"AWS_CA_BUNDLE env var should be present")
+
+	var foundMount bool
+	for _, vm := range container.VolumeMounts {
+		if vm.Name == "custom-ca" && vm.MountPath == "/custom-ca" && vm.ReadOnly {
+			foundMount = true
+			break
+		}
+	}
+	assert.True(t, foundMount, "custom-ca volume mount should be present for AWS_CA_BUNDLE cert")
+
+	var foundVolume bool
+	for _, v := range cronjob.Spec.JobTemplate.Spec.Template.Spec.Volumes {
+		if v.Name == "custom-ca" {
+			foundVolume = true
+			assert.Equal(t, "my-ca-cert-secret", v.Secret.SecretName)
+			break
+		}
+	}
+	assert.True(t, foundVolume, "custom-ca volume should be present for AWS_CA_BUNDLE cert")
+}
+
+// TestBackupNoExtraEnvVars tests that the template works correctly when no extraEnvVars are specified
+func TestBackupNoExtraEnvVars(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.Backup.SecretName = "demo"
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.BucketName = "demo-bucket"
+	helmValues.Backup.DatabaseAdminServiceName = "standalone-admin"
+	helmValues.Backup.Database = "neo4j"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while trying to install helm backup without extraEnvVars")
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
+	cronjob := cronjobs[0].(*batchv1.CronJob)
+
+	container := cronjob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
+
+	for _, envVar := range container.Env {
+		assert.NotEqual(t, "AWS_CA_BUNDLE", envVar.Name, "AWS_CA_BUNDLE should not be present when extraEnvVars is empty")
+	}
+}

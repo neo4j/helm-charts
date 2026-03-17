@@ -138,13 +138,24 @@ func startDatabase(t *testing.T, releaseName model.ReleaseName, databaseName str
 	return nil
 }
 
-// createMoviesDataSet runs movie dataset cypher query
+// createMoviesDataSet runs movie dataset cypher query, retrying on NotALeader errors
+// which can occur when the cluster is still electing a leader after previous tests
 func createMoviesDataSet(t *testing.T, releaseName model.ReleaseName) error {
-	_, err := runQuery(t, releaseName, model.MOVIES_CYPHER, nil, false)
-	if !assert.NoError(t, err) {
+	deadline := time.Now().Add(2 * time.Minute)
+	var err error
+	for time.Now().Before(deadline) {
+		_, err = runQuery(t, releaseName, model.MOVIES_CYPHER, nil, false)
+		if err == nil {
+			return nil
+		}
+		if neo4j.IsNeo4jError(err) && strings.Contains(err.(*neo4j.Neo4jError).Code, "NotALeader") {
+			t.Logf("Leader not available yet, retrying in 10s... (%v)", err)
+			time.Sleep(10 * time.Second)
+			continue
+		}
 		return fmt.Errorf("error seen while creating movies dataset, err := %v", err)
 	}
-	return nil
+	return fmt.Errorf("error seen while creating movies dataset after retries, err := %v", err)
 }
 
 // checkDataBaseExists runs a cypher query to check if the given database name exists or not

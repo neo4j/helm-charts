@@ -714,7 +714,7 @@ func PerformAggregateBackup() error {
 			return fmt.Errorf("Aggregate Backup Failed for database %s !! output = %s \n err = %v", db, output, err)
 		}
 		log.Printf("Aggregate backup completed successfully for database %s", db)
-		if !noAggregationNeeded {
+		if !noAggregationNeeded && db != "*" {
 			backupFileNames, err := retrieveAggregatedBackupFileNames(output)
 			if err != nil {
 				return err

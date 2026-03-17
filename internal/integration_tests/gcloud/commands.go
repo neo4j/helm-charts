@@ -44,7 +44,10 @@ func run(t *testing.T, command string, args ...string) error {
 	if out != nil {
 		t.Logf("output: %s\n", out)
 	}
-	return err
+	if err != nil {
+		return fmt.Errorf("%w: %s", err, string(out))
+	}
+	return nil
 }
 
 func createDisk(t *testing.T, zone Zone, project Project, releaseName model.ReleaseName) (model.PersistentDiskName, Closeable, error) {

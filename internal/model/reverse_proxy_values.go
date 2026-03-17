@@ -1,9 +1,12 @@
 package model
 
 type Neo4jReverseProxyValues struct {
-	NameOverride     string       `yaml:"nameOverride,omitempty"`
-	FullnameOverride string       `yaml:"fullnameOverride,omitempty"`
-	ReverseProxy     ReverseProxy `yaml:"reverseProxy,omitempty"`
+	NameOverride      string                   `yaml:"nameOverride,omitempty"`
+	FullnameOverride  string                   `yaml:"fullnameOverride,omitempty"`
+	ReverseProxy      ReverseProxy             `yaml:"reverseProxy,omitempty"`
+	ExtraEnvVars      []map[string]interface{} `yaml:"extraEnvVars,omitempty"`
+	ExtraVolumes      []map[string]interface{} `yaml:"extraVolumes,omitempty"`
+	ExtraVolumeMounts []map[string]interface{} `yaml:"extraVolumeMounts,omitempty"`
 }
 
 type ReverseProxy struct {

@@ -77,3 +77,21 @@ reverseProxy:
 #      - secretName: "demo2"
 #        hosts:
 #          - localhost
+
+# Additional environment variables for the reverse proxy container
+# Follows the standard Kubernetes env var format
+extraEnvVars: []
+#  - name: MY_CUSTOM_VAR
+#    value: "my-value"
+
+# Additional volumes for the reverse proxy pod
+extraVolumes: []
+#  - name: custom-config
+#    configMap:
+#      name: my-configmap
+
+# Additional volume mounts for the reverse proxy container
+extraVolumeMounts: []
+#  - name: custom-config
+#    mountPath: /config
+#    readOnly: true

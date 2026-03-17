@@ -413,3 +413,105 @@ func TestReverseProxyImagePullSecretsEmpty(t *testing.T) {
 	pullSecrets := deployment.Spec.Template.Spec.ImagePullSecrets
 	assert.Nil(t, pullSecrets, "imagePullSecrets should be nil when empty")
 }
+
+// TestReverseProxyExtraEnvVars tests that extraEnvVars are correctly injected into the reverse proxy container
+func TestReverseProxyExtraEnvVars(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jReverseProxyValues
+	helmValues.ReverseProxy.ServiceName = "neo4j-service"
+	helmValues.ExtraEnvVars = []map[string]interface{}{
+		{"name": "CUSTOM_VAR_1", "value": "value1"},
+		{"name": "CUSTOM_VAR_2", "value": "value2"},
+	}
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while testing extraEnvVars with reverse proxy helm chart")
+
+	deploymentList := manifests.OfType(&appsv1.Deployment{})
+	assert.Len(t, deploymentList, 1, fmt.Sprintf("number of deployments should be 1, not %d", len(deploymentList)))
+
+	deployment := deploymentList[0].(*appsv1.Deployment)
+	container := deployment.Spec.Template.Spec.Containers[0]
+	envVariables := container.Env
+
+	assert.Contains(t, envVariables, corev1.EnvVar{Name: "CUSTOM_VAR_1", Value: "value1"},
+		"CUSTOM_VAR_1 should be present in container env vars")
+	assert.Contains(t, envVariables, corev1.EnvVar{Name: "CUSTOM_VAR_2", Value: "value2"},
+		"CUSTOM_VAR_2 should be present in container env vars")
+}
+
+// TestReverseProxyExtraVolumesAndMounts tests that extraVolumes and extraVolumeMounts are correctly applied
+func TestReverseProxyExtraVolumesAndMounts(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jReverseProxyValues
+	helmValues.ReverseProxy.ServiceName = "neo4j-service"
+	helmValues.ExtraVolumes = []map[string]interface{}{
+		{
+			"name": "custom-config",
+			"configMap": map[string]interface{}{
+				"name": "my-configmap",
+			},
+		},
+	}
+	helmValues.ExtraVolumeMounts = []map[string]interface{}{
+		{
+			"name":      "custom-config",
+			"mountPath": "/config",
+			"readOnly":  true,
+		},
+	}
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while testing extraVolumes and extraVolumeMounts with reverse proxy helm chart")
+
+	deploymentList := manifests.OfType(&appsv1.Deployment{})
+	assert.Len(t, deploymentList, 1, fmt.Sprintf("number of deployments should be 1, not %d", len(deploymentList)))
+
+	deployment := deploymentList[0].(*appsv1.Deployment)
+	container := deployment.Spec.Template.Spec.Containers[0]
+
+	var foundMount bool
+	for _, vm := range container.VolumeMounts {
+		if vm.Name == "custom-config" {
+			foundMount = true
+			assert.Equal(t, "/config", vm.MountPath)
+			assert.True(t, vm.ReadOnly)
+			break
+		}
+	}
+	assert.True(t, foundMount, "custom-config volume mount should be present")
+
+	volumes := deployment.Spec.Template.Spec.Volumes
+	var foundVolume bool
+	for _, v := range volumes {
+		if v.Name == "custom-config" {
+			foundVolume = true
+			assert.NotNil(t, v.ConfigMap, "custom-config volume should be a configMap volume")
+			assert.Equal(t, "my-configmap", v.ConfigMap.Name)
+			break
+		}
+	}
+	assert.True(t, foundVolume, "custom-config volume should be present")
+}
+
+// TestReverseProxyNoExtraEnvVars tests that the template works correctly when no extras are specified
+func TestReverseProxyNoExtraEnvVars(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jReverseProxyValues
+	helmValues.ReverseProxy.ServiceName = "neo4j-service"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while testing reverse proxy without extras")
+
+	deploymentList := manifests.OfType(&appsv1.Deployment{})
+	assert.Len(t, deploymentList, 1)
+
+	deployment := deploymentList[0].(*appsv1.Deployment)
+	container := deployment.Spec.Template.Spec.Containers[0]
+
+	assert.Nil(t, container.VolumeMounts, "volumeMounts should be nil when no extras specified")
+	assert.Nil(t, deployment.Spec.Template.Spec.Volumes, "volumes should be nil when no extras specified")
+}

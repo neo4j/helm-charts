@@ -43,6 +43,17 @@ spec:
               value: {{ $.Values.reverseProxy.domain | default "cluster.local" }}
             - name: NAMESPACE
               value: {{ $.Values.reverseProxy.namespace | default .Release.Namespace }}
+            {{- with .Values.extraEnvVars }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if .Values.extraVolumeMounts }}
+          volumeMounts:
+            {{- toYaml .Values.extraVolumeMounts | nindent 12 }}
+          {{- end }}
+      {{- if .Values.extraVolumes }}
+      volumes:
+        {{- toYaml .Values.extraVolumes | nindent 8 }}
+      {{- end }}
 ---
 apiVersion: v1
 kind: Service
