@@ -1,13 +1,13 @@
 {{- /* In almost all cases the selector should be unspecified and the default selector should be used. */ -}}
-{{- template "neo4j.checkPortMapping" . -}}
+{{- template "neo4j.headlessService.checkPortMapping" . -}}
 apiVersion: v1
 kind: Service
 metadata:
-  name: "{{ include "neo4j.name" $ }}-headless"
+  name: "{{ include "neo4j.headlessService.name" $ }}-headless"
   namespace: "{{ .Release.Namespace }}"
   labels:
-    helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" $ }}"
-    app: "{{ template "neo4j.name" . }}"
+    helm.neo4j.com/neo4j.name: "{{ template "neo4j.headlessService.name" $ }}"
+    app: "{{ template "neo4j.headlessService.name" . }}"
   {{- with .Values.annotations }}
   annotations: {{ toYaml . | nindent 4 }}
   {{- end }}
@@ -46,7 +46,7 @@ spec:
     {{- end }}
 
   selector:
-    app: "{{ template "neo4j.name" . }}"
+    app: "{{ template "neo4j.headlessService.name" . }}"
     {{- with .Values.selector }}
     {{- . | toYaml | nindent 4 }}
     {{- end }}

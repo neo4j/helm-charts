@@ -2,7 +2,7 @@
 Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
-{{- define "neo4j.fullname" -}}
+{{- define "neo4j.admin.fullname" -}}
     {{- if .Values.fullnameOverride -}}
         {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
     {{- else -}}
@@ -20,7 +20,7 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- end -}}
 
 {{/* checkNodeSelectorLabels checks if there is any node in the cluster which has nodeSelector labels */}}
-{{- define "neo4j.checkNodeSelectorLabels" -}}
+{{- define "neo4j.admin.checkNodeSelectorLabels" -}}
     {{- if and (not (empty $.Values.nodeSelector)) (not $.Values.disableLookups) -}}
         {{- $validNodes := 0 -}}
         {{- $numberOfLabelsRequired := len $.Values.nodeSelector -}}
@@ -48,7 +48,7 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
     {{- end -}}
 {{- end -}}
 
-{{- define "neo4j.tolerations" -}}
+{{- define "neo4j.admin.tolerations" -}}
 {{/* Add tolerations only if .Values.tolerations contains entries */}}
     {{- if . -}}
 tolerations:
@@ -56,14 +56,14 @@ tolerations:
     {{- end -}}
 {{- end -}}
 
-{{- define "neo4j.affinity" -}}
+{{- define "neo4j.admin.affinity" -}}
     {{- if . -}}
 affinity:
 {{ toYaml . | indent 1 }}
     {{- end -}}
 {{- end -}}
 
-{{- define "neo4j.resourcesAndLimits" -}}
+{{- define "neo4j.admin.resourcesAndLimits" -}}
 requests:
   ephemeral-storage: {{ .Values.resources.requests.ephemeralStorage | default "4Gi" }}
 
