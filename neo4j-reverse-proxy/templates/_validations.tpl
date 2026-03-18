@@ -7,8 +7,10 @@
         {{- else -}}
             {{- range $.Values.reverseProxy.ingress.tls.config -}}
                 {{- $value := . -}}
-                {{- if and (not (kindIs "invalid" $value.secretName)) (empty ($value.secretName | trim)) -}}
-                    {{ fail (printf "Empty secretName for tls config") }}
+                {{- if not (kindIs "invalid" $value.secretName) -}}
+                    {{- if empty ($value.secretName | trim) -}}
+                        {{ fail (printf "Empty secretName for tls config") }}
+                    {{- end -}}
                 {{- end -}}
             {{- end -}}
         {{- end -}}
