@@ -76,15 +76,16 @@ func TestReverseProxyIngressWhenTLSEnabled(t *testing.T) {
 	assert.Equal(t, ingressTLS[0].SecretName, secretName, fmt.Sprintf("TLS config secret name %s not matching with %s", secretName, ingressTLS[0].SecretName))
 }
 
-// TestReverseProxyIngressEmptyConfigWhenTLSEnabled checks when tls config is not present
+// TestReverseProxyIngressEmptyConfigWhenTLSEnabled checks that TLS enabled with empty config
+// and no annotations fails with a descriptive error
 func TestReverseProxyIngressEmptyConfigWhenTLSEnabled(t *testing.T) {
 	t.Parallel()
 
 	helmValues := model.DefaultNeo4jReverseProxyValues
 	helmValues.ReverseProxy.Ingress.TLS.Config = nil
 	_, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
-	assert.Error(t, err, "no error found")
-	assert.Contains(t, err.Error(), "Empty tls config")
+	assert.Error(t, err, "TLS enabled with no config and no annotations should fail")
+	assert.Contains(t, err.Error(), "either tls.config or ingress annotations must be provided")
 }
 
 // TestReverseProxyIngressEmptySecretName checks if error is seen when no secretname is provided
@@ -99,6 +100,53 @@ func TestReverseProxyIngressEmptySecretName(t *testing.T) {
 	_, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
 	assert.Error(t, err, "no error found")
 	assert.Contains(t, err.Error(), "Empty secretName for tls config")
+}
+
+// TestReverseProxyIngressTLSEnabledWithAnnotationsNoConfig checks that TLS enabled with
+// annotations and no tls.config succeeds (annotation-based certificate management)
+func TestReverseProxyIngressTLSEnabledWithAnnotationsNoConfig(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jReverseProxyValues
+	helmValues.ReverseProxy.Ingress.TLS.Config = nil
+	helmValues.ReverseProxy.Ingress.Annotations = map[string]string{
+		"cert-manager.io/cluster-issuer": "letsencrypt-prod",
+	}
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
+	assert.NoError(t, err, "TLS enabled with cert annotations and no tls.config should succeed")
+	ingressList := manifests.OfType(&v1.Ingress{})
+	assert.Len(t, ingressList, 1, fmt.Sprintf("number of ingress should be 1, not equal with %d", len(ingressList)))
+
+	ingress := ingressList[0].(*v1.Ingress)
+	assert.Nil(t, ingress.Spec.TLS, "tls block should not be rendered when tls.config is empty")
+	assert.Equal(t, "letsencrypt-prod", ingress.Annotations["cert-manager.io/cluster-issuer"], "cert-manager annotation should be present")
+
+	servicePort := ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Number
+	assert.Equal(t, int32(443), servicePort, "service port should be 443 when TLS is enabled")
+}
+
+// TestReverseProxyIngressTLSConfigWithoutSecretName checks that TLS config entries
+// without a secretName are valid (ingress controller uses its default certificate)
+func TestReverseProxyIngressTLSConfigWithoutSecretName(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jReverseProxyValues
+	helmValues.ReverseProxy.Ingress.TLS.Config = []model.Config{
+		{
+			Hosts: []string{"example.com"},
+		},
+	}
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
+	assert.NoError(t, err, "TLS config without secretName should succeed")
+	ingressList := manifests.OfType(&v1.Ingress{})
+	assert.Len(t, ingressList, 1, fmt.Sprintf("number of ingress should be 1, not equal with %d", len(ingressList)))
+
+	ingressTLS := ingressList[0].(*v1.Ingress).Spec.TLS
+	assert.NotNil(t, ingressTLS, "tls block should be rendered when tls.config has entries")
+	assert.Equal(t, "", ingressTLS[0].SecretName, "secretName should be empty")
+	assert.Equal(t, []string{"example.com"}, ingressTLS[0].Hosts, "hosts should match")
 }
 
 // TestReverseProxyIngressHostName checks if hostname is populated in the ingress definition or not
