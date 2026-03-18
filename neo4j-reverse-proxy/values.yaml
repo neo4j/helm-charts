@@ -79,9 +79,18 @@ reverseProxy:
     annotations: {}
 #      "demo": "value"
 #      "demo2": "value2"
+#      # For annotation-based certificate management (no tls.config needed):
+#      # AWS ALB with ACM:
+#      #   "alb.ingress.kubernetes.io/certificate-arn": "arn:aws:acm:region:account:certificate/id"
+#      #   "alb.ingress.kubernetes.io/listen-ports": '[{"HTTPS":443}]'
+#      # cert-manager:
+#      #   "cert-manager.io/cluster-issuer": "letsencrypt-prod"
     host: ""
     tls:
       enabled: false
+      # tls.config is optional when certificates are managed via ingress annotations.
+      # When tls.config is empty and tls.enabled is true, TLS termination is handled
+      # by the ingress controller using the certificate specified in annotations.
       config: []
 #      - secretName: "demo2"
 #        hosts:
