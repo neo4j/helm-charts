@@ -160,6 +160,7 @@ backup:
   # For GCP :
   # create the secret via the gcp service account json key file.
   # ex: 'kubectl create secret generic gcpcred --from-file=credentials=/demo/gcpcreds.json'
+  # When using Workload Identity (via serviceAccountName), leave secretName empty
   secretName: ""
   # provide the keyname used in the above secret
   secretKeyName: ""
