@@ -10,15 +10,26 @@ type Neo4jReverseProxyValues struct {
 }
 
 type ReverseProxy struct {
-	Image            string            `yaml:"image,omitempty"`
-	ImagePullSecrets []string          `yaml:"imagePullSecrets,omitempty"`
-	ServiceName      string            `yaml:"serviceName,omitempty"`
-	Namespace        string            `yaml:"namespace,omitempty"`
-	Domain           string            `yaml:"domain,omitempty"`
-	Ingress          Ingress           `yaml:"ingress,omitempty"`
-	PodLabels        map[string]string `yaml:"podLabels,omitempty"`
-	NodeSelector     map[string]string `yaml:"nodeSelector,omitempty"`
-	Tolerations      []Toleration      `yaml:"tolerations,omitempty"`
+	Image            string                `yaml:"image,omitempty"`
+	ImagePullSecrets []string              `yaml:"imagePullSecrets,omitempty"`
+	ServiceName      string                `yaml:"serviceName,omitempty"`
+	Namespace        string                `yaml:"namespace,omitempty"`
+	Domain           string                `yaml:"domain,omitempty"`
+	Ingress          Ingress               `yaml:"ingress,omitempty"`
+	PodLabels        map[string]string     `yaml:"podLabels,omitempty"`
+	NodeSelector     map[string]string     `yaml:"nodeSelector,omitempty"`
+	Tolerations      []Toleration          `yaml:"tolerations,omitempty"`
+	Resources        ReverseProxyResources `yaml:"resources,omitempty"`
+}
+
+type ReverseProxyResources struct {
+	Requests ReverseProxyResourceValues `yaml:"requests,omitempty"`
+	Limits   ReverseProxyResourceValues `yaml:"limits,omitempty"`
+}
+
+type ReverseProxyResourceValues struct {
+	CPU    string `yaml:"cpu,omitempty"`
+	Memory string `yaml:"memory,omitempty"`
 }
 
 type Ingress struct {
