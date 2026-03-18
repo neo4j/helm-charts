@@ -2115,7 +2115,6 @@ func TestNeo4jResourcesAndLimits(t *testing.T) {
 		GenerateNeo4jResourcesTestCase([]string{"memoryRequests"}, "", "3Gi"),
 		GenerateNeo4jResourcesTestCase([]string{"cpuRequests", "memoryResources"}, "1", "3Gi"),
 		GenerateNeo4jResourcesTestCase([]string{"cpuResources", "memoryResources"}, "0.5", "3Gi"),
-		GenerateNeo4jResourcesTestCase([]string{"cpuRequests", "memoryRequests"}, "0.5", "3Gi"),
 		GenerateNeo4jResourcesTestCase([]string{"cpuResources", "memoryRequests"}, "0.5", "3Gi"),
 	}
 
@@ -2125,6 +2124,83 @@ func TestNeo4jResourcesAndLimits(t *testing.T) {
 				checkResourcesAndLimits(t, chart, edition, testCase)
 			})
 		}
+	}))
+}
+
+func TestNeo4jResourcesRequestsOnly(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		var helmTemplateArgs []string
+		desiredFeatures := [][]string{
+			useNeo4jClusterName,
+			useDataModeAndAcceptLicense,
+			{"--set", "neo4j.resources.requests.cpu=500m", "--set", "neo4j.resources.requests.memory=2Gi"},
+		}
+		if edition == "enterprise" {
+			desiredFeatures = append(desiredFeatures, useEnterpriseAndAcceptLicense)
+		}
+		for _, a := range desiredFeatures {
+			helmTemplateArgs = append(helmTemplateArgs, a...)
+		}
+
+		manifest, err := model.HelmTemplate(t, chart, helmTemplateArgs)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		statefulSets := manifest.OfType(&appsv1.StatefulSet{})
+		assert.Len(t, statefulSets, 1)
+
+		statefulSet := statefulSets[0].(*appsv1.StatefulSet)
+		assert.Len(t, statefulSet.Spec.Template.Spec.Containers, 1)
+		container := statefulSet.Spec.Template.Spec.Containers[0]
+
+		assert.Equal(t, "500m", container.Resources.Requests.Cpu().String())
+		assert.Equal(t, "2Gi", container.Resources.Requests.Memory().String())
+		assert.True(t, container.Resources.Limits.Cpu().IsZero(), "CPU limits should not be set when omitted in full format")
+		assert.True(t, container.Resources.Limits.Memory().IsZero(), "Memory limits should not be set when omitted in full format")
+	}))
+}
+
+func TestNeo4jResourcesIndependentLimits(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		var helmTemplateArgs []string
+		desiredFeatures := [][]string{
+			useNeo4jClusterName,
+			useDataModeAndAcceptLicense,
+			{
+				"--set", "neo4j.resources.requests.cpu=500m",
+				"--set", "neo4j.resources.requests.memory=2Gi",
+				"--set", "neo4j.resources.limits.cpu=2000m",
+				"--set", "neo4j.resources.limits.memory=4Gi",
+			},
+		}
+		if edition == "enterprise" {
+			desiredFeatures = append(desiredFeatures, useEnterpriseAndAcceptLicense)
+		}
+		for _, a := range desiredFeatures {
+			helmTemplateArgs = append(helmTemplateArgs, a...)
+		}
+
+		manifest, err := model.HelmTemplate(t, chart, helmTemplateArgs)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		statefulSets := manifest.OfType(&appsv1.StatefulSet{})
+		assert.Len(t, statefulSets, 1)
+
+		statefulSet := statefulSets[0].(*appsv1.StatefulSet)
+		assert.Len(t, statefulSet.Spec.Template.Spec.Containers, 1)
+		container := statefulSet.Spec.Template.Spec.Containers[0]
+
+		assert.Equal(t, "500m", container.Resources.Requests.Cpu().String())
+		assert.Equal(t, "2Gi", container.Resources.Requests.Memory().String())
+		assert.Equal(t, "2", container.Resources.Limits.Cpu().String())
+		assert.Equal(t, "4Gi", container.Resources.Limits.Memory().String())
 	}))
 }
 

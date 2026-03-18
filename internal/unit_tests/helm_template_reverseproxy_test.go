@@ -515,3 +515,59 @@ func TestReverseProxyNoExtraEnvVars(t *testing.T) {
 	assert.Nil(t, container.VolumeMounts, "volumeMounts should be nil when no extras specified")
 	assert.Nil(t, deployment.Spec.Template.Spec.Volumes, "volumes should be nil when no extras specified")
 }
+
+func TestReverseProxyResources(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jReverseProxyValues
+	helmValues.ReverseProxy.ServiceName = "neo4j-service"
+	helmValues.ReverseProxy.Resources = model.ReverseProxyResources{
+		Requests: model.ReverseProxyResourceValues{
+			CPU:    "200m",
+			Memory: "256Mi",
+		},
+		Limits: model.ReverseProxyResourceValues{
+			CPU:    "1000m",
+			Memory: "512Mi",
+		},
+	}
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while testing resources with reverse proxy helm chart")
+
+	deploymentList := manifests.OfType(&appsv1.Deployment{})
+	assert.Len(t, deploymentList, 1, fmt.Sprintf("number of deployments should be 1, not %d", len(deploymentList)))
+
+	deployment := deploymentList[0].(*appsv1.Deployment)
+	containers := deployment.Spec.Template.Spec.Containers
+	assert.Len(t, containers, 1, "should have exactly one container")
+
+	resources := containers[0].Resources
+	assert.Equal(t, "200m", resources.Requests.Cpu().String(), "CPU request should match")
+	assert.Equal(t, "256Mi", resources.Requests.Memory().String(), "Memory request should match")
+	assert.Equal(t, "1", resources.Limits.Cpu().String(), "CPU limit should match")
+	assert.Equal(t, "512Mi", resources.Limits.Memory().String(), "Memory limit should match")
+}
+
+func TestReverseProxyDefaultResources(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jReverseProxyValues
+	helmValues.ReverseProxy.ServiceName = "neo4j-service"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while testing default resources with reverse proxy helm chart")
+
+	deploymentList := manifests.OfType(&appsv1.Deployment{})
+	assert.Len(t, deploymentList, 1, fmt.Sprintf("number of deployments should be 1, not %d", len(deploymentList)))
+
+	deployment := deploymentList[0].(*appsv1.Deployment)
+	containers := deployment.Spec.Template.Spec.Containers
+	assert.Len(t, containers, 1, "should have exactly one container")
+
+	resources := containers[0].Resources
+	assert.False(t, resources.Requests.Cpu().IsZero(), "default CPU request should not be zero")
+	assert.False(t, resources.Requests.Memory().IsZero(), "default memory request should not be zero")
+	assert.False(t, resources.Limits.Cpu().IsZero(), "default CPU limit should not be zero")
+	assert.False(t, resources.Limits.Memory().IsZero(), "default memory limit should not be zero")
+}
