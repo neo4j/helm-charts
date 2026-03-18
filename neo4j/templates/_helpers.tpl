@@ -159,6 +159,7 @@ E.g. by adding `--set podSpec.loadbalancer=include`
 
     {{- end -}}
 
+    {{- $usesFullFormat := and $isCPUSet $isMemorySet }}
 
     {{- if not $isCPUSet }}
         {{- if kindIs "invalid" .Values.neo4j.resources.cpu -}}
@@ -179,8 +180,8 @@ E.g. by adding `--set podSpec.loadbalancer=include`
     {{- $requests := dict "cpu" $cpu "memory" $memory -}}
     {{- $ignored := set .Values.neo4j.resources "requests" $requests -}}
 
-    {{/* set limits as same as cpu and memory if not provided by the user */}}
-    {{- if kindIs "invalid" .Values.neo4j.resources.limits -}}
+    {{/* only auto-set limits when user uses shorthand or mixed format; full format allows omitting limits */}}
+    {{- if and (kindIs "invalid" .Values.neo4j.resources.limits) (not $usesFullFormat) -}}
        {{- $ignored := set .Values.neo4j.resources "limits" $requests -}}
     {{- end -}}
 

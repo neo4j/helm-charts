@@ -46,6 +46,15 @@ spec:
             {{- with .Values.extraEnvVars }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
+          {{- with .Values.reverseProxy.resources }}
+          resources:
+            {{- if or (hasKey . "limits") (hasKey . "requests") }}
+            {{- omit . "cpu" "memory" | toYaml | nindent 12 }}
+            {{- else }}
+            requests: {{ . | toYaml | nindent 14 }}
+            limits: {{ . | toYaml | nindent 14 }}
+            {{- end }}
+          {{- end }}
           {{- if .Values.extraVolumeMounts }}
           volumeMounts:
             {{- toYaml .Values.extraVolumeMounts | nindent 12 }}

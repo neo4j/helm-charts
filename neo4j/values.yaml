@@ -71,7 +71,19 @@ neo4j:
   # this can be used to perform tasks that cannot be performed when Neo4j is running such as `neo4j-admin dump`
   offlineMaintenanceModeEnabled: false
   #
-  # set resources for the Neo4j Container. The values set will be used for both "requests" and "limit".
+  # Resources for the Neo4j Container. Two formats supported:
+  # 1. Shorthand (values used for both requests and limits):
+  #    resources:
+  #      cpu: "1000m"
+  #      memory: "2Gi"
+  # 2. Full format (limits can be set independently or omitted for bursting):
+  #    resources:
+  #      requests:
+  #        cpu: "500m"
+  #        memory: "2Gi"
+  #      limits:          # omit this section entirely to allow bursting
+  #        cpu: "2000m"
+  #        memory: "4Gi"
   resources:
     cpu: "1000m"
     memory: "2Gi"
