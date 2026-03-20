@@ -719,7 +719,11 @@ logging:
 #    </Loggers>
 #    </Configuration>
 
-# define your podDisruptionBudget details here
+# PodDisruptionBudget for this Neo4j instance.
+# NOTE: Because each cluster member is a separate Helm release with its own single-replica StatefulSet,
+# this PDB only protects the single pod of THIS release.
+# For cluster-wide disruption protection during worker node rolling upgrades (e.g., Kubermatic, GKE node auto-upgrades),
+# create a separate PDB that spans all cluster members using the shared label "helm.neo4j.com/neo4j.name".
 podDisruptionBudget:
   enabled: false
   matchLabels: {}
