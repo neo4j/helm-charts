@@ -130,10 +130,27 @@ jobs:
           ref: dev
 
       - name: Version Updates
-        run: |          
+        run: |
           git config --global user.email team-smcs@neo4j.com
           git config --global user.name "team-smcs"
           ./bin/gcloud/version_updates
+
+      - name: Generate changelog
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          mkdir -p tmp
+          python3 bin/changelog/generate.py \
+            --chart-version "${HELM_CHART_VERSION}" \
+            --docker-version "${DOCKER_IMAGE_VERSION}" \
+            --out tmp/release-notes.md
+          python3 bin/changelog/update_file.py \
+            --notes tmp/release-notes.md \
+            --changelog CHANGELOG.md \
+            --chart-version "${HELM_CHART_VERSION}" \
+            --docker-version "${DOCKER_IMAGE_VERSION}"
+          git add CHANGELOG.md
 
       - name: GPG Key Signing
         run: |
@@ -162,23 +179,13 @@ jobs:
           echo "CHART_VERSION=${HELM_CHART_VERSION}" >> $GITHUB_OUTPUT
           echo "Using chart version ${HELM_CHART_VERSION} for release"
 
-      - name: Set Release Notes URL
-        id: release_notes
-        run: |
-          RELEASE_NOTES_SUFFIX=$(echo ${DOCKER_IMAGE_VERSION} | sed -E 's/([0-9]{4})\.([0-9]{2})\.[0-9]+/\1-\2/')
-          echo "RELEASE_NOTES_SUFFIX=${RELEASE_NOTES_SUFFIX}" >> $GITHUB_OUTPUT
-          echo "Release notes suffix: ${RELEASE_NOTES_SUFFIX}"
       - name: Release Notes
         uses: softprops/action-gh-release@v1
         with:
           name: v${{ steps.chart_version.outputs.CHART_VERSION }}
           tag_name: ${{ steps.chart_version.outputs.CHART_VERSION }}
           token: ${{ secrets.GH_TOKEN }}
-          body: |
-            - Update to Neo4j ${{ inputs.DOCKER_IMAGE_VERSION }} as the new baseline
-            - Helm Chart Version: ${{ inputs.HELM_CHART_VERSION }}
-            - Docker Image Version: ${{ inputs.DOCKER_IMAGE_VERSION }}
-            - See [Release notes](https://neo4j.com/release-notes/database/neo4j-${{ steps.release_notes.outputs.RELEASE_NOTES_SUFFIX }}/) for details of changes
+          body_path: tmp/release-notes.md
           make_latest: true
           files: |
-            tmp/new-packages/*.tgz 
+            tmp/new-packages/*.tgz
