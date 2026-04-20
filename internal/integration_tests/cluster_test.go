@@ -9,6 +9,7 @@ import (
 	"github.com/neo4j/helm-charts/internal/integration_tests/gcloud"
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/neo4j/helm-charts/internal/resources"
+	"github.com/neo4j/helm-charts/internal/testutil/timeouts"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,7 +26,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 			closeables = append([]Closeable{closeable}, closeables...)
 		}
 	}
-	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
+	clusterReleaseName := model.NewReleaseName("cluster-" + TestNamespace(t))
 	namespace := string(clusterReleaseName.Namespace())
 	err := labelNodes(t, namespace)
 	addCloseable(func() error {
@@ -78,7 +79,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	addCloseable(closeablesNew...)
 
 	for _, core := range cores {
-		err = run(t, "kubectl", "--namespace", string(core.Name().Namespace()), "rollout", "status", "--watch", "--timeout=180s", "statefulset/"+core.Name().String())
+		err = run(t, "kubectl", "--namespace", string(core.Name().Namespace()), "rollout", "status", "--watch", timeouts.KubectlRollout(), "statefulset/"+core.Name().String())
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -112,7 +113,7 @@ func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
 		}
 	}
 
-	clusterReleaseName := model.NewReleaseName("apoc-cluster-" + TestRunIdentifier)
+	clusterReleaseName := model.NewReleaseName("apoc-cluster-" + TestNamespace(t))
 	defaultHelmArgs := []string{}
 	defaultHelmArgs = append(defaultHelmArgs, model.DefaultNeo4jNameArg...)
 	defaultHelmArgs = append(defaultHelmArgs, model.DefaultClusterSizeArg...)
@@ -148,7 +149,7 @@ func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
 	addCloseable(closeablesNew...)
 
 	for _, core := range cores {
-		err = run(t, "kubectl", "--namespace", string(core.Name().Namespace()), "rollout", "status", "--watch", "--timeout=180s", "statefulset/"+core.Name().String())
+		err = run(t, "kubectl", "--namespace", string(core.Name().Namespace()), "rollout", "status", "--watch", timeouts.KubectlRollout(), "statefulset/"+core.Name().String())
 		if !assert.NoError(t, err) {
 			return
 		}

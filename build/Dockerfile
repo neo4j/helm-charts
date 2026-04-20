@@ -7,7 +7,12 @@ COPY docker_resources/* /tmp/
 # use bash as the default shell (https://unix.stackexchange.com/questions/442510/how-to-use-bash-for-sh-in-ubuntu)
 RUN cd /bin && ln -s bash /bin/sh.bash && mv /bin/sh.bash /bin/sh
 
-## Install kubectl, helm go and dev/install dependencies
+## Install kubectl, helm, go, and dev/install dependencies.
+##
+## The previous implementation used a bundled `go_linux_installer` binary that
+## hard-coded `storage.googleapis.com/golang/go<version>.linux-amd64.tar.gz`.
+## That endpoint now returns 403 for recent versions, breaking every rebuild
+## of this image. Switch to the canonical `go.dev/dl/` source.
 RUN apt-get update && apt-get install -y \
   bash \
   curl \
@@ -19,13 +24,13 @@ RUN apt-get update && apt-get install -y \
   awscli \
   jq \
   && ./tmp/get-helm-3 --no-sudo --version "${HELM_VERSION}" \
-  && ./tmp/go_linux_installer -v -version "${GO_VERSION}" \
+  && curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" -o /tmp/go.tar.gz \
+  && tar -C /root -xzf /tmp/go.tar.gz \
+  && mv /root/go /root/.go \
   && rm -rf /var/lib/apt/lists/* \
   && rm -rf /tmp/* \
   && curl -q https://dl.min.io/client/mc/release/linux-amd64/mc --create-dirs -o /root/minio-binaries/mc \
   && chmod +x /root/minio-binaries/mc \
-#  && export VERSION=$(curl -q "https://api.github.com/repos/minio/operator/releases/latest" | jq -r '.|.tag_name') \
-#  && export NUMBER=$(echo ${VERSION} | sed 's/v//g') \
   && export VERSION="v5.0.14" \
   && export NUMBER="5.0.14" \
   && echo "${VERSION} and ${NUMBER}" \

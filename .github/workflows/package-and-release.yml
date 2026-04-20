@@ -37,17 +37,19 @@ jobs:
   check-authorization:
     runs-on: ubuntu-latest
     outputs:
-      should_run: ${{ steps.check.outputs.should_run }}
+      should_run: ${{ steps.gate.outputs.should_run }}
     steps:
-      - id: check
+      - uses: actions/checkout@v4
+      - id: gate
+        uses: ./.github/actions/authz-gate
+        with:
+          allowed_actors: ${{ vars.CI_ALLOWED_ACTORS }}
+          require_dispatch: 'true'
+      - name: Enforce authorization
+        if: steps.gate.outputs.should_run != 'true'
         run: |
-          if [[ "${{ github.actor }}" == "bfeshti" || "${{ github.actor }}" == "riggi-alekaj" ]]; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
-          else
-            echo "should_run=false" >> $GITHUB_OUTPUT
-            echo "Only authorized users can run this workflow"
-            exit 1
-          fi
+          echo "Only authorized users can run this workflow"
+          exit 1
 
   build-reverseproxy-backup-release-image:
     name: ReverseProxy and Backup Docker Image build
@@ -57,65 +59,31 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - name: Build & push release images
+        uses: ./.github/actions/build-neo4j-images
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push reverse proxy image
-        uses: docker/build-push-action@v5
-        with:
-          context: "{{defaultContext}}:neo4j-reverse-proxy"
-          push: true
-          tags: "neo4j/helm-charts-reverse-proxy:${{ inputs.DOCKER_IMAGE_VERSION }}"
-          provenance: false
-
-      - name: Build and push operations image
-        uses: docker/build-push-action@v5
-        with:
-          context: "{{defaultContext}}:neo4j/neo4j-operations"
-          push: true
-          tags: "neo4j/helm-charts-operations:${{ inputs.DOCKER_IMAGE_VERSION }}"
-          provenance: false
-
-      - name: Build and push backup image
-        uses: docker/build-push-action@v5
-        with:
-          context: "{{defaultContext}}:neo4j-admin"
-          push: true
-          tags: "neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION}}"
-          provenance: false
-          build-args: |
-            IMAGE=neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise
-            DISTRIBUTION=debian
-
-      - name: Build and push red hat backup image
-        uses: docker/build-push-action@v5
-        with:
-          context: "{{defaultContext}}:neo4j-admin"
-          push: true
-          tags: "neo4j/helm-charts-backup:${{ inputs.DOCKER_IMAGE_VERSION }}-ubi9"
-          provenance: false
-          build-args: |
-            IMAGE=neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise-ubi9
-            DISTRIBUTION=redhat
+          registry: docker.io
+          registry_username: ${{ secrets.DOCKERHUB_USERNAME }}
+          registry_password: ${{ secrets.DOCKERHUB_TOKEN }}
+          reverseproxy_tag: neo4j/helm-charts-reverse-proxy:${{ inputs.DOCKER_IMAGE_VERSION }}
+          operations_tag: neo4j/helm-charts-operations:${{ inputs.DOCKER_IMAGE_VERSION }}
+          backup_tag_debian: neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION }}
+          backup_tag_redhat: neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION }}-ubi9
+          backup_source_debian: neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise
+          backup_source_redhat: neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise-ubi9
+          cache_scope: release
 
   packaging:
     name: Packaging and Release
-    needs: [build-reverseproxy-backup-release-image]
+    needs: [check-authorization, build-reverseproxy-backup-release-image]
     runs-on: ubuntu-latest
-    if: ${{ needs.check-authorization.outputs.should_run == 'true' }}
+    if: needs.check-authorization.outputs.should_run == 'true'
     env:
       HELM_CHART_VERSION: ${{ inputs.HELM_CHART_VERSION }}
       DOCKER_IMAGE_VERSION: ${{ inputs.DOCKER_IMAGE_VERSION }}
       HELM_REPO_NAME: ${{ vars.HELM_REPO_NAME }}
     container:
-      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
+      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:${{ vars.CI_IMAGE_TAG || 'latest' }}
       options: --user 1001
       credentials:
         username: _json_key

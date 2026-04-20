@@ -32,6 +32,8 @@ import (
 	. "github.com/neo4j/helm-charts/internal/helpers"
 	"github.com/neo4j/helm-charts/internal/integration_tests/gcloud"
 	"github.com/neo4j/helm-charts/internal/model"
+	"github.com/neo4j/helm-charts/internal/testutil/poll"
+	"github.com/neo4j/helm-charts/internal/testutil/timeouts"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -425,16 +427,6 @@ func createNamespace(t *testing.T, releaseName model.ReleaseName) (Closeable, er
 	}
 
 	err := run(t, "kubectl", "create", "ns", namespace)
-	if err != nil {
-		// Check if the error is because namespace already exists (race condition)
-		// This can happen when parallel tests use the same namespace name
-		checkErr := run(t, "kubectl", "get", "ns", namespace)
-		if checkErr == nil {
-			// Namespace exists, this is likely a race condition with another parallel test
-			t.Logf("Namespace %s already exists, likely created by parallel test - continuing", namespace)
-			err = nil // Clear the error to continue successfully
-		}
-	}
 	return func() error {
 		return runAll(t, "kubectl", kCleanupCommands(releaseName.Namespace()), false)
 	}, err
@@ -491,120 +483,122 @@ func runWithRetry(t *testing.T, maxRetries int, command string, args ...string) 
 }
 
 func kubectlLogs(t *testing.T, podName string, namespace string) (string, error) {
-	var out []byte
-	var err error
-	for attempt := 0; attempt < 3; attempt++ {
-		out, err = exec.Command("kubectl", "logs", podName, "--namespace", namespace).CombinedOutput()
-		if err == nil {
-			return string(out), nil
+	return poll.UntilValue(context.Background(), t, poll.Opts{
+		Interval:      10 * time.Second,
+		Timeout:       25 * time.Second, // 3 attempts at 10s interval matches historical budget
+		Description:   fmt.Sprintf("kubectl logs for pod %s in %s", podName, namespace),
+		RetryableErrs: func(error) bool { return true },
+	}, func(context.Context) (string, bool, error) {
+		out, err := exec.Command("kubectl", "logs", podName, "--namespace", namespace).CombinedOutput()
+		if err != nil {
+			return "", false, err
 		}
-		t.Logf("Failed to get logs for pod %s (attempt %d/3): %v", podName, attempt+1, err)
-		time.Sleep(10 * time.Second)
-	}
-	return "", fmt.Errorf("failed to get logs for pod %s after 3 attempts: %w", podName, err)
+		return string(out), true, nil
+	})
 }
 
 func waitForPodsTerminated(t *testing.T, namespace string, timeout time.Duration) {
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
-		if err != nil || len(pods.Items) == 0 {
-			return
+	err := poll.Until(context.Background(), t, poll.Opts{
+		Interval:      5 * time.Second,
+		Timeout:       timeout,
+		Description:   fmt.Sprintf("all pods in namespace %s to terminate", namespace),
+		RetryableErrs: func(error) bool { return true }, // list-pods failures are transient
+	}, func(ctx context.Context) (bool, error) {
+		pods, err := Clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return false, err
 		}
-		t.Logf("Waiting for pods in namespace %s to terminate (%d remaining)...", namespace, len(pods.Items))
-		time.Sleep(5 * time.Second)
+		return len(pods.Items) == 0, nil
+	})
+	if err != nil {
+		t.Logf("%v; force-deleting remaining pods", err)
+		// Pods are still Terminating (finalizers, detaching disks, preStop hooks) — force-remove them
+		// so downstream `helm uninstall --wait` doesn't block indefinitely.
+		_ = run(t, "kubectl", "delete", "pod", "--all", "--namespace", namespace, "--force", "--grace-period=0", "--ignore-not-found")
 	}
-	t.Logf("Timed out waiting for pods in namespace %s to terminate after %v; force-deleting", namespace, timeout)
-	// Pods are still Terminating (finalizers, detaching disks, preStop hooks) — force-remove them
-	// so downstream `helm uninstall --wait` doesn't block indefinitely.
-	_ = run(t, "kubectl", "delete", "pod", "--all", "--namespace", namespace, "--force", "--grace-period=0", "--ignore-not-found")
 }
 
 // waitForBackupPodCompletion polls until a pod matching podNameSubstring appears in the namespace
 // and its logs contain successMessage. Returns the pod name and full log output.
 // Periodically logs the pod's actual output for diagnostics.
 func waitForBackupPodCompletion(t *testing.T, namespace, podNameSubstring, successMessage string, timeout time.Duration) (string, string, error) {
-	deadline := time.Now().Add(timeout)
-	var podFound bool
-	var lastLogOutput string
-	var lastPodName string
-	pollCount := 0
-
-	for time.Now().Before(deadline) {
-		pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
+	var (
+		lastLogOutput string
+		lastPodName   string
+		pollCount     int
+	)
+	type result struct {
+		podName string
+		logs    string
+	}
+	got, err := poll.UntilValue(context.Background(), t, poll.Opts{
+		Interval:      30 * time.Second,
+		Timeout:       timeout,
+		Description:   fmt.Sprintf("backup pod matching %q to log %q", podNameSubstring, successMessage),
+		RetryableErrs: func(error) bool { return true },
+	}, func(ctx context.Context) (result, bool, error) {
+		pods, err := Clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
 		if err != nil {
-			t.Logf("Error retrieving pod list: %v", err)
-			time.Sleep(30 * time.Second)
-			continue
+			return result{}, false, fmt.Errorf("list pods: %w", err)
 		}
-
-		podFound = false
 		for _, pod := range pods.Items {
-			if strings.Contains(pod.Name, podNameSubstring) {
-				podFound = true
-				lastPodName = pod.Name
-				t.Logf("Found backup pod: %s (status: %s)", pod.Name, pod.Status.Phase)
-
-				logOutput, logsErr := kubectlLogs(t, pod.Name, namespace)
-				if logsErr != nil {
-					break
-				}
-				lastLogOutput = logOutput
-
-				if strings.Contains(logOutput, successMessage) {
-					return pod.Name, logOutput, nil
-				}
-
-				// Log pod output periodically (every 4th poll ~2 min) for diagnostics
-				if pollCount%4 == 0 {
-					preview := logOutput
-					if len(preview) > 500 {
-						preview = preview[:500] + "..."
-					}
-					t.Logf("Backup pod '%s' not yet completed. Current logs:\n%s", podNameSubstring, preview)
-				} else {
-					t.Logf("Backup pod '%s' not yet completed, waiting...", podNameSubstring)
-				}
-				break
+			if !strings.Contains(pod.Name, podNameSubstring) {
+				continue
 			}
+			lastPodName = pod.Name
+			t.Logf("Found backup pod: %s (status: %s)", pod.Name, pod.Status.Phase)
+			logs, logsErr := kubectlLogs(t, pod.Name, namespace)
+			if logsErr != nil {
+				return result{}, false, fmt.Errorf("kubectl logs: %w", logsErr)
+			}
+			lastLogOutput = logs
+			if strings.Contains(logs, successMessage) {
+				return result{podName: pod.Name, logs: logs}, true, nil
+			}
+			// Log pod output every 4th poll (~2 min) for diagnostics.
+			if pollCount%4 == 0 {
+				preview := logs
+				if len(preview) > 500 {
+					preview = preview[:500] + "..."
+				}
+				t.Logf("Backup pod %q not yet completed. Current logs:\n%s", podNameSubstring, preview)
+			}
+			pollCount++
+			return result{}, false, nil
 		}
-
-		if !podFound {
-			t.Logf("Backup pod matching '%s' not yet created, waiting...", podNameSubstring)
-		}
+		t.Logf("Backup pod matching %q not yet created, waiting...", podNameSubstring)
 		pollCount++
-		time.Sleep(30 * time.Second)
+		return result{}, false, nil
+	})
+	if err != nil {
+		if lastPodName != "" {
+			t.Logf("TIMEOUT: Backup pod %q did not complete. Final pod logs:\n%s", lastPodName, lastLogOutput)
+		}
+		return "", "", err
 	}
-
-	if !podFound {
-		return "", "", fmt.Errorf("no backup pod matching '%s' found after %s", podNameSubstring, timeout)
-	}
-
-	// Log full pod output on timeout for post-failure diagnostics
-	t.Logf("TIMEOUT: Backup pod '%s' did not complete within %s. Final pod logs:\n%s", lastPodName, timeout, lastLogOutput)
-	return "", "", fmt.Errorf("backup pod matching '%s' did not complete within %s", podNameSubstring, timeout)
+	return got.podName, got.logs, nil
 }
 
 // waitForPodByName polls until a pod matching podNameSubstring appears in the namespace.
 // Use this when only pod spec checks (env vars, mounts) are needed, not log assertions.
 func waitForPodByName(t *testing.T, namespace, podNameSubstring string, timeout time.Duration) (v1.Pod, error) {
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
+	return poll.UntilValue(context.Background(), t, poll.Opts{
+		Interval:      30 * time.Second,
+		Timeout:       timeout,
+		Description:   fmt.Sprintf("pod matching %q to appear in %s", podNameSubstring, namespace),
+		RetryableErrs: func(error) bool { return true },
+	}, func(ctx context.Context) (v1.Pod, bool, error) {
+		pods, err := Clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
 		if err != nil {
-			t.Logf("Error retrieving pod list: %v", err)
-			time.Sleep(30 * time.Second)
-			continue
+			return v1.Pod{}, false, err
 		}
 		for _, pod := range pods.Items {
 			if strings.Contains(pod.Name, podNameSubstring) {
-				return pod, nil
+				return pod, true, nil
 			}
 		}
-		t.Logf("Pod matching '%s' not yet created, waiting...", podNameSubstring)
-		time.Sleep(30 * time.Second)
-	}
-	return v1.Pod{}, fmt.Errorf("no pod matching '%s' found after %s", podNameSubstring, timeout)
+		return v1.Pod{}, false, nil
+	})
 }
 
 func AsCloseable(closeables []Closeable) Closeable {
@@ -792,7 +786,7 @@ func TestBackupLogStreamingIntegration(t *testing.T, releaseName model.ReleaseNa
 		return nil
 	}
 
-	backupReleaseName := model.NewReleaseName("standalone-backup-logs-" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("standalone-backup-logs-" + TestNamespace(t))
 	namespace := string(releaseName.Namespace())
 
 	t.Cleanup(func() {
@@ -875,7 +869,7 @@ func TestBackupCompressIntegration(t *testing.T, releaseName model.ReleaseName) 
 		return nil
 	}
 
-	backupReleaseName := model.NewReleaseName("standalone-backup-compress-" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("standalone-backup-compress-" + TestNamespace(t))
 	namespace := string(releaseName.Namespace())
 
 	t.Cleanup(func() {
@@ -927,7 +921,7 @@ func TestAggregateBackupWithWildcard(t *testing.T, standaloneReleaseName model.R
 
 	// Step 1: Create initial backups for multiple databases (neo4j and system)
 	t.Log("Step 1: Creating initial backups for neo4j and system databases")
-	initialBackupReleaseName := model.NewReleaseName("wildcard-initial-backup-" + TestRunIdentifier)
+	initialBackupReleaseName := model.NewReleaseName("wildcard-initial-backup-" + TestNamespace(t))
 
 	t.Cleanup(func() {
 		_ = runAll(t, "helm", [][]string{
@@ -972,7 +966,7 @@ func TestAggregateBackupWithWildcard(t *testing.T, standaloneReleaseName model.R
 
 	// Step 2: Run aggregate backup with wildcard
 	t.Log("Step 2: Running aggregate backup with wildcard")
-	aggregateBackupReleaseName := model.NewReleaseName("wildcard-aggregate-backup-" + TestRunIdentifier)
+	aggregateBackupReleaseName := model.NewReleaseName("wildcard-aggregate-backup-" + TestNamespace(t))
 
 	t.Cleanup(func() {
 		_ = runAll(t, "helm", [][]string{
@@ -1193,8 +1187,8 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 		t.Skip()
 		return nil
 	}
-	backupReleaseName := model.NewReleaseName("standalone-backup-aws-" + TestRunIdentifier)
-	backupBucketName := fmt.Sprintf("helm-charts-%s", TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("standalone-backup-aws-" + TestNamespace(t))
+	backupBucketName := fmt.Sprintf("helm-charts-%s", TestNamespace(t))
 	namespace := string(standaloneReleaseName.Namespace())
 
 	t.Logf("Using namespace: %s for AWS backup test", namespace)
@@ -1305,7 +1299,7 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 		t.Skip()
 		return nil
 	}
-	backupReleaseName := model.NewReleaseName("standalone-backup-azure-" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("standalone-backup-azure-" + TestNamespace(t))
 	namespace := string(standaloneReleaseName.Namespace())
 
 	t.Log("Starting Azure backup test")
@@ -1383,7 +1377,7 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 		t.Skip()
 		return nil
 	}
-	backupReleaseName := model.NewReleaseName("standalone-backup-gcp-" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("standalone-backup-gcp-" + TestNamespace(t))
 	namespace := string(standaloneReleaseName.Namespace())
 
 	t.Log("Starting GCP backup test")
@@ -1495,7 +1489,7 @@ func InstallNeo4jBackupGCPHelmChartWithInconsistencies(t *testing.T, standaloneR
 
 // installNeo4jBackupLocalWithConsistencyCheck performs local backup with consistency check
 func installNeo4jBackupLocalWithConsistencyCheck(t *testing.T, standaloneReleaseName model.ReleaseName) error {
-	backupReleaseName := model.NewReleaseName("standalone-backup-local-incon-" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("standalone-backup-local-incon-" + TestNamespace(t))
 	namespace := string(standaloneReleaseName.Namespace())
 
 	t.Cleanup(func() {
@@ -1611,7 +1605,7 @@ func installNeo4jBackupLocalWithConsistencyCheck(t *testing.T, standaloneRelease
 
 // installNeo4jBackupGCPCloudStorage performs cloud backup to GCP without consistency check
 func installNeo4jBackupGCPCloudStorage(t *testing.T, standaloneReleaseName model.ReleaseName) error {
-	backupReleaseName := model.NewReleaseName("standalone-backup-gcp-incon-" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("standalone-backup-gcp-incon-" + TestNamespace(t))
 	namespace := string(standaloneReleaseName.Namespace())
 
 	t.Cleanup(func() {
@@ -1757,7 +1751,7 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t *testing.T, standalone
 	}
 	shortName := standaloneReleaseName.ShortName()
 	currentUnixTime := time.Now().Unix()
-	backupReleaseName := model.NewReleaseName(fmt.Sprintf("%s-gcp-workload-%s", shortName, TestRunIdentifier))
+	backupReleaseName := model.NewReleaseName(fmt.Sprintf("%s-gcp-workload-%s", shortName, TestNamespace(t)))
 	gcpServiceAccountName := fmt.Sprintf("%s-%d", gcpServiceAccountNamePrefix, currentUnixTime)
 	k8sServiceAccountName := fmt.Sprintf("%s-%d", k8sServiceAccountNamePrefix, currentUnixTime)
 	namespace := string(standaloneReleaseName.Namespace())
@@ -1839,7 +1833,7 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 		t.Skip()
 		return nil
 	}
-	reverseProxyReleaseName := model.NewReleaseName("rp-" + TestRunIdentifier)
+	reverseProxyReleaseName := model.NewReleaseName("rp-" + TestNamespace(t))
 	namespace := string(standaloneReleaseName.Namespace())
 
 	t.Cleanup(func() {
@@ -1906,74 +1900,73 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 
 // waitForDeploymentReady polls until the deployment has all replicas available.
 func waitForDeploymentReady(t *testing.T, namespace, deploymentName string, timeout time.Duration) error {
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		deployment, err := Clientset.AppsV1().Deployments(namespace).Get(context.Background(), deploymentName, metav1.GetOptions{})
-		if err == nil && deployment.Status.ReadyReplicas > 0 &&
-			deployment.Status.ReadyReplicas == deployment.Status.Replicas {
-			t.Logf("Deployment %s/%s is ready (%d/%d replicas)", namespace, deploymentName,
-				deployment.Status.ReadyReplicas, deployment.Status.Replicas)
-			return nil
+	return poll.Until(context.Background(), t, poll.Opts{
+		Interval:      10 * time.Second,
+		Timeout:       timeout,
+		Description:   fmt.Sprintf("deployment %s/%s to be ready", namespace, deploymentName),
+		RetryableErrs: func(error) bool { return true },
+	}, func(ctx context.Context) (bool, error) {
+		deployment, err := Clientset.AppsV1().Deployments(namespace).Get(ctx, deploymentName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
 		}
-		t.Logf("Waiting for deployment %s/%s to become ready...", namespace, deploymentName)
-		time.Sleep(10 * time.Second)
-	}
-	return fmt.Errorf("deployment %s/%s did not become ready within %s", namespace, deploymentName, timeout)
+		return deployment.Status.ReadyReplicas > 0 && deployment.Status.ReadyReplicas == deployment.Status.Replicas, nil
+	})
 }
 
 // waitForSingleReadyPod polls until exactly one Ready pod matches the label selector, then returns its name.
 func waitForSingleReadyPod(t *testing.T, namespace, labelSelector string, timeout time.Duration) (string, error) {
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{
-			LabelSelector: labelSelector,
-		})
+	return poll.UntilValue(context.Background(), t, poll.Opts{
+		Interval:      10 * time.Second,
+		Timeout:       timeout,
+		Description:   fmt.Sprintf("single Ready pod in %s with selector %q", namespace, labelSelector),
+		RetryableErrs: func(error) bool { return true },
+	}, func(ctx context.Context) (string, bool, error) {
+		pods, err := Clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: labelSelector})
 		if err != nil {
-			t.Logf("Error listing pods with selector %q: %v", labelSelector, err)
-			time.Sleep(10 * time.Second)
-			continue
+			return "", false, err
 		}
-		readyPods := make([]v1.Pod, 0, len(pods.Items))
+		var ready []v1.Pod
 		for _, pod := range pods.Items {
 			if pod.DeletionTimestamp != nil {
 				continue
 			}
 			for _, cond := range pod.Status.Conditions {
 				if cond.Type == v1.PodReady && cond.Status == v1.ConditionTrue {
-					readyPods = append(readyPods, pod)
+					ready = append(ready, pod)
 					break
 				}
 			}
 		}
-		if len(readyPods) == 1 {
-			return readyPods[0].Name, nil
+		if len(ready) == 1 {
+			return ready[0].Name, true, nil
 		}
-		t.Logf("Waiting for single ready pod with selector %q (currently %d ready, %d total)...",
-			labelSelector, len(readyPods), len(pods.Items))
-		time.Sleep(10 * time.Second)
-	}
-	return "", fmt.Errorf("did not observe a single ready pod for selector %q within %s", labelSelector, timeout)
+		return "", false, nil
+	})
 }
 
 // waitForIngressIP polls until the Ingress has a LoadBalancer IP or hostname assigned.
 func waitForIngressIP(t *testing.T, namespace, ingressName string, timeout time.Duration) (string, error) {
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		ingress, err := Clientset.NetworkingV1().Ingresses(namespace).Get(context.Background(), ingressName, metav1.GetOptions{})
-		if err == nil && ingress != nil {
-			for _, lb := range ingress.Status.LoadBalancer.Ingress {
-				if lb.IP != "" {
-					return lb.IP, nil
-				}
-				if lb.Hostname != "" {
-					return lb.Hostname, nil
-				}
+	return poll.UntilValue(context.Background(), t, poll.Opts{
+		Interval:      10 * time.Second,
+		Timeout:       timeout,
+		Description:   fmt.Sprintf("ingress %s/%s to get LoadBalancer address", namespace, ingressName),
+		RetryableErrs: func(error) bool { return true },
+	}, func(ctx context.Context) (string, bool, error) {
+		ingress, err := Clientset.NetworkingV1().Ingresses(namespace).Get(ctx, ingressName, metav1.GetOptions{})
+		if err != nil {
+			return "", false, err
+		}
+		for _, lb := range ingress.Status.LoadBalancer.Ingress {
+			if lb.IP != "" {
+				return lb.IP, true, nil
+			}
+			if lb.Hostname != "" {
+				return lb.Hostname, true, nil
 			}
 		}
-		t.Logf("Waiting for ingress %s/%s to be assigned a LoadBalancer IP...", namespace, ingressName)
-		time.Sleep(10 * time.Second)
-	}
-	return "", fmt.Errorf("ingress %s/%s did not receive a LoadBalancer IP within %s", namespace, ingressName, timeout)
+		return "", false, nil
+	})
 }
 
 func createGCPServiceAccount(k8sServiceAccountName string, namespace string, gcpServiceAccountName string) error {
@@ -2283,7 +2276,7 @@ func TestProbeConfigurations(t *testing.T) {
 
 			err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()),
 				"wait", "--for=condition=ready", "pod", releaseName.PodName(),
-				"--timeout=300s")
+				timeouts.KubectlPodReady())
 			assert.NoError(t, err)
 
 			err = CheckProbes(t, releaseName)

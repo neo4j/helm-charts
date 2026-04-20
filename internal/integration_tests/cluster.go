@@ -21,6 +21,8 @@ import (
 	. "github.com/neo4j/helm-charts/internal/helpers"
 	"github.com/neo4j/helm-charts/internal/integration_tests/gcloud"
 	"github.com/neo4j/helm-charts/internal/model"
+	"github.com/neo4j/helm-charts/internal/testutil/poll"
+	"github.com/neo4j/helm-charts/internal/testutil/timeouts"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -166,7 +168,7 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t *testing.T, 
 	}
 	shortName := clusterReleaseName.ShortName()
 	currentUnixTime := time.Now().Unix()
-	backupReleaseName := model.NewReleaseName(fmt.Sprintf("%s-gcp-workload-%s", shortName, TestRunIdentifier))
+	backupReleaseName := model.NewReleaseName(fmt.Sprintf("%s-gcp-workload-%s", shortName, TestNamespace(t)))
 	gcpServiceAccountName := fmt.Sprintf("%s-%d", gcpServiceAccountNamePrefix, currentUnixTime)
 	k8sServiceAccountName := fmt.Sprintf("%s-%d", k8sServiceAccountNamePrefix, currentUnixTime)
 	namespace := string(clusterReleaseName.Namespace())
@@ -240,7 +242,7 @@ func InstallNeo4jBackupAWSLocalWithConsistencyCheck(t *testing.T, releaseName mo
 		t.Skip()
 		return nil
 	}
-	backupReleaseName := model.NewReleaseName("cluster-backup-local-" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("cluster-backup-local-" + TestNamespace(t))
 	namespace := string(releaseName.Namespace())
 
 	t.Cleanup(func() {
@@ -352,7 +354,7 @@ func InstallNeo4jBackupAWSCloudStorage(t *testing.T, releaseName model.ReleaseNa
 		t.Skip()
 		return nil
 	}
-	backupReleaseName := model.NewReleaseName("cluster-backup-aws-" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("cluster-backup-aws-" + TestNamespace(t))
 	namespace := string(releaseName.Namespace())
 
 	t.Cleanup(func() {
@@ -498,7 +500,7 @@ func InstallNeo4jBackupAWSHelmChartViaS3(t *testing.T, releaseName model.Release
 	}
 
 	namespace := "default"
-	backupReleaseName := model.NewReleaseName("cluster-backup-aws-s3" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("cluster-backup-aws-s3" + TestNamespace(t))
 	secretName := "awscred"
 
 	t.Cleanup(func() {
@@ -623,7 +625,7 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 	}
 
 	namespace := "default"
-	backupReleaseName := model.NewReleaseName("cluster-backup-aws-s3-tls" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("cluster-backup-aws-s3-tls" + TestNamespace(t))
 	secretName := "awscred"
 	caCertSecretName := "s3-ca-cert"
 
@@ -1101,7 +1103,7 @@ func apocConfigTests(releaseName model.ReleaseName) []SubTest {
 // checkClusterCorePasswordFailure checks if a cluster core is failing on installation or not with an incorrect password
 func checkClusterCorePasswordFailure(t *testing.T) error {
 	//creating a sample cluster core definition (which is not supposed to get installed)
-	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
+	clusterReleaseName := model.NewReleaseName("cluster-" + TestNamespace(t))
 	core := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 4), nil}
 	releaseName := core.Name()
 	// we are not using the customized run() func here since we need to assert the error received on stdout
@@ -1236,30 +1238,31 @@ func checkHeadlessServiceEndpoints(t *testing.T, service model.ReleaseName) erro
 	}
 	headlessServiceSelectors := labels.Set(headlessService.Spec.Selector)
 	listOptions := metav1.ListOptions{LabelSelector: headlessServiceSelectors.AsSelector().String()}
+	ns := string(service.Namespace())
 
-	const maxAttempts = 6
 	var endPointIPs, podIPs []string
-	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		//get the endpoints associated with the headless service
-		endpoints, err := Clientset.CoreV1().Endpoints(string(service.Namespace())).Get(context.TODO(), serviceName, metav1.GetOptions{})
+	pollErr := poll.Until(context.Background(), t, poll.Opts{
+		Interval:      5 * time.Second,
+		Timeout:       30 * time.Second,
+		Description:   fmt.Sprintf("headless service %s/%s endpoints to match pod IPs", ns, serviceName),
+		RetryableErrs: func(error) bool { return true },
+	}, func(ctx context.Context) (bool, error) {
+		endpoints, err := Clientset.CoreV1().Endpoints(ns).Get(ctx, serviceName, metav1.GetOptions{})
 		if err != nil {
-			return fmt.Errorf("failed to get headless service endpoints %v", err)
+			return false, fmt.Errorf("get endpoints: %w", err)
 		}
-
 		endPointIPs = endPointIPs[:0]
 		if len(endpoints.Subsets) > 0 {
-			for _, endpointAddress := range endpoints.Subsets[0].Addresses {
-				if endpointAddress.IP != "" {
-					endPointIPs = append(endPointIPs, endpointAddress.IP)
+			for _, addr := range endpoints.Subsets[0].Addresses {
+				if addr.IP != "" {
+					endPointIPs = append(endPointIPs, addr.IP)
 				}
 			}
 		}
-
-		pods, err := Clientset.CoreV1().Pods(string(service.Namespace())).List(context.TODO(), listOptions)
+		pods, err := Clientset.CoreV1().Pods(ns).List(ctx, listOptions)
 		if err != nil {
-			return fmt.Errorf("cannot get pods matching with headless service selector: %v", err)
+			return false, fmt.Errorf("list pods: %w", err)
 		}
-
 		podIPs = podIPs[:0]
 		for _, pod := range pods.Items {
 			// Skip pods that are being torn down — they'll disappear from endpoints shortly.
@@ -1272,22 +1275,17 @@ func checkHeadlessServiceEndpoints(t *testing.T, service model.ReleaseName) erro
 			}
 			podIPs = append(podIPs, pod.Status.PodIP)
 		}
-
 		if len(podIPs) > 0 && len(endPointIPs) > 0 && stringsElementsMatch(podIPs, endPointIPs) {
-			return nil
+			return true, nil
 		}
-		t.Logf("headless endpoints / pod IPs mismatch on attempt %d/%d (pods=%v, endpoints=%v), retrying", attempt, maxAttempts, podIPs, endPointIPs)
-		time.Sleep(5 * time.Second)
-	}
-
-	if !assert.ElementsMatch(t, podIPs, endPointIPs) {
-		return fmt.Errorf("podIPs %v and endPointIps %v do not match after %d attempts", podIPs, endPointIPs, maxAttempts)
-	}
-	if !assert.NotEmpty(t, podIPs) {
-		return fmt.Errorf("no ready pods found for headless service %s", serviceName)
-	}
-	if !assert.NotEmpty(t, endPointIPs) {
-		return fmt.Errorf("no endpoint addresses found for headless service %s", serviceName)
+		t.Logf("headless endpoints / pod IPs not yet matched (pods=%v, endpoints=%v)", podIPs, endPointIPs)
+		return false, nil
+	})
+	if pollErr != nil {
+		assert.ElementsMatch(t, podIPs, endPointIPs)
+		assert.NotEmpty(t, podIPs)
+		assert.NotEmpty(t, endPointIPs)
+		return pollErr
 	}
 	return nil
 }
@@ -1342,7 +1340,7 @@ func performBackgroundInstall(t *testing.T, componentsToParallelInstall []helmCo
 func TestBackupMultipleEndpointsE2E(t *testing.T) {
 	t.Parallel()
 
-	releaseName := model.NewReleaseName("multiple-backup-endpoints-" + TestRunIdentifier)
+	releaseName := model.NewReleaseName("multiple-backup-endpoints-" + TestNamespace(t))
 	_, err := createNamespace(t, releaseName)
 	if err != nil {
 		return
@@ -1438,7 +1436,7 @@ func TestClusterProbeConfigurations(t *testing.T) {
 
 			err = run(t, "kubectl", "--namespace", string(clusterReleaseName.Namespace()),
 				"wait", "--for=condition=ready", "pod", clusterReleaseName.PodName(),
-				"--timeout=300s")
+				timeouts.KubectlPodReady())
 			assert.NoError(t, err)
 
 			err = CheckProbes(t, clusterReleaseName)

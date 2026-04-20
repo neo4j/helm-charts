@@ -1,0 +1,155 @@
+name: Integration tests (edition × os)
+
+on:
+  workflow_call:
+    inputs:
+      edition:
+        description: 'Neo4j edition to test ("enterprise" or "community").'
+        type: string
+        required: true
+      os:
+        description: 'Base OS of the images under test ("debian" or "redhat").'
+        type: string
+        required: true
+      release:
+        description: 'Set to "true" to test against published release images rather than nightly bundles.'
+        type: string
+        required: false
+        default: 'false'
+      docker_image_version:
+        description: 'Required when release is "true". The Neo4j docker image tag (e.g. 2025.04.0) to pull.'
+        type: string
+        required: false
+        default: ''
+      cluster_name:
+        description: 'GKE cluster to run tests against.'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    name: ${{ inputs.os }} ${{ inputs.edition }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+      NEO4J_EDITION: ${{ inputs.edition }}
+      CLOUDSDK_CONTAINER_CLUSTER: ${{ inputs.cluster_name }}
+      CLOUDSDK_CORE_PROJECT: ${{ secrets.CLOUDSDK_CORE_PROJECT }}
+      CLOUDSDK_COMPUTE_ZONE: 'europe-west2-b'
+      CLOUDSDK_COMPUTE_REGION: 'europe-west2'
+      GO_TEST_COUNT: '1'
+      GO_TEST_TIMEOUT: 45m
+      GO_TEST_FORMAT: json
+      NEO4J_REVERSE_PROXY_IMG: '${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ github.run_id }}-${{ github.run_attempt }}'
+      NEO4J_OPERATIONS_IMG: '${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ github.run_id }}-${{ github.run_attempt }}'
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AZURE_STORAGE_ACCOUNT: ${{ secrets.AZURE_STORAGE_ACCOUNT }}
+      AZURE_STORAGE_KEY: ${{ secrets.AZURE_STORAGE_KEY }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      GCP_SERVICE_ACCOUNT_CRED: ${{ secrets.GCLOUD_SERVICE_KEY }}
+      BLOOM_LICENSE: ${{ secrets.BLOOM_LICENSE }}
+      IPS_USERNAME: ${{ secrets.IPS_USERNAME }}
+      IPS_EMAIL: ${{ secrets.IPS_EMAIL }}
+    container:
+      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:${{ vars.CI_IMAGE_TAG || 'latest' }}
+      credentials:
+        username: _json_key
+        password: ${{ secrets.GCLOUD_SERVICE_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
+        with:
+          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
+
+      - name: Fetch GKE credentials
+        uses: google-github-actions/get-gke-credentials@64bc7249bbcf78056bb92f14d3cedc2da193946c # v2
+        with:
+          cluster_name: ${{ inputs.cluster_name }}
+          location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
+        with:
+          version: '>= 363.0.0'
+
+      - name: Verify cluster connectivity
+        run: |
+          set -euo pipefail
+          attempt=1
+          max=5
+          until kubectl cluster-info >/dev/null 2>&1 && kubectl get nodes >/dev/null 2>&1; do
+            if (( attempt >= max )); then
+              echo "::error::Failed to reach cluster ${CLOUDSDK_CONTAINER_CLUSTER} after ${max} attempts"
+              kubectl cluster-info || true
+              kubectl get nodes || true
+              exit 1
+            fi
+            echo "Cluster not ready yet (attempt ${attempt}/${max}); sleeping 10s"
+            attempt=$(( attempt + 1 ))
+            sleep 10
+          done
+          echo "Cluster ${CLOUDSDK_CONTAINER_CLUSTER} reachable; $(kubectl get nodes --no-headers | wc -l) nodes ready"
+
+      - name: Set up gotestfmt
+        run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
+
+      - name: Resolve image names
+        id: images
+        env:
+          RELEASE: ${{ inputs.release }}
+          DOCKER_VERSION: ${{ inputs.docker_image_version }}
+          EDITION: ${{ inputs.edition }}
+          OS: ${{ inputs.os }}
+          REGISTRY: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}
+        run: |
+          set -euo pipefail
+
+          # Main Neo4j image: nightly bundle or explicit release tag.
+          if [[ "$RELEASE" == "true" ]]; then
+            if [[ -z "$DOCKER_VERSION" ]]; then
+              echo "::error::docker_image_version is required when release is true"
+              exit 1
+            fi
+            if [[ "$EDITION" == "enterprise" ]]; then
+              neo4j_img="neo4j:${DOCKER_VERSION}-enterprise"
+            else
+              neo4j_img="neo4j:${DOCKER_VERSION}"
+            fi
+          else
+            neo4j_img="${REGISTRY}/neo4j:2025-${EDITION}-${OS}-nightly-bundle"
+          fi
+
+          # Backup image tag includes ubi9- prefix for RedHat.
+          backup_prefix=""
+          if [[ "$OS" == "redhat" ]]; then
+            backup_prefix="ubi9-"
+          fi
+          backup_img="${REGISTRY}/neo4j-admin:${backup_prefix}${RUN_ID}"
+
+          echo "neo4j_img=${neo4j_img}" >> "$GITHUB_OUTPUT"
+          echo "backup_img=${backup_img}" >> "$GITHUB_OUTPUT"
+          echo "Resolved: neo4j=${neo4j_img} backup=${backup_img}"
+
+      - name: Run Integration and Unit Tests
+        env:
+          NEO4J_DOCKER_IMG: ${{ steps.images.outputs.neo4j_img }}
+          NEO4J_DOCKER_BACKUP_IMG: ${{ steps.images.outputs.backup_img }}
+        run: |
+          set -euo pipefail
+          mkdir -p .kube
+          cat "${KUBECONFIG}" > .kube/config
+          export KUBECONFIG="$(pwd)/.kube/config"
+          export IPS_PASS=$(gcloud auth print-access-token)
+          echo "Running ${NEO4J_EDITION} tests on ${{ inputs.os }} against cluster ${CLOUDSDK_CONTAINER_CLUSTER}"
+          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
+          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt

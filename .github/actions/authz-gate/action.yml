@@ -1,0 +1,84 @@
+name: 'Authorization Gate'
+description: >-
+  Decide whether the current workflow invocation is authorized to proceed,
+  based on the acting user and (optionally) the event type and git ref.
+  Reads the actor allowlist from the CI_ALLOWED_ACTORS repo variable
+  (JSON array of usernames) with a hardcoded fallback for bootstrap.
+
+inputs:
+  allowed_actors:
+    description: >-
+      JSON array of GitHub usernames allowed to run the calling workflow.
+      Callers should resolve vars.CI_ALLOWED_ACTORS at the workflow level
+      (the vars context is not available inside composite actions) and
+      pass the value in through this input.
+    required: false
+    default: ''
+  require_dispatch:
+    description: 'If "true", require github.event_name == workflow_dispatch.'
+    required: false
+    default: 'false'
+  require_branch:
+    description: 'If set, require github.ref_name to match this value.'
+    required: false
+    default: ''
+  fallback_actors:
+    description: >-
+      JSON array used when `allowed_actors` is empty.
+      Exists so the pipeline does not hard-fail before the repo variable is provisioned.
+    required: false
+    default: '["bfeshti","riggi-alekaj"]'
+
+outputs:
+  should_run:
+    description: '"true" if the invocation is authorized, "false" otherwise.'
+    value: ${{ steps.evaluate.outputs.should_run }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: evaluate
+      shell: bash
+      env:
+        ACTOR: ${{ github.actor }}
+        EVENT_NAME: ${{ github.event_name }}
+        REF_NAME: ${{ github.ref_name }}
+        INPUT_ACTORS: ${{ inputs.allowed_actors }}
+        FALLBACK_ACTORS: ${{ inputs.fallback_actors }}
+        REQUIRE_DISPATCH: ${{ inputs.require_dispatch }}
+        REQUIRE_BRANCH: ${{ inputs.require_branch }}
+      run: |
+        set -euo pipefail
+
+        # Precedence: action input (which the caller should source from
+        # vars.CI_ALLOWED_ACTORS) > hardcoded fallback.
+        list="${INPUT_ACTORS:-}"
+        if [[ -z "$list" ]]; then
+          list="$FALLBACK_ACTORS"
+          echo "::warning::CI_ALLOWED_ACTORS repo variable is unset; using built-in fallback allowlist"
+        fi
+
+        if ! printf '%s' "$list" | jq -e 'type == "array"' >/dev/null 2>&1; then
+          echo "::error::allowed_actors must be a JSON array of usernames, got: $list"
+          exit 1
+        fi
+
+        actor_ok=$(printf '%s' "$list" \
+          | jq --arg a "$ACTOR" 'map(ascii_downcase) | index($a | ascii_downcase) != null')
+
+        reasons=()
+        [[ "$actor_ok" != "true" ]] && reasons+=("actor '$ACTOR' not in allowlist")
+        if [[ "$REQUIRE_DISPATCH" == "true" && "$EVENT_NAME" != "workflow_dispatch" ]]; then
+          reasons+=("event '$EVENT_NAME' is not workflow_dispatch")
+        fi
+        if [[ -n "$REQUIRE_BRANCH" && "$REF_NAME" != "$REQUIRE_BRANCH" ]]; then
+          reasons+=("ref '$REF_NAME' is not '$REQUIRE_BRANCH'")
+        fi
+
+        if (( ${#reasons[@]} > 0 )); then
+          printf 'authz-gate: deny — %s\n' "$(IFS='; '; echo "${reasons[*]}")"
+          echo "should_run=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "authz-gate: allow (actor=$ACTOR event=$EVENT_NAME ref=$REF_NAME)"
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+        fi

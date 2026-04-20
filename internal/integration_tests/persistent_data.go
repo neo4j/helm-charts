@@ -1,8 +1,10 @@
 package integration_tests
 
 import (
-	"github.com/neo4j/helm-charts/internal/model"
 	"testing"
+
+	"github.com/neo4j/helm-charts/internal/model"
+	"github.com/neo4j/helm-charts/internal/testutil/timeouts"
 )
 
 func ResourcesCleanup(t *testing.T, releaseName model.ReleaseName) error {
@@ -20,7 +22,7 @@ func ResourcesReinstall(t *testing.T, releaseName model.ReleaseName, chart model
 		_ = run(t, "kubectl", "get", "events")
 		return err
 	}
-	err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()), "rollout", "status", "--watch", "--timeout=120s", "statefulset/"+releaseName.String())
+	err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()), "rollout", "status", "--watch", timeouts.KubectlRollout(), "statefulset/"+releaseName.String())
 	if err != nil {
 		t.Log("Helm Install failed:", err)
 		return err

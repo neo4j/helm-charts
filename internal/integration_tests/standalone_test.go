@@ -13,7 +13,7 @@ import (
 
 // Install Neo4j on the provided GKE K8s cluster and then run the tests from the table above using it
 func TestInstallStandaloneOnGCloudK8s(t *testing.T) {
-	releaseName := model.NewReleaseName("install-" + TestRunIdentifier)
+	releaseName := model.NewReleaseName("install-" + TestNamespace(t))
 	chart := model.Neo4jHelmChartCommunityAndEnterprise
 
 	t.Parallel()
