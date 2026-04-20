@@ -9,7 +9,9 @@ inputs:
   allowed_actors:
     description: >-
       JSON array of GitHub usernames allowed to run the calling workflow.
-      Overrides the CI_ALLOWED_ACTORS repo variable when set.
+      Callers should pass `${{ vars.CI_ALLOWED_ACTORS }}` — the `vars`
+      context is not available inside composite actions, so the caller
+      has to resolve it and hand it down.
     required: false
     default: ''
   require_dispatch:
@@ -22,7 +24,7 @@ inputs:
     default: ''
   fallback_actors:
     description: >-
-      JSON array used when neither input nor CI_ALLOWED_ACTORS is set.
+      JSON array used when `allowed_actors` is empty.
       Exists so the pipeline does not hard-fail before the repo variable is provisioned.
     required: false
     default: '["bfeshti","riggi-alekaj"]'
@@ -42,16 +44,15 @@ runs:
         EVENT_NAME: ${{ github.event_name }}
         REF_NAME: ${{ github.ref_name }}
         INPUT_ACTORS: ${{ inputs.allowed_actors }}
-        REPO_VAR_ACTORS: ${{ vars.CI_ALLOWED_ACTORS }}
         FALLBACK_ACTORS: ${{ inputs.fallback_actors }}
         REQUIRE_DISPATCH: ${{ inputs.require_dispatch }}
         REQUIRE_BRANCH: ${{ inputs.require_branch }}
       run: |
         set -euo pipefail
 
-        # Precedence: action input > repo variable > fallback.
+        # Precedence: action input (which the caller should source from
+        # vars.CI_ALLOWED_ACTORS) > hardcoded fallback.
         list="${INPUT_ACTORS:-}"
-        [[ -z "$list" ]] && list="${REPO_VAR_ACTORS:-}"
         if [[ -z "$list" ]]; then
           list="$FALLBACK_ACTORS"
           echo "::warning::CI_ALLOWED_ACTORS repo variable is unset; using built-in fallback allowlist"

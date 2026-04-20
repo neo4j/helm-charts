@@ -43,6 +43,7 @@ jobs:
       - id: gate
         uses: ./.github/actions/authz-gate
         with:
+          allowed_actors: ${{ vars.CI_ALLOWED_ACTORS }}
           require_dispatch: 'true'
       - name: Enforce authorization
         if: steps.gate.outputs.should_run != 'true'
