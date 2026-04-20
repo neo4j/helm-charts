@@ -1342,9 +1342,6 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 		return err
 	}
 
-	t.Log("Waiting for Azure backup job to complete")
-	time.Sleep(4 * time.Minute)
-
 	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
 	if err != nil {
 		t.Logf("Failed to get Azure backup cronjob: %v", err)
@@ -1355,50 +1352,26 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 		return fmt.Errorf("azure cronjob schedule %s not matching with the schedule defined in values.yaml %s", cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule)
 	}
 
-	t.Log("Getting Azure backup pod logs")
-	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
-	if err != nil {
-		t.Logf("Failed to list pods: %v", err)
-		return fmt.Errorf("error while retrieving pod list during azure backup operation: %v", err)
+	t.Log("Waiting for Azure backup job to complete")
+	_, logOutput, pollErr := waitForBackupPodCompletion(t, namespace, "standalone-backup-azure", "Cloud backup completed successfully", 8*time.Minute)
+	if pollErr != nil {
+		return pollErr
 	}
 
-	var found bool
-	for _, pod := range pods.Items {
-		if strings.Contains(pod.Name, "standalone-backup-azure") {
-			found = true
-			t.Logf("Found Azure backup pod: %s", pod.Name)
-			t.Logf("Pod status: %s", pod.Status.Phase)
-
-			logOutput, err := kubectlLogs(t, pod.Name, namespace)
-			if err != nil {
-				return err
-			}
-			t.Logf("Azure backup pod logs:\n%s", logOutput)
-
-			// Check for connectivity and initialization logs
-			requiredLogs := []string{
-				"Connectivity established with Database",
-				"Printing backup flags",
-				"--include-metadata=all",
-				"--type=FULL",
-				"neo4j system",
-				"Backup completed successfully",
-				"Cloud backup completed successfully",
-			}
-
-			for _, requiredLog := range requiredLogs {
-				if !strings.Contains(logOutput, requiredLog) {
-					t.Logf("Required log entry not found in Azure backup: %s", requiredLog)
-					return fmt.Errorf("required log entry not found in Azure backup: %s", requiredLog)
-				}
-			}
-			break
+	// Check for connectivity and initialization logs
+	requiredLogs := []string{
+		"Connectivity established with Database",
+		"Printing backup flags",
+		"--include-metadata=all",
+		"--type=FULL",
+		"neo4j system",
+		"Backup completed successfully",
+	}
+	for _, requiredLog := range requiredLogs {
+		if !strings.Contains(logOutput, requiredLog) {
+			t.Logf("Required log entry not found in Azure backup: %s", requiredLog)
+			return fmt.Errorf("required log entry not found in Azure backup: %s", requiredLog)
 		}
-	}
-
-	if !found {
-		t.Log("No Azure backup pod found")
-		return fmt.Errorf("no azure backup pod found")
 	}
 
 	t.Log("Azure backup test completed successfully")
@@ -1881,38 +1854,45 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 	helmValues.ReverseProxy.Namespace = namespace
 
 	err := run(t, "helm", "upgrade", "--install", "ingress-nginx", "ingress-nginx", "--repo", "https://kubernetes.github.io/ingress-nginx", "--namespace", "ingress-nginx", "--create-namespace")
-	assert.NoError(t, err)
-	time.Sleep(1 * time.Minute)
+	if err != nil {
+		return fmt.Errorf("failed to install ingress-nginx: %w", err)
+	}
+
+	if err := waitForDeploymentReady(t, "ingress-nginx", "ingress-nginx-controller", 3*time.Minute); err != nil {
+		return fmt.Errorf("ingress-nginx controller not ready: %w", err)
+	}
 
 	_, err = helmClient.Install(t, reverseProxyReleaseName.String(), namespace, helmValues)
-	assert.NoError(t, err)
-
-	time.Sleep(1 * time.Minute)
+	if err != nil {
+		return fmt.Errorf("failed to install reverse proxy chart: %w", err)
+	}
 
 	reverseProxyDepName := fmt.Sprintf("%s-reverseproxy-dep", reverseProxyReleaseName.String())
+	if err := waitForDeploymentReady(t, namespace, reverseProxyDepName, 3*time.Minute); err != nil {
+		return fmt.Errorf("reverse proxy deployment not ready: %w", err)
+	}
+
 	deployment, err := Clientset.AppsV1().Deployments(namespace).Get(context.Background(), reverseProxyDepName, metav1.GetOptions{})
-	assert.NoError(t, err, "cannot retrieve reverse proxy pod")
+	assert.NoError(t, err, "cannot retrieve reverse proxy deployment")
 	assert.NotNil(t, deployment, "no reverse proxy deployment found")
 
-	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("name=%s-reverseproxy", reverseProxyReleaseName.String()),
-	})
-	assert.NoError(t, err, "cannot retrieve reverse proxy pod")
-	assert.NotNil(t, pods, "no reverse proxy pods found")
-	assert.Equal(t, len(pods.Items), 1, "more than 1 reverse proxy pods found")
+	podName, err := waitForSingleReadyPod(t, namespace,
+		fmt.Sprintf("name=%s-reverseproxy", reverseProxyReleaseName.String()), 3*time.Minute)
+	if err != nil {
+		return fmt.Errorf("reverse proxy pod not ready: %w", err)
+	}
 
 	cmd := []string{"ls", "-lst", "/reverse-proxy"}
-	stdoutCmd, _, err := ExecInPod(standaloneReleaseName, cmd, pods.Items[0].Name)
+	stdoutCmd, _, err := ExecInPod(standaloneReleaseName, cmd, podName)
 	assert.NoError(t, err, "cannot exec in reverse proxy pod")
 	assert.NotContains(t, stdoutCmd, "root")
 	assert.Contains(t, stdoutCmd, "neo4j")
 
 	ingressName := fmt.Sprintf("%s-reverseproxy-ingress", reverseProxyReleaseName.String())
-	ingress, err := Clientset.NetworkingV1().Ingresses(namespace).Get(context.Background(), ingressName, metav1.GetOptions{})
-	assert.NoError(t, err, "cannot retrieve reverse proxy ingress")
-	assert.NotNil(t, ingress, "empty reverse proxy ingress found")
-	ingressIP := ingress.Status.LoadBalancer.Ingress[0].IP
-	assert.NotEmpty(t, ingressIP, "no ingress ip found")
+	ingressIP, err := waitForIngressIP(t, namespace, ingressName, 5*time.Minute)
+	if err != nil {
+		return fmt.Errorf("reverse proxy ingress IP not ready: %w", err)
+	}
 
 	ingressURL := fmt.Sprintf("https://%s:443", ingressIP)
 	stdout, _, err := RunCommand(exec.Command("wget", "-qO-", "--no-check-certificate", ingressURL))
@@ -1922,6 +1902,78 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 	assert.NotContains(t, string(stdout), "8443")
 
 	return nil
+}
+
+// waitForDeploymentReady polls until the deployment has all replicas available.
+func waitForDeploymentReady(t *testing.T, namespace, deploymentName string, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		deployment, err := Clientset.AppsV1().Deployments(namespace).Get(context.Background(), deploymentName, metav1.GetOptions{})
+		if err == nil && deployment.Status.ReadyReplicas > 0 &&
+			deployment.Status.ReadyReplicas == deployment.Status.Replicas {
+			t.Logf("Deployment %s/%s is ready (%d/%d replicas)", namespace, deploymentName,
+				deployment.Status.ReadyReplicas, deployment.Status.Replicas)
+			return nil
+		}
+		t.Logf("Waiting for deployment %s/%s to become ready...", namespace, deploymentName)
+		time.Sleep(10 * time.Second)
+	}
+	return fmt.Errorf("deployment %s/%s did not become ready within %s", namespace, deploymentName, timeout)
+}
+
+// waitForSingleReadyPod polls until exactly one Ready pod matches the label selector, then returns its name.
+func waitForSingleReadyPod(t *testing.T, namespace, labelSelector string, timeout time.Duration) (string, error) {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{
+			LabelSelector: labelSelector,
+		})
+		if err != nil {
+			t.Logf("Error listing pods with selector %q: %v", labelSelector, err)
+			time.Sleep(10 * time.Second)
+			continue
+		}
+		readyPods := make([]v1.Pod, 0, len(pods.Items))
+		for _, pod := range pods.Items {
+			if pod.DeletionTimestamp != nil {
+				continue
+			}
+			for _, cond := range pod.Status.Conditions {
+				if cond.Type == v1.PodReady && cond.Status == v1.ConditionTrue {
+					readyPods = append(readyPods, pod)
+					break
+				}
+			}
+		}
+		if len(readyPods) == 1 {
+			return readyPods[0].Name, nil
+		}
+		t.Logf("Waiting for single ready pod with selector %q (currently %d ready, %d total)...",
+			labelSelector, len(readyPods), len(pods.Items))
+		time.Sleep(10 * time.Second)
+	}
+	return "", fmt.Errorf("did not observe a single ready pod for selector %q within %s", labelSelector, timeout)
+}
+
+// waitForIngressIP polls until the Ingress has a LoadBalancer IP or hostname assigned.
+func waitForIngressIP(t *testing.T, namespace, ingressName string, timeout time.Duration) (string, error) {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		ingress, err := Clientset.NetworkingV1().Ingresses(namespace).Get(context.Background(), ingressName, metav1.GetOptions{})
+		if err == nil && ingress != nil {
+			for _, lb := range ingress.Status.LoadBalancer.Ingress {
+				if lb.IP != "" {
+					return lb.IP, nil
+				}
+				if lb.Hostname != "" {
+					return lb.Hostname, nil
+				}
+			}
+		}
+		t.Logf("Waiting for ingress %s/%s to be assigned a LoadBalancer IP...", namespace, ingressName)
+		time.Sleep(10 * time.Second)
+	}
+	return "", fmt.Errorf("ingress %s/%s did not receive a LoadBalancer IP within %s", namespace, ingressName, timeout)
 }
 
 func createGCPServiceAccount(k8sServiceAccountName string, namespace string, gcpServiceAccountName string) error {

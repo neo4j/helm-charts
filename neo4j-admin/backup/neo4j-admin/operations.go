@@ -22,44 +22,57 @@ import (
 	"google.golang.org/api/iterator"
 )
 
-// CheckDatabaseConnectivity checks if there is connectivity with the provided backup instance or not
+// CheckDatabaseConnectivity checks if there is connectivity with the provided backup instance or not.
+// It retries on transient failures (e.g. kube-dns cold-start on a fresh pod) before giving up.
 func CheckDatabaseConnectivity(hostPortList string) error {
 	// Split by comma to handle multiple endpoints
 	endpoints := strings.Split(hostPortList, ",")
 
+	const maxAttempts = 6
+	delay := 5 * time.Second
 	var lastErr error
-	for _, endpoint := range endpoints {
-		endpoint = strings.TrimSpace(endpoint)
-		address := strings.Split(endpoint, ":")
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		for _, endpoint := range endpoints {
+			endpoint = strings.TrimSpace(endpoint)
+			address := strings.Split(endpoint, ":")
 
-		if len(address) != 2 {
-			lastErr = fmt.Errorf("invalid endpoint format %s, expected host:port", endpoint)
-			log.Printf("Warning: %v", lastErr)
-			continue
+			if len(address) != 2 {
+				lastErr = fmt.Errorf("invalid endpoint format %s, expected host:port", endpoint)
+				log.Printf("Warning: %v", lastErr)
+				continue
+			}
+
+			output, err := exec.Command("nc", "-vz", "-w", "5", address[0], address[1]).CombinedOutput()
+			if err != nil {
+				lastErr = fmt.Errorf("connectivity cannot be established with %s \n output = %s \n err = %v",
+					endpoint, string(output), err)
+				log.Printf("Warning (attempt %d/%d): %v", attempt, maxAttempts, lastErr)
+				continue
+			}
+
+			outputString := strings.ToLower(string(output))
+			if !strings.Contains(outputString, "succeeded") && !strings.Contains(outputString, "connected") {
+				lastErr = fmt.Errorf("connectivity cannot be established with %s. Missing 'succeeded' in output \n output = %s",
+					endpoint, string(output))
+				log.Printf("Warning (attempt %d/%d): %v", attempt, maxAttempts, lastErr)
+				continue
+			}
+
+			log.Printf("Connectivity established with Database %s!!", endpoint)
+			return nil // Return on first successful connection
 		}
 
-		output, err := exec.Command("nc", "-vz", address[0], address[1]).CombinedOutput()
-		if err != nil {
-			lastErr = fmt.Errorf("connectivity cannot be established with %s \n output = %s \n err = %v",
-				endpoint, string(output), err)
-			log.Printf("Warning: %v", lastErr)
-			continue
+		if attempt < maxAttempts {
+			log.Printf("All endpoints failed on attempt %d/%d; retrying in %s", attempt, maxAttempts, delay)
+			time.Sleep(delay)
+			if delay < 30*time.Second {
+				delay *= 2
+			}
 		}
-
-		outputString := strings.ToLower(string(output))
-		if !strings.Contains(outputString, "succeeded") && !strings.Contains(outputString, "connected") {
-			lastErr = fmt.Errorf("connectivity cannot be established with %s. Missing 'succeeded' in output \n output = %s",
-				endpoint, string(output))
-			log.Printf("Warning: %v", lastErr)
-			continue
-		}
-
-		log.Printf("Connectivity established with Database %s!!", endpoint)
-		return nil // Return on first successful connection
 	}
 
-	// If we get here, all endpoints failed
-	return fmt.Errorf("connectivity cannot be established with any endpoint: %v", lastErr)
+	// If we get here, all endpoints failed after all retries
+	return fmt.Errorf("connectivity cannot be established with any endpoint after %d attempts: %v", maxAttempts, lastErr)
 }
 
 // importCustomCA imports the custom S3 CA certificate into a JVM truststore and updates system CA certificates
