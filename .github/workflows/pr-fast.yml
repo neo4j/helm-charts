@@ -55,8 +55,16 @@ jobs:
             --chart-yaml-schema=""   \
             --validate-maintainers=false
 
-  helm-unit:
-    name: helm template unit tests
+  testutil-unit:
+    # Exercises the new utility packages (poll, testid, timeouts) that are
+    # independent of the cluster-config package init and safe under -race.
+    # internal/unit_tests is intentionally NOT included here: that package
+    # mixes helm-template rendering (unit-like) with tests that perform real
+    # `helm install` calls against a cluster and with tests that share
+    # mutable state under `forEachSupportedEdition` which trips -race. The
+    # full GKE pipeline exercises those; fixing them in-place is out of
+    # scope for the overhaul.
+    name: testutil package tests (-race)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -68,43 +76,13 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Set up Helm
-        uses: azure/setup-helm@v4
-        with:
-          version: v3.14.3
+      - name: go build ./...
+        # Catches compile-level breakage anywhere in the repo before the
+        # slow GKE pipeline even starts.
+        run: go build ./...
 
-      - name: Run unit tests
-        env:
-          # internal/model/default_values.go demands these at package init;
-          # provide stub values so the tests can import the model package.
-          KUBECONFIG: /tmp/kubeconfig-empty
-          NEO4J_EDITION: enterprise
-          NEO4J_DOCKER_IMG: 'stub:stub'
-          NEO4J_DOCKER_BACKUP_IMG: 'stub:stub'
-          NEO4J_REVERSE_PROXY_IMG: 'stub:stub'
-          NEO4J_OPERATIONS_IMG: 'stub:stub'
-          BLOOM_LICENSE: stub
-          IPS_USERNAME: stub
-          IPS_PASS: stub
-          IPS_EMAIL: stub
-          AWS_ACCESS_KEY_ID: stub
-          AWS_SECRET_ACCESS_KEY: stub
-          AZURE_STORAGE_ACCOUNT: stub
-          AZURE_STORAGE_KEY: stub
-          AZURE_CLIENT_ID: stub
-          AZURE_CLIENT_SECRET: stub
-          AZURE_TENANT_ID: stub
-          GCP_SERVICE_ACCOUNT_CRED: stub
-        run: |
-          mkdir -p /tmp
-          cat > /tmp/kubeconfig-empty <<'EOF'
-          apiVersion: v1
-          kind: Config
-          clusters: []
-          contexts: []
-          users: []
-          EOF
-          go test -race -count=1 ./internal/testutil/... ./internal/unit_tests/...
+      - name: Run testutil tests with race detector
+        run: go test -race -count=1 ./internal/testutil/...
 
   kind-smoke:
     name: kind install smoke
