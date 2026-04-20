@@ -10,6 +10,11 @@ permissions:
   contents: read
   actions: write
 
+env:
+  # Silence the Node 20 deprecation warning on actions/checkout, setup-python,
+  # etc. The runtime will flip the default to Node 24 in June 2026 anyway.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   detect:
     runs-on: ubuntu-latest
@@ -30,7 +35,10 @@ jobs:
       - name: Detect new Neo4j docker version
         id: detect
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_AUTOMATION_PAT }}
+          # Default GITHUB_TOKEN is enough here: the detector only reads
+          # Docker Hub tags + /releases/tags/<tag> (covered by contents: read).
+          # The elevated PAT is only required by the dispatch/watch steps below.
+          GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
