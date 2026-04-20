@@ -21,14 +21,15 @@ var (
 var Neo4jConfFile = fmt.Sprintf("neo4j/neo4j-%s.conf", model.Neo4jEdition)
 
 func init() {
+	// Format kept intentionally short: Kubernetes CronJob names are capped at
+	// 52 chars and Helm release names at 53. TestNamespace() appends a
+	// 7-char SHA suffix (`-` + 6 hex) on top of this run ID, so the combined
+	// suffix must stay well under ~20 chars to leave room for descriptive
+	// prefixes like "standalone-backup-local-incon-" (30 chars).
 	dt := time.Now()
-	dateTag := dt.Format("15:04:05.00 Mon")
+	dateTag := dt.Format("150405")
 	randomSuffix := rand.Intn(1000)
-	dateTag = fmt.Sprintf("%s-%d", dateTag, randomSuffix)
-	dateTag = strings.ReplaceAll(dateTag, " ", "-")
-	dateTag = strings.ReplaceAll(dateTag, ":", "-")
-	dateTag = strings.ReplaceAll(dateTag, ".", "-")
-	TestRunIdentifier = strings.ToLower(dateTag)
+	TestRunIdentifier = strings.ToLower(fmt.Sprintf("%s-%d", dateTag, randomSuffix))
 }
 
 // TestNamespace returns a deterministic, per-test identifier that embeds both
