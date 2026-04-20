@@ -59,7 +59,16 @@ var (
 	Config                      *restclient.Config
 	gcpServiceAccountNamePrefix = "gcp-sa"
 	k8sServiceAccountNamePrefix = "k8s-sa"
-	mutex                       sync.Mutex
+	// Roles granted by createGCPServiceAccount at the project level;
+	// deleteGCPServiceAccount revokes the same set so the project policy
+	// doesn't accumulate `deleted:serviceAccount:...` ghost members
+	// (which eventually poison add-iam-policy-binding calls for unrelated
+	// SAs).
+	gcpServiceAccountProjectRoles = []string{
+		"roles/storage.admin",
+		"roles/artifactregistry.repoAdmin",
+	}
+	mutex sync.Mutex
 )
 
 func init() {
@@ -1989,19 +1998,14 @@ func createGCPServiceAccount(k8sServiceAccountName string, namespace string, gcp
 		return fmt.Errorf("failed waiting for service account creation: %v", err)
 	}
 
-	stdout, stderr, err = runGcloudCommandWithRetry(exec.Command("gcloud", "projects", "add-iam-policy-binding",
-		project, "--member", serviceAccountConfig, "--role", "roles/storage.admin"), 3, "storage.admin role binding")
-	if err != nil {
-		return fmt.Errorf("error seen while trying to add iam policy binding to gcp service account %s \n Here's why err := %s \n stderr := %s", gcpServiceAccountName, err, string(stderr))
+	for _, role := range gcpServiceAccountProjectRoles {
+		stdout, stderr, err = runGcloudCommandWithRetry(exec.Command("gcloud", "projects", "add-iam-policy-binding",
+			project, "--member", serviceAccountConfig, "--role", role), 3, role+" role binding")
+		if err != nil {
+			return fmt.Errorf("error seen while trying to add %s iam policy binding to gcp service account %s \n Here's why err := %s \n stderr := %s", role, gcpServiceAccountName, err, string(stderr))
+		}
+		log.Printf("Added %s to %s \n Stdout = %s \n Stderr = %s", role, serviceAccountEmail, string(stdout), string(stderr))
 	}
-	log.Printf("Adding iam policy binding \n Stdout = %s \n Stderr = %s", string(stdout), string(stderr))
-
-	stdout, stderr, err = runGcloudCommandWithRetry(exec.Command("gcloud", "projects", "add-iam-policy-binding",
-		project, "--member", serviceAccountConfig, "--role", "roles/artifactregistry.repoAdmin"), 3, "artifactregistry.repoAdmin role binding")
-	if err != nil {
-		return fmt.Errorf("error seen while trying to add artifact registry iam policy binding to gcp service account %s \n Here's why err := %s \n stderr := %s", gcpServiceAccountName, err, string(stderr))
-	}
-	log.Printf("Adding iam policy binding \n Stdout = %s \n Stderr = %s", string(stdout), string(stderr))
 
 	stdout, stderr, err = runGcloudCommandWithRetry(exec.Command("gcloud", "iam", "service-accounts", "add-iam-policy-binding",
 		serviceAccountEmail, "--role", "roles/iam.workloadIdentityUser",
@@ -2075,9 +2079,26 @@ func revertInconsistency(releaseName model.ReleaseName) error {
 
 func deleteGCPServiceAccount(gcpServiceAccountName string) error {
 	log.Printf("Deleting GCP Service Account %s", gcpServiceAccountName)
-	_, _, err := RunCommand(exec.Command("gcloud", "iam", "service-accounts", "delete", fmt.Sprintf("%s@%s.iam.gserviceaccount.com", gcpServiceAccountName, string(gcloud.CurrentProject()))))
+	project := string(gcloud.CurrentProject())
+	serviceAccountEmail := fmt.Sprintf("%s@%s.iam.gserviceaccount.com", gcpServiceAccountName, project)
+	serviceAccountConfig := fmt.Sprintf("serviceAccount:%s", serviceAccountEmail)
+
+	// Revoke project-level bindings BEFORE deleting the SA. If we delete
+	// first, the bindings are stranded as `deleted:serviceAccount:...`
+	// ghost members and GCP will fail subsequent add-iam-policy-binding
+	// calls on this project with "Service account X does not exist",
+	// referencing the ghost rather than anything the failing test touched.
+	for _, role := range gcpServiceAccountProjectRoles {
+		_, stderr, err := runGcloudCommandWithRetry(exec.Command("gcloud", "projects", "remove-iam-policy-binding",
+			project, "--member", serviceAccountConfig, "--role", role), 3, "remove "+role+" binding")
+		if err != nil {
+			log.Printf("warning: failed to remove %s binding for %s: %v; stderr=%s", role, serviceAccountEmail, err, string(stderr))
+		}
+	}
+
+	_, _, err := RunCommand(exec.Command("gcloud", "iam", "service-accounts", "delete", serviceAccountEmail))
 	if err != nil {
-		return fmt.Errorf("error seen while trying to add iam policy binding \n Here's why err := %s ", err)
+		return fmt.Errorf("error seen while trying to delete gcp service account %s \n Here's why err := %s ", gcpServiceAccountName, err)
 	}
 	return nil
 }
