@@ -67,13 +67,22 @@ done once.
      --description "Include this PR in the next helm-charts release notes"
    ```
 
-2. **Add three secrets** (repo Settings → Secrets and variables → Actions):
+2. **Add secrets and repo variables** (repo Settings → Secrets and variables
+   → Actions):
+
+   Secrets:
 
    | Name | Purpose |
    | --- | --- |
    | `RELEASE_AUTOMATION_PAT` | Fine-grained PAT owned by a user in `CI_ALLOWED_ACTORS` (currently `bfeshti` / `riggi-alekaj`). Needs `actions: read/write`, `contents: read` on this repo. The scheduled workflow uses it to `gh workflow run tests.yml`, and the dispatched run's `github.actor` becomes the PAT owner — which is why it must be allow-listed. |
-   | `SLACK_WEBHOOK_URL_FAILURES` | Incoming webhook for the alert/on-call channel. Posted to when auto-release aborts. |
-   | `SLACK_WEBHOOK_URL_RELEASES` | Incoming webhook for the announcement channel. Posted to on successful auto-release. |
+   | `SLACK_BOT_TOKEN` | Bot user OAuth token (`xoxb-…`) for the Slack app that posts notifications. The app must have the `chat:write` scope and be invited to both channels below (`/invite @<bot>` in each channel). |
+
+   Repo variables:
+
+   | Name | Purpose |
+   | --- | --- |
+   | `SLACK_CHANNEL_FAILURES` | Slack channel ID (e.g. `C0123456789`) for failure alerts. Grab from Slack → channel → "View channel details" → bottom of "About" tab. |
+   | `SLACK_CHANNEL_RELEASES` | Slack channel ID for successful-release announcements. |
 
    `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` already exist (used by
    `package-and-release.yml`); the detector reuses them to lift Docker Hub's

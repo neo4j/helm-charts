@@ -109,9 +109,9 @@ jobs:
     steps:
       - uses: slackapi/slack-github-action@fcfb566f8b0aab22203f066d80ca1d7e4b5d05b3 # v1
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL_FAILURES }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
+          channel-id: ${{ vars.SLACK_CHANNEL_FAILURES }}
           payload: |
             {
               "text": ":x: helm-charts auto-release failed for Neo4j ${{ needs.detect.outputs.docker_image_version }} (chart ${{ needs.detect.outputs.helm_chart_version }}). Dispatched run: ${{ needs.run-tests-and-release.outputs.run_url }} | Orchestrator: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
@@ -124,9 +124,9 @@ jobs:
     steps:
       - uses: slackapi/slack-github-action@fcfb566f8b0aab22203f066d80ca1d7e4b5d05b3 # v1
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL_RELEASES }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
+          channel-id: ${{ vars.SLACK_CHANNEL_RELEASES }}
           payload: |
             {
               "text": ":white_check_mark: helm-charts auto-released ${{ needs.detect.outputs.helm_chart_version }} (Neo4j ${{ needs.detect.outputs.docker_image_version }}). Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.detect.outputs.helm_chart_version }}"
