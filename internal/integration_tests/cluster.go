@@ -21,6 +21,7 @@ import (
 	. "github.com/neo4j/helm-charts/internal/helpers"
 	"github.com/neo4j/helm-charts/internal/integration_tests/gcloud"
 	"github.com/neo4j/helm-charts/internal/model"
+	"github.com/neo4j/helm-charts/internal/testutil/poll"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -1236,30 +1237,31 @@ func checkHeadlessServiceEndpoints(t *testing.T, service model.ReleaseName) erro
 	}
 	headlessServiceSelectors := labels.Set(headlessService.Spec.Selector)
 	listOptions := metav1.ListOptions{LabelSelector: headlessServiceSelectors.AsSelector().String()}
+	ns := string(service.Namespace())
 
-	const maxAttempts = 6
 	var endPointIPs, podIPs []string
-	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		//get the endpoints associated with the headless service
-		endpoints, err := Clientset.CoreV1().Endpoints(string(service.Namespace())).Get(context.TODO(), serviceName, metav1.GetOptions{})
+	pollErr := poll.Until(context.Background(), t, poll.Opts{
+		Interval:      5 * time.Second,
+		Timeout:       30 * time.Second,
+		Description:   fmt.Sprintf("headless service %s/%s endpoints to match pod IPs", ns, serviceName),
+		RetryableErrs: func(error) bool { return true },
+	}, func(ctx context.Context) (bool, error) {
+		endpoints, err := Clientset.CoreV1().Endpoints(ns).Get(ctx, serviceName, metav1.GetOptions{})
 		if err != nil {
-			return fmt.Errorf("failed to get headless service endpoints %v", err)
+			return false, fmt.Errorf("get endpoints: %w", err)
 		}
-
 		endPointIPs = endPointIPs[:0]
 		if len(endpoints.Subsets) > 0 {
-			for _, endpointAddress := range endpoints.Subsets[0].Addresses {
-				if endpointAddress.IP != "" {
-					endPointIPs = append(endPointIPs, endpointAddress.IP)
+			for _, addr := range endpoints.Subsets[0].Addresses {
+				if addr.IP != "" {
+					endPointIPs = append(endPointIPs, addr.IP)
 				}
 			}
 		}
-
-		pods, err := Clientset.CoreV1().Pods(string(service.Namespace())).List(context.TODO(), listOptions)
+		pods, err := Clientset.CoreV1().Pods(ns).List(ctx, listOptions)
 		if err != nil {
-			return fmt.Errorf("cannot get pods matching with headless service selector: %v", err)
+			return false, fmt.Errorf("list pods: %w", err)
 		}
-
 		podIPs = podIPs[:0]
 		for _, pod := range pods.Items {
 			// Skip pods that are being torn down — they'll disappear from endpoints shortly.
@@ -1272,22 +1274,17 @@ func checkHeadlessServiceEndpoints(t *testing.T, service model.ReleaseName) erro
 			}
 			podIPs = append(podIPs, pod.Status.PodIP)
 		}
-
 		if len(podIPs) > 0 && len(endPointIPs) > 0 && stringsElementsMatch(podIPs, endPointIPs) {
-			return nil
+			return true, nil
 		}
-		t.Logf("headless endpoints / pod IPs mismatch on attempt %d/%d (pods=%v, endpoints=%v), retrying", attempt, maxAttempts, podIPs, endPointIPs)
-		time.Sleep(5 * time.Second)
-	}
-
-	if !assert.ElementsMatch(t, podIPs, endPointIPs) {
-		return fmt.Errorf("podIPs %v and endPointIps %v do not match after %d attempts", podIPs, endPointIPs, maxAttempts)
-	}
-	if !assert.NotEmpty(t, podIPs) {
-		return fmt.Errorf("no ready pods found for headless service %s", serviceName)
-	}
-	if !assert.NotEmpty(t, endPointIPs) {
-		return fmt.Errorf("no endpoint addresses found for headless service %s", serviceName)
+		t.Logf("headless endpoints / pod IPs not yet matched (pods=%v, endpoints=%v)", podIPs, endPointIPs)
+		return false, nil
+	})
+	if pollErr != nil {
+		assert.ElementsMatch(t, podIPs, endPointIPs)
+		assert.NotEmpty(t, podIPs)
+		assert.NotEmpty(t, endPointIPs)
+		return pollErr
 	}
 	return nil
 }
