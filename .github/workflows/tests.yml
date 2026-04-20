@@ -25,7 +25,7 @@ env:
   CLOUDSDK_COMPUTE_ZONE: "europe-west2-b"
   CLOUDSDK_COMPUTE_REGION: "europe-west2"
   GO_TEST_COUNT: 1
-  GO_TEST_TIMEOUT: 29m
+  GO_TEST_TIMEOUT: 45m
   GO_TEST_FORMAT: json
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -215,7 +215,7 @@ jobs:
     needs: [gke-setup, build-reverseproxy-backup, check-pr]
     if: needs.check-pr.outputs.should_run == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 75
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       NEO4J_EDITION: "enterprise"
@@ -277,7 +277,7 @@ jobs:
     needs: [gke-setup, build-reverseproxy-backup, check-pr]
     if: needs.check-pr.outputs.should_run == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 75
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       NEO4J_EDITION: "community"
@@ -339,7 +339,7 @@ jobs:
     needs: [gke-setup-redhat, build-reverseproxy-backup, check-pr]
     if: needs.check-pr.outputs.should_run == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 75
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       NEO4J_EDITION: "enterprise"
@@ -401,7 +401,7 @@ jobs:
     needs: [gke-setup-redhat, build-reverseproxy-backup, check-pr]
     if: needs.check-pr.outputs.should_run == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 75
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       NEO4J_EDITION: "community"

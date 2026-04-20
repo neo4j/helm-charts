@@ -54,8 +54,11 @@ func standaloneCleanup(t *testing.T, releaseName model.ReleaseName) func() {
 				waitForPodsTerminated(t, namespace, 60*time.Second)
 			}
 
+			// Force-delete any pods still in Terminating state so `helm uninstall` doesn't block.
+			_ = run(t, "kubectl", "delete", "pod", "--all", "--namespace", namespace, "--force", "--grace-period=0", "--ignore-not-found")
+
 			_ = runAll(t, "helm", [][]string{
-				{"uninstall", releaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
+				{"uninstall", releaseName.String(), "--timeout", "30s", "--namespace", namespace},
 			}, false)
 
 			_ = runAll(t, "kubectl", [][]string{

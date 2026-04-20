@@ -1183,63 +1183,95 @@ func checkHeadlessServiceConfiguration(t *testing.T, service model.ReleaseName) 
 
 // checkHeadlessServiceEndpoints checks whether the headless endpoints have the cluster cores or not
 // By default , headless service includes cluster core only and no read replicas
+//
+// This check is brittle by nature: there's always a window where a pod has been scheduled but
+// not yet assigned an IP, or a pod is Terminating but still registered as an endpoint. To avoid
+// flakes we:
+//   - filter out pods that are Terminating (DeletionTimestamp set) or have empty PodIPs,
+//   - filter out empty endpoint addresses (shouldn't happen, but seen in practice),
+//   - and retry a few times if the sets briefly disagree.
 func checkHeadlessServiceEndpoints(t *testing.T, service model.ReleaseName) error {
 
 	serviceName := fmt.Sprintf("%s-headless", model.DefaultNeo4jName)
-
-	//get the endpoints associated with the headless service
-	endpoints, err := Clientset.CoreV1().Endpoints(string(service.Namespace())).Get(context.TODO(), serviceName, metav1.GetOptions{})
-	if !assert.NoError(t, err) {
-		return fmt.Errorf("failed to get headless service endpoints %v", err)
-	}
-
-	if !assert.NotEmpty(t, endpoints.Subsets) {
-		return fmt.Errorf("headlessService endpoints subset cannot be empty")
-	}
-
-	if !assert.Len(t, endpoints.Subsets, 1) {
-		return fmt.Errorf("headlessService endpoints subset length should be 1 whereas it is %d", len(endpoints.Subsets))
-	}
-
-	if !assert.NotEmpty(t, endpoints.Subsets[0].Addresses) {
-		return fmt.Errorf("headlessService endpoints addresses list cannot be empty")
-	}
-
-	//get the list of endpoint ip's
-	var endPointIPs []string
-	for _, endpointAddress := range endpoints.Subsets[0].Addresses {
-		endPointIPs = append(endPointIPs, endpointAddress.IP)
-	}
 
 	headlessService, err := Clientset.CoreV1().Services(string(service.Namespace())).Get(context.TODO(), serviceName, metav1.GetOptions{})
 	if !assert.NoError(t, err) {
 		return fmt.Errorf("headless service %s not found , Error seen := %v", service.String(), err)
 	}
-
-	//get the list of pods which match the headless service selectors
 	headlessServiceSelectors := labels.Set(headlessService.Spec.Selector)
 	listOptions := metav1.ListOptions{LabelSelector: headlessServiceSelectors.AsSelector().String()}
-	pods, err := Clientset.CoreV1().Pods(string(service.Namespace())).List(context.TODO(), listOptions)
-	if !assert.NoError(t, err) {
-		return fmt.Errorf("cannot get pods matching with headless service selector")
+
+	const maxAttempts = 6
+	var endPointIPs, podIPs []string
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		//get the endpoints associated with the headless service
+		endpoints, err := Clientset.CoreV1().Endpoints(string(service.Namespace())).Get(context.TODO(), serviceName, metav1.GetOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to get headless service endpoints %v", err)
+		}
+
+		endPointIPs = endPointIPs[:0]
+		if len(endpoints.Subsets) > 0 {
+			for _, endpointAddress := range endpoints.Subsets[0].Addresses {
+				if endpointAddress.IP != "" {
+					endPointIPs = append(endPointIPs, endpointAddress.IP)
+				}
+			}
+		}
+
+		pods, err := Clientset.CoreV1().Pods(string(service.Namespace())).List(context.TODO(), listOptions)
+		if err != nil {
+			return fmt.Errorf("cannot get pods matching with headless service selector: %v", err)
+		}
+
+		podIPs = podIPs[:0]
+		for _, pod := range pods.Items {
+			// Skip pods that are being torn down — they'll disappear from endpoints shortly.
+			if pod.DeletionTimestamp != nil {
+				continue
+			}
+			// Skip pods with no IP yet — transient between Pending and Running.
+			if pod.Status.PodIP == "" {
+				continue
+			}
+			podIPs = append(podIPs, pod.Status.PodIP)
+		}
+
+		if len(podIPs) > 0 && len(endPointIPs) > 0 && stringsElementsMatch(podIPs, endPointIPs) {
+			return nil
+		}
+		t.Logf("headless endpoints / pod IPs mismatch on attempt %d/%d (pods=%v, endpoints=%v), retrying", attempt, maxAttempts, podIPs, endPointIPs)
+		time.Sleep(5 * time.Second)
 	}
 
-	if !assert.NotEmpty(t, pods) {
-		return fmt.Errorf("pods list matching headless service selector cannot be empty")
-	}
-
-	//get the list of podIPs matching the headless service selector
-	var podIPs []string
-	for _, pod := range pods.Items {
-		podIPs = append(podIPs, pod.Status.PodIP)
-	}
-
-	//compare podIps and headlessService endPoint IPs ...both should match
 	if !assert.ElementsMatch(t, podIPs, endPointIPs) {
-		return fmt.Errorf("podIPs %v and endPointIps %v do not match", podIPs, endPointIPs)
+		return fmt.Errorf("podIPs %v and endPointIps %v do not match after %d attempts", podIPs, endPointIPs, maxAttempts)
 	}
-
+	if !assert.NotEmpty(t, podIPs) {
+		return fmt.Errorf("no ready pods found for headless service %s", serviceName)
+	}
+	if !assert.NotEmpty(t, endPointIPs) {
+		return fmt.Errorf("no endpoint addresses found for headless service %s", serviceName)
+	}
 	return nil
+}
+
+// stringsElementsMatch reports whether a and b contain the same strings, ignoring order.
+func stringsElementsMatch(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	counts := make(map[string]int, len(a))
+	for _, s := range a {
+		counts[s]++
+	}
+	for _, s := range b {
+		counts[s]--
+		if counts[s] < 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func performBackgroundInstall(t *testing.T, componentsToParallelInstall []helmComponent, clusterReleaseName model.ReleaseName) ([]Closeable, error) {

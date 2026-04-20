@@ -507,14 +507,17 @@ func kubectlLogs(t *testing.T, podName string, namespace string) (string, error)
 func waitForPodsTerminated(t *testing.T, namespace string, timeout time.Duration) {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		err := run(t, "kubectl", "get", "pods", "--namespace", namespace, "--no-headers")
-		if err != nil {
+		pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
+		if err != nil || len(pods.Items) == 0 {
 			return
 		}
-		t.Logf("Waiting for pods in namespace %s to terminate...", namespace)
+		t.Logf("Waiting for pods in namespace %s to terminate (%d remaining)...", namespace, len(pods.Items))
 		time.Sleep(5 * time.Second)
 	}
-	t.Logf("Timed out waiting for pods in namespace %s to terminate after %v", namespace, timeout)
+	t.Logf("Timed out waiting for pods in namespace %s to terminate after %v; force-deleting", namespace, timeout)
+	// Pods are still Terminating (finalizers, detaching disks, preStop hooks) — force-remove them
+	// so downstream `helm uninstall --wait` doesn't block indefinitely.
+	_ = run(t, "kubectl", "delete", "pod", "--all", "--namespace", namespace, "--force", "--grace-period=0", "--ignore-not-found")
 }
 
 // waitForBackupPodCompletion polls until a pod matching podNameSubstring appears in the namespace

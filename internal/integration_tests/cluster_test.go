@@ -182,9 +182,16 @@ func clusterTestCleanup(t *testing.T, clusterReleaseName model.ReleaseName, core
 
 			waitForPodsTerminated(t, namespace, 60*time.Second)
 
+			// Force-delete any stragglers (waitForPodsTerminated already does this on timeout,
+			// but calling it again is cheap and guards against pods created between scale-down
+			// and uninstall). This is the critical fix: if a pod is stuck Terminating,
+			// `helm uninstall --wait` blocks for its full --timeout, which is how we ran
+			// out of the Go test deadline previously.
+			_ = run(t, "kubectl", "delete", "pod", "--all", "--namespace", namespace, "--force", "--grace-period=0", "--ignore-not-found")
+
 			_ = runAll(t, "helm", [][]string{
-				{"uninstall", core1.name.String(), core2.name.String(), core3.name.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
-				{"uninstall", clusterReleaseName.String() + "-headless", "--wait", "--timeout", "1m", "--namespace", namespace},
+				{"uninstall", core1.name.String(), core2.name.String(), core3.name.String(), "--timeout", "30s", "--namespace", namespace},
+				{"uninstall", clusterReleaseName.String() + "-headless", "--timeout", "30s", "--namespace", namespace},
 			}, false)
 
 			_ = runAll(t, "kubectl", [][]string{
