@@ -272,7 +272,7 @@ jobs:
           export IPS_PASS=$(gcloud auth print-access-token)
           #inputs.RELEASE does not hold value when workflow_dispatch is not called
           ISRELEASE="$ISRELEASE_INPUT"
-          if [[ ${#ISRELEASE} != 0 ]]; then            
+          if [[ "$ISRELEASE" == "true" ]]; then
             export NEO4J_DOCKER_IMG="neo4j:$DOCKER_IMAGE_VERSION_INPUT-enterprise"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
@@ -334,7 +334,7 @@ jobs:
           export IPS_PASS=$(gcloud auth print-access-token)
           #inputs.RELEASE does not hold value when workflow_dispatch is not called
           ISRELEASE="$ISRELEASE_INPUT"
-          if [[ ${#ISRELEASE} != 0 ]]; then            
+          if [[ "$ISRELEASE" == "true" ]]; then
             export NEO4J_DOCKER_IMG="neo4j:$DOCKER_IMAGE_VERSION_INPUT"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
@@ -397,7 +397,7 @@ jobs:
           export IPS_PASS=$(gcloud auth print-access-token)          
           #inputs.RELEASE does not hold value when workflow_dispatch is not called
           ISRELEASE="$ISRELEASE_INPUT"
-          if [[ ${#ISRELEASE} != 0 ]]; then            
+          if [[ "$ISRELEASE" == "true" ]]; then
             export NEO4J_DOCKER_IMG="neo4j:$DOCKER_IMAGE_VERSION_INPUT-enterprise"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
@@ -459,7 +459,7 @@ jobs:
           export IPS_PASS=$(gcloud auth print-access-token)
           #inputs.RELEASE does not hold value when workflow_dispatch is not called
           ISRELEASE="$ISRELEASE_INPUT"
-          if [[ ${#ISRELEASE} != 0 ]]; then            
+          if [[ "$ISRELEASE" == "true" ]]; then
             export NEO4J_DOCKER_IMG="neo4j:$DOCKER_IMAGE_VERSION_INPUT"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
