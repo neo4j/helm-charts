@@ -33,6 +33,7 @@ import (
 	"github.com/neo4j/helm-charts/internal/integration_tests/gcloud"
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/neo4j/helm-charts/internal/testutil/poll"
+	"github.com/neo4j/helm-charts/internal/testutil/timeouts"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -2275,7 +2276,7 @@ func TestProbeConfigurations(t *testing.T) {
 
 			err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()),
 				"wait", "--for=condition=ready", "pod", releaseName.PodName(),
-				"--timeout=300s")
+				timeouts.KubectlPodReady())
 			assert.NoError(t, err)
 
 			err = CheckProbes(t, releaseName)

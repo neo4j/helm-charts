@@ -9,6 +9,7 @@ import (
 	"github.com/neo4j/helm-charts/internal/integration_tests/gcloud"
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/neo4j/helm-charts/internal/resources"
+	"github.com/neo4j/helm-charts/internal/testutil/timeouts"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -78,7 +79,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	addCloseable(closeablesNew...)
 
 	for _, core := range cores {
-		err = run(t, "kubectl", "--namespace", string(core.Name().Namespace()), "rollout", "status", "--watch", "--timeout=180s", "statefulset/"+core.Name().String())
+		err = run(t, "kubectl", "--namespace", string(core.Name().Namespace()), "rollout", "status", "--watch", timeouts.KubectlRollout(), "statefulset/"+core.Name().String())
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -148,7 +149,7 @@ func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
 	addCloseable(closeablesNew...)
 
 	for _, core := range cores {
-		err = run(t, "kubectl", "--namespace", string(core.Name().Namespace()), "rollout", "status", "--watch", "--timeout=180s", "statefulset/"+core.Name().String())
+		err = run(t, "kubectl", "--namespace", string(core.Name().Namespace()), "rollout", "status", "--watch", timeouts.KubectlRollout(), "statefulset/"+core.Name().String())
 		if !assert.NoError(t, err) {
 			return
 		}
