@@ -1,0 +1,86 @@
+name: 'Build and push Neo4j helm-charts images'
+description: >-
+  Builds the four images the test suite and the release workflow share
+  (reverse-proxy, operations, backup/debian, backup/redhat) with the tags
+  and backup source images supplied by the caller. Consolidates what used
+  to be 14 copies of docker/build-push-action across three workflows.
+
+inputs:
+  registry:
+    description: 'Registry host (e.g. europe-west2-docker.pkg.dev, or docker.io for public release pushes).'
+    required: true
+  registry_username:
+    description: 'Registry username ("_json_key" for GCP SA JSON, dockerhub username for docker.io, etc.).'
+    required: true
+  registry_password:
+    description: 'Registry password or service-account JSON.'
+    required: true
+  reverseproxy_tag:
+    description: 'Full image reference for the reverse-proxy build (e.g. "registry/reverseproxy:123" or "neo4j/helm-charts-reverse-proxy:2025.04.0").'
+    required: true
+  operations_tag:
+    description: 'Full image reference for the operations image.'
+    required: true
+  backup_tag_debian:
+    description: 'Full image reference for the Debian-based backup image.'
+    required: true
+  backup_tag_redhat:
+    description: 'Full image reference for the RedHat-based backup image.'
+    required: true
+  backup_source_debian:
+    description: 'Neo4j source image passed as IMAGE build-arg for the Debian backup build.'
+    required: true
+  backup_source_redhat:
+    description: 'Neo4j source image passed as IMAGE build-arg for the RedHat backup build.'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ inputs.registry }}
+        username: ${{ inputs.registry_username }}
+        password: ${{ inputs.registry_password }}
+
+    - name: Build and push reverse-proxy image
+      uses: docker/build-push-action@v5
+      with:
+        context: "{{defaultContext}}:neo4j-reverse-proxy"
+        push: true
+        tags: ${{ inputs.reverseproxy_tag }}
+        provenance: false
+
+    - name: Build and push operations image
+      uses: docker/build-push-action@v5
+      with:
+        context: "{{defaultContext}}:neo4j/neo4j-operations"
+        push: true
+        tags: ${{ inputs.operations_tag }}
+        provenance: false
+
+    - name: Build and push backup image (debian)
+      uses: docker/build-push-action@v5
+      with:
+        context: "{{defaultContext}}:neo4j-admin"
+        push: true
+        tags: ${{ inputs.backup_tag_debian }}
+        provenance: false
+        build-args: |
+          IMAGE=${{ inputs.backup_source_debian }}
+          DISTRIBUTION=debian
+
+    - name: Build and push backup image (redhat)
+      uses: docker/build-push-action@v5
+      with:
+        context: "{{defaultContext}}:neo4j-admin"
+        push: true
+        tags: ${{ inputs.backup_tag_redhat }}
+        provenance: false
+        build-args: |
+          IMAGE=${{ inputs.backup_source_redhat }}
+          DISTRIBUTION=redhat
