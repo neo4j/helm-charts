@@ -105,7 +105,7 @@ jobs:
     if: failure() && needs.detect.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: slackapi/slack-github-action@v1
+      - uses: slackapi/slack-github-action@fcfb566f8b0aab22203f066d80ca1d7e4b5d05b3 # v1
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL_FAILURES }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
@@ -120,7 +120,7 @@ jobs:
     if: success() && needs.detect.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: slackapi/slack-github-action@v1
+      - uses: slackapi/slack-github-action@fcfb566f8b0aab22203f066d80ca1d7e4b5d05b3 # v1
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL_RELEASES }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
