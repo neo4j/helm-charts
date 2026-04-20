@@ -1,28 +1,69 @@
 #!/usr/bin/env bash
 
-# This script cleans up GCP resources that might be left over from previous test runs
+# Cleans up GCP resources left over from previous test runs.
+#
+# Best-effort by design (a failed pre-test cleanup should not block new tests),
+# but every failure is now surfaced as a warning rather than swallowed with
+# `|| true`. If the resource is truly gone after the attempt, the warning is
+# suppressed — we only complain when something remains.
 
 set -o pipefail -o errtrace -o errexit -o nounset
 shopt -s inherit_errexit
 [[ -n "${TRACE:-}" ]] && set -o xtrace
 
-# Required env vars
 CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
 RESOURCE_PREFIX="${RESOURCE_PREFIX:-ghactions}"
 
-# Clean up any existing clusters 
-echo "Cleaning up any existing clusters..."
+warnings=0
+
+warn() {
+    printf '::warning::%s\n' "$1"
+    warnings=$((warnings + 1))
+}
+
+delete_cluster() {
+    local cluster="$1"
+    if gcloud container clusters delete "$cluster" \
+            --zone="${CLOUDSDK_COMPUTE_ZONE}" --quiet 2>&1 | tee /tmp/cluster_delete.log; then
+        return 0
+    fi
+    # Ignore "not found" — someone else got there first.
+    if grep -q "was not found" /tmp/cluster_delete.log; then
+        return 0
+    fi
+    # Confirm whether the cluster is still there before promoting to a warning.
+    if gcloud container clusters describe "$cluster" \
+            --zone="${CLOUDSDK_COMPUTE_ZONE}" >/dev/null 2>&1; then
+        warn "cluster ${cluster} still exists after delete attempt"
+    fi
+}
+
+delete_disk() {
+    local disk="$1"
+    if gcloud compute disks delete "$disk" \
+            --zone="${CLOUDSDK_COMPUTE_ZONE}" --quiet 2>&1 | tee /tmp/disk_delete.log; then
+        return 0
+    fi
+    if grep -q "was not found" /tmp/disk_delete.log; then
+        return 0
+    fi
+    if gcloud compute disks describe "$disk" \
+            --zone="${CLOUDSDK_COMPUTE_ZONE}" >/dev/null 2>&1; then
+        warn "disk ${disk} still exists after delete attempt"
+    fi
+}
+
+echo "Cleaning up any existing clusters with prefix ${RESOURCE_PREFIX}..."
 CLUSTERS=$(gcloud container clusters list --format="get(name)" --filter="name ~ ^${RESOURCE_PREFIX}-.*")
 if [ -n "$CLUSTERS" ]; then
     while read -r cluster; do
         if [ -n "$cluster" ]; then
             echo "Deleting cluster: $cluster"
-            gcloud container clusters delete "$cluster" --zone="${CLOUDSDK_COMPUTE_ZONE}" --quiet || true
+            delete_cluster "$cluster"
         fi
     done <<< "$CLUSTERS"
 fi
 
-# Clean up any orphaned persistent disks
 echo "Cleaning up orphaned persistent disks..."
 DISKS=$(gcloud compute disks list \
     --filter="zone=${CLOUDSDK_COMPUTE_ZONE} AND (name:${RESOURCE_PREFIX}-* OR name:neo4j-data-disk-${RESOURCE_PREFIX}-*)" \
@@ -31,45 +72,38 @@ if [ -n "$DISKS" ]; then
     while read -r disk; do
         if [ -n "$disk" ]; then
             echo "Deleting disk: $disk"
-            gcloud compute disks delete "$disk" --zone="${CLOUDSDK_COMPUTE_ZONE}" --quiet || true
+            delete_disk "$disk"
         fi
     done <<< "$DISKS"
 fi
 
-# Clean up test-related container images older than 24 hours
 if [[ -n "${ARTIFACT_REGISTRY_REPO_NAME:-}" ]]; then
-    echo "Cleaning up old test-related container images..."
+    echo "Cleaning up old test-related container images (>24h)..."
     CUTOFF_TIME=$(date -u -d "24 hours ago" +"%Y-%m-%dT%H:%M:%SZ")
-
-    # Define the test-related image patterns
-    TEST_IMAGE_PATTERNS=(
-        "reverseproxy"
-        "neo4j-operations"
-        "neo4j-admin"
-    )
-
+    TEST_IMAGE_PATTERNS=(reverseproxy neo4j-operations neo4j-admin)
     for pattern in "${TEST_IMAGE_PATTERNS[@]}"; do
-
         IMAGES=$(gcloud container images list --repository="${ARTIFACT_REGISTRY_REPO_NAME}" \
             --format="get(name)" --filter="name ~ .*${pattern}.*" 2>/dev/null || true)
-        
-        if [ -n "$IMAGES" ]; then
-            while read -r image; do
-                if [ -n "$image" ]; then
-                    OLD_TAGS=$(gcloud container images list-tags "$image" \
-                        --filter="timestamp.datetime < '${CUTOFF_TIME}'" \
-                        --format="get(digest)" 2>/dev/null || true)
-                    
-                    while read -r digest; do
-                        if [ -n "$digest" ]; then
-                            echo "Deleting old image: $image@$digest"
-                            gcloud container images delete --quiet "${image}@${digest}" 2>/dev/null || true
-                        fi
-                    done <<< "$OLD_TAGS"
+        [ -n "$IMAGES" ] || continue
+        while read -r image; do
+            [ -n "$image" ] || continue
+            OLD_TAGS=$(gcloud container images list-tags "$image" \
+                --filter="timestamp.datetime < '${CUTOFF_TIME}'" \
+                --format="get(digest)" 2>/dev/null || true)
+            while read -r digest; do
+                [ -n "$digest" ] || continue
+                echo "Deleting old image: $image@$digest"
+                if ! gcloud container images delete --quiet "${image}@${digest}" 2>/dev/null; then
+                    warn "failed to delete image ${image}@${digest}"
                 fi
-            done <<< "$IMAGES"
-        fi
+            done <<< "$OLD_TAGS"
+        done <<< "$IMAGES"
     done
 else
     echo "Skipping image cleanup - ARTIFACT_REGISTRY_REPO_NAME not set"
-fi 
+fi
+
+if (( warnings > 0 )); then
+    echo "Cleanup finished with ${warnings} warning(s) above"
+fi
+echo "Cleanup complete"
