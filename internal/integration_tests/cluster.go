@@ -49,6 +49,34 @@ func labelNodes(t *testing.T, namespace string) error {
 	return errors.ErrorOrNil()
 }
 
+// ensureNodeLabel makes sure at least one node in the cluster carries
+// testLabel=<labelValue>. GKE may replace nodes mid-test (autorepair,
+// autoscaling, preemption), dropping the labels applied by labelNodes().
+// If no node still has the label, this picks a node without any testLabel
+// and applies it, so subsequent helm installs that use this label as a
+// nodeSelector find a matching node at template evaluation time.
+func ensureNodeLabel(t *testing.T, labelValue string) error {
+	selector := fmt.Sprintf("testLabel=%s", labelValue)
+	if _, err := getNodeWithLabel(selector); err == nil {
+		return nil
+	}
+
+	nodesList, err := getNodesList()
+	if err != nil {
+		return err
+	}
+
+	for _, node := range nodesList.Items {
+		if _, hasLabel := node.ObjectMeta.Labels["testLabel"]; hasLabel {
+			continue
+		}
+		t.Logf("ensureNodeLabel: %s missing, applying to node %s", selector, node.ObjectMeta.Name)
+		return run(t, "kubectl", "label", "nodes", node.ObjectMeta.Name, selector)
+	}
+
+	return fmt.Errorf("no unlabeled node available to apply %s", selector)
+}
+
 // removeLabelFromNodes removes label testLabel from all the nodes added via labelNodes func
 func removeLabelFromNodes(t *testing.T) error {
 
@@ -239,6 +267,10 @@ func InstallNeo4jBackupAWSLocalWithConsistencyCheck(t *testing.T, releaseName mo
 	helmValues.ConsistencyCheck.Enable = true
 	helmValues.ConsistencyCheck.Database = "neo4j"
 
+	if err := ensureNodeLabel(t, fmt.Sprintf("%s-5", namespace)); err != nil {
+		return err
+	}
+
 	_, err := helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
 
@@ -386,6 +418,10 @@ func InstallNeo4jBackupAWSCloudStorage(t *testing.T, releaseName model.ReleaseNa
 	// Disable consistency check for cloud backup to avoid timeouts and reduce template size
 	helmValues.ConsistencyCheck.Enable = false
 	helmValues.ConsistencyCheck.Database = ""
+
+	if err := ensureNodeLabel(t, fmt.Sprintf("%s-5", namespace)); err != nil {
+		return err
+	}
 
 	_, err = helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
