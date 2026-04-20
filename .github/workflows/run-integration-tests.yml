@@ -79,6 +79,24 @@ jobs:
         with:
           version: '>= 363.0.0'
 
+      - name: Verify cluster connectivity
+        run: |
+          set -euo pipefail
+          attempt=1
+          max=5
+          until kubectl cluster-info >/dev/null 2>&1 && kubectl get nodes >/dev/null 2>&1; do
+            if (( attempt >= max )); then
+              echo "::error::Failed to reach cluster ${CLOUDSDK_CONTAINER_CLUSTER} after ${max} attempts"
+              kubectl cluster-info || true
+              kubectl get nodes || true
+              exit 1
+            fi
+            echo "Cluster not ready yet (attempt ${attempt}/${max}); sleeping 10s"
+            attempt=$(( attempt + 1 ))
+            sleep 10
+          done
+          echo "Cluster ${CLOUDSDK_CONTAINER_CLUSTER} reachable; $(kubectl get nodes --no-headers | wc -l) nodes ready"
+
       - name: Set up gotestfmt
         run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
 
