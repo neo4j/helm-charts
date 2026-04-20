@@ -9,9 +9,9 @@ inputs:
   allowed_actors:
     description: >-
       JSON array of GitHub usernames allowed to run the calling workflow.
-      Callers should pass `${{ vars.CI_ALLOWED_ACTORS }}` — the `vars`
-      context is not available inside composite actions, so the caller
-      has to resolve it and hand it down.
+      Callers should resolve vars.CI_ALLOWED_ACTORS at the workflow level
+      (the vars context is not available inside composite actions) and
+      pass the value in through this input.
     required: false
     default: ''
   require_dispatch:
