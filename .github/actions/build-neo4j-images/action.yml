@@ -33,6 +33,10 @@ inputs:
   backup_source_redhat:
     description: 'Neo4j source image passed as IMAGE build-arg for the RedHat backup build.'
     required: true
+  cache_scope:
+    description: 'Scope prefix for GHA build cache (e.g. "ci", "release"). Distinct scopes keep mode=max cache entries from clobbering each other.'
+    required: false
+    default: 'ci'
 
 runs:
   using: composite
@@ -54,6 +58,8 @@ runs:
         push: true
         tags: ${{ inputs.reverseproxy_tag }}
         provenance: false
+        cache-from: type=gha,scope=${{ inputs.cache_scope }}-reverseproxy
+        cache-to: type=gha,mode=max,scope=${{ inputs.cache_scope }}-reverseproxy
 
     - name: Build and push operations image
       uses: docker/build-push-action@v5
@@ -62,6 +68,8 @@ runs:
         push: true
         tags: ${{ inputs.operations_tag }}
         provenance: false
+        cache-from: type=gha,scope=${{ inputs.cache_scope }}-operations
+        cache-to: type=gha,mode=max,scope=${{ inputs.cache_scope }}-operations
 
     - name: Build and push backup image (debian)
       uses: docker/build-push-action@v5
@@ -73,6 +81,8 @@ runs:
         build-args: |
           IMAGE=${{ inputs.backup_source_debian }}
           DISTRIBUTION=debian
+        cache-from: type=gha,scope=${{ inputs.cache_scope }}-backup-debian
+        cache-to: type=gha,mode=max,scope=${{ inputs.cache_scope }}-backup-debian
 
     - name: Build and push backup image (redhat)
       uses: docker/build-push-action@v5
@@ -84,3 +94,5 @@ runs:
         build-args: |
           IMAGE=${{ inputs.backup_source_redhat }}
           DISTRIBUTION=redhat
+        cache-from: type=gha,scope=${{ inputs.cache_scope }}-backup-redhat
+        cache-to: type=gha,mode=max,scope=${{ inputs.cache_scope }}-backup-redhat
