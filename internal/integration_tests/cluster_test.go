@@ -25,7 +25,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 			closeables = append([]Closeable{closeable}, closeables...)
 		}
 	}
-	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
+	clusterReleaseName := model.NewReleaseName("cluster-" + TestNamespace(t))
 	namespace := string(clusterReleaseName.Namespace())
 	err := labelNodes(t, namespace)
 	addCloseable(func() error {
@@ -112,7 +112,7 @@ func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
 		}
 	}
 
-	clusterReleaseName := model.NewReleaseName("apoc-cluster-" + TestRunIdentifier)
+	clusterReleaseName := model.NewReleaseName("apoc-cluster-" + TestNamespace(t))
 	defaultHelmArgs := []string{}
 	defaultHelmArgs = append(defaultHelmArgs, model.DefaultNeo4jNameArg...)
 	defaultHelmArgs = append(defaultHelmArgs, model.DefaultClusterSizeArg...)

@@ -166,7 +166,7 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t *testing.T, 
 	}
 	shortName := clusterReleaseName.ShortName()
 	currentUnixTime := time.Now().Unix()
-	backupReleaseName := model.NewReleaseName(fmt.Sprintf("%s-gcp-workload-%s", shortName, TestRunIdentifier))
+	backupReleaseName := model.NewReleaseName(fmt.Sprintf("%s-gcp-workload-%s", shortName, TestNamespace(t)))
 	gcpServiceAccountName := fmt.Sprintf("%s-%d", gcpServiceAccountNamePrefix, currentUnixTime)
 	k8sServiceAccountName := fmt.Sprintf("%s-%d", k8sServiceAccountNamePrefix, currentUnixTime)
 	namespace := string(clusterReleaseName.Namespace())
@@ -240,7 +240,7 @@ func InstallNeo4jBackupAWSLocalWithConsistencyCheck(t *testing.T, releaseName mo
 		t.Skip()
 		return nil
 	}
-	backupReleaseName := model.NewReleaseName("cluster-backup-local-" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("cluster-backup-local-" + TestNamespace(t))
 	namespace := string(releaseName.Namespace())
 
 	t.Cleanup(func() {
@@ -352,7 +352,7 @@ func InstallNeo4jBackupAWSCloudStorage(t *testing.T, releaseName model.ReleaseNa
 		t.Skip()
 		return nil
 	}
-	backupReleaseName := model.NewReleaseName("cluster-backup-aws-" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("cluster-backup-aws-" + TestNamespace(t))
 	namespace := string(releaseName.Namespace())
 
 	t.Cleanup(func() {
@@ -498,7 +498,7 @@ func InstallNeo4jBackupAWSHelmChartViaS3(t *testing.T, releaseName model.Release
 	}
 
 	namespace := "default"
-	backupReleaseName := model.NewReleaseName("cluster-backup-aws-s3" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("cluster-backup-aws-s3" + TestNamespace(t))
 	secretName := "awscred"
 
 	t.Cleanup(func() {
@@ -623,7 +623,7 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 	}
 
 	namespace := "default"
-	backupReleaseName := model.NewReleaseName("cluster-backup-aws-s3-tls" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("cluster-backup-aws-s3-tls" + TestNamespace(t))
 	secretName := "awscred"
 	caCertSecretName := "s3-ca-cert"
 
@@ -1101,7 +1101,7 @@ func apocConfigTests(releaseName model.ReleaseName) []SubTest {
 // checkClusterCorePasswordFailure checks if a cluster core is failing on installation or not with an incorrect password
 func checkClusterCorePasswordFailure(t *testing.T) error {
 	//creating a sample cluster core definition (which is not supposed to get installed)
-	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
+	clusterReleaseName := model.NewReleaseName("cluster-" + TestNamespace(t))
 	core := clusterCore{model.NewCoreReleaseName(clusterReleaseName, 4), nil}
 	releaseName := core.Name()
 	// we are not using the customized run() func here since we need to assert the error received on stdout
@@ -1342,7 +1342,7 @@ func performBackgroundInstall(t *testing.T, componentsToParallelInstall []helmCo
 func TestBackupMultipleEndpointsE2E(t *testing.T) {
 	t.Parallel()
 
-	releaseName := model.NewReleaseName("multiple-backup-endpoints-" + TestRunIdentifier)
+	releaseName := model.NewReleaseName("multiple-backup-endpoints-" + TestNamespace(t))
 	_, err := createNamespace(t, releaseName)
 	if err != nil {
 		return

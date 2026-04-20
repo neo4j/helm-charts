@@ -425,16 +425,6 @@ func createNamespace(t *testing.T, releaseName model.ReleaseName) (Closeable, er
 	}
 
 	err := run(t, "kubectl", "create", "ns", namespace)
-	if err != nil {
-		// Check if the error is because namespace already exists (race condition)
-		// This can happen when parallel tests use the same namespace name
-		checkErr := run(t, "kubectl", "get", "ns", namespace)
-		if checkErr == nil {
-			// Namespace exists, this is likely a race condition with another parallel test
-			t.Logf("Namespace %s already exists, likely created by parallel test - continuing", namespace)
-			err = nil // Clear the error to continue successfully
-		}
-	}
 	return func() error {
 		return runAll(t, "kubectl", kCleanupCommands(releaseName.Namespace()), false)
 	}, err
@@ -792,7 +782,7 @@ func TestBackupLogStreamingIntegration(t *testing.T, releaseName model.ReleaseNa
 		return nil
 	}
 
-	backupReleaseName := model.NewReleaseName("standalone-backup-logs-" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("standalone-backup-logs-" + TestNamespace(t))
 	namespace := string(releaseName.Namespace())
 
 	t.Cleanup(func() {
@@ -875,7 +865,7 @@ func TestBackupCompressIntegration(t *testing.T, releaseName model.ReleaseName) 
 		return nil
 	}
 
-	backupReleaseName := model.NewReleaseName("standalone-backup-compress-" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("standalone-backup-compress-" + TestNamespace(t))
 	namespace := string(releaseName.Namespace())
 
 	t.Cleanup(func() {
@@ -927,7 +917,7 @@ func TestAggregateBackupWithWildcard(t *testing.T, standaloneReleaseName model.R
 
 	// Step 1: Create initial backups for multiple databases (neo4j and system)
 	t.Log("Step 1: Creating initial backups for neo4j and system databases")
-	initialBackupReleaseName := model.NewReleaseName("wildcard-initial-backup-" + TestRunIdentifier)
+	initialBackupReleaseName := model.NewReleaseName("wildcard-initial-backup-" + TestNamespace(t))
 
 	t.Cleanup(func() {
 		_ = runAll(t, "helm", [][]string{
@@ -972,7 +962,7 @@ func TestAggregateBackupWithWildcard(t *testing.T, standaloneReleaseName model.R
 
 	// Step 2: Run aggregate backup with wildcard
 	t.Log("Step 2: Running aggregate backup with wildcard")
-	aggregateBackupReleaseName := model.NewReleaseName("wildcard-aggregate-backup-" + TestRunIdentifier)
+	aggregateBackupReleaseName := model.NewReleaseName("wildcard-aggregate-backup-" + TestNamespace(t))
 
 	t.Cleanup(func() {
 		_ = runAll(t, "helm", [][]string{
@@ -1193,8 +1183,8 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 		t.Skip()
 		return nil
 	}
-	backupReleaseName := model.NewReleaseName("standalone-backup-aws-" + TestRunIdentifier)
-	backupBucketName := fmt.Sprintf("helm-charts-%s", TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("standalone-backup-aws-" + TestNamespace(t))
+	backupBucketName := fmt.Sprintf("helm-charts-%s", TestNamespace(t))
 	namespace := string(standaloneReleaseName.Namespace())
 
 	t.Logf("Using namespace: %s for AWS backup test", namespace)
@@ -1305,7 +1295,7 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 		t.Skip()
 		return nil
 	}
-	backupReleaseName := model.NewReleaseName("standalone-backup-azure-" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("standalone-backup-azure-" + TestNamespace(t))
 	namespace := string(standaloneReleaseName.Namespace())
 
 	t.Log("Starting Azure backup test")
@@ -1383,7 +1373,7 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 		t.Skip()
 		return nil
 	}
-	backupReleaseName := model.NewReleaseName("standalone-backup-gcp-" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("standalone-backup-gcp-" + TestNamespace(t))
 	namespace := string(standaloneReleaseName.Namespace())
 
 	t.Log("Starting GCP backup test")
@@ -1495,7 +1485,7 @@ func InstallNeo4jBackupGCPHelmChartWithInconsistencies(t *testing.T, standaloneR
 
 // installNeo4jBackupLocalWithConsistencyCheck performs local backup with consistency check
 func installNeo4jBackupLocalWithConsistencyCheck(t *testing.T, standaloneReleaseName model.ReleaseName) error {
-	backupReleaseName := model.NewReleaseName("standalone-backup-local-incon-" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("standalone-backup-local-incon-" + TestNamespace(t))
 	namespace := string(standaloneReleaseName.Namespace())
 
 	t.Cleanup(func() {
@@ -1611,7 +1601,7 @@ func installNeo4jBackupLocalWithConsistencyCheck(t *testing.T, standaloneRelease
 
 // installNeo4jBackupGCPCloudStorage performs cloud backup to GCP without consistency check
 func installNeo4jBackupGCPCloudStorage(t *testing.T, standaloneReleaseName model.ReleaseName) error {
-	backupReleaseName := model.NewReleaseName("standalone-backup-gcp-incon-" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("standalone-backup-gcp-incon-" + TestNamespace(t))
 	namespace := string(standaloneReleaseName.Namespace())
 
 	t.Cleanup(func() {
@@ -1757,7 +1747,7 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t *testing.T, standalone
 	}
 	shortName := standaloneReleaseName.ShortName()
 	currentUnixTime := time.Now().Unix()
-	backupReleaseName := model.NewReleaseName(fmt.Sprintf("%s-gcp-workload-%s", shortName, TestRunIdentifier))
+	backupReleaseName := model.NewReleaseName(fmt.Sprintf("%s-gcp-workload-%s", shortName, TestNamespace(t)))
 	gcpServiceAccountName := fmt.Sprintf("%s-%d", gcpServiceAccountNamePrefix, currentUnixTime)
 	k8sServiceAccountName := fmt.Sprintf("%s-%d", k8sServiceAccountNamePrefix, currentUnixTime)
 	namespace := string(standaloneReleaseName.Namespace())
@@ -1839,7 +1829,7 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 		t.Skip()
 		return nil
 	}
-	reverseProxyReleaseName := model.NewReleaseName("rp-" + TestRunIdentifier)
+	reverseProxyReleaseName := model.NewReleaseName("rp-" + TestNamespace(t))
 	namespace := string(standaloneReleaseName.Namespace())
 
 	t.Cleanup(func() {
