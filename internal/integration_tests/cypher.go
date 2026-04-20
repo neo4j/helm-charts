@@ -10,9 +10,23 @@ import (
 	"time"
 
 	"github.com/neo4j/helm-charts/internal/model"
+	"github.com/neo4j/helm-charts/internal/testutil/poll"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/stretchr/testify/assert"
 )
+
+// isNotALeader returns true for Neo4j NotALeader errors that surface briefly
+// during leader election and are safe to retry.
+func isNotALeader(err error) bool {
+	if err == nil {
+		return false
+	}
+	var neoErr *neo4j.Neo4jError
+	if errors.As(err, &neoErr) {
+		return strings.Contains(neoErr.Code, "NotALeader")
+	}
+	return strings.Contains(err.Error(), "NotALeader")
+}
 
 // Auth stuff
 const dbUri = "neo4j+ssc://localhost"
@@ -141,21 +155,15 @@ func startDatabase(t *testing.T, releaseName model.ReleaseName, databaseName str
 // createMoviesDataSet runs movie dataset cypher query, retrying on NotALeader errors
 // which can occur when the cluster is still electing a leader after previous tests
 func createMoviesDataSet(t *testing.T, releaseName model.ReleaseName) error {
-	deadline := time.Now().Add(2 * time.Minute)
-	var err error
-	for time.Now().Before(deadline) {
-		_, err = runQuery(t, releaseName, model.MOVIES_CYPHER, nil, false)
-		if err == nil {
-			return nil
-		}
-		if neo4j.IsNeo4jError(err) && strings.Contains(err.(*neo4j.Neo4jError).Code, "NotALeader") {
-			t.Logf("Leader not available yet, retrying in 10s... (%v)", err)
-			time.Sleep(10 * time.Second)
-			continue
-		}
-		return fmt.Errorf("error seen while creating movies dataset, err := %v", err)
-	}
-	return fmt.Errorf("error seen while creating movies dataset after retries, err := %v", err)
+	return poll.Until(context.Background(), t, poll.Opts{
+		Interval:      10 * time.Second,
+		Timeout:       2 * time.Minute,
+		Description:   "MOVIES_CYPHER to run against a leader",
+		RetryableErrs: isNotALeader,
+	}, func(context.Context) (bool, error) {
+		_, err := runQuery(t, releaseName, model.MOVIES_CYPHER, nil, false)
+		return err == nil, err
+	})
 }
 
 // checkDataBaseExists runs a cypher query to check if the given database name exists or not
@@ -183,25 +191,21 @@ func checkDataBaseExists(t *testing.T, releaseName model.ReleaseName, databaseNa
 // checkApocConfig fires a apoc cypher query
 // It's a way to check if apoc plugin is loaded and the customized apoc config is loaded or not
 func checkApocConfig(t *testing.T, releaseName model.ReleaseName) error {
-
-	var lastErr error
-	for i := 0; i < 3; i++ {
+	return poll.Until(context.Background(), t, poll.Opts{
+		Interval:      10 * time.Second,
+		Timeout:       30 * time.Second, // 3 × 10s preserves historical budget
+		Description:   "APOC create.node to run against a leader",
+		RetryableErrs: isNotALeader,
+	}, func(context.Context) (bool, error) {
 		results, err := runQuery(t, releaseName, "CALL apoc.create.node([\"Person\", \"Actor\"], {name: \"Tom Hanks\"});", nil, false)
 		if err != nil {
-			if strings.Contains(err.Error(), "NotALeader") {
-				t.Logf("Attempt %d: Hit non-leader node, retrying...", i+1)
-				time.Sleep(10 * time.Second)
-				lastErr = err
-				continue
-			}
-			return fmt.Errorf("error seen while firing apoc cypher \n err := %v", err)
+			return false, err
 		}
 		if len(results) == 0 {
-			return fmt.Errorf("no results received from cypher query")
+			return false, fmt.Errorf("no results received from cypher query")
 		}
-		return nil
-	}
-	return fmt.Errorf("apoc query failed after 3 attempts: %v", lastErr)
+		return true, nil
+	})
 }
 
 // checkNodeCount runs the cypher query to get the number of nodes on a cluster core
@@ -221,40 +225,36 @@ func checkNodeCount(t *testing.T, releaseName model.ReleaseName) error {
 	}
 }
 
-// checkLdapPassword runs a cypher query to get ldapPassword and checks if the ldapPassword is set or not
+// checkLdapPassword runs a cypher query to get ldapPassword and checks if the ldapPassword is set or not.
+// The 60-second timeout absorbs both the post-install config-propagation wait
+// (previously a fixed 30s sleep up front) and leader-election retries.
 func checkLdapPassword(t *testing.T, releaseName model.ReleaseName) error {
-	time.Sleep(30 * time.Second)
-
-	maxRetries := 3
-	var lastErr error
-
-	for i := 0; i < maxRetries; i++ {
+	var ldapPass string
+	err := poll.Until(context.Background(), t, poll.Opts{
+		Interval:      10 * time.Second,
+		Timeout:       60 * time.Second,
+		Description:   "LDAP system_password to be observable via listConfig",
+		RetryableErrs: isNotALeader,
+	}, func(context.Context) (bool, error) {
 		result, err := runQuery(t, releaseName,
 			"CALL dbms.listConfig('dbms.security.ldap.authorization.system_password') YIELD value",
 			noParams,
 			model.Neo4jEdition == "community")
-
 		if err != nil {
-			if strings.Contains(err.Error(), "NotALeader") {
-				t.Logf("Attempt %d: Hit non-leader node, retrying...", i+1)
-				time.Sleep(10 * time.Second)
-				lastErr = err
-				continue
-			}
-			return err
+			return false, err
 		}
-
 		value, found := result[0].Get("value")
 		if !found {
-			return fmt.Errorf("expected at least one result")
+			return false, fmt.Errorf("no value in listConfig result")
 		}
-
-		ldapPass := value.(string)
-		assert.NotEqual(t, ldapPass, "No Value", "LdapPassword not set !!")
-		return nil
+		ldapPass = value.(string)
+		return true, nil
+	})
+	if err != nil {
+		return err
 	}
-
-	return fmt.Errorf("failed to check LDAP password after %d attempts: %v", maxRetries, lastErr)
+	assert.NotEqual(t, ldapPass, "No Value", "LdapPassword not set !!")
+	return nil
 }
 
 // checkBloomVersion runs the cypher query to get bloom license info
@@ -341,27 +341,24 @@ func runQueryViaSystemDB(t *testing.T, releaseName model.ReleaseName, cypher str
 	return result.Collect(ctx)
 }
 
-func awaitConnectivity(t *testing.T, err error, driver neo4j.DriverWithContext, ctx context.Context) error {
-	// This polls verify connectivity until it succeeds or it times out. We should be able to remove this when we have readiness probes (maybe)
-	start := time.Now()
-	timeoutAfter := time.Minute * 3
-	for {
-		t.Log("Checking connectivity for ", dbUri)
-		err = driver.VerifyConnectivity(ctx)
+func awaitConnectivity(t *testing.T, _ error, driver neo4j.DriverWithContext, ctx context.Context) error {
+	// Remove this when Neo4j readiness probes gate traffic; until then we poll.
+	return poll.Until(ctx, t, poll.Opts{
+		Interval:      5 * time.Second,
+		Timeout:       3 * time.Minute,
+		Description:   "neo4j driver VerifyConnectivity to " + dbUri,
+		RetryableErrs: func(error) bool { return true },
+	}, func(pctx context.Context) (bool, error) {
+		err := driver.VerifyConnectivity(pctx)
 		if err == nil {
-			t.Log("Connectivity check passed for ", dbUri)
-			return nil
-		} else if neo4j.IsNeo4jError(err) && strings.Contains(err.(*neo4j.Neo4jError).Code, "CredentialsExpired") {
-			t.Logf("recieved CredentialsExpired message from driver. Attempting to proceed")
-			return nil
-		} else {
-			elapsed := time.Now().Sub(start)
-			if elapsed > timeoutAfter {
-				return err
-			} else {
-				t.Logf("Connectivity check failed (%s), retrying...", err)
-				time.Sleep(5 * time.Second)
-			}
+			return true, nil
 		}
-	}
+		// CredentialsExpired means the server is up and responding — good enough to proceed.
+		var neoErr *neo4j.Neo4jError
+		if errors.As(err, &neoErr) && strings.Contains(neoErr.Code, "CredentialsExpired") {
+			t.Logf("received CredentialsExpired; connectivity is established")
+			return true, nil
+		}
+		return false, err
+	})
 }
