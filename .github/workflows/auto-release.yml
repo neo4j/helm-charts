@@ -1,0 +1,126 @@
+name: Auto-release on new Neo4j version
+
+on:
+  schedule:
+    # Four times a day at 00:00, 06:00, 12:00, 18:00 UTC.
+    - cron: '0 0,6,12,18 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.detect.outputs.should_release }}
+      helm_chart_version: ${{ steps.detect.outputs.helm_chart_version }}
+      docker_image_version: ${{ steps.detect.outputs.docker_image_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - name: Detect new Neo4j docker version
+        id: detect
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_AUTOMATION_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          python3 bin/release/detect_new_version.py >> "$GITHUB_OUTPUT"
+
+  run-tests-and-release:
+    needs: detect
+    if: needs.detect.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      run_id: ${{ steps.dispatch.outputs.run_id }}
+      run_url: ${{ steps.dispatch.outputs.run_url }}
+      run_conclusion: ${{ steps.watch.outputs.conclusion }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - name: Dispatch tests.yml with RELEASE=true
+        id: dispatch
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_AUTOMATION_PAT }}
+          HELM_CHART_VERSION: ${{ needs.detect.outputs.helm_chart_version }}
+          DOCKER_IMAGE_VERSION: ${{ needs.detect.outputs.docker_image_version }}
+        run: |
+          set -euo pipefail
+          before=$(date -u +%FT%TZ)
+          gh workflow run tests.yml \
+            --ref dev \
+            -f HELM_CHART_VERSION="${HELM_CHART_VERSION}" \
+            -f DOCKER_IMAGE_VERSION="${DOCKER_IMAGE_VERSION}" \
+            -f RELEASE=true
+
+          # Wait for the dispatched run to register, then capture its id.
+          run_id=""
+          for i in $(seq 1 30); do
+            sleep 5
+            run_id=$(gh run list \
+              --workflow=tests.yml \
+              --event=workflow_dispatch \
+              --branch=dev \
+              --created=">=${before}" \
+              --limit 1 \
+              --json databaseId \
+              --jq '.[0].databaseId' || true)
+            if [[ -n "${run_id}" && "${run_id}" != "null" ]]; then
+              break
+            fi
+          done
+          if [[ -z "${run_id}" || "${run_id}" == "null" ]]; then
+            echo "Failed to locate dispatched run" >&2
+            exit 1
+          fi
+          url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${run_id}"
+          echo "run_id=${run_id}" >> "$GITHUB_OUTPUT"
+          echo "run_url=${url}" >> "$GITHUB_OUTPUT"
+          echo "Dispatched run: ${url}"
+
+      - name: Wait for tests.yml to finish
+        id: watch
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_AUTOMATION_PAT }}
+        run: |
+          set -euo pipefail
+          gh run watch "${{ steps.dispatch.outputs.run_id }}" --exit-status
+          conclusion=$(gh run view "${{ steps.dispatch.outputs.run_id }}" --json conclusion --jq .conclusion)
+          echo "conclusion=${conclusion}" >> "$GITHUB_OUTPUT"
+
+  notify_failure:
+    needs: [detect, run-tests-and-release]
+    if: failure() && needs.detect.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: slackapi/slack-github-action@v1
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL_FAILURES }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        with:
+          payload: |
+            {
+              "text": ":x: helm-charts auto-release failed for Neo4j ${{ needs.detect.outputs.docker_image_version }} (chart ${{ needs.detect.outputs.helm_chart_version }}). Dispatched run: ${{ needs.run-tests-and-release.outputs.run_url }} | Orchestrator: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }
+
+  notify_success:
+    needs: [detect, run-tests-and-release]
+    if: success() && needs.detect.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: slackapi/slack-github-action@v1
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL_RELEASES }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        with:
+          payload: |
+            {
+              "text": ":white_check_mark: helm-charts auto-released ${{ needs.detect.outputs.helm_chart_version }} (Neo4j ${{ needs.detect.outputs.docker_image_version }}). Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.detect.outputs.helm_chart_version }}"
+            }
