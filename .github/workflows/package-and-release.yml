@@ -37,17 +37,18 @@ jobs:
   check-authorization:
     runs-on: ubuntu-latest
     outputs:
-      should_run: ${{ steps.check.outputs.should_run }}
+      should_run: ${{ steps.gate.outputs.should_run }}
     steps:
-      - id: check
+      - uses: actions/checkout@v4
+      - id: gate
+        uses: ./.github/actions/authz-gate
+        with:
+          require_dispatch: 'true'
+      - name: Enforce authorization
+        if: steps.gate.outputs.should_run != 'true'
         run: |
-          if [[ "${{ github.actor }}" == "bfeshti" || "${{ github.actor }}" == "riggi-alekaj" ]]; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
-          else
-            echo "should_run=false" >> $GITHUB_OUTPUT
-            echo "Only authorized users can run this workflow"
-            exit 1
-          fi
+          echo "Only authorized users can run this workflow"
+          exit 1
 
   build-reverseproxy-backup-release-image:
     name: ReverseProxy and Backup Docker Image build
@@ -107,9 +108,9 @@ jobs:
 
   packaging:
     name: Packaging and Release
-    needs: [build-reverseproxy-backup-release-image]
+    needs: [check-authorization, build-reverseproxy-backup-release-image]
     runs-on: ubuntu-latest
-    if: ${{ needs.check-authorization.outputs.should_run == 'true' }}
+    if: needs.check-authorization.outputs.should_run == 'true'
     env:
       HELM_CHART_VERSION: ${{ inputs.HELM_CHART_VERSION }}
       DOCKER_IMAGE_VERSION: ${{ inputs.DOCKER_IMAGE_VERSION }}
