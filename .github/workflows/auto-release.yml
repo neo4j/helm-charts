@@ -22,6 +22,11 @@ jobs:
         with:
           ref: dev
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Detect new Neo4j docker version
         id: detect
         env:
@@ -30,7 +35,7 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
-          python3 bin/release/detect_new_version.py >> "$GITHUB_OUTPUT"
+          python bin/release/detect_new_version.py >> "$GITHUB_OUTPUT"
 
   run-tests-and-release:
     needs: detect

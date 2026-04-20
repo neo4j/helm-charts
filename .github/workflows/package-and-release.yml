@@ -81,7 +81,7 @@ jobs:
       DOCKER_IMAGE_VERSION: ${{ inputs.DOCKER_IMAGE_VERSION }}
       HELM_REPO_NAME: ${{ vars.HELM_REPO_NAME }}
     container:
-      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
+      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:${{ vars.CI_IMAGE_TAG || 'latest' }}
       options: --user 1001
       credentials:
         username: _json_key

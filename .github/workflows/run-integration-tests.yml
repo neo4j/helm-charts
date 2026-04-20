@@ -55,7 +55,7 @@ jobs:
       IPS_USERNAME: ${{ secrets.IPS_USERNAME }}
       IPS_EMAIL: ${{ secrets.IPS_EMAIL }}
     container:
-      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
+      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:${{ vars.CI_IMAGE_TAG || 'latest' }}
       credentials:
         username: _json_key
         password: ${{ secrets.GCLOUD_SERVICE_KEY }}
