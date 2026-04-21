@@ -21,7 +21,6 @@ lift Docker Hub's anonymous rate limit. ``GITHUB_REPOSITORY`` defaults to
 
 from __future__ import annotations
 
-import base64
 import json
 import os
 import re

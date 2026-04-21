@@ -10,6 +10,11 @@ permissions:
   contents: read
   actions: write
 
+env:
+  # Silence the Node 20 deprecation warning on actions/checkout, setup-python,
+  # etc. The runtime will flip the default to Node 24 in June 2026 anyway.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   detect:
     runs-on: ubuntu-latest
@@ -46,28 +51,29 @@ jobs:
       run_url: ${{ steps.dispatch.outputs.run_url }}
       run_conclusion: ${{ steps.watch.outputs.conclusion }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: dev
-
       - name: Dispatch tests.yml with RELEASE=true
         id: dispatch
         env:
           GH_TOKEN: ${{ secrets.RELEASE_AUTOMATION_PAT }}
+          GH_REPO: ${{ github.repository }}
           HELM_CHART_VERSION: ${{ needs.detect.outputs.helm_chart_version }}
           DOCKER_IMAGE_VERSION: ${{ needs.detect.outputs.docker_image_version }}
         run: |
           set -euo pipefail
+
+          # ISO 8601 instant immediately before dispatch; used to identify the
+          # run we just created via the --created filter on gh run list.
           before=$(date -u +%FT%TZ)
+
           gh workflow run tests.yml \
             --ref dev \
             -f HELM_CHART_VERSION="${HELM_CHART_VERSION}" \
             -f DOCKER_IMAGE_VERSION="${DOCKER_IMAGE_VERSION}" \
             -f RELEASE=true
 
-          # Wait for the dispatched run to register, then capture its id.
+          # Poll for the new run to appear (up to ~2 minutes).
           run_id=""
-          for i in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             sleep 5
             run_id=$(gh run list \
               --workflow=tests.yml \
@@ -82,7 +88,7 @@ jobs:
             fi
           done
           if [[ -z "${run_id}" || "${run_id}" == "null" ]]; then
-            echo "Failed to locate dispatched run" >&2
+            echo "::error::Failed to locate dispatched tests.yml run after 150s"
             exit 1
           fi
           url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${run_id}"
@@ -94,6 +100,7 @@ jobs:
         id: watch
         env:
           GH_TOKEN: ${{ secrets.RELEASE_AUTOMATION_PAT }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           gh run watch "${{ steps.dispatch.outputs.run_id }}" --exit-status
@@ -107,9 +114,9 @@ jobs:
     steps:
       - uses: slackapi/slack-github-action@fcfb566f8b0aab22203f066d80ca1d7e4b5d05b3 # v1
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL_FAILURES }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
+          channel-id: ${{ vars.SLACK_CHANNEL_FAILURES }}
           payload: |
             {
               "text": ":x: helm-charts auto-release failed for Neo4j ${{ needs.detect.outputs.docker_image_version }} (chart ${{ needs.detect.outputs.helm_chart_version }}). Dispatched run: ${{ needs.run-tests-and-release.outputs.run_url }} | Orchestrator: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
@@ -122,9 +129,9 @@ jobs:
     steps:
       - uses: slackapi/slack-github-action@fcfb566f8b0aab22203f066d80ca1d7e4b5d05b3 # v1
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL_RELEASES }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
+          channel-id: ${{ vars.SLACK_CHANNEL_RELEASES }}
           payload: |
             {
               "text": ":white_check_mark: helm-charts auto-released ${{ needs.detect.outputs.helm_chart_version }} (Neo4j ${{ needs.detect.outputs.docker_image_version }}). Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.detect.outputs.helm_chart_version }}"
