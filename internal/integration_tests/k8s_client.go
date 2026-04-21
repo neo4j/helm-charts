@@ -189,27 +189,37 @@ func getNodesList() (*coreV1.NodeList, error) {
 	return Clientset.CoreV1().Nodes().List(context.TODO(), v1.ListOptions{})
 }
 
-// getNodeWithLabel returns the node with the given label
+// getNodeWithLabel returns the first node that carries the given "key=value" label.
 func getNodeWithLabel(labelName string) (*coreV1.Node, error) {
+	matches, err := getNodesWithLabel(labelName)
+	if err != nil {
+		return nil, err
+	}
+	if len(matches) == 0 {
+		return nil, fmt.Errorf("No node with the label %s found", labelName)
+	}
+	return matches[0], nil
+}
+
+// getNodesWithLabel returns every node that carries the given "key=value" label.
+func getNodesWithLabel(labelName string) ([]*coreV1.Node, error) {
 	nodes, err := getNodesList()
 	if err != nil {
 		return nil, err
 	}
-	labelKey := strings.Split(labelName, "=")[0]
-	labelValue := strings.Split(labelName, "=")[1]
-	var nodeSelectorNode *coreV1.Node
-	for _, node := range nodes.Items {
-		if value, present := node.ObjectMeta.Labels[labelKey]; present {
-			if value == labelValue {
-				nodeSelectorNode = &node
-				break
-			}
+	parts := strings.SplitN(labelName, "=", 2)
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("label %q is not in key=value form", labelName)
+	}
+	labelKey, labelValue := parts[0], parts[1]
+	var matches []*coreV1.Node
+	for i := range nodes.Items {
+		node := &nodes.Items[i]
+		if v, ok := node.ObjectMeta.Labels[labelKey]; ok && v == labelValue {
+			matches = append(matches, node)
 		}
 	}
-	if nodeSelectorNode == nil {
-		return nil, fmt.Errorf("No node with the label %s found", labelName)
-	}
-	return nodeSelectorNode, nil
+	return matches, nil
 }
 
 func getManifest(namespace model.Namespace) (*model.K8sResources, error) {

@@ -30,7 +30,16 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-// labelNodes labels all the node with testLabel=namespace-<number>
+// labelNodes labels nodes with the two testLabel values that are actually
+// consumed as nodeSelectors by this test suite:
+//
+//	testLabel=<namespace>-1  → core-1 pod (see model.NodeSelectorLabel)
+//	testLabel=<namespace>-5  → backup pods (see installBackupCluster* helpers)
+//
+// Each label is applied to multiple nodes so a single GKE node replacement
+// (autorepair, autoupgrade, preemption) doesn't strand the scheduler with
+// no matching node — core-1 in particular is long-lived for the whole test,
+// and losing its only matching node leaves it Pending forever.
 func labelNodes(t *testing.T, namespace string) error {
 
 	var errors *multierror.Error
@@ -38,13 +47,25 @@ func labelNodes(t *testing.T, namespace string) error {
 	if err != nil {
 		return err
 	}
+	const replicaCount = 3
+	if len(nodesList.Items) < 2*replicaCount {
+		return fmt.Errorf("labelNodes needs at least %d nodes, got %d", 2*replicaCount, len(nodesList.Items))
+	}
 
-	for index, node := range nodesList.Items {
-		labelName := fmt.Sprintf("testLabel=%s-%d", namespace, index+1)
-		err = run(t, "kubectl", "label", "nodes", node.ObjectMeta.Name, labelName)
-		if err != nil {
-			errors = multierror.Append(errors, err)
-			t.Logf("Node Label failed for %s: %v", node.ObjectMeta.Name, err)
+	assignments := []struct {
+		label    string
+		nodeIdxs []int
+	}{
+		{label: fmt.Sprintf("testLabel=%s-1", namespace), nodeIdxs: []int{0, 1, 2}},
+		{label: fmt.Sprintf("testLabel=%s-5", namespace), nodeIdxs: []int{3, 4, 5}},
+	}
+	for _, a := range assignments {
+		for _, idx := range a.nodeIdxs {
+			name := nodesList.Items[idx].ObjectMeta.Name
+			if err := run(t, "kubectl", "label", "nodes", name, "--overwrite", a.label); err != nil {
+				errors = multierror.Append(errors, err)
+				t.Logf("Node label failed for %s=%s: %v", name, a.label, err)
+			}
 		}
 	}
 
@@ -991,6 +1012,12 @@ func nodeSelectorTests(name model.ReleaseName) []SubTest {
 	return []SubTest{
 		{name: fmt.Sprintf("Check cluster core 1 is assigned with label %s", model.NodeSelectorLabel(namespace)), test: func(t *testing.T) {
 			t.Parallel()
+			// Re-apply the label before asserting. If GKE replaced the node
+			// carrying it mid-test the assertion would spuriously fail on a
+			// condition unrelated to what we're actually verifying.
+			if err := ensureNodeLabel(t, fmt.Sprintf("%s-1", namespace)); !assert.NoError(t, err) {
+				return
+			}
 			assert.NoError(t, checkNodeSelectorLabel(t, name, model.NodeSelectorLabel(namespace)), fmt.Sprintf("Core-1 Pod should be deployed on node with label %s", model.NodeSelectorLabel(namespace)))
 		}},
 	}
@@ -1045,22 +1072,33 @@ func checkCoreImageName(t *testing.T, releaseName model.ReleaseName) error {
 	return nil
 }
 
-// checkNodeSelectorLabel checks whether the given pod is associated with the correct node or not
+// checkNodeSelectorLabel asserts the pod is scheduled on one of the nodes that
+// carries the given label. Multiple nodes may carry the same label (see
+// labelNodes) so we accept any of them rather than insisting on the first.
 func checkNodeSelectorLabel(t *testing.T, releaseName model.ReleaseName, labelName string) error {
 
-	nodeSelectorNode, err := getNodeWithLabel(labelName)
+	matches, err := getNodesWithLabel(labelName)
 	if !assert.NoError(t, err) {
 		return err
+	}
+	if !assert.NotEmpty(t, matches, "no node carries label %s", labelName) {
+		return fmt.Errorf("no node carries label %s", labelName)
 	}
 	pod, err := getSpecificPod(releaseName.Namespace(), releaseName.PodName())
 	if !assert.NoError(t, err) {
 		return fmt.Errorf("error while fetching pod list \n %v", err)
 	}
-	if !assert.Equal(t, nodeSelectorNode.Name, pod.Spec.NodeName) {
-		return fmt.Errorf("pod %s is not scheduled on the correct node %s", pod.Spec.NodeName, nodeSelectorNode.Name)
+	for _, node := range matches {
+		if node.Name == pod.Spec.NodeName {
+			return nil
+		}
 	}
-
-	return nil
+	names := make([]string, 0, len(matches))
+	for _, node := range matches {
+		names = append(names, node.Name)
+	}
+	assert.Fail(t, fmt.Sprintf("pod %s is on node %s; expected one of %v", pod.Name, pod.Spec.NodeName, names))
+	return fmt.Errorf("pod on %s; expected one of %v", pod.Spec.NodeName, names)
 }
 
 // checkImagePullSecret checks whether a secret of type docker-registry is created or not

@@ -64,7 +64,11 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	// Install one core synchronously, if all cores are installed simultaneously they run into conflicts all trying to create a -auth secret
+	// Install one core synchronously, if all cores are installed simultaneously they run into conflicts all trying to create a -auth secret.
+	// Re-apply the nodeSelector label right before install so a GKE node replacement between labelNodes() and this install doesn't leave core-1 unschedulable.
+	if err := ensureNodeLabel(t, fmt.Sprintf("%s-1", namespace)); !assert.NoError(t, err) {
+		return
+	}
 	result := core1.Install(t)
 	addCloseable(result.Closeable)
 	if !assert.NoError(t, result.error) {
@@ -80,6 +84,15 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 
 	for _, core := range cores {
 		err = run(t, "kubectl", "--namespace", string(core.Name().Namespace()), "rollout", "status", "--watch", timeouts.KubectlRollout(), "statefulset/"+core.Name().String())
+		if !assert.NoError(t, err) {
+			return
+		}
+		// rollout status returns as soon as the partition-update count is
+		// satisfied for RollingUpdate StatefulSets — it does NOT wait for
+		// Ready. Follow up with an explicit Ready wait so subsequent sub-tests
+		// don't fire against a pod that's still initializing (or worse,
+		// permanently Pending after a node replacement).
+		err = run(t, "kubectl", "--namespace", string(core.Name().Namespace()), "wait", "--for=condition=Ready", "pod/"+core.Name().PodName(), timeouts.KubectlPodReady())
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -150,6 +163,15 @@ func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
 
 	for _, core := range cores {
 		err = run(t, "kubectl", "--namespace", string(core.Name().Namespace()), "rollout", "status", "--watch", timeouts.KubectlRollout(), "statefulset/"+core.Name().String())
+		if !assert.NoError(t, err) {
+			return
+		}
+		// rollout status returns as soon as the partition-update count is
+		// satisfied for RollingUpdate StatefulSets — it does NOT wait for
+		// Ready. Follow up with an explicit Ready wait so subsequent sub-tests
+		// don't fire against a pod that's still initializing (or worse,
+		// permanently Pending after a node replacement).
+		err = run(t, "kubectl", "--namespace", string(core.Name().Namespace()), "wait", "--for=condition=Ready", "pod/"+core.Name().PodName(), timeouts.KubectlPodReady())
 		if !assert.NoError(t, err) {
 			return
 		}
