@@ -35,7 +35,7 @@ jobs:
       - name: Detect new Neo4j docker version
         id: detect
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_AUTOMATION_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -54,7 +54,7 @@ jobs:
       - name: Dispatch tests.yml with RELEASE=true
         id: dispatch
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_AUTOMATION_PAT }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GH_REPO: ${{ github.repository }}
           HELM_CHART_VERSION: ${{ needs.detect.outputs.helm_chart_version }}
           DOCKER_IMAGE_VERSION: ${{ needs.detect.outputs.docker_image_version }}
@@ -99,7 +99,7 @@ jobs:
       - name: Wait for tests.yml to finish
         id: watch
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_AUTOMATION_PAT }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
