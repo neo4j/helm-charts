@@ -1,5 +1,5 @@
 ARG IMAGE
-FROM golang:1.24.0-trixie AS build
+FROM golang:1.24.13-trixie AS build
 RUN apt-get update && apt-get install -y curl && apt-get remove -y python* && apt-get autoremove -y && apt-get clean
 WORKDIR backup
 COPY backup/aws aws/
