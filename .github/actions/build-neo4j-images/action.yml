@@ -37,6 +37,14 @@ inputs:
     description: 'Scope prefix for GHA build cache (e.g. "ci", "release"). Distinct scopes keep mode=max cache entries from clobbering each other.'
     required: false
     default: 'ci'
+  dockerhub_username:
+    description: 'Optional Docker Hub username for authenticating base-image pulls from docker.io (the backup builds pull neo4j:*, and shared GHA runner IPs routinely hit the anonymous pull rate limit, which BuildKit surfaces as "no match for platform in manifest: not found"). Leave empty when the primary registry is docker.io.'
+    required: false
+    default: ''
+  dockerhub_token:
+    description: 'Optional Docker Hub token, paired with dockerhub_username.'
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -50,6 +58,13 @@ runs:
         registry: ${{ inputs.registry }}
         username: ${{ inputs.registry_username }}
         password: ${{ inputs.registry_password }}
+
+    - name: Log in to Docker Hub (authenticate base-image pulls)
+      if: inputs.dockerhub_username != '' && inputs.dockerhub_token != ''
+      uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+      with:
+        username: ${{ inputs.dockerhub_username }}
+        password: ${{ inputs.dockerhub_token }}
 
     - name: Build and push reverse-proxy image
       uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5

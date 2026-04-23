@@ -162,6 +162,8 @@ jobs:
           backup_tag_redhat: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ env.RUN_ID }}
           backup_source_debian: ${{ inputs.RELEASE && format('neo4j:{0}-enterprise', inputs.DOCKER_IMAGE_VERSION) || format('{0}/neo4j:2025-enterprise-debian-nightly-bundle', vars.ARTIFACT_REGISTRY_REPO_NAME) }}
           backup_source_redhat: ${{ inputs.RELEASE && format('neo4j:{0}-enterprise-ubi9', inputs.DOCKER_IMAGE_VERSION) || format('{0}/neo4j:2025-enterprise-redhat-nightly-bundle', vars.ARTIFACT_REGISTRY_REPO_NAME) }}
+          dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
+          dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
 
   run-tests-debian:
     name: Debian tests

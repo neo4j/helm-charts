@@ -21,13 +21,19 @@ MAX_ATTEMPTS="${CREATE_CLUSTER_MAX_ATTEMPTS:-3}"
 
 # For more info on release channels see https://cloud.google.com/kubernetes-engine/docs/concepts/release-channels
 create_cluster() {
-    # --no-enable-autorepair / --no-enable-autoupgrade: integration tests pin
-    # pods to specific nodes via nodeSelector labels applied by labelNodes().
-    # If GKE replaces a node mid-test (autorepair after a transient kubelet
-    # blip, or a scheduled autoupgrade) the label goes with it and the
-    # scheduler can't place the pod — core-1 ends up Pending for the rest of
-    # the run. Clusters are short-lived (one CI run) so auto-maintenance
-    # costs more than it gives.
+    # --no-enable-autorepair: integration tests pin pods to specific nodes via
+    # nodeSelector labels applied by labelNodes(). If GKE auto-repairs a node
+    # mid-test (typically after a transient kubelet blip) the label goes with
+    # it and the scheduler can't place the pod — core-1 ends up Pending for
+    # the rest of the run. Clusters are short-lived (one CI run) so
+    # auto-repair costs more than it gives.
+    #
+    # Node auto-upgrade cannot be disabled while --release-channel is set
+    # (GKE enforces "Auto_upgrade must be true when release_channel is set"),
+    # and dropping the release channel trades cluster-version stability for a
+    # maintenance-window risk that is extremely unlikely to hit a ~1h CI run
+    # on the STABLE channel. Keep the release channel; tolerate the rare
+    # scheduled auto-upgrade.
     gcloud container clusters create "${CLOUDSDK_CONTAINER_CLUSTER}" \
          --release-channel="${RELEASE_CHANNEL}" \
          --zone="${CLOUDSDK_COMPUTE_ZONE}" \
@@ -37,7 +43,7 @@ create_cluster() {
          --disk-type="${DISK_TYPE}" --disk-size="${DISK_SIZE}" \
          --max-pods-per-node="${MAX_PODS_PER_NODE}" --enable-ip-alias \
          --enable-shielded-nodes --metadata=disable-legacy-endpoints=true --no-enable-basic-auth \
-         --no-enable-autorepair --no-enable-autoupgrade
+         --no-enable-autorepair
 }
 
 attempt=1
