@@ -98,10 +98,10 @@ jobs:
         with:
           context: "{{defaultContext}}:neo4j-admin"
           push: true
-          tags: "neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION }}-ubi9"
+          tags: "neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION }}-ubi10"
           provenance: false
           build-args: |
-            IMAGE=neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise-ubi9
+            IMAGE=neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise-ubi10
             DISTRIBUTION=redhat
 
   packaging:

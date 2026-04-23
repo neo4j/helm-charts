@@ -179,7 +179,7 @@ jobs:
         with:
           context: "{{defaultContext}}:neo4j-admin"
           push: true
-          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ env.RUN_ID }}"
+          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi10-${{ env.RUN_ID }}"
           provenance: false
           build-args: |
             IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:5-enterprise-redhat-nightly-bundle
@@ -203,10 +203,10 @@ jobs:
         with:
           context: "{{defaultContext}}:neo4j-admin"
           push: true
-          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ env.RUN_ID }}"
+          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi10-${{ env.RUN_ID }}"
           provenance: false
           build-args: |
-            IMAGE=neo4j:${{ inputs.DOCKER_IMAGE_VERSION}}-enterprise-ubi9
+            IMAGE=neo4j:${{ inputs.DOCKER_IMAGE_VERSION}}-enterprise-ubi10
             DISTRIBUTION=redhat
 
   run-enterprise-tests:
@@ -336,7 +336,7 @@ jobs:
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
       NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:5-enterprise-redhat-nightly-bundle"
       NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ github.run_id }}-${{ github.run_attempt }}"
-      NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ github.run_id }}-${{ github.run_attempt }}"
+      NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi10-${{ github.run_id }}-${{ github.run_attempt }}"
       NEO4J_OPERATIONS_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ github.run_id }}-${{ github.run_attempt }}"
     container:
       image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
@@ -394,7 +394,7 @@ jobs:
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
       NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:5-community-redhat-nightly-bundle"
       NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ github.run_id }}-${{ github.run_attempt }}"
-      NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ github.run_id }}-${{ github.run_attempt }}"
+      NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi10-${{ github.run_id }}-${{ github.run_attempt }}"
       NEO4J_OPERATIONS_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ github.run_id }}-${{ github.run_attempt }}"
     container:
       image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
@@ -544,10 +544,10 @@ jobs:
         with:
           context: "{{defaultContext}}:neo4j-admin"
           push: true
-          tags: "neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION}}-ubi9"
+          tags: "neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION}}-ubi10"
           provenance: false
           build-args: |
-            IMAGE=neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise-ubi9
+            IMAGE=neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise-ubi10
             DISTRIBUTION=redhat
 
   packaging:
