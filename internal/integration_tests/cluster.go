@@ -301,9 +301,6 @@ func InstallNeo4jBackupAWSLocalWithConsistencyCheck(t *testing.T, releaseName mo
 	assert.NoError(t, err, "cannot retrieve local backup cronjob")
 	assert.Equal(t, cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule, fmt.Sprintf("local backup cronjob schedule %s not matching with the schedule defined in values.yaml %s", cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule))
 
-	nodeSelectorNode, err := getNodeWithLabel(fmt.Sprintf("testLabel=%s-5", namespace))
-	assert.NoError(t, err)
-
 	// Poll for backup completion with consistency check - shorter timeout for local backup
 	deadline := time.Now().Add(10 * time.Minute) // Local backup should be much faster
 	var found bool
@@ -338,7 +335,7 @@ func InstallNeo4jBackupAWSLocalWithConsistencyCheck(t *testing.T, releaseName mo
 				// Check if consistency check completed successfully
 				if strings.Contains(logOutput, "No inconsistencies found") {
 					t.Logf("Local backup and consistency check completed successfully")
-					assert.Equal(t, nodeSelectorNode.Name, pod.Spec.NodeName, fmt.Sprintf("backup pod %s is not scheduled on the correct node %s", pod.Spec.NodeName, nodeSelectorNode.Name))
+					assertPodOnLabeledNode(t, pod, fmt.Sprintf("testLabel=%s-5", namespace))
 					return nil
 				} else if strings.Contains(logOutput, "Consistency Check Failed") || strings.Contains(logOutput, "Consistency check timed out") {
 					t.Logf("Consistency check failed or timed out")
@@ -453,9 +450,6 @@ func InstallNeo4jBackupAWSCloudStorage(t *testing.T, releaseName model.ReleaseNa
 	assert.NoError(t, err, "cannot retrieve aws cloud backup cronjob")
 	assert.Equal(t, cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule, fmt.Sprintf("aws cloud backup cronjob schedule %s not matching with the schedule defined in values.yaml %s", cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule))
 
-	nodeSelectorNode, err := getNodeWithLabel(fmt.Sprintf("testLabel=%s-5", namespace))
-	assert.NoError(t, err)
-
 	// Poll for cloud backup completion - reasonable timeout without consistency check
 	deadline := time.Now().Add(8 * time.Minute) // Cloud backup without consistency check
 	var found bool
@@ -483,7 +477,7 @@ func InstallNeo4jBackupAWSCloudStorage(t *testing.T, releaseName model.ReleaseNa
 				// Check if backup completed successfully
 				if strings.Contains(logOutput, "Backup completed successfully") {
 					t.Logf("Cloud backup to AWS S3 completed successfully")
-					assert.Equal(t, nodeSelectorNode.Name, pod.Spec.NodeName, fmt.Sprintf("backup pod %s is not scheduled on the correct node %s", pod.Spec.NodeName, nodeSelectorNode.Name))
+					assertPodOnLabeledNode(t, pod, fmt.Sprintf("testLabel=%s-5", namespace))
 
 					// Verify backup files were created in S3
 					if strings.Contains(logOutput, "neo4j-") && strings.Contains(logOutput, "system-") {
@@ -1099,6 +1093,31 @@ func checkNodeSelectorLabel(t *testing.T, releaseName model.ReleaseName, labelNa
 	}
 	assert.Fail(t, fmt.Sprintf("pod %s is on node %s; expected one of %v", pod.Name, pod.Spec.NodeName, names))
 	return fmt.Errorf("pod on %s; expected one of %v", pod.Spec.NodeName, names)
+}
+
+// assertPodOnLabeledNode asserts a pod was scheduled on one of the nodes that
+// carries labelName. labelNodes applies each testLabel value to multiple
+// nodes (self-healing against GKE node replacement), so an exact-equality
+// check against getNodeWithLabel's first match flakes whenever the scheduler
+// picks a different one of the matches.
+func assertPodOnLabeledNode(t *testing.T, pod v1.Pod, labelName string) {
+	matches, err := getNodesWithLabel(labelName)
+	if !assert.NoError(t, err) {
+		return
+	}
+	if !assert.NotEmpty(t, matches, "no node carries label %s", labelName) {
+		return
+	}
+	for _, n := range matches {
+		if n.Name == pod.Spec.NodeName {
+			return
+		}
+	}
+	names := make([]string, 0, len(matches))
+	for _, n := range matches {
+		names = append(names, n.Name)
+	}
+	assert.Fail(t, fmt.Sprintf("backup pod %s scheduled on %s; expected one of %v", pod.Name, pod.Spec.NodeName, names))
 }
 
 // checkImagePullSecret checks whether a secret of type docker-registry is created or not
