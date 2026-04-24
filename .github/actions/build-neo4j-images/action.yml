@@ -74,7 +74,7 @@ runs:
         tags: ${{ inputs.reverseproxy_tag }}
         provenance: false
         cache-from: type=gha,scope=${{ inputs.cache_scope }}-reverseproxy
-        cache-to: type=gha,mode=max,scope=${{ inputs.cache_scope }}-reverseproxy
+        cache-to: type=gha,mode=max,ignore-error=true,scope=${{ inputs.cache_scope }}-reverseproxy
 
     - name: Build and push operations image
       uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
@@ -84,7 +84,7 @@ runs:
         tags: ${{ inputs.operations_tag }}
         provenance: false
         cache-from: type=gha,scope=${{ inputs.cache_scope }}-operations
-        cache-to: type=gha,mode=max,scope=${{ inputs.cache_scope }}-operations
+        cache-to: type=gha,mode=max,ignore-error=true,scope=${{ inputs.cache_scope }}-operations
 
     - name: Build and push backup image (debian)
       uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
@@ -97,7 +97,7 @@ runs:
           IMAGE=${{ inputs.backup_source_debian }}
           DISTRIBUTION=debian
         cache-from: type=gha,scope=${{ inputs.cache_scope }}-backup-debian
-        cache-to: type=gha,mode=max,scope=${{ inputs.cache_scope }}-backup-debian
+        cache-to: type=gha,mode=max,ignore-error=true,scope=${{ inputs.cache_scope }}-backup-debian
 
     - name: Build and push backup image (redhat)
       uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
@@ -110,4 +110,4 @@ runs:
           IMAGE=${{ inputs.backup_source_redhat }}
           DISTRIBUTION=redhat
         cache-from: type=gha,scope=${{ inputs.cache_scope }}-backup-redhat
-        cache-to: type=gha,mode=max,scope=${{ inputs.cache_scope }}-backup-redhat
+        cache-to: type=gha,mode=max,ignore-error=true,scope=${{ inputs.cache_scope }}-backup-redhat
