@@ -51,7 +51,7 @@ jobs:
     outputs:
       should_run: ${{ steps.gate.outputs.should_run }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - id: gate
         uses: ./.github/actions/authz-gate
         with:
@@ -64,7 +64,7 @@ jobs:
     outputs:
       should_run: ${{ steps.gate.outputs.should_run }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - id: gate
         uses: ./.github/actions/authz-gate
         with:
@@ -79,15 +79,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         
       - name: Authenticate Service Account
-        uses: 'google-github-actions/auth@v2'
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
           
       - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
         with:
           version: '>= 363.0.0'
           
@@ -103,10 +103,10 @@ jobs:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Authenticate Service Account
-        uses: 'google-github-actions/auth@v2'
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
 
@@ -126,10 +126,10 @@ jobs:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Authenticate Service Account
-        uses: 'google-github-actions/auth@v2'
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
 
@@ -149,7 +149,7 @@ jobs:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Build & push test images
         uses: ./.github/actions/build-neo4j-images
         with:
@@ -211,15 +211,15 @@ jobs:
       - run-tests-debian
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - id: 'gcloud-auth'
-        uses: 'google-github-actions/auth@v2'
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
 
       - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
         with:
           version: '>= 363.0.0'
 
@@ -239,15 +239,15 @@ jobs:
       - run-tests-redhat
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - id: 'gcloud-auth'
-        uses: 'google-github-actions/auth@v2'
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
 
       - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
         with:
           version: '>= 363.0.0'
 
@@ -262,7 +262,7 @@ jobs:
     if: needs.check-release.outputs.should_run == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Build & push release images
         uses: ./.github/actions/build-neo4j-images
         with:
@@ -294,7 +294,7 @@ jobs:
         password: ${{ secrets.GCLOUD_SERVICE_KEY }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: '0'
           fetch-tags: true
@@ -352,7 +352,7 @@ jobs:
           echo "Using chart version ${HELM_CHART_VERSION} for release"
 
       - name: Release Notes
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@26994186c0ac3ef5cae75ac16aa32e8153525f77 # v1
         with:
           name: v${{ steps.chart_version.outputs.CHART_VERSION }}
           tag_name: ${{ steps.chart_version.outputs.CHART_VERSION }}

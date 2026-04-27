@@ -39,7 +39,7 @@ jobs:
     outputs:
       should_run: ${{ steps.gate.outputs.should_run }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - id: gate
         uses: ./.github/actions/authz-gate
         with:
@@ -58,7 +58,7 @@ jobs:
     if: ${{ needs.check-authorization.outputs.should_run == 'true' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Build & push release images
         uses: ./.github/actions/build-neo4j-images
         with:
@@ -90,7 +90,7 @@ jobs:
         password: ${{ secrets.GCLOUD_SERVICE_KEY }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: '0'
           fetch-tags: true
@@ -148,7 +148,7 @@ jobs:
           echo "Using chart version ${HELM_CHART_VERSION} for release"
 
       - name: Release Notes
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@26994186c0ac3ef5cae75ac16aa32e8153525f77 # v1
         with:
           name: v${{ steps.chart_version.outputs.CHART_VERSION }}
           tag_name: ${{ steps.chart_version.outputs.CHART_VERSION }}
