@@ -4,13 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       HELM_CHART_VERSION:
-        description: 'Helm chart version to be released (e.g., 5.26.10)'
+        description: 'Helm chart version to be released (e.g., 5.26.26)'
         type: string
-        required: true
       DOCKER_IMAGE_VERSION:
-        description: 'Docker image version/Neo4j version to use (e.g., 5.26.10)'
+        description: 'Docker image version/Neo4j version to use (e.g., 5.26.26)'
         type: string
-        required: true
       RELEASE:
         description: 'Release (True) or execute only tests (False)'
         type: boolean
@@ -27,7 +25,7 @@ env:
   CLOUDSDK_COMPUTE_ZONE: "europe-west2-b"
   CLOUDSDK_COMPUTE_REGION: "europe-west2"
   GO_TEST_COUNT: 1
-  GO_TEST_TIMEOUT: 29m
+  GO_TEST_TIMEOUT: 45m
   GO_TEST_FORMAT: json
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -41,23 +39,35 @@ env:
   RESOURCE_PREFIX: ghactions
 
 permissions:
+  contents: read
   pull-requests: read
 
 jobs:
   check-pr:
     runs-on: ubuntu-latest
     outputs:
-      should_run: ${{ steps.check.outputs.should_run }}
+      should_run: ${{ steps.gate.outputs.should_run }}
     steps:
-      - id: check
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.actor }}" == "bfeshti" || "${{ github.actor }}" == "riggi-alekaj" ]]; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.actor }}" == "bfeshti" || "${{ github.actor }}" == "riggi-alekaj" ]]; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
-          else
-            echo "should_run=false" >> $GITHUB_OUTPUT
-          fi
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - id: gate
+        uses: ./.github/actions/authz-gate
+        with:
+          allowed_actors: ${{ vars.CI_ALLOWED_ACTORS }}
+
+  check-release:
+    needs: check-pr
+    if: inputs.RELEASE
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.gate.outputs.should_run }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - id: gate
+        uses: ./.github/actions/authz-gate
+        with:
+          allowed_actors: ${{ vars.CI_ALLOWED_ACTORS }}
+          require_dispatch: 'true'
+          require_branch: '5.26'
 
   cleanup:
     needs: check-pr
@@ -66,15 +76,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         
       - name: Authenticate Service Account
-        uses: 'google-github-actions/auth@v2'
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
           
       - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
         with:
           version: '>= 363.0.0'
           
@@ -90,10 +100,10 @@ jobs:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Authenticate Service Account
-        uses: 'google-github-actions/auth@v2'
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
 
@@ -113,10 +123,10 @@ jobs:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Authenticate Service Account
-        uses: 'google-github-actions/auth@v2'
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
 
@@ -135,311 +145,56 @@ jobs:
     env:
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
     steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Build & push test images
+        uses: ./.github/actions/build-neo4j-images
         with:
           registry: europe-west2-docker.pkg.dev
-          username: _json_key
-          password: ${{ secrets.GCLOUD_SERVICE_KEY }}
+          registry_username: _json_key
+          registry_password: ${{ secrets.GCLOUD_SERVICE_KEY }}
+          reverseproxy_tag: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ env.RUN_ID }}
+          operations_tag: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ env.RUN_ID }}
+          backup_tag_debian: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ env.RUN_ID }}
+          backup_tag_redhat: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi10-${{ env.RUN_ID }}
+          backup_source_debian: ${{ inputs.RELEASE && format('neo4j:{0}-enterprise', inputs.DOCKER_IMAGE_VERSION) || format('{0}/neo4j:5-enterprise-debian-nightly-bundle', vars.ARTIFACT_REGISTRY_REPO_NAME) }}
+          backup_source_redhat: ${{ inputs.RELEASE && format('neo4j:{0}-enterprise-ubi10', inputs.DOCKER_IMAGE_VERSION) || format('{0}/neo4j:5-enterprise-redhat-nightly-bundle', vars.ARTIFACT_REGISTRY_REPO_NAME) }}
+          dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
+          dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push reverse proxy image
-        uses: docker/build-push-action@v5
-        with:
-          context: "{{defaultContext}}:neo4j-reverse-proxy"
-          push: true
-          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ env.RUN_ID }}"
-          provenance: false
-
-      - name: Build and push neo4j operations image
-        uses: docker/build-push-action@v5
-        with:
-          context: "{{defaultContext}}:neo4j/neo4j-operations"
-          push: true
-          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ env.RUN_ID }}"
-          provenance: false
-
-      - name: Build and push backup image
-        uses: docker/build-push-action@v5
-        if: ${{ !inputs.RELEASE }}
-        with:
-          context: "{{defaultContext}}:neo4j-admin"
-          push: true
-          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ env.RUN_ID }}"
-          provenance: false
-          build-args: |
-            IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:5-enterprise-debian-nightly-bundle
-            DISTRIBUTION=debian
-
-      - name: Build and push red hat backup image
-        uses: docker/build-push-action@v5
-        if: ${{ !inputs.RELEASE }}
-        with:
-          context: "{{defaultContext}}:neo4j-admin"
-          push: true
-          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi10-${{ env.RUN_ID }}"
-          provenance: false
-          build-args: |
-            IMAGE=${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:5-enterprise-redhat-nightly-bundle
-            DISTRIBUTION=redhat
-
-      - name: Build and push backup image
-        uses: docker/build-push-action@v5
-        if: ${{ inputs.RELEASE }}
-        with:
-          context: "{{defaultContext}}:neo4j-admin"
-          push: true
-          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ env.RUN_ID }}"
-          provenance: false
-          build-args: |
-            IMAGE=neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise
-            DISTRIBUTION=debian
-
-      - name: Build and push red hat backup image
-        uses: docker/build-push-action@v5
-        if: ${{ inputs.RELEASE }}
-        with:
-          context: "{{defaultContext}}:neo4j-admin"
-          push: true
-          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi10-${{ env.RUN_ID }}"
-          provenance: false
-          build-args: |
-            IMAGE=neo4j:${{ inputs.DOCKER_IMAGE_VERSION}}-enterprise-ubi10
-            DISTRIBUTION=redhat
-
-  run-enterprise-tests:
-    name: Debian Enterprise tests
+  run-tests-debian:
+    name: Debian tests
     needs: [gke-setup, build-reverseproxy-backup, check-pr]
     if: needs.check-pr.outputs.should_run == 'true'
-    runs-on: ubuntu-latest
-    env:
-      RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
-      NEO4J_EDITION: "enterprise"
-      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
-      NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:5-enterprise-debian-nightly-bundle"
-      NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ github.run_id }}-${{ github.run_attempt }}"
-      NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ github.run_id }}-${{ github.run_attempt }}"
-      NEO4J_OPERATIONS_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ github.run_id }}-${{ github.run_attempt }}"
-    container:
-      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
-      credentials:
-        username: _json_key
-        password: ${{ secrets.GCLOUD_SERVICE_KEY }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    strategy:
+      fail-fast: false
+      matrix:
+        edition: [enterprise, community]
+    uses: ./.github/workflows/run-integration-tests.yml
+    with:
+      edition: ${{ matrix.edition }}
+      os: debian
+      release: ${{ inputs.RELEASE && 'true' || 'false' }}
+      docker_image_version: ${{ inputs.DOCKER_IMAGE_VERSION }}
+      cluster_name: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
+    secrets: inherit
 
-      - id: 'gcloud-auth'
-        uses: 'google-github-actions/auth@v2'
-        with:
-          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
-
-      - id: 'get-credentials'
-        uses: 'google-github-actions/get-gke-credentials@v2'
-        with:
-          cluster_name: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
-          location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
-
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
-        with:
-          version: '>= 363.0.0'
-
-      - name: Set up gotestfmt
-        run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
-
-      - name: Run Enterprise Integration and Unit tests
-        run: |
-          mkdir -p .kube
-          cat ${KUBECONFIG} > .kube/config
-          CURRENT_DIRECTORY=$(pwd)
-          export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"          
-          export IPS_PASS=$(gcloud auth print-access-token)
-          #inputs.RELEASE does not hold value when workflow_dispatch is not called
-          ISRELEASE=${{ inputs.RELEASE }}
-          if [[ ${#ISRELEASE} != 0 ]]; then            
-            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise"
-          fi
-          echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
-          echo "printing kubeconfig path $KUBECONFIG"
-          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-
-  run-community-tests:
-    name: Debian Community Tests
-    needs: [gke-setup, build-reverseproxy-backup, check-pr]
-    if: needs.check-pr.outputs.should_run == 'true'
-    runs-on: ubuntu-latest
-    env:
-      RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
-      NEO4J_EDITION: "community"
-      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
-      NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:5-community-debian-nightly-bundle"
-      NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ github.run_id }}-${{ github.run_attempt }}"
-      NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ github.run_id }}-${{ github.run_attempt }}"
-      NEO4J_OPERATIONS_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ github.run_id }}-${{ github.run_attempt }}"
-    container:
-      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
-      credentials:
-        username: _json_key
-        password: ${{ secrets.GCLOUD_SERVICE_KEY }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - id: 'gcloud-auth'
-        uses: 'google-github-actions/auth@v2'
-        with:
-          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
-
-      - id: 'get-credentials'
-        uses: 'google-github-actions/get-gke-credentials@v2'
-        with:
-          cluster_name: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
-          location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
-
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
-        with:
-          version: '>= 363.0.0'
-
-      - name: Set up gotestfmt
-        run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
-
-      - name: Run Community Integration and Unit tests
-        run: |
-          mkdir -p .kube
-          cat ${KUBECONFIG} > .kube/config
-          CURRENT_DIRECTORY=$(pwd)
-          export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"          
-          export IPS_PASS=$(gcloud auth print-access-token)
-          #inputs.RELEASE does not hold value when workflow_dispatch is not called
-          ISRELEASE=${{ inputs.RELEASE }}
-          if [[ ${#ISRELEASE} != 0 ]]; then            
-            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.DOCKER_IMAGE_VERSION}}"
-          fi
-          echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
-          echo "printing kubeconfig path $KUBECONFIG"
-          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-
-  run-enterprise-tests-redhat:
-    name: RedHat Enterprise Tests
+  run-tests-redhat:
+    name: RedHat tests
     needs: [gke-setup-redhat, build-reverseproxy-backup, check-pr]
     if: needs.check-pr.outputs.should_run == 'true'
-    runs-on: ubuntu-latest
-    env:
-      RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
-      NEO4J_EDITION: "enterprise"
-      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
-      NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:5-enterprise-redhat-nightly-bundle"
-      NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ github.run_id }}-${{ github.run_attempt }}"
-      NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi10-${{ github.run_id }}-${{ github.run_attempt }}"
-      NEO4J_OPERATIONS_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ github.run_id }}-${{ github.run_attempt }}"
-    container:
-      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
-      credentials:
-        username: _json_key
-        password: ${{ secrets.GCLOUD_SERVICE_KEY }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - id: 'gcloud-auth'
-        uses: 'google-github-actions/auth@v2'
-        with:
-          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
-
-      - id: 'get-credentials'
-        uses: 'google-github-actions/get-gke-credentials@v2'
-        with:
-          cluster_name: ${{ env.CLOUDSDK_CONTAINER_CLUSTER }}
-          location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
-
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
-        with:
-          version: '>= 363.0.0'
-
-      - name: Set up gotestfmt
-        run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
-
-      - name: Run Enterprise Integration and Unit tests for Red Hat
-        run: |
-          mkdir -p .kube
-          cat ${KUBECONFIG} > .kube/config
-          CURRENT_DIRECTORY=$(pwd)
-          export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
-          echo "printing kubeconfig path $KUBECONFIG"
-          export IPS_PASS=$(gcloud auth print-access-token)          
-          #inputs.RELEASE does not hold value when workflow_dispatch is not called
-          ISRELEASE=${{ inputs.RELEASE }}
-          if [[ ${#ISRELEASE} != 0 ]]; then            
-            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.DOCKER_IMAGE_VERSION}}-enterprise"
-          fi
-          echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
-          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-
-  run-community-tests-redhat:
-    name: RedHat Community Tests
-    needs: [gke-setup-redhat, build-reverseproxy-backup, check-pr]
-    if: needs.check-pr.outputs.should_run == 'true'
-    runs-on: ubuntu-latest
-    env:
-      RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
-      NEO4J_EDITION: "community"
-      CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
-      NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:5-community-redhat-nightly-bundle"
-      NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ github.run_id }}-${{ github.run_attempt }}"
-      NEO4J_DOCKER_BACKUP_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi10-${{ github.run_id }}-${{ github.run_attempt }}"
-      NEO4J_OPERATIONS_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ github.run_id }}-${{ github.run_attempt }}"
-    container:
-      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
-      credentials:
-        username: _json_key
-        password: ${{ secrets.GCLOUD_SERVICE_KEY }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - id: 'gcloud-auth'
-        uses: 'google-github-actions/auth@v2'
-        with:
-          credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
-
-      - id: 'get-credentials'
-        uses: 'google-github-actions/get-gke-credentials@v2'
-        with:
-          cluster_name: ${{ env.CLOUDSDK_CONTAINER_CLUSTER }}
-          location: ${{ env.CLOUDSDK_COMPUTE_ZONE }}
-
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
-        with:
-          version: '>= 363.0.0'
-
-      - name: Set up gotestfmt
-        run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
-
-      - name: Run Community Integration and Unit tests for Red Hat
-        run: |
-          mkdir -p .kube
-          cat ${KUBECONFIG} > .kube/config
-          CURRENT_DIRECTORY=$(pwd)
-          export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
-          echo "printing kubeconfig path $KUBECONFIG"
-          export IPS_PASS=$(gcloud auth print-access-token)
-          #inputs.RELEASE does not hold value when workflow_dispatch is not called
-          ISRELEASE=${{ inputs.RELEASE }}
-          if [[ ${#ISRELEASE} != 0 ]]; then            
-            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}"
-          fi
-          echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
-          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
-          go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/unit_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
+    strategy:
+      fail-fast: false
+      matrix:
+        edition: [enterprise, community]
+    uses: ./.github/workflows/run-integration-tests.yml
+    with:
+      edition: ${{ matrix.edition }}
+      os: redhat
+      release: ${{ inputs.RELEASE && 'true' || 'false' }}
+      docker_image_version: ${{ inputs.DOCKER_IMAGE_VERSION }}
+      cluster_name: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
+    secrets: inherit
 
   gke-delete:
     name: Debian GKE Cluster Deletion
@@ -448,20 +203,20 @@ jobs:
     env:
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
     needs:
-      - run-enterprise-tests
-      - run-community-tests
+      - check-pr
       - gke-setup
+      - run-tests-debian
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - id: 'gcloud-auth'
-        uses: 'google-github-actions/auth@v2'
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
 
       - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
         with:
           version: '>= 363.0.0'
 
@@ -476,20 +231,20 @@ jobs:
     env:
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup-redhat.outputs.CLOUDSDK_CONTAINER_CLUSTER_REDHAT }}
     needs:
-      - run-enterprise-tests-redhat
-      - run-community-tests-redhat
+      - check-pr
       - gke-setup-redhat
+      - run-tests-redhat
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - id: 'gcloud-auth'
-        uses: 'google-github-actions/auth@v2'
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           credentials_json: '${{ secrets.GCLOUD_SERVICE_KEY }}'
 
       - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
         with:
           version: '>= 363.0.0'
 
@@ -499,75 +254,44 @@ jobs:
 
   build-reverseproxy-backup-release-image:
     name: ReverseProxy and Backup Docker Image build
-    needs: [run-community-tests, run-community-tests-redhat, run-enterprise-tests, run-enterprise-tests-redhat, check-pr]
+    needs: [run-tests-debian, run-tests-redhat, check-release]
     runs-on: ubuntu-latest
-    if: ${{ inputs.RELEASE && github.ref_name == '5.26' && success() && (github.actor == 'bfeshti' || github.actor == 'riggi-alekaj') && needs.check-pr.outputs.should_run == 'true' }}
+    if: needs.check-release.outputs.should_run == 'true'
     steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Build & push release images
+        uses: ./.github/actions/build-neo4j-images
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push reverse proxy image
-        uses: docker/build-push-action@v5
-        with:
-          context: "{{defaultContext}}:neo4j-reverse-proxy"
-          push: true
-          tags: "neo4j/helm-charts-reverse-proxy:${{ inputs.HELM_CHART_VERSION}}"
-          provenance: false
-
-      - name: Build and push operations image
-        uses: docker/build-push-action@v5
-        with:
-          context: "{{defaultContext}}:neo4j/neo4j-operations"
-          push: true
-          tags: "neo4j/helm-charts-operations:${{ inputs.HELM_CHART_VERSION}}"
-          provenance: false
-
-      - name: Build and push backup image
-        uses: docker/build-push-action@v5
-        with:
-          context: "{{defaultContext}}:neo4j-admin"
-          push: true
-          tags: "neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION }}"
-          provenance: false
-          build-args: |
-            IMAGE=neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise
-            DISTRIBUTION=debian
-
-      - name: Build and push red hat backup image
-        uses: docker/build-push-action@v5
-        with:
-          context: "{{defaultContext}}:neo4j-admin"
-          push: true
-          tags: "neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION}}-ubi10"
-          provenance: false
-          build-args: |
-            IMAGE=neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise-ubi10
-            DISTRIBUTION=redhat
+          registry: docker.io
+          registry_username: ${{ secrets.DOCKERHUB_USERNAME }}
+          registry_password: ${{ secrets.DOCKERHUB_TOKEN }}
+          reverseproxy_tag: neo4j/helm-charts-reverse-proxy:${{ inputs.DOCKER_IMAGE_VERSION }}
+          operations_tag: neo4j/helm-charts-operations:${{ inputs.DOCKER_IMAGE_VERSION }}
+          backup_tag_debian: neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION }}
+          backup_tag_redhat: neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION }}-ubi10
+          backup_source_debian: neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise
+          backup_source_redhat: neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise-ubi10
+          cache_scope: release
 
   packaging:
     name: Packaging and Release
-    needs: [run-community-tests, run-community-tests-redhat, run-enterprise-tests, run-enterprise-tests-redhat, build-reverseproxy-backup-release-image, check-pr]
+    needs: [run-tests-debian, run-tests-redhat, build-reverseproxy-backup-release-image, check-release]
     runs-on: ubuntu-latest
-    if: ${{ inputs.RELEASE && github.ref_name == '5.26' && success() && (github.actor == 'bfeshti' || github.actor == 'riggi-alekaj') && needs.check-pr.outputs.should_run == 'true' }}
+    if: needs.check-release.outputs.should_run == 'true'
     env:
       HELM_CHART_VERSION: ${{ inputs.HELM_CHART_VERSION }}
       DOCKER_IMAGE_VERSION: ${{ inputs.DOCKER_IMAGE_VERSION }}
       HELM_REPO_NAME: ${{ vars.HELM_REPO_NAME }}
     container:
-      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
+      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:${{ vars.CI_IMAGE_TAG || 'latest' }}
       options: --user 1001
       credentials:
         username: _json_key
         password: ${{ secrets.GCLOUD_SERVICE_KEY }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: '0'
           fetch-tags: true
@@ -575,10 +299,27 @@ jobs:
           ref: 5.26
 
       - name: Version Updates
-        run: |          
+        run: |
           git config --global user.email team-smcs@neo4j.com
           git config --global user.name "team-smcs"
           ./bin/gcloud/version_updates
+
+      - name: Generate changelog
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          mkdir -p tmp
+          python3 bin/changelog/generate.py \
+            --chart-version "${HELM_CHART_VERSION}" \
+            --docker-version "${DOCKER_IMAGE_VERSION}" \
+            --out tmp/release-notes.md
+          python3 bin/changelog/update_file.py \
+            --notes tmp/release-notes.md \
+            --changelog CHANGELOG.md \
+            --chart-version "${HELM_CHART_VERSION}" \
+            --docker-version "${DOCKER_IMAGE_VERSION}"
+          git add CHANGELOG.md
 
       - name: GPG Key Signing
         run: |
@@ -601,18 +342,19 @@ jobs:
         run: |          
           ./bin/gcloud/index_yaml_update
 
+      - name: Set Chart Version
+        id: chart_version
+        run: |
+          echo "CHART_VERSION=${HELM_CHART_VERSION}" >> $GITHUB_OUTPUT
+          echo "Using chart version ${HELM_CHART_VERSION} for release"
+
       - name: Release Notes
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@26994186c0ac3ef5cae75ac16aa32e8153525f77 # v1
         with:
-          name: v${{ inputs.HELM_CHART_VERSION }}
-          tag_name: ${{ inputs.HELM_CHART_VERSION }}
+          name: v${{ steps.chart_version.outputs.CHART_VERSION }}
+          tag_name: ${{ steps.chart_version.outputs.CHART_VERSION }}
           token: ${{ secrets.GH_TOKEN }}
-          body: "- Update to Neo4j ${{ inputs.DOCKER_IMAGE_VERSION }} as the new baseline, see [Release notes](https://neo4j.com/release-notes/database/neo4j-5///) for details of changes"
+          body_path: tmp/release-notes.md
           make_latest: true
           files: |
-            neo4j-${{ inputs.HELM_CHART_VERSION }}.tgz
-            neo4j-admin-${{ inputs.HELM_CHART_VERSION }}.tgz
-            neo4j-reverse-proxy-${{ inputs.HELM_CHART_VERSION}}.tgz
-            neo4j-headless-service-${{ inputs.HELM_CHART_VERSION }}.tgz
-            neo4j-persistent-volume-${{ inputs.HELM_CHART_VERSION}}.tgz
-            neo4j-loadbalancer-${{ inputs.HELM_CHART_VERSION }}.tgz
+            tmp/new-packages/*.tgz
