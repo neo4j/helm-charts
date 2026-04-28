@@ -336,9 +336,6 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 	assert.NoError(t, err, "cannot retrieve aws backup cronjob")
 	assert.Equal(t, cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule, fmt.Sprintf("aws cronjob schedule %s not matching with the schedule defined in values.yaml %s", cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule))
 
-	nodeSelectorNode, err := getNodeWithLabel(fmt.Sprintf("testLabel=%s-5", namespace))
-	assert.NoError(t, err)
-
 	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
 	assert.NoError(t, err, "error while retrieving pod list during aws backup operation")
 
@@ -353,7 +350,7 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to s3 bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to s3 bucket"), string(out))
 			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
-			assert.Equal(t, nodeSelectorNode.Name, pod.Spec.NodeName, fmt.Sprintf("backup pod %s is not scheduled on the correct node %s", pod.Spec.NodeName, nodeSelectorNode.Name))
+			assertPodOnLabeledNode(t, pod, fmt.Sprintf("testLabel=%s-5", namespace))
 			break
 		}
 	}
@@ -951,22 +948,55 @@ func checkCoreImageName(t *testing.T, releaseName model.ReleaseName) error {
 	return nil
 }
 
-// checkNodeSelectorLabel checks whether the given pod is associated with the correct node or not
+// checkNodeSelectorLabel asserts the pod is scheduled on one of the nodes that
+// carries the given label. labelNodes intentionally applies each label to
+// multiple nodes so one GKE node replacement does not make the test unschedulable.
 func checkNodeSelectorLabel(t *testing.T, releaseName model.ReleaseName, labelName string) error {
 
-	nodeSelectorNode, err := getNodeWithLabel(labelName)
+	matches, err := getNodesWithLabel(labelName)
 	if !assert.NoError(t, err) {
 		return err
+	}
+	if !assert.NotEmpty(t, matches, "no node carries label %s", labelName) {
+		return fmt.Errorf("no node carries label %s", labelName)
 	}
 	pod, err := getSpecificPod(releaseName.Namespace(), releaseName.PodName())
 	if !assert.NoError(t, err) {
 		return fmt.Errorf("error while fetching pod list \n %v", err)
 	}
-	if !assert.Equal(t, nodeSelectorNode.Name, pod.Spec.NodeName) {
-		return fmt.Errorf("pod %s is not scheduled on the correct node %s", pod.Spec.NodeName, nodeSelectorNode.Name)
+	for _, node := range matches {
+		if node.Name == pod.Spec.NodeName {
+			return nil
+		}
 	}
+	names := make([]string, 0, len(matches))
+	for _, node := range matches {
+		names = append(names, node.Name)
+	}
+	assert.Fail(t, fmt.Sprintf("pod %s is on node %s; expected one of %v", pod.Name, pod.Spec.NodeName, names))
+	return fmt.Errorf("pod on %s; expected one of %v", pod.Spec.NodeName, names)
+}
 
-	return nil
+// assertPodOnLabeledNode asserts a pod was scheduled on one of the nodes that
+// carries labelName.
+func assertPodOnLabeledNode(t *testing.T, pod v1.Pod, labelName string) {
+	matches, err := getNodesWithLabel(labelName)
+	if !assert.NoError(t, err) {
+		return
+	}
+	if !assert.NotEmpty(t, matches, "no node carries label %s", labelName) {
+		return
+	}
+	for _, node := range matches {
+		if node.Name == pod.Spec.NodeName {
+			return
+		}
+	}
+	names := make([]string, 0, len(matches))
+	for _, node := range matches {
+		names = append(names, node.Name)
+	}
+	assert.Fail(t, fmt.Sprintf("backup pod %s scheduled on %s; expected one of %v", pod.Name, pod.Spec.NodeName, names))
 }
 
 // checkImagePullSecret checks whether a secret of type docker-registry is created or not
