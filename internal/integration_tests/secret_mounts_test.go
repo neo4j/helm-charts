@@ -16,7 +16,7 @@ import (
 // TestSecretMountsInGCloudK8s tests secret mounting functionality in Kubernetes environment
 func TestSecretMountsInGCloudK8s(t *testing.T) {
 	chart := model.Neo4jHelmChartCommunityAndEnterprise
-	releaseName := model.NewReleaseName("secret-mounts-" + TestRunIdentifier)
+	releaseName := model.NewReleaseName("secret-mounts-" + TestNamespace(t))
 	t.Parallel()
 
 	t.Logf("Starting setup of '%s'", t.Name())

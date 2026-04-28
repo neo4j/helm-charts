@@ -9,6 +9,7 @@ import (
 	"github.com/neo4j/helm-charts/internal/integration_tests/gcloud"
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/neo4j/helm-charts/internal/resources"
+	"github.com/neo4j/helm-charts/internal/testutil/timeouts"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,7 +26,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 			closeables = append([]Closeable{closeable}, closeables...)
 		}
 	}
-	clusterReleaseName := model.NewReleaseName("cluster-" + TestRunIdentifier)
+	clusterReleaseName := model.NewReleaseName("cluster-" + TestNamespace(t))
 	namespace := string(clusterReleaseName.Namespace())
 	err := labelNodes(t, namespace)
 	addCloseable(func() error {
@@ -63,7 +64,11 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	// Install one core synchronously, if all cores are installed simultaneously they run into conflicts all trying to create a -auth secret
+	// Install one core synchronously, if all cores are installed simultaneously they run into conflicts all trying to create a -auth secret.
+	// Re-apply the nodeSelector label right before install so a GKE node replacement between labelNodes() and this install doesn't leave core-1 unschedulable.
+	if err := ensureNodeLabel(t, fmt.Sprintf("%s-1", namespace)); !assert.NoError(t, err) {
+		return
+	}
 	result := core1.Install(t)
 	addCloseable(result.Closeable)
 	if !assert.NoError(t, result.error) {
@@ -78,7 +83,16 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 	addCloseable(closeablesNew...)
 
 	for _, core := range cores {
-		err = run(t, "kubectl", "--namespace", string(core.Name().Namespace()), "rollout", "status", "--watch", "--timeout=180s", "statefulset/"+core.Name().String())
+		err = run(t, "kubectl", "--namespace", string(core.Name().Namespace()), "rollout", "status", "--watch", timeouts.KubectlRollout(), "statefulset/"+core.Name().String())
+		if !assert.NoError(t, err) {
+			return
+		}
+		// rollout status returns as soon as the partition-update count is
+		// satisfied for RollingUpdate StatefulSets — it does NOT wait for
+		// Ready. Follow up with an explicit Ready wait so subsequent sub-tests
+		// don't fire against a pod that's still initializing (or worse,
+		// permanently Pending after a node replacement).
+		err = run(t, "kubectl", "--namespace", string(core.Name().Namespace()), "wait", "--for=condition=Ready", "pod/"+core.Name().PodName(), timeouts.KubectlPodReady())
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -112,7 +126,7 @@ func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
 		}
 	}
 
-	clusterReleaseName := model.NewReleaseName("apoc-cluster-" + TestRunIdentifier)
+	clusterReleaseName := model.NewReleaseName("apoc-cluster-" + TestNamespace(t))
 	defaultHelmArgs := []string{}
 	defaultHelmArgs = append(defaultHelmArgs, model.DefaultNeo4jNameArg...)
 	defaultHelmArgs = append(defaultHelmArgs, model.DefaultClusterSizeArg...)
@@ -148,7 +162,16 @@ func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
 	addCloseable(closeablesNew...)
 
 	for _, core := range cores {
-		err = run(t, "kubectl", "--namespace", string(core.Name().Namespace()), "rollout", "status", "--watch", "--timeout=180s", "statefulset/"+core.Name().String())
+		err = run(t, "kubectl", "--namespace", string(core.Name().Namespace()), "rollout", "status", "--watch", timeouts.KubectlRollout(), "statefulset/"+core.Name().String())
+		if !assert.NoError(t, err) {
+			return
+		}
+		// rollout status returns as soon as the partition-update count is
+		// satisfied for RollingUpdate StatefulSets — it does NOT wait for
+		// Ready. Follow up with an explicit Ready wait so subsequent sub-tests
+		// don't fire against a pod that's still initializing (or worse,
+		// permanently Pending after a node replacement).
+		err = run(t, "kubectl", "--namespace", string(core.Name().Namespace()), "wait", "--for=condition=Ready", "pod/"+core.Name().PodName(), timeouts.KubectlPodReady())
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -172,27 +195,39 @@ func clusterTestCleanup(t *testing.T, clusterReleaseName model.ReleaseName, core
 		err := run(t, "kubectl", "get", "namespace", namespace)
 		if err == nil {
 			for _, core := range []clusterCore{core1, core2, core3} {
-				_ = run(t, "kubectl", "get", "statefulset", core.name.String(), "--namespace", namespace)
-				if err == nil {
+				stsErr := run(t, "kubectl", "get", "statefulset", core.name.String(), "--namespace", namespace)
+				if stsErr == nil {
 					_ = runAll(t, "kubectl", [][]string{
 						{"scale", "statefulset", core.name.String(), "--namespace", namespace, "--replicas=0"},
 					}, false)
 				}
 			}
 
-			time.Sleep(30 * time.Second)
+			waitForPodsTerminated(t, namespace, 60*time.Second)
+
+			// Force-delete any stragglers (waitForPodsTerminated already does this on timeout,
+			// but calling it again is cheap and guards against pods created between scale-down
+			// and uninstall). This is the critical fix: if a pod is stuck Terminating,
+			// `helm uninstall --wait` blocks for its full --timeout, which is how we ran
+			// out of the Go test deadline previously.
+			_ = run(t, "kubectl", "delete", "pod", "--all", "--namespace", namespace, "--force", "--grace-period=0", "--ignore-not-found")
 
 			_ = runAll(t, "helm", [][]string{
-				{"uninstall", core1.name.String(), core2.name.String(), core3.name.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
-				{"uninstall", clusterReleaseName.String() + "-headless", "--wait", "--timeout", "1m", "--namespace", namespace},
+				{"uninstall", core1.name.String(), core2.name.String(), core3.name.String(), "--timeout", "30s", "--namespace", namespace},
+				{"uninstall", clusterReleaseName.String() + "-headless", "--timeout", "30s", "--namespace", namespace},
 			}, false)
-
-			time.Sleep(10 * time.Second)
 
 			_ = runAll(t, "kubectl", [][]string{
 				{"delete", "pvc", "--all", "--namespace", namespace, "--force", "--grace-period=0", "--ignore-not-found"},
-				{"delete", "pv", "--all", "--force", "--grace-period=0", "--ignore-not-found"},
 			}, false)
+
+			pvDeleteCmds := [][]string{}
+			for _, core := range []clusterCore{core1, core2, core3} {
+				pvDeleteCmds = append(pvDeleteCmds, []string{
+					"delete", "pv", fmt.Sprintf("%s-pv", core.name.String()), "--force", "--grace-period=0", "--ignore-not-found",
+				})
+			}
+			_ = runAll(t, "kubectl", pvDeleteCmds, false)
 
 			_ = runAll(t, "kubectl", [][]string{
 				{"delete", "namespace", namespace, "--force", "--grace-period=0", "--ignore-not-found"},

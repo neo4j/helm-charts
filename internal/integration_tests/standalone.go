@@ -32,6 +32,7 @@ import (
 	. "github.com/neo4j/helm-charts/internal/helpers"
 	"github.com/neo4j/helm-charts/internal/integration_tests/gcloud"
 	"github.com/neo4j/helm-charts/internal/model"
+	"github.com/neo4j/helm-charts/internal/testutil/poll"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -439,11 +440,52 @@ func createPriorityClass(t *testing.T, releaseName model.ReleaseName) (Closeable
 
 func run(t *testing.T, command string, args ...string) error {
 	t.Logf("running: %s %s\n", command, args)
-	out, err := exec.Command(command, args...).CombinedOutput()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+
+	out, err := exec.CommandContext(ctx, command, args...).CombinedOutput()
+	if ctx.Err() == context.DeadlineExceeded {
+		t.Logf("Command timed out after 10 minutes: %s %s", command, args)
+		return fmt.Errorf("command timed out after 10 minutes: %s %v", command, args)
+	}
 	if out != nil {
 		t.Logf("output: %s\n", out)
 	}
 	return err
+}
+
+func kubectlLogs(t *testing.T, podName string, namespace string) (string, error) {
+	return poll.UntilValue(context.Background(), t, poll.Opts{
+		Interval:      10 * time.Second,
+		Timeout:       25 * time.Second,
+		Description:   fmt.Sprintf("kubectl logs for pod %s in %s", podName, namespace),
+		RetryableErrs: func(error) bool { return true },
+	}, func(context.Context) (string, bool, error) {
+		out, err := exec.Command("kubectl", "logs", podName, "--namespace", namespace).CombinedOutput()
+		if err != nil {
+			return "", false, err
+		}
+		return string(out), true, nil
+	})
+}
+
+func waitForPodsTerminated(t *testing.T, namespace string, timeout time.Duration) {
+	err := poll.Until(context.Background(), t, poll.Opts{
+		Interval:      5 * time.Second,
+		Timeout:       timeout,
+		Description:   fmt.Sprintf("all pods in namespace %s to terminate", namespace),
+		RetryableErrs: func(error) bool { return true },
+	}, func(ctx context.Context) (bool, error) {
+		pods, err := Clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return false, err
+		}
+		return len(pods.Items) == 0, nil
+	})
+	if err != nil {
+		t.Logf("%v; force-deleting remaining pods", err)
+		_ = run(t, "kubectl", "delete", "pod", "--all", "--namespace", namespace, "--force", "--grace-period=0", "--ignore-not-found")
+	}
 }
 
 func AsCloseable(closeables []Closeable) Closeable {

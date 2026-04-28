@@ -1,8 +1,8 @@
 package gcloud
 
 import (
-	"sync"
-
+	"context"
+	"fmt"
 	"os/exec"
 	"strings"
 	"testing"
@@ -12,16 +12,9 @@ import (
 	"github.com/neo4j/helm-charts/internal/model"
 )
 
-var (
-	credentialMutex sync.Mutex
-)
-
 func InstallGcloud(t *testing.T, zone Zone, project Project, releaseName model.ReleaseName) (Closeable, *model.PersistentDiskName, error) {
 
-	// Synchronize credential fetching to prevent race conditions
-	credentialMutex.Lock()
 	err := run(t, "gcloud", "container", "clusters", "get-credentials", string(CurrentCluster()))
-	credentialMutex.Unlock()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -36,11 +29,25 @@ func InstallGcloud(t *testing.T, zone Zone, project Project, releaseName model.R
 
 func run(t *testing.T, command string, args ...string) error {
 	t.Logf("running: %s %s\n", command, args)
-	out, err := exec.Command(command, args...).CombinedOutput()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, command, args...)
+	out, err := cmd.CombinedOutput()
+
+	if ctx.Err() == context.DeadlineExceeded {
+		t.Logf("Command timed out after 5 minutes: %s %s", command, args)
+		return fmt.Errorf("command timed out after 5 minutes: %s %v", command, args)
+	}
+
 	if out != nil {
 		t.Logf("output: %s\n", out)
 	}
-	return err
+	if err != nil {
+		return fmt.Errorf("%w: %s", err, string(out))
+	}
+	return nil
 }
 
 func createDisk(t *testing.T, zone Zone, project Project, releaseName model.ReleaseName) (model.PersistentDiskName, Closeable, error) {
@@ -50,22 +57,19 @@ func createDisk(t *testing.T, zone Zone, project Project, releaseName model.Rele
 }
 
 func deleteDisk(t *testing.T, zone Zone, project Project, diskName string) error {
-	delete := func() error {
+	deleteFn := func() error {
 		return run(t, "gcloud", "compute", "disks", "delete", diskName, "--quiet", "--zone="+string(zone), "--project="+string(project))
 	}
-	err := delete()
+	err := deleteFn()
 	if err != nil {
-		timeout := time.After(1 * time.Minute)
-		for {
-			select {
-			case <-timeout:
-				return err
-			default:
-				if err = delete(); err == nil {
-					return err
-				} else if strings.Contains(err.Error(), "was not found") {
-					return err
-				}
+		deadline := time.Now().Add(1 * time.Minute)
+		for time.Now().Before(deadline) {
+			time.Sleep(5 * time.Second)
+			if err = deleteFn(); err == nil {
+				return nil
+			}
+			if strings.Contains(err.Error(), "was not found") {
+				return nil
 			}
 		}
 	}

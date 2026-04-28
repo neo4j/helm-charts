@@ -29,7 +29,10 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-// labelNodes labels all the node with testLabel=namespace-<number>
+// labelNodes applies the nodeSelector labels consumed by the cluster tests:
+// testLabel=<namespace>-1 for core-1 and testLabel=<namespace>-5 for backup pods.
+// Each label is applied to multiple nodes so one GKE node replacement does not
+// leave a pod permanently Pending with no matching node.
 func labelNodes(t *testing.T, namespace string) error {
 
 	var errors *multierror.Error
@@ -37,17 +40,54 @@ func labelNodes(t *testing.T, namespace string) error {
 	if err != nil {
 		return err
 	}
+	const replicaCount = 3
+	if len(nodesList.Items) < 2*replicaCount {
+		return fmt.Errorf("labelNodes needs at least %d nodes, got %d", 2*replicaCount, len(nodesList.Items))
+	}
 
-	for index, node := range nodesList.Items {
-		labelName := fmt.Sprintf("testLabel=%s-%d", namespace, index+1)
-		err = run(t, "kubectl", "label", "nodes", node.ObjectMeta.Name, labelName)
-		if err != nil {
-			errors = multierror.Append(errors, err)
-			t.Logf("Node Label failed for %s: %v", node.ObjectMeta.Name, err)
+	assignments := []struct {
+		label    string
+		nodeIdxs []int
+	}{
+		{label: fmt.Sprintf("testLabel=%s-1", namespace), nodeIdxs: []int{0, 1, 2}},
+		{label: fmt.Sprintf("testLabel=%s-5", namespace), nodeIdxs: []int{3, 4, 5}},
+	}
+	for _, a := range assignments {
+		for _, idx := range a.nodeIdxs {
+			name := nodesList.Items[idx].ObjectMeta.Name
+			if err := run(t, "kubectl", "label", "nodes", name, "--overwrite", a.label); err != nil {
+				errors = multierror.Append(errors, err)
+				t.Logf("Node label failed for %s=%s: %v", name, a.label, err)
+			}
 		}
 	}
 
 	return errors.ErrorOrNil()
+}
+
+// ensureNodeLabel makes sure at least one node in the cluster carries
+// testLabel=<labelValue>. GKE may replace nodes mid-test, dropping the labels
+// applied by labelNodes().
+func ensureNodeLabel(t *testing.T, labelValue string) error {
+	selector := fmt.Sprintf("testLabel=%s", labelValue)
+	if _, err := getNodeWithLabel(selector); err == nil {
+		return nil
+	}
+
+	nodesList, err := getNodesList()
+	if err != nil {
+		return err
+	}
+
+	for _, node := range nodesList.Items {
+		if _, hasLabel := node.ObjectMeta.Labels["testLabel"]; hasLabel {
+			continue
+		}
+		t.Logf("ensureNodeLabel: %s missing, applying to node %s", selector, node.ObjectMeta.Name)
+		return run(t, "kubectl", "label", "nodes", node.ObjectMeta.Name, selector)
+	}
+
+	return fmt.Errorf("no unlabeled node available to apply %s", selector)
 }
 
 // removeLabelFromNodes removes label testLabel from all the nodes added via labelNodes func

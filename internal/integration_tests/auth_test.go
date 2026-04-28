@@ -3,16 +3,17 @@ package integration_tests
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
 func TestAuthSecretsWrongKey(t *testing.T) {
 	t.Parallel()
-	releaseName := model.NewReleaseName("auth-wrong-key-" + TestRunIdentifier)
+	releaseName := model.NewReleaseName("auth-wrong-key-" + TestNamespace(t))
 	_, err := createNamespace(t, releaseName)
 	if err != nil {
 		return
@@ -49,7 +50,7 @@ func TestAuthSecretsWrongKey(t *testing.T) {
 
 func TestAuthSecretsInvalidPassword(t *testing.T) {
 	t.Parallel()
-	releaseName := model.NewReleaseName("auth-invalid-password-" + TestRunIdentifier)
+	releaseName := model.NewReleaseName("auth-invalid-password-" + TestNamespace(t))
 	_, err := createNamespace(t, releaseName)
 	if err != nil {
 		return
@@ -86,7 +87,7 @@ func TestAuthSecretsInvalidPassword(t *testing.T) {
 
 func TestAuthSecretsWithLookupDisabled(t *testing.T) {
 	t.Parallel()
-	releaseName := model.NewReleaseName("auth-invalid-password-" + TestRunIdentifier)
+	releaseName := model.NewReleaseName("auth-invalid-password-" + TestNamespace(t))
 	_, err := createNamespace(t, releaseName)
 	if err != nil {
 		return
@@ -113,8 +114,8 @@ func TestAuthPasswordCannotBeDifferent(t *testing.T) {
 		return
 	}
 	t.Parallel()
-	releaseName1 := model.NewReleaseName("auth-pass-1-" + TestRunIdentifier)
-	releaseName2 := model.NewReleaseName("auth-pass-2-" + TestRunIdentifier)
+	releaseName1 := model.NewReleaseName("auth-pass-1-" + TestNamespace(t))
+	releaseName2 := model.NewReleaseName("auth-pass-2-" + TestNamespace(t))
 	_, err := createNamespace(t, releaseName1)
 	if err != nil {
 		return
@@ -145,7 +146,7 @@ func TestAuthPasswordCannotBeDifferent(t *testing.T) {
 // TestAuthLdapSecretsWrongKey tests helm installation failure when a valid secret with invalid key is used for ldapPasswordFromSecret
 func TestAuthLdapSecretsWrongKey(t *testing.T) {
 	t.Parallel()
-	releaseName := model.NewReleaseName("ldap-auth-wrong-key-" + TestRunIdentifier)
+	releaseName := model.NewReleaseName("ldap-auth-wrong-key-" + TestNamespace(t))
 	_, err := createNamespace(t, releaseName)
 	if err != nil {
 		return
@@ -184,7 +185,7 @@ func TestAuthLdapSecretsWrongKey(t *testing.T) {
 // TestAuthLdapInvalidSecret tests helm installation failure when an invalid secret name is used for ldapPasswordFromSecret
 func TestAuthLdapInvalidSecret(t *testing.T) {
 	t.Parallel()
-	releaseName := model.NewReleaseName("ldap-auth-wrong-key-" + TestRunIdentifier)
+	releaseName := model.NewReleaseName("ldap-auth-wrong-key-" + TestNamespace(t))
 	_, err := createNamespace(t, releaseName)
 	if err != nil {
 		return
@@ -210,7 +211,7 @@ func TestAuthLdapInvalidSecret(t *testing.T) {
 func TestBackupInvalidSecretKeyName(t *testing.T) {
 	t.Parallel()
 
-	releaseName := model.NewReleaseName("ldap-auth-wrong-key-" + TestRunIdentifier)
+	releaseName := model.NewReleaseName("backup-auth-wrong-key-" + TestNamespace(t))
 	_, err := createNamespace(t, releaseName)
 	if err != nil {
 		return
@@ -243,6 +244,12 @@ func TestBackupInvalidSecretKeyName(t *testing.T) {
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
 	_, err = helmClient.Install(t, releaseName.String(), namespace, helmValues)
 	assert.Contains(t, err.Error(), fmt.Sprintf("Secret %s must contain key %s", helmValues.Backup.SecretName, helmValues.Backup.SecretKeyName))
+
+	t.Cleanup(func() {
+		_ = runAll(t, "kubectl", [][]string{
+			{"delete", "namespace", string(releaseName.Namespace())},
+		}, false)
+	})
 }
 
 // TestBackupNodeSelectorLabels checks for failure when missing nodeSelector labels are provided
@@ -263,7 +270,7 @@ func TestBackupNodeSelectorLabels(t *testing.T) {
 	helmValues.Backup.BucketName = "demo2"
 	helmValues.Backup.Database = "neo4j1"
 
-	releaseName := model.NewReleaseName("backup-nodeselector" + TestRunIdentifier)
+	releaseName := model.NewReleaseName("backup-nodeselector" + TestNamespace(t))
 	_, err := createNamespace(t, releaseName)
 	if err != nil {
 		return
