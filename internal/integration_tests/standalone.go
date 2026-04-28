@@ -1404,57 +1404,38 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 	helmValues.ReverseProxy.ServiceName = fmt.Sprintf("%s-admin", standaloneReleaseName.String())
 	helmValues.ReverseProxy.Namespace = namespace
 
-	//installing nginx ingress controller
 	err := run(t, "helm", "upgrade", "--install", "ingress-nginx", "ingress-nginx", "--repo", "https://kubernetes.github.io/ingress-nginx", "--namespace", "ingress-nginx", "--create-namespace")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to install ingress-nginx: %w", err)
+	}
+
+	if err := waitForDeploymentReady(t, "ingress-nginx", "ingress-nginx-controller", 3*time.Minute); err != nil {
+		return fmt.Errorf("ingress-nginx controller not ready: %w", err)
 	}
 
 	_, err = helmClient.Install(t, reverseProxyReleaseName.String(), namespace, helmValues)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to install reverse proxy chart: %w", err)
 	}
 
 	reverseProxyDepName := fmt.Sprintf("%s-reverseproxy-dep", reverseProxyReleaseName.String())
-	err = run(t, "kubectl", "--namespace", namespace, "rollout", "status", "deployment/"+reverseProxyDepName, "--timeout=3m")
-	if err != nil {
-		return err
+	if err := waitForDeploymentReady(t, namespace, reverseProxyDepName, 3*time.Minute); err != nil {
+		return fmt.Errorf("reverse proxy deployment not ready: %w", err)
 	}
+
 	deployment, err := Clientset.AppsV1().Deployments(namespace).Get(context.Background(), reverseProxyDepName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("cannot retrieve reverse proxy deployment: %v", err)
 	}
 	assert.NotNil(t, deployment, "no reverse proxy deployment found")
 
-	pod, err := poll.UntilValue(context.Background(), t, poll.Opts{
-		Interval:      5 * time.Second,
-		Timeout:       3 * time.Minute,
-		Description:   fmt.Sprintf("reverse proxy pod for %s to be Ready", reverseProxyReleaseName.String()),
-		RetryableErrs: func(error) bool { return true },
-	}, func(ctx context.Context) (v1.Pod, bool, error) {
-		pods, err := Clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("name=%s-reverseproxy", reverseProxyReleaseName.String()),
-		})
-		if err != nil {
-			return v1.Pod{}, false, err
-		}
-		if len(pods.Items) != 1 {
-			return v1.Pod{}, false, fmt.Errorf("expected 1 reverse proxy pod, got %d", len(pods.Items))
-		}
-		pod := pods.Items[0]
-		for _, condition := range pod.Status.Conditions {
-			if condition.Type == v1.PodReady && condition.Status == v1.ConditionTrue {
-				return pod, true, nil
-			}
-		}
-		return pod, false, fmt.Errorf("reverse proxy pod %s is not Ready", pod.Name)
-	})
+	podName, err := waitForSingleReadyPod(t, namespace, fmt.Sprintf("name=%s-reverseproxy", reverseProxyReleaseName.String()), 3*time.Minute)
 	if err != nil {
-		return err
+		return fmt.Errorf("reverse proxy pod not ready: %w", err)
 	}
 
 	cmd := []string{"ls", "-lst", "/reverse-proxy"}
-	stdoutCmd, _, err := ExecInPod(standaloneReleaseName, cmd, pod.Name)
+	stdoutCmd, _, err := ExecInPod(standaloneReleaseName, cmd, podName)
 	if err != nil {
 		return fmt.Errorf("cannot exec in reverse proxy pod: %v", err)
 	}
@@ -1462,23 +1443,9 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 	assert.Contains(t, stdoutCmd, "neo4j")
 
 	ingressName := fmt.Sprintf("%s-reverseproxy-ingress", reverseProxyReleaseName.String())
-	ingressIP, err := poll.UntilValue(context.Background(), t, poll.Opts{
-		Interval:      10 * time.Second,
-		Timeout:       5 * time.Minute,
-		Description:   fmt.Sprintf("ingress IP for %s", ingressName),
-		RetryableErrs: func(error) bool { return true },
-	}, func(ctx context.Context) (string, bool, error) {
-		ingress, err := Clientset.NetworkingV1().Ingresses(namespace).Get(ctx, ingressName, metav1.GetOptions{})
-		if err != nil {
-			return "", false, err
-		}
-		if len(ingress.Status.LoadBalancer.Ingress) == 0 || ingress.Status.LoadBalancer.Ingress[0].IP == "" {
-			return "", false, fmt.Errorf("no ingress IP assigned")
-		}
-		return ingress.Status.LoadBalancer.Ingress[0].IP, true, nil
-	})
+	ingressIP, err := waitForIngressIP(t, namespace, ingressName, 5*time.Minute)
 	if err != nil {
-		return err
+		return fmt.Errorf("reverse proxy ingress IP not ready: %w", err)
 	}
 
 	ingressURL := fmt.Sprintf("https://%s:443", ingressIP)
@@ -1505,6 +1472,77 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 	assert.NotContains(t, string(stdout), "8443")
 
 	return nil
+}
+
+// waitForDeploymentReady polls until the deployment has all replicas available.
+func waitForDeploymentReady(t *testing.T, namespace, deploymentName string, timeout time.Duration) error {
+	return poll.Until(context.Background(), t, poll.Opts{
+		Interval:      10 * time.Second,
+		Timeout:       timeout,
+		Description:   fmt.Sprintf("deployment %s/%s to be ready", namespace, deploymentName),
+		RetryableErrs: func(error) bool { return true },
+	}, func(ctx context.Context) (bool, error) {
+		deployment, err := Clientset.AppsV1().Deployments(namespace).Get(ctx, deploymentName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		return deployment.Status.ReadyReplicas > 0 && deployment.Status.ReadyReplicas == deployment.Status.Replicas, nil
+	})
+}
+
+// waitForSingleReadyPod polls until exactly one Ready pod matches the label selector, then returns its name.
+func waitForSingleReadyPod(t *testing.T, namespace, labelSelector string, timeout time.Duration) (string, error) {
+	return poll.UntilValue(context.Background(), t, poll.Opts{
+		Interval:      10 * time.Second,
+		Timeout:       timeout,
+		Description:   fmt.Sprintf("single Ready pod in %s with selector %q", namespace, labelSelector),
+		RetryableErrs: func(error) bool { return true },
+	}, func(ctx context.Context) (string, bool, error) {
+		pods, err := Clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: labelSelector})
+		if err != nil {
+			return "", false, err
+		}
+		var ready []v1.Pod
+		for _, pod := range pods.Items {
+			if pod.DeletionTimestamp != nil {
+				continue
+			}
+			for _, cond := range pod.Status.Conditions {
+				if cond.Type == v1.PodReady && cond.Status == v1.ConditionTrue {
+					ready = append(ready, pod)
+					break
+				}
+			}
+		}
+		if len(ready) == 1 {
+			return ready[0].Name, true, nil
+		}
+		return "", false, nil
+	})
+}
+
+// waitForIngressIP polls until the Ingress has a LoadBalancer IP or hostname assigned.
+func waitForIngressIP(t *testing.T, namespace, ingressName string, timeout time.Duration) (string, error) {
+	return poll.UntilValue(context.Background(), t, poll.Opts{
+		Interval:      10 * time.Second,
+		Timeout:       timeout,
+		Description:   fmt.Sprintf("ingress %s/%s to get LoadBalancer address", namespace, ingressName),
+		RetryableErrs: func(error) bool { return true },
+	}, func(ctx context.Context) (string, bool, error) {
+		ingress, err := Clientset.NetworkingV1().Ingresses(namespace).Get(ctx, ingressName, metav1.GetOptions{})
+		if err != nil {
+			return "", false, err
+		}
+		for _, lb := range ingress.Status.LoadBalancer.Ingress {
+			if lb.IP != "" {
+				return lb.IP, true, nil
+			}
+			if lb.Hostname != "" {
+				return lb.Hostname, true, nil
+			}
+		}
+		return "", false, nil
+	})
 }
 
 func createGCPServiceAccount(k8sServiceAccountName string, namespace string, gcpServiceAccountName string) error {
