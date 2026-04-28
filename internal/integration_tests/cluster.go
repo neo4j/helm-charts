@@ -22,6 +22,7 @@ import (
 	. "github.com/neo4j/helm-charts/internal/helpers"
 	"github.com/neo4j/helm-charts/internal/integration_tests/gcloud"
 	"github.com/neo4j/helm-charts/internal/model"
+	"github.com/neo4j/helm-charts/internal/testutil/poll"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -110,6 +111,10 @@ func removeLabelFromNodes(t *testing.T) error {
 	return errors.ErrorOrNil()
 }
 
+func backupSecretName(backupReleaseName model.ReleaseName, suffix string) string {
+	return fmt.Sprintf("%s-%s", backupReleaseName.String(), suffix)
+}
+
 // clusterTests contains all the tests related to cluster
 func clusterTests(clusterRelease model.ReleaseName) ([]SubTest, error) {
 
@@ -135,7 +140,6 @@ func clusterTests(clusterRelease model.ReleaseName) ([]SubTest, error) {
 			assert.NoError(t, CheckLogsFormat(t, clusterRelease), "Cluster core logs format should be in JSON")
 		}},
 		{name: "Check Neo4j Operations Pod for enabling server", test: func(t *testing.T) {
-			t.Parallel()
 			assert.NoError(t, CheckNeo4jOperationsPod(t, clusterRelease), "Neo4j Operations Pod should get executed")
 		}},
 		{name: "ImagePullSecret tests", test: func(t *testing.T) {
@@ -225,30 +229,35 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t *testing.T, 
 	_, err = helmClient.Install(t, backupReleaseName.String(), namespace, helmValues)
 	assert.NoError(t, err)
 
-	time.Sleep(2 * time.Minute)
 	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
 	assert.NoError(t, err, "cannot retrieve gcp backup cronjob")
 	assert.Equal(t, cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule, fmt.Sprintf("gcp cronjob schedule %s not matching with the schedule defined in values.yaml %s", cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule))
 
-	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
-	assert.NoError(t, err, "error while retrieving pod list during gcp backup operation")
-
-	var found bool
-	for _, pod := range pods.Items {
-		if strings.Contains(pod.Name, "gcp-workload") {
-			found = true
-			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
-			assert.NoError(t, err, "error while getting gcp workload backup pod logs")
-			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
-			assert.Contains(t, string(out), "Backup Completed for database neo4j system !!")
-			assert.Regexp(t, regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("system(.*)backup uploaded to GCS bucket"), string(out))
-			assert.Regexp(t, regexp.MustCompile("No inconsistencies found"), string(out))
-			assert.NotContains(t, string(out), "Deleting file")
-			break
+	_, err = waitForPodLogsMatching(t, namespace, backupReleaseName.String(), 5*time.Minute, func(logOutput string) error {
+		for _, requiredLog := range []string{
+			"Backup Completed for database neo4j system !!",
+			"No inconsistencies found",
+		} {
+			if !strings.Contains(logOutput, requiredLog) {
+				return fmt.Errorf("required log entry not found: %s", requiredLog)
+			}
 		}
+		for _, expectedPattern := range []*regexp.Regexp{
+			regexp.MustCompile("neo4j(.*)backup uploaded to GCS bucket"),
+			regexp.MustCompile("system(.*)backup uploaded to GCS bucket"),
+		} {
+			if !expectedPattern.MatchString(logOutput) {
+				return fmt.Errorf("required log pattern not found: %s", expectedPattern.String())
+			}
+		}
+		if strings.Contains(logOutput, "Deleting file") {
+			return fmt.Errorf("unexpected backup file cleanup found in logs")
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("gcp workload backup logs did not reach expected content: %v", err)
 	}
-	assert.Equal(t, true, found, "no gcp workload backup pod found")
 
 	return nil
 }
@@ -261,25 +270,22 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 	}
 	backupReleaseName := model.NewReleaseName("cluster-backup-aws-" + TestRunIdentifier)
 	namespace := string(releaseName.Namespace())
+	secretName := backupSecretName(backupReleaseName, "awscred")
 
 	t.Cleanup(func() {
 		_ = runAll(t, "kubectl", [][]string{
-			{"delete", "secret", "awscred", "--namespace", namespace, "--ignore-not-found"},
+			{"delete", "secret", secretName, "--namespace", namespace, "--ignore-not-found"},
 		}, false)
 		_ = runAll(t, "helm", [][]string{
 			{"uninstall", backupReleaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
 		}, false)
 	})
 
-	_ = runAll(t, "kubectl", [][]string{
-		{"delete", "secret", "awscred", "--namespace", namespace, "--ignore-not-found"},
-	}, false)
-
 	time.Sleep(2 * time.Second)
 
 	secretKey := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "awscred",
+			Name:      secretName,
 			Namespace: namespace,
 		},
 		Data: map[string][]byte{
@@ -295,7 +301,7 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 		return fmt.Errorf("failed to create AWS credentials secret: %v", err)
 	}
 
-	_, err = Clientset.CoreV1().Secrets(namespace).Get(context.TODO(), "awscred", metav1.GetOptions{})
+	_, err = Clientset.CoreV1().Secrets(namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to verify AWS credentials secret exists: %v", err)
 	}
@@ -311,7 +317,7 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 		DatabaseNamespace:        namespace,
 		Database:                 "neo4j,system",
 		CloudProvider:            "aws",
-		SecretName:               "awscred",
+		SecretName:               secretName,
 		SecretKeyName:            "credentials",
 		S3Region:                 "us-east-1",
 		Verbose:                  true,
@@ -362,7 +368,7 @@ func InstallNeo4jBackupAWSHelmChartViaS3(t *testing.T, releaseName model.Release
 
 	namespace := "default"
 	backupReleaseName := model.NewReleaseName("cluster-backup-aws-s3" + TestRunIdentifier)
-	secretName := "awscred"
+	secretName := backupSecretName(backupReleaseName, "awscred")
 
 	t.Cleanup(func() {
 		_ = runAll(t, "kubectl", [][]string{
@@ -386,10 +392,6 @@ func InstallNeo4jBackupAWSHelmChartViaS3(t *testing.T, releaseName model.Release
 		},
 		Type: "Opaque",
 	}
-
-	_ = runAll(t, "kubectl", [][]string{
-		{"delete", "secret", secretName, "--namespace", namespace, "--ignore-not-found"},
-	}, false)
 
 	_, err := Clientset.CoreV1().Secrets(namespace).Create(context.TODO(), secretKey, metav1.CreateOptions{})
 	if err != nil {
@@ -497,8 +499,8 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 
 	namespace := "default"
 	backupReleaseName := model.NewReleaseName("cluster-backup-aws-s3-tls" + TestRunIdentifier)
-	secretName := "awscred"
-	caCertSecretName := "s3-ca-cert"
+	secretName := backupSecretName(backupReleaseName, "awscred")
+	caCertSecretName := backupSecretName(backupReleaseName, "s3-ca-cert")
 
 	t.Cleanup(func() {
 		_ = runAll(t, "kubectl", [][]string{
@@ -826,7 +828,6 @@ func CheckLogsFormat(t *testing.T, releaseName model.ReleaseName) error {
 
 // CheckNeo4jOperationsPod checks whether the neo4j operations pod is executed or not
 func CheckNeo4jOperationsPod(t *testing.T, releaseName model.ReleaseName) error {
-
 	fetchPods := func() (*v1.PodList, error) {
 		pods, err := getPodsWithSpecificLabel(releaseName.Namespace(), "app=neo4j-operations")
 		if err != nil {
@@ -841,22 +842,27 @@ func CheckNeo4jOperationsPod(t *testing.T, releaseName model.ReleaseName) error 
 		return pods, nil
 	}
 
-	pods, err := fetchPods()
+	pod, err := poll.UntilValue(context.Background(), t, poll.Opts{
+		Interval:      10 * time.Second,
+		Timeout:       5 * time.Minute,
+		Description:   fmt.Sprintf("neo4j operations pod in namespace %s to complete", releaseName.Namespace()),
+		RetryableErrs: func(err error) bool { return !strings.Contains(err.Error(), "operations pod failed") },
+	}, func(context.Context) (v1.Pod, bool, error) {
+		pods, err := fetchPods()
+		if err != nil {
+			return v1.Pod{}, false, err
+		}
+		pod := pods.Items[0]
+		if pod.Status.Phase == v1.PodSucceeded {
+			return pod, true, nil
+		}
+		if pod.Status.Phase == v1.PodFailed {
+			return pod, false, fmt.Errorf("operations pod failed")
+		}
+		return pod, false, fmt.Errorf("operations pod phase is %s", pod.Status.Phase)
+	})
 	if err != nil {
 		return err
-	}
-	pod := pods.Items[0]
-	for pod.Status.Phase == v1.PodRunning {
-		t.Logf("operations pod in running state..Waiting for it to be completed")
-		time.Sleep(30 * time.Second)
-		pods, err = fetchPods()
-		if err != nil {
-			return err
-		}
-		pod = pods.Items[0]
-	}
-	if pod.Status.Phase != v1.PodSucceeded {
-		return fmt.Errorf("pod phase %v is not succeeded", pod.Status.Phase)
 	}
 
 	out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", string(releaseName.Namespace())).CombinedOutput()

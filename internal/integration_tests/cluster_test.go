@@ -18,8 +18,6 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 		t.Skip()
 		return
 	}
-	t.Parallel()
-
 	var closeables []Closeable
 	addCloseable := func(closeableList ...Closeable) {
 		for _, closeable := range closeableList {
@@ -117,8 +115,6 @@ func TestInstallNeo4jClusterWithApocConfigInGcloud(t *testing.T) {
 		t.Skip()
 		return
 	}
-	t.Parallel()
-
 	var closeables []Closeable
 	addCloseable := func(closeableList ...Closeable) {
 		for _, closeable := range closeableList {

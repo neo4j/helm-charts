@@ -33,6 +33,7 @@ import (
 	"github.com/neo4j/helm-charts/internal/integration_tests/gcloud"
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/neo4j/helm-charts/internal/testutil/poll"
+	"github.com/neo4j/helm-charts/internal/testutil/timeouts"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -469,6 +470,37 @@ func kubectlLogs(t *testing.T, podName string, namespace string) (string, error)
 	})
 }
 
+func waitForPodLogsMatching(t *testing.T, namespace string, podNamePart string, timeout time.Duration, ready func(string) error) (string, error) {
+	return poll.UntilValue(context.Background(), t, poll.Opts{
+		Interval:      10 * time.Second,
+		Timeout:       timeout,
+		Description:   fmt.Sprintf("logs for pod containing %s in %s", podNamePart, namespace),
+		RetryableErrs: func(error) bool { return true },
+	}, func(ctx context.Context) (string, bool, error) {
+		pods, err := Clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return "", false, err
+		}
+
+		for _, pod := range pods.Items {
+			if !strings.Contains(pod.Name, podNamePart) {
+				continue
+			}
+			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
+			if err != nil {
+				return "", false, err
+			}
+			logOutput := string(out)
+			if err := ready(logOutput); err != nil {
+				return logOutput, false, err
+			}
+			return logOutput, true, nil
+		}
+
+		return "", false, fmt.Errorf("no pod containing %s found", podNamePart)
+	})
+}
+
 func waitForPodsTerminated(t *testing.T, namespace string, timeout time.Duration) {
 	err := poll.Until(context.Background(), t, poll.Opts{
 		Interval:      5 * time.Second,
@@ -491,12 +523,10 @@ func waitForPodsTerminated(t *testing.T, namespace string, timeout time.Duration
 func AsCloseable(closeables []Closeable) Closeable {
 	return func() error {
 		var combinedErrors error
-		if closeables != nil {
-			for _, closeable := range closeables {
-				innerErr := closeable()
-				if innerErr != nil {
-					combinedErrors = CombineErrors(combinedErrors, innerErr)
-				}
+		for _, closeable := range closeables {
+			innerErr := closeable()
+			if innerErr != nil {
+				combinedErrors = CombineErrors(combinedErrors, innerErr)
 			}
 		}
 		return combinedErrors
@@ -661,6 +691,10 @@ func installNeo4j(t *testing.T, releaseName model.ReleaseName, chart model.Neo4j
 	}
 
 	err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()), "rollout", "status", "--watch", "--timeout=120s", "statefulset/"+releaseName.String())
+	if err != nil {
+		return AsCloseable(closeables), err
+	}
+	err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()), "wait", "--for=condition=Ready", "pod/"+releaseName.PodName(), timeouts.KubectlPodReady())
 	return AsCloseable(closeables), err
 }
 
@@ -746,11 +780,9 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 	log.Printf("%v", expectedConfiguration)
 	return []SubTest{
 		{name: "Check Neo4j Logs For Any Errors", test: func(t *testing.T) {
-			t.Parallel()
 			assert.NoError(t, checkNeo4jLogsForAnyErrors(t, name), "Neo4j Logs check should succeed")
 		}},
 		{name: "Check Neo4j Configuration", test: func(t *testing.T) {
-			t.Parallel()
 			assert.NoError(t, checkNeo4jConfiguration(t, name, expectedConfiguration), "Neo4j Config check should succeed")
 		}},
 		{name: "Check Bloom Version", test: func(t *testing.T) { assert.NoError(t, checkBloomVersion(t, name), "Retrieve a valid BLOOM version") }},
@@ -770,27 +802,21 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithInconsistencies(t, name), "Backup to GCP should succeed along with upload of inconsistencies report")
 		}},
 		{name: "Install Backup Helm Chart For GCP With Workload Identity", test: func(t *testing.T) {
-			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t, name), "Backup to GCP with workload identity should succeed")
 		}},
 		{name: "Install Backup Helm Chart For AWS", test: func(t *testing.T) {
-			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupAWSHelmChart(t, name), "Backup to AWS should succeed")
 		}},
 		{name: "Install Backup Helm Chart For Azure", test: func(t *testing.T) {
-			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupAzureHelmChart(t, name), "Backup to Azure should succeed")
 		}},
 		{name: "Install Backup Helm Chart For GCP", test: func(t *testing.T) {
-			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupGCPHelmChart(t, name), "Backup to GCP should succeed")
 		}},
 		{name: "Install Reverse Proxy Helm Chart", test: func(t *testing.T) {
-			t.Parallel()
 			assert.NoError(t, InstallReverseProxyHelmChart(t, name), "Reverse Proxy installation with ingress should succeed")
 		}},
 		{name: "Install Backup With File Cleanup", test: func(t *testing.T) {
-			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupWithFileCleanup(t, name), "Backup with file cleanup should succeed")
 		}},
 		{name: "Check Backup Log Streaming", test: func(t *testing.T) {
@@ -1323,35 +1349,30 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t *testing.T, standalone
 		return err
 	}
 
-	time.Sleep(2 * time.Minute)
 	cronjob, err := Clientset.BatchV1().CronJobs(namespace).Get(context.Background(), backupReleaseName.String(), metav1.GetOptions{})
 	assert.NoError(t, err, "cannot retrieve gcp backup cronjob")
 	assert.Equal(t, cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule, fmt.Sprintf("gcp cronjob schedule %s not matching with the schedule defined in values.yaml %s", cronjob.Spec.Schedule, helmValues.Neo4J.JobSchedule))
 
-	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
-	assert.NoError(t, err, "error while retrieving pod list during gcp backup operation")
-
-	var found bool
-	for _, pod := range pods.Items {
-		if strings.Contains(pod.Name, "gcp-workload") {
-			found = true
-			out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", namespace).CombinedOutput()
-			assert.NoError(t, err, "error while getting gcp workload backup pod logs")
-			assert.NotNil(t, out, "gcp backup logs cannot be retrieved")
-			logOutput := string(out)
-			// Check for connectivity and initialization logs
-			assert.Contains(t, logOutput, "Connectivity established with Database")
-			assert.Contains(t, logOutput, "Credential Path is /credentials/")
-			assert.Contains(t, logOutput, "Connectivity with bucket")
-			assert.Contains(t, logOutput, "Printing backup flags")
-			// Check backup command parameters
-			assert.Contains(t, logOutput, "--include-metadata=all")
-			assert.Contains(t, logOutput, "--type=FULL")
-			assert.Contains(t, logOutput, "neo4j system")
-			break
-		}
+	requiredLogs := []string{
+		"Connectivity established with Database",
+		"Credential Path is /credentials/",
+		"Connectivity with bucket",
+		"Printing backup flags",
+		"--include-metadata=all",
+		"--type=FULL",
+		"neo4j system",
 	}
-	assert.Equal(t, true, found, "no gcp workload backup pod found")
+	_, err = waitForPodLogsMatching(t, namespace, backupReleaseName.String(), 5*time.Minute, func(logOutput string) error {
+		for _, requiredLog := range requiredLogs {
+			if !strings.Contains(logOutput, requiredLog) {
+				return fmt.Errorf("required log entry not found: %s", requiredLog)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("gcp workload backup logs did not reach expected content: %v", err)
+	}
 
 	return nil
 }
@@ -1377,42 +1398,100 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 
 	//installing nginx ingress controller
 	err := run(t, "helm", "upgrade", "--install", "ingress-nginx", "ingress-nginx", "--repo", "https://kubernetes.github.io/ingress-nginx", "--namespace", "ingress-nginx", "--create-namespace")
-	assert.NoError(t, err)
-	time.Sleep(1 * time.Minute)
+	if err != nil {
+		return err
+	}
 
 	_, err = helmClient.Install(t, reverseProxyReleaseName.String(), namespace, helmValues)
-	assert.NoError(t, err)
-
-	time.Sleep(1 * time.Minute)
+	if err != nil {
+		return err
+	}
 
 	reverseProxyDepName := fmt.Sprintf("%s-reverseproxy-dep", reverseProxyReleaseName.String())
+	err = run(t, "kubectl", "--namespace", namespace, "rollout", "status", "deployment/"+reverseProxyDepName, "--timeout=3m")
+	if err != nil {
+		return err
+	}
 	deployment, err := Clientset.AppsV1().Deployments(namespace).Get(context.Background(), reverseProxyDepName, metav1.GetOptions{})
-	assert.NoError(t, err, "cannot retrieve reverse proxy pod")
+	if err != nil {
+		return fmt.Errorf("cannot retrieve reverse proxy deployment: %v", err)
+	}
 	assert.NotNil(t, deployment, "no reverse proxy deployment found")
 
-	pods, err := Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("name=%s-reverseproxy", reverseProxyReleaseName.String()),
+	pod, err := poll.UntilValue(context.Background(), t, poll.Opts{
+		Interval:      5 * time.Second,
+		Timeout:       3 * time.Minute,
+		Description:   fmt.Sprintf("reverse proxy pod for %s to be Ready", reverseProxyReleaseName.String()),
+		RetryableErrs: func(error) bool { return true },
+	}, func(ctx context.Context) (v1.Pod, bool, error) {
+		pods, err := Clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("name=%s-reverseproxy", reverseProxyReleaseName.String()),
+		})
+		if err != nil {
+			return v1.Pod{}, false, err
+		}
+		if len(pods.Items) != 1 {
+			return v1.Pod{}, false, fmt.Errorf("expected 1 reverse proxy pod, got %d", len(pods.Items))
+		}
+		pod := pods.Items[0]
+		for _, condition := range pod.Status.Conditions {
+			if condition.Type == v1.PodReady && condition.Status == v1.ConditionTrue {
+				return pod, true, nil
+			}
+		}
+		return pod, false, fmt.Errorf("reverse proxy pod %s is not Ready", pod.Name)
 	})
-	assert.NoError(t, err, "cannot retrieve reverse proxy pod")
-	assert.NotNil(t, pods, "no reverse proxy pods found")
-	assert.Equal(t, len(pods.Items), 1, "more than 1 reverse proxy pods found")
+	if err != nil {
+		return err
+	}
 
 	cmd := []string{"ls", "-lst", "/reverse-proxy"}
-	stdoutCmd, _, err := ExecInPod(standaloneReleaseName, cmd, pods.Items[0].Name)
-	assert.NoError(t, err, "cannot exec in reverse proxy pod")
+	stdoutCmd, _, err := ExecInPod(standaloneReleaseName, cmd, pod.Name)
+	if err != nil {
+		return fmt.Errorf("cannot exec in reverse proxy pod: %v", err)
+	}
 	assert.NotContains(t, stdoutCmd, "root")
 	assert.Contains(t, stdoutCmd, "neo4j")
 
 	ingressName := fmt.Sprintf("%s-reverseproxy-ingress", reverseProxyReleaseName.String())
-	ingress, err := Clientset.NetworkingV1().Ingresses(namespace).Get(context.Background(), ingressName, metav1.GetOptions{})
-	assert.NoError(t, err, "cannot retrieve reverse proxy ingress")
-	assert.NotNil(t, ingress, "empty reverse proxy ingress found")
-	ingressIP := ingress.Status.LoadBalancer.Ingress[0].IP
-	assert.NotEmpty(t, ingressIP, "no ingress ip found")
+	ingressIP, err := poll.UntilValue(context.Background(), t, poll.Opts{
+		Interval:      10 * time.Second,
+		Timeout:       5 * time.Minute,
+		Description:   fmt.Sprintf("ingress IP for %s", ingressName),
+		RetryableErrs: func(error) bool { return true },
+	}, func(ctx context.Context) (string, bool, error) {
+		ingress, err := Clientset.NetworkingV1().Ingresses(namespace).Get(ctx, ingressName, metav1.GetOptions{})
+		if err != nil {
+			return "", false, err
+		}
+		if len(ingress.Status.LoadBalancer.Ingress) == 0 || ingress.Status.LoadBalancer.Ingress[0].IP == "" {
+			return "", false, fmt.Errorf("no ingress IP assigned")
+		}
+		return ingress.Status.LoadBalancer.Ingress[0].IP, true, nil
+	})
+	if err != nil {
+		return err
+	}
 
 	ingressURL := fmt.Sprintf("https://%s:443", ingressIP)
-	stdout, _, err := RunCommand(exec.Command("wget", "-qO-", "--no-check-certificate", ingressURL))
-	assert.NoError(t, err)
+	stdout, err := poll.UntilValue(context.Background(), t, poll.Opts{
+		Interval:      10 * time.Second,
+		Timeout:       3 * time.Minute,
+		Description:   fmt.Sprintf("reverse proxy endpoint %s to return Neo4j routing metadata", ingressURL),
+		RetryableErrs: func(error) bool { return true },
+	}, func(context.Context) ([]byte, bool, error) {
+		stdout, _, err := RunCommand(exec.Command("wget", "-qO-", "--no-check-certificate", ingressURL))
+		if err != nil {
+			return nil, false, err
+		}
+		if !strings.Contains(string(stdout), "bolt_routing") {
+			return stdout, false, fmt.Errorf("reverse proxy response missing bolt_routing")
+		}
+		return stdout, true, nil
+	})
+	if err != nil {
+		return err
+	}
 	assert.NotNil(t, string(stdout), "no wget output found")
 	assert.Contains(t, string(stdout), "bolt_routing")
 	assert.NotContains(t, string(stdout), "8443")

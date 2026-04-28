@@ -16,7 +16,6 @@ func TestInstallStandaloneOnGCloudK8s(t *testing.T) {
 	releaseName := model.NewReleaseName("install-" + TestNamespace(t))
 	chart := model.Neo4jHelmChartCommunityAndEnterprise
 
-	t.Parallel()
 	t.Logf("Starting setup of '%s'", t.Name())
 	defaultHelmArgs := []string{}
 	defaultHelmArgs = append(defaultHelmArgs, model.DefaultNeo4jNameArg...)

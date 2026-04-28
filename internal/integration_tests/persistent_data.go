@@ -27,5 +27,6 @@ func ResourcesReinstall(t *testing.T, releaseName model.ReleaseName, chart model
 		t.Log("Helm Install failed:", err)
 		return err
 	}
+	err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()), "wait", "--for=condition=Ready", "pod/"+releaseName.PodName(), timeouts.KubectlPodReady())
 	return err
 }

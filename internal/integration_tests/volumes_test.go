@@ -10,8 +10,6 @@ import "testing"
 func TestVolumesInGCloudK8s(t *testing.T) {
 	chart := model.Neo4jHelmChartCommunityAndEnterprise
 	releaseName := model.NewReleaseName("volumes-" + TestNamespace(t))
-	t.Parallel()
-
 	t.Logf("Starting setup of '%s'", t.Name())
 	defaultHelmArgs := []string{}
 	defaultHelmArgs = append(defaultHelmArgs, model.DefaultNeo4jNameArg...)

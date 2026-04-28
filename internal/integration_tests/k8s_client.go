@@ -77,6 +77,10 @@ func CheckProbes(t *testing.T, releaseName model.ReleaseName) error {
 		if err != nil {
 			return fmt.Errorf("Failed to get Pods options: %v", err)
 		}
+		if len(pods.Items) == 0 {
+			time.Sleep(5 * time.Second)
+			continue
+		}
 
 		for _, pod := range pods.Items {
 			for _, container := range pod.Spec.Containers {
@@ -327,12 +331,9 @@ func ExecInPod(releaseName model.ReleaseName, cmd []string, podName string) (str
 			Stderr: &stderr,
 		})
 		if err != nil {
-			if strings.Contains(err.Error(), "container not found") {
-				lastErr = err
-				time.Sleep(10 * time.Second)
-				continue
-			}
-			return "", "", err
+			lastErr = err
+			time.Sleep(10 * time.Second)
+			continue
 		}
 		s := strings.TrimSuffix(stdout.String(), "\n")
 		return s, stderr.String(), nil

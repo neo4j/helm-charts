@@ -19,7 +19,10 @@ RUN apt-get update && apt-get install -y \
   awscli \
   jq \
   && ./tmp/get-helm-3 --no-sudo --version "${HELM_VERSION}" \
-  && ./tmp/go_linux_installer -v -version "${GO_VERSION}" \
+  && rm -rf /root/.go \
+  && mkdir -p /root/.go \
+  && curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" -o /tmp/go.tar.gz \
+  && tar -C /root/.go --strip-components=1 -xzf /tmp/go.tar.gz \
   && rm -rf /var/lib/apt/lists/* \
   && rm -rf /tmp/* \
   && curl -q https://dl.min.io/client/mc/release/linux-amd64/mc --create-dirs -o /root/minio-binaries/mc \
@@ -32,8 +35,8 @@ RUN apt-get update && apt-get install -y \
   && curl -qL "https://github.com/minio/operator/releases/download/${VERSION}/kubectl-minio_${NUMBER}_linux_amd64" --create-dirs -o /root/minio-binaries/kubectl-minio \
   && chmod +x /root/minio-binaries/kubectl-minio
 
-ENV USE_GKE_GCLOUD_AUTH_PLUGIN True
+ENV USE_GKE_GCLOUD_AUTH_PLUGIN=True
 # Configure Go
-ENV GOPATH /root/go
-ENV PATH /root/go/bin:/root/.go/bin:/root/minio-binaries/:$PATH
+ENV GOPATH=/root/go
+ENV PATH=/root/go/bin:/root/.go/bin:/root/minio-binaries/:$PATH
 RUN mkdir -p ${GOPATH}/src ${GOPATH}/bin
