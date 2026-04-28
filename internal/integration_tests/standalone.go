@@ -704,7 +704,7 @@ func TestBackupLogStreamingIntegration(t *testing.T, releaseName model.ReleaseNa
 		return nil
 	}
 
-	backupReleaseName := model.NewReleaseName("standalone-backup-logs-" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("standalone-backup-logs-" + TestNamespace(t))
 	namespace := string(releaseName.Namespace())
 
 	t.Cleanup(func() {
@@ -780,9 +780,11 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 	log.Printf("%v", expectedConfiguration)
 	return []SubTest{
 		{name: "Check Neo4j Logs For Any Errors", test: func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, checkNeo4jLogsForAnyErrors(t, name), "Neo4j Logs check should succeed")
 		}},
 		{name: "Check Neo4j Configuration", test: func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, checkNeo4jConfiguration(t, name, expectedConfiguration), "Neo4j Config check should succeed")
 		}},
 		{name: "Check Bloom Version", test: func(t *testing.T) { assert.NoError(t, checkBloomVersion(t, name), "Retrieve a valid BLOOM version") }},
@@ -802,21 +804,27 @@ func k8sTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) ([]SubT
 			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithInconsistencies(t, name), "Backup to GCP should succeed along with upload of inconsistencies report")
 		}},
 		{name: "Install Backup Helm Chart For GCP With Workload Identity", test: func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t, name), "Backup to GCP with workload identity should succeed")
 		}},
 		{name: "Install Backup Helm Chart For AWS", test: func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupAWSHelmChart(t, name), "Backup to AWS should succeed")
 		}},
 		{name: "Install Backup Helm Chart For Azure", test: func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupAzureHelmChart(t, name), "Backup to Azure should succeed")
 		}},
 		{name: "Install Backup Helm Chart For GCP", test: func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupGCPHelmChart(t, name), "Backup to GCP should succeed")
 		}},
 		{name: "Install Reverse Proxy Helm Chart", test: func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, InstallReverseProxyHelmChart(t, name), "Reverse Proxy installation with ingress should succeed")
 		}},
 		{name: "Install Backup With File Cleanup", test: func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, InstallNeo4jBackupWithFileCleanup(t, name), "Backup with file cleanup should succeed")
 		}},
 		{name: "Check Backup Log Streaming", test: func(t *testing.T) {
@@ -846,8 +854,8 @@ func InstallNeo4jBackupAWSHelmChart(t *testing.T, standaloneReleaseName model.Re
 		t.Skip()
 		return nil
 	}
-	backupReleaseName := model.NewReleaseName("standalone-backup-aws-" + TestRunIdentifier)
-	backupBucketName := fmt.Sprintf("helm-charts-%s", TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("standalone-backup-aws-" + TestNamespace(t))
+	backupBucketName := fmt.Sprintf("helm-charts-%s", TestNamespace(t))
 	namespace := string(standaloneReleaseName.Namespace())
 
 	t.Logf("Using namespace: %s for AWS backup test", namespace)
@@ -940,7 +948,7 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 		t.Skip()
 		return nil
 	}
-	backupReleaseName := model.NewReleaseName("standalone-backup-azure-" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("standalone-backup-azure-" + TestNamespace(t))
 	namespace := string(standaloneReleaseName.Namespace())
 
 	t.Log("Starting Azure backup test")
@@ -1051,7 +1059,7 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 		t.Skip()
 		return nil
 	}
-	backupReleaseName := model.NewReleaseName("standalone-backup-gcp-" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("standalone-backup-gcp-" + TestNamespace(t))
 	namespace := string(standaloneReleaseName.Namespace())
 
 	t.Log("Starting GCP backup test")
@@ -1170,7 +1178,7 @@ func InstallNeo4jBackupGCPHelmChartWithInconsistencies(t *testing.T, standaloneR
 		return err
 	}
 
-	backupReleaseName := model.NewReleaseName("standalone-backup-gcp-incon-" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("standalone-backup-gcp-incon-" + TestNamespace(t))
 	namespace := string(standaloneReleaseName.Namespace())
 
 	t.Cleanup(func() {
@@ -1293,7 +1301,7 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t *testing.T, standalone
 	}
 	shortName := standaloneReleaseName.ShortName()
 	currentUnixTime := time.Now().Unix()
-	backupReleaseName := model.NewReleaseName(fmt.Sprintf("%s-gcp-workload-%s", shortName, TestRunIdentifier))
+	backupReleaseName := model.NewReleaseName(fmt.Sprintf("%s-gcp-workload-%s", shortName, TestNamespace(t)))
 	gcpServiceAccountName := fmt.Sprintf("%s-%d", gcpServiceAccountNamePrefix, currentUnixTime)
 	k8sServiceAccountName := fmt.Sprintf("%s-%d", k8sServiceAccountNamePrefix, currentUnixTime)
 	namespace := string(standaloneReleaseName.Namespace())
@@ -1382,7 +1390,7 @@ func InstallReverseProxyHelmChart(t *testing.T, standaloneReleaseName model.Rele
 		t.Skip()
 		return nil
 	}
-	reverseProxyReleaseName := model.NewReleaseName("rp-" + TestRunIdentifier)
+	reverseProxyReleaseName := model.NewReleaseName("rp-" + TestNamespace(t))
 	namespace := string(standaloneReleaseName.Namespace())
 
 	t.Cleanup(func() {

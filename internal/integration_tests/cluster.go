@@ -140,6 +140,7 @@ func clusterTests(clusterRelease model.ReleaseName) ([]SubTest, error) {
 			assert.NoError(t, CheckLogsFormat(t, clusterRelease), "Cluster core logs format should be in JSON")
 		}},
 		{name: "Check Neo4j Operations Pod for enabling server", test: func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, CheckNeo4jOperationsPod(t, clusterRelease), "Neo4j Operations Pod should get executed")
 		}},
 		{name: "ImagePullSecret tests", test: func(t *testing.T) {
@@ -179,7 +180,7 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t *testing.T, 
 	}
 	shortName := clusterReleaseName.ShortName()
 	currentUnixTime := time.Now().Unix()
-	backupReleaseName := model.NewReleaseName(fmt.Sprintf("%s-gcp-workload-%s", shortName, TestRunIdentifier))
+	backupReleaseName := model.NewReleaseName(fmt.Sprintf("%s-gcp-workload-%s", shortName, TestNamespace(t)))
 	gcpServiceAccountName := fmt.Sprintf("%s-%d", gcpServiceAccountNamePrefix, currentUnixTime)
 	k8sServiceAccountName := fmt.Sprintf("%s-%d", k8sServiceAccountNamePrefix, currentUnixTime)
 	namespace := string(clusterReleaseName.Namespace())
@@ -268,7 +269,7 @@ func InstallNeo4jBackupAWSHelmChartWithNodeSelector(t *testing.T, releaseName mo
 		t.Skip()
 		return nil
 	}
-	backupReleaseName := model.NewReleaseName("cluster-backup-aws-" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("cluster-backup-aws-" + TestNamespace(t))
 	namespace := string(releaseName.Namespace())
 	secretName := backupSecretName(backupReleaseName, "awscred")
 
@@ -367,7 +368,7 @@ func InstallNeo4jBackupAWSHelmChartViaS3(t *testing.T, releaseName model.Release
 	}
 
 	namespace := "default"
-	backupReleaseName := model.NewReleaseName("cluster-backup-aws-s3" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("cluster-backup-aws-s3" + TestNamespace(t))
 	secretName := backupSecretName(backupReleaseName, "awscred")
 
 	t.Cleanup(func() {
@@ -498,7 +499,7 @@ func InstallNeo4jBackupAWSHelmChartViaS3TLS(t *testing.T, releaseName model.Rele
 	}
 
 	namespace := "default"
-	backupReleaseName := model.NewReleaseName("cluster-backup-aws-s3-tls" + TestRunIdentifier)
+	backupReleaseName := model.NewReleaseName("cluster-backup-aws-s3-tls" + TestNamespace(t))
 	secretName := backupSecretName(backupReleaseName, "awscred")
 	caCertSecretName := backupSecretName(backupReleaseName, "s3-ca-cert")
 

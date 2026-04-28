@@ -18,6 +18,8 @@ import (
 func TestSecretMountsInGCloudK8s(t *testing.T) {
 	chart := model.Neo4jHelmChartCommunityAndEnterprise
 	releaseName := model.NewReleaseName("secret-mounts-" + TestNamespace(t))
+	t.Parallel()
+
 	t.Logf("Starting setup of '%s'", t.Name())
 
 	// Create namespace first
