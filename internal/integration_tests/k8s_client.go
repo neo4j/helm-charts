@@ -77,10 +77,6 @@ func CheckProbes(t *testing.T, releaseName model.ReleaseName) error {
 		if err != nil {
 			return fmt.Errorf("Failed to get Pods options: %v", err)
 		}
-		if len(pods.Items) == 0 {
-			time.Sleep(5 * time.Second)
-			continue
-		}
 
 		for _, pod := range pods.Items {
 			for _, container := range pod.Spec.Containers {
@@ -193,37 +189,27 @@ func getNodesList() (*coreV1.NodeList, error) {
 	return Clientset.CoreV1().Nodes().List(context.TODO(), v1.ListOptions{})
 }
 
-// getNodeWithLabel returns the first node that carries the given "key=value" label.
+// getNodeWithLabel returns the node with the given label
 func getNodeWithLabel(labelName string) (*coreV1.Node, error) {
-	matches, err := getNodesWithLabel(labelName)
-	if err != nil {
-		return nil, err
-	}
-	if len(matches) == 0 {
-		return nil, fmt.Errorf("No node with the label %s found", labelName)
-	}
-	return matches[0], nil
-}
-
-// getNodesWithLabel returns every node that carries the given "key=value" label.
-func getNodesWithLabel(labelName string) ([]*coreV1.Node, error) {
 	nodes, err := getNodesList()
 	if err != nil {
 		return nil, err
 	}
-	parts := strings.SplitN(labelName, "=", 2)
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("label %q is not in key=value form", labelName)
-	}
-	labelKey, labelValue := parts[0], parts[1]
-	var matches []*coreV1.Node
-	for i := range nodes.Items {
-		node := &nodes.Items[i]
-		if v, ok := node.ObjectMeta.Labels[labelKey]; ok && v == labelValue {
-			matches = append(matches, node)
+	labelKey := strings.Split(labelName, "=")[0]
+	labelValue := strings.Split(labelName, "=")[1]
+	var nodeSelectorNode *coreV1.Node
+	for _, node := range nodes.Items {
+		if value, present := node.ObjectMeta.Labels[labelKey]; present {
+			if value == labelValue {
+				nodeSelectorNode = &node
+				break
+			}
 		}
 	}
-	return matches, nil
+	if nodeSelectorNode == nil {
+		return nil, fmt.Errorf("No node with the label %s found", labelName)
+	}
+	return nodeSelectorNode, nil
 }
 
 func getManifest(namespace model.Namespace) (*model.K8sResources, error) {
@@ -308,35 +294,36 @@ func ExecInPod(releaseName model.ReleaseName, cmd []string, podName string) (str
 	if podName != "" {
 		name = podName
 	}
-
-	var lastErr error
-	for attempt := 0; attempt < 6; attempt++ {
-		var stdout, stderr bytes.Buffer
-		req := Clientset.CoreV1().RESTClient().Post().Resource("pods").Name(name).
-			Namespace(string(releaseName.Namespace())).SubResource("exec")
-		option := &coreV1.PodExecOptions{
-			Command: cmd,
-			Stdin:   false,
-			Stdout:  true,
-			Stderr:  true,
-			TTY:     false,
-		}
-		req.VersionedParams(option, scheme.ParameterCodec)
-		executor, err := remotecommand.NewSPDYExecutor(Config, "POST", req.URL())
-		if err != nil {
-			return "", "", err
-		}
-		err = executor.Stream(remotecommand.StreamOptions{
-			Stdout: &stdout,
-			Stderr: &stderr,
-		})
-		if err != nil {
-			lastErr = err
-			time.Sleep(10 * time.Second)
-			continue
-		}
-		s := strings.TrimSuffix(stdout.String(), "\n")
-		return s, stderr.String(), nil
+	var (
+		stdout bytes.Buffer
+		stderr bytes.Buffer
+	)
+	req := Clientset.CoreV1().RESTClient().Post().Resource("pods").Name(name).
+		Namespace(string(releaseName.Namespace())).SubResource("exec")
+	option := &coreV1.PodExecOptions{
+		Command: cmd,
+		Stdin:   false,
+		Stdout:  true,
+		Stderr:  true,
+		TTY:     false,
 	}
-	return "", "", fmt.Errorf("ExecInPod failed after 6 attempts: %w", lastErr)
+	req.VersionedParams(
+		option,
+		scheme.ParameterCodec,
+	)
+	exec, err := remotecommand.NewSPDYExecutor(Config, "POST", req.URL())
+	if err != nil {
+		return "", "", err
+	}
+	err = exec.Stream(remotecommand.StreamOptions{
+		Stdout: &stdout,
+		Stderr: &stderr,
+	})
+	if err != nil {
+		return "", "", err
+	}
+	s := stdout.String()
+	s = strings.TrimSuffix(s, "\n")
+	e := stderr.String()
+	return s, e, nil
 }

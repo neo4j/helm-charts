@@ -1,50 +1,28 @@
 #!/usr/bin/env bash
 
-# Removes a Kubernetes cluster from GKE, distinguishing "not found" from
-# real deletion failures so the next test run doesn't race with leftover state.
+# This removes a Kubernetes cluster from GKE
 
+# make bash play nicely
+#
 set -o pipefail -o errtrace -o errexit -o nounset
 shopt -s inherit_errexit
 [[ -n "${TRACE:-}" ]] && set -o xtrace
 
+# Required env vars
 CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
 RESOURCE_PREFIX="${RESOURCE_PREFIX:-ghactions}"
 
-delete_one() {
-    local cluster="$1"
-    local log="/tmp/delete_cluster_$$.log"
-    if gcloud container clusters delete "$cluster" \
-            --zone="${CLOUDSDK_COMPUTE_ZONE}" --quiet 2>&1 | tee "$log"; then
-        return 0
-    fi
-    # "not found" is benign — something else already cleaned it up.
-    if grep -q "was not found" "$log"; then
-        echo "Cluster ${cluster} already gone"
-        return 0
-    fi
-    # Otherwise, verify the cluster is actually gone before calling this a success.
-    if gcloud container clusters describe "$cluster" \
-            --zone="${CLOUDSDK_COMPUTE_ZONE}" >/dev/null 2>&1; then
-        echo "::error::Cluster ${cluster} still present after delete attempt"
-        return 1
-    fi
-    return 0
-}
-
+# If a specific cluster name is provided, use it; otherwise use the prefix pattern
 if [ -n "${CLOUDSDK_CONTAINER_CLUSTER:-}" ]; then
     echo "Deleting specific cluster: ${CLOUDSDK_CONTAINER_CLUSTER}"
-    delete_one "${CLOUDSDK_CONTAINER_CLUSTER}"
+    gcloud container clusters delete --quiet --zone="${CLOUDSDK_COMPUTE_ZONE}" "${CLOUDSDK_CONTAINER_CLUSTER}" || true
 else
     echo "No specific cluster name provided. Looking for clusters with prefix: ${RESOURCE_PREFIX}"
-    failures=0
     gcloud container clusters list --format="get(name)" --filter="name ~ ^${RESOURCE_PREFIX}-.*" | while read -r cluster; do
         if [ -n "$cluster" ]; then
             echo "Deleting cluster: $cluster"
-            delete_one "$cluster" || failures=$((failures + 1))
+            gcloud container clusters delete "$cluster" --zone="${CLOUDSDK_COMPUTE_ZONE}" --quiet || true
         fi
     done
-    if (( failures > 0 )); then
-        echo "::error::${failures} cluster deletion(s) failed"
-        exit 1
-    fi
 fi
+

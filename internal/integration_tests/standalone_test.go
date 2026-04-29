@@ -13,7 +13,7 @@ import (
 
 // Install Neo4j on the provided GKE K8s cluster and then run the tests from the table above using it
 func TestInstallStandaloneOnGCloudK8s(t *testing.T) {
-	releaseName := model.NewReleaseName("install-" + TestNamespace(t))
+	releaseName := model.NewReleaseName("install-" + TestRunIdentifier)
 	chart := model.Neo4jHelmChartCommunityAndEnterprise
 
 	t.Parallel()
@@ -45,21 +45,20 @@ func standaloneCleanup(t *testing.T, releaseName model.ReleaseName) func() {
 
 		err := run(t, "kubectl", "get", "namespace", namespace)
 		if err == nil {
-			stsErr := run(t, "kubectl", "get", "statefulset", releaseName.String(), "--namespace", namespace)
-			if stsErr == nil {
+			_ = run(t, "kubectl", "get", "statefulset", releaseName.String(), "--namespace", namespace)
+			if err == nil {
 				_ = runAll(t, "kubectl", [][]string{
 					{"scale", "statefulset", releaseName.String(), "--namespace", namespace, "--replicas=0"},
 				}, false)
 
-				waitForPodsTerminated(t, namespace, 60*time.Second)
+				time.Sleep(30 * time.Second)
 			}
 
-			// Force-delete any pods still in Terminating state so `helm uninstall` doesn't block.
-			_ = run(t, "kubectl", "delete", "pod", "--all", "--namespace", namespace, "--force", "--grace-period=0", "--ignore-not-found")
-
 			_ = runAll(t, "helm", [][]string{
-				{"uninstall", releaseName.String(), "--timeout", "30s", "--namespace", namespace},
+				{"uninstall", releaseName.String(), "--wait", "--timeout", "3m", "--namespace", namespace},
 			}, false)
+
+			time.Sleep(10 * time.Second)
 
 			_ = runAll(t, "kubectl", [][]string{
 				{"delete", "statefulset", releaseName.String(), "--namespace", namespace, "--force", "--grace-period=0", "--ignore-not-found"},
@@ -68,7 +67,7 @@ func standaloneCleanup(t *testing.T, releaseName model.ReleaseName) func() {
 			}, false)
 
 			_ = runAll(t, "kubectl", [][]string{
-				{"delete", "pv", fmt.Sprintf("%s-pv", releaseName.String()), "--force", "--grace-period=0", "--ignore-not-found"},
+				{"delete", "pv", "--all", "--force", "--grace-period=0", "--ignore-not-found"},
 			}, false)
 
 			_ = runAll(t, "kubectl", [][]string{
