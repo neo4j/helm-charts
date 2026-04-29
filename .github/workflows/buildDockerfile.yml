@@ -9,6 +9,9 @@ on:
     branches:
       - 5.26
 
+permissions:
+  contents: read
+
 jobs:
   build-docker-file:
     name: Build Docker file
