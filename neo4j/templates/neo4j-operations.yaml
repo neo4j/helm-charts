@@ -7,6 +7,9 @@ metadata:
   name: {{ include "neo4j.fullname" . }}-operations
   labels:
     app: "neo4j-operations"
+    helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" $ }}"
+    helm.neo4j.com/clustering: "{{ $clusterEnabled }}"
+    helm.neo4j.com/instance: "{{ include "neo4j.fullname" . }}"
     {{- include "neo4j.labels" $.Values.neo4j.operations | indent 4 }}
 spec:
   restartPolicy: Never

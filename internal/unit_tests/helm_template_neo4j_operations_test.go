@@ -59,6 +59,10 @@ func TestNeo4jOperationsEnableServer(t *testing.T) {
 		}
 	}
 	assert.Contains(t, operationsPod.ObjectMeta.Labels, "testkey")
+	assert.Equal(t, "neo4j-operations", operationsPod.ObjectMeta.Labels["app"])
+	assert.Equal(t, helmValues.Neo4J.Name, operationsPod.ObjectMeta.Labels["helm.neo4j.com/neo4j.name"])
+	assert.Equal(t, "true", operationsPod.ObjectMeta.Labels["helm.neo4j.com/clustering"])
+	assert.Equal(t, model.DefaultHelmTemplateReleaseName.String(), operationsPod.ObjectMeta.Labels["helm.neo4j.com/instance"])
 
 	operationsRole := manifest.OfTypeWithName(
 		&v12.Role{},

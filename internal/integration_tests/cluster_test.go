@@ -101,7 +101,7 @@ func TestInstallNeo4jClusterInGcloud(t *testing.T) {
 
 	t.Logf("Succeeded with setup of '%s'", t.Name())
 
-	subTests, err := clusterTests(core1.Name())
+	subTests, err := clusterTests(core1.Name(), core3.Name())
 	if !assert.NoError(t, err) {
 		return
 	}

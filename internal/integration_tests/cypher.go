@@ -43,6 +43,8 @@ var createdNodes = map[model.ReleaseName]*int64{}
 // empty param map (makes queries without params more readable)
 var noParams = map[string]interface{}{}
 
+var errPortForwardExited = errors.New("port forward exited while waiting for Neo4j connectivity")
+
 func checkNeo4jConfiguration(t *testing.T, releaseName model.ReleaseName, expectedConfiguration *model.Neo4jConfiguration) (err error) {
 
 	var runtimeConfig []*neo4j.Record
@@ -274,54 +276,52 @@ func checkBloomVersion(t *testing.T, releaseName model.ReleaseName) error {
 }
 
 func runQuery(t *testing.T, releaseName model.ReleaseName, cypher string, params map[string]interface{}, connectToPod bool) ([]*neo4j.Record, error) {
-
-	boltPort, cleanupProxy, proxyErr := proxyBolt(t, releaseName, connectToPod)
-	defer cleanupProxy()
-	if proxyErr != nil {
-		return nil, proxyErr
-	}
-	ctx := context.Background()
-	driver, err := neo4j.NewDriverWithContext(fmt.Sprintf("%s:%d", dbUri, boltPort), authToUse, func(config *neo4j.Config) {
-	})
-	// Handle driver lifetime based on your application lifetime requirements  driver's lifetime is usually
-	// bound by the application lifetime, which usually implies one driver instance per application
-	defer driver.Close(ctx)
-
-	if err := awaitConnectivity(t, err, driver, ctx); err != nil {
-		return nil, err
-	}
-
-	// Sessions are shortlived, cheap to create and NOT thread safe. Typically create one or more sessions
-	// per request in your web application. Make sure to call Close on the session when done.
-	// For multidatabase support, set sessionConfig.DatabaseName to requested database
-	// Session config will default to write mode, if only reads are to be used configure session for
-	// read mode.
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: dbName})
-	defer session.Close(ctx)
-
-	result, err := session.Run(ctx, cypher, params)
-	if err != nil {
-		return nil, err
-	}
-
-	return result.Collect(ctx)
+	return runQueryInDatabase(t, releaseName, cypher, params, connectToPod, dbUri, dbName)
 }
 
 func runQueryViaSystemDB(t *testing.T, releaseName model.ReleaseName, cypher string, params map[string]interface{}, connectToPod bool) ([]*neo4j.Record, error) {
+	return runQueryInDatabase(t, releaseName, cypher, params, connectToPod, boltDbUri, systemDbName)
+}
 
-	boltPort, cleanupProxy, proxyErr := proxyBolt(t, releaseName, connectToPod)
-	defer cleanupProxy()
+func runQueryInDatabase(t *testing.T, releaseName model.ReleaseName, cypher string, params map[string]interface{}, connectToPod bool, uri string, databaseName string) ([]*neo4j.Record, error) {
+	var lastErr error
+	for attempt := 1; attempt <= 3; attempt++ {
+		records, err := runQueryInDatabaseOnce(t, releaseName, cypher, params, connectToPod, uri, databaseName)
+		if err == nil {
+			return records, nil
+		}
+		lastErr = err
+		if !errors.Is(err, errPortForwardExited) {
+			return nil, err
+		}
+		if attempt == 3 {
+			break
+		}
+		t.Logf("retrying Neo4j query after dropped port-forward (attempt %d/3): %v", attempt, err)
+		time.Sleep(5 * time.Second)
+	}
+	return nil, lastErr
+}
+
+func runQueryInDatabaseOnce(t *testing.T, releaseName model.ReleaseName, cypher string, params map[string]interface{}, connectToPod bool, uri string, databaseName string) ([]*neo4j.Record, error) {
+	boltPort, cleanupProxy, proxyDone, proxyErr := proxyBolt(t, releaseName, connectToPod)
+	if cleanupProxy != nil {
+		defer cleanupProxy()
+	}
 	if proxyErr != nil {
-		return nil, proxyErr
+		return nil, fmt.Errorf("%w: %v", errPortForwardExited, proxyErr)
 	}
 	ctx := context.Background()
-	driver, err := neo4j.NewDriverWithContext(fmt.Sprintf("%s:%d", boltDbUri, boltPort), authToUse, func(config *neo4j.Config) {
+	driver, err := neo4j.NewDriverWithContext(fmt.Sprintf("%s:%d", uri, boltPort), authToUse, func(config *neo4j.Config) {
 	})
+	if err != nil {
+		return nil, err
+	}
 	// Handle driver lifetime based on your application lifetime requirements  driver's lifetime is usually
 	// bound by the application lifetime, which usually implies one driver instance per application
 	defer driver.Close(ctx)
 
-	if err := awaitConnectivity(t, err, driver, ctx); err != nil {
+	if err := awaitConnectivity(t, nil, driver, ctx, uri, proxyDone); err != nil {
 		return nil, err
 	}
 
@@ -330,7 +330,7 @@ func runQueryViaSystemDB(t *testing.T, releaseName model.ReleaseName, cypher str
 	// For multidatabase support, set sessionConfig.DatabaseName to requested database
 	// Session config will default to write mode, if only reads are to be used configure session for
 	// read mode.
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: systemDbName})
+	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: databaseName})
 	defer session.Close(ctx)
 
 	result, err := session.Run(ctx, cypher, params)
@@ -341,17 +341,36 @@ func runQueryViaSystemDB(t *testing.T, releaseName model.ReleaseName, cypher str
 	return result.Collect(ctx)
 }
 
-func awaitConnectivity(t *testing.T, _ error, driver neo4j.DriverWithContext, ctx context.Context) error {
+func awaitConnectivity(t *testing.T, driverErr error, driver neo4j.DriverWithContext, ctx context.Context, uri string, proxyDone <-chan error) error {
+	if driverErr != nil {
+		return driverErr
+	}
 	// Remove this when Neo4j readiness probes gate traffic; until then we poll.
 	return poll.Until(ctx, t, poll.Opts{
 		Interval:      5 * time.Second,
 		Timeout:       3 * time.Minute,
-		Description:   "neo4j driver VerifyConnectivity to " + dbUri,
-		RetryableErrs: func(error) bool { return true },
+		Description:   "neo4j driver VerifyConnectivity to " + uri,
+		RetryableErrs: func(err error) bool { return !errors.Is(err, errPortForwardExited) },
 	}, func(pctx context.Context) (bool, error) {
+		select {
+		case err := <-proxyDone:
+			if err == nil {
+				return false, errPortForwardExited
+			}
+			return false, fmt.Errorf("%w: %v", errPortForwardExited, err)
+		default:
+		}
 		err := driver.VerifyConnectivity(pctx)
 		if err == nil {
 			return true, nil
+		}
+		select {
+		case proxyErr := <-proxyDone:
+			if proxyErr == nil {
+				return false, errPortForwardExited
+			}
+			return false, fmt.Errorf("%w: %v", errPortForwardExited, proxyErr)
+		default:
 		}
 		// CredentialsExpired means the server is up and responding — good enough to proceed.
 		var neoErr *neo4j.Neo4jError

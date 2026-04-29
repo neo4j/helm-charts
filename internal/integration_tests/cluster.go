@@ -116,7 +116,7 @@ func backupSecretName(backupReleaseName model.ReleaseName, suffix string) string
 }
 
 // clusterTests contains all the tests related to cluster
-func clusterTests(clusterRelease model.ReleaseName) ([]SubTest, error) {
+func clusterTests(clusterRelease, operationsRelease model.ReleaseName) ([]SubTest, error) {
 
 	subTests := []SubTest{
 		{name: "Install Backup Helm Chart For AWS With NodeSelector", test: func(t *testing.T) {
@@ -141,7 +141,7 @@ func clusterTests(clusterRelease model.ReleaseName) ([]SubTest, error) {
 		}},
 		{name: "Check Neo4j Operations Pod for enabling server", test: func(t *testing.T) {
 			t.Parallel()
-			assert.NoError(t, CheckNeo4jOperationsPod(t, clusterRelease), "Neo4j Operations Pod should get executed")
+			assert.NoError(t, CheckNeo4jOperationsPod(t, operationsRelease), "Neo4j Operations Pod should get executed")
 		}},
 		{name: "ImagePullSecret tests", test: func(t *testing.T) {
 			t.Parallel()
@@ -826,51 +826,37 @@ func CheckLogsFormat(t *testing.T, releaseName model.ReleaseName) error {
 
 // CheckNeo4jOperationsPod checks whether the neo4j operations pod is executed or not
 func CheckNeo4jOperationsPod(t *testing.T, releaseName model.ReleaseName) error {
-	fetchPods := func() (*v1.PodList, error) {
-		pods, err := getPodsWithSpecificLabel(releaseName.Namespace(), "app=neo4j-operations")
-		if err != nil {
-			return &v1.PodList{}, fmt.Errorf("error seen while fetching list of pods \n %v", err)
-		}
-		if len(pods.Items) == 0 {
-			return &v1.PodList{}, fmt.Errorf("no pods found")
-		}
-		if len(pods.Items) > 1 {
-			return &v1.PodList{}, fmt.Errorf("more than one operations pod found")
-		}
-		return pods, nil
-	}
+	podName := fmt.Sprintf("%s-operations", releaseName.String())
 
 	pod, err := poll.UntilValue(context.Background(), t, poll.Opts{
 		Interval:      10 * time.Second,
 		Timeout:       5 * time.Minute,
-		Description:   fmt.Sprintf("neo4j operations pod in namespace %s to complete", releaseName.Namespace()),
+		Description:   fmt.Sprintf("neo4j operations pod %s in namespace %s to complete", podName, releaseName.Namespace()),
 		RetryableErrs: func(err error) bool { return !strings.Contains(err.Error(), "operations pod failed") },
 	}, func(context.Context) (v1.Pod, bool, error) {
-		pods, err := fetchPods()
+		pod, err := getSpecificPod(releaseName.Namespace(), podName)
 		if err != nil {
 			return v1.Pod{}, false, err
 		}
-		pod := pods.Items[0]
 		if pod.Status.Phase == v1.PodSucceeded {
-			return pod, true, nil
+			return *pod, true, nil
 		}
 		if pod.Status.Phase == v1.PodFailed {
-			return pod, false, fmt.Errorf("operations pod failed")
+			return *pod, false, fmt.Errorf("operations pod failed")
 		}
-		return pod, false, fmt.Errorf("operations pod phase is %s", pod.Status.Phase)
+		return *pod, false, fmt.Errorf("operations pod phase is %s", pod.Status.Phase)
 	})
 	if err != nil {
 		return err
 	}
 
-	out, err := exec.Command("kubectl", "logs", pod.Name, "--namespace", string(releaseName.Namespace())).CombinedOutput()
+	logOutput, err := kubectlLogs(t, pod.Name, string(releaseName.Namespace()))
 	if err != nil {
-		t.Logf("error while fetching operations pod logs")
 		return err
 	}
-	stringOutput := strings.ToLower(string(out))
+	stringOutput := strings.ToLower(logOutput)
 	if !strings.Contains(stringOutput, "server is already enabled") {
-		return fmt.Errorf("operations pod does not contain valid logs \n logs := %s", string(out))
+		return fmt.Errorf("operations pod does not contain valid logs \n logs := %s", logOutput)
 	}
 	return nil
 }

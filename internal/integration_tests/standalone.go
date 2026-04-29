@@ -245,9 +245,10 @@ func kCleanupCommands(namespace model.Namespace) [][]string {
 
 var portOffset int32 = 0
 
-func proxyBolt(t *testing.T, releaseName model.ReleaseName, connectToPod bool) (int32, Closeable, error) {
+func proxyBolt(t *testing.T, releaseName model.ReleaseName, connectToPod bool) (int32, Closeable, <-chan error, error) {
 	localHttpPort := 9000 + atomic.AddInt32(&portOffset, 1)
 	localBoltPort := 9100 + atomic.AddInt32(&portOffset, 1)
+	processDone := make(chan error, 1)
 
 	program := "kubectl"
 
@@ -260,13 +261,14 @@ func proxyBolt(t *testing.T, releaseName model.ReleaseName, connectToPod bool) (
 	cmd := exec.Command(program, args...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return localBoltPort, nil, err
+		close(processDone)
+		return localBoltPort, nil, processDone, err
 	}
 	// Use the same pipe for standard error
 	cmd.Stderr = cmd.Stdout
 
 	// Make a new channel which will be used to signal that we are ready
-	started := make(chan struct{})
+	started := make(chan struct{}, 1)
 
 	// Create a scanner which scans in a line-by-line fashion
 	scanner := bufio.NewScanner(stdout)
@@ -275,7 +277,12 @@ func proxyBolt(t *testing.T, releaseName model.ReleaseName, connectToPod bool) (
 	// It's running in a goroutine so that it doesn't block
 	go func() {
 		var once sync.Once
-		notifyStarted := func() { started <- struct{}{} }
+		notifyStarted := func() {
+			select {
+			case started <- struct{}{}:
+			default:
+			}
+		}
 
 		// We're all done, unblock the channel
 		defer func() {
@@ -286,7 +293,7 @@ func proxyBolt(t *testing.T, releaseName model.ReleaseName, connectToPod bool) (
 		for scanner.Scan() {
 			line := scanner.Text()
 			t.Log("PortForward:", line)
-			if strings.HasPrefix(line, "Forwarding from") {
+			if strings.HasPrefix(line, "Forwarding from") && strings.Contains(line, fmt.Sprintf(":%d", localBoltPort)) {
 				once.Do(notifyStarted)
 			}
 		}
@@ -299,21 +306,43 @@ func proxyBolt(t *testing.T, releaseName model.ReleaseName, connectToPod bool) (
 	// Start the command and check for errors
 	err = cmd.Start()
 	if err == nil {
-		// Wait for output to indicate we actually started forwarding
-		<-started
-		if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
-			err = fmt.Errorf("port forward process exited unexpectedly")
+		go func() {
+			processDone <- cmd.Wait()
+			close(processDone)
+		}()
+
+		// Wait for output to indicate the Bolt port actually started forwarding.
+		select {
+		case <-started:
+			select {
+			case waitErr := <-processDone:
+				err = fmt.Errorf("port forward process exited unexpectedly: %w", waitErr)
+			default:
+			}
+		case waitErr := <-processDone:
+			err = fmt.Errorf("port forward process exited before forwarding Bolt port %d: %w", localBoltPort, waitErr)
+		case <-time.After(15 * time.Second):
+			err = fmt.Errorf("timed out waiting for port forward to start forwarding Bolt port %d", localBoltPort)
 		}
+	} else {
+		close(processDone)
 	}
 
 	return localBoltPort, func() error {
+		select {
+		case <-processDone:
+			stdout.Close()
+			return nil
+		default:
+		}
+
 		var cmdErr = cmd.Process.Kill()
 		if cmdErr != nil {
 			t.Log("failed to kill process: ", cmdErr)
 		}
 		stdout.Close()
 		return cmdErr
-	}, err
+	}, processDone, err
 }
 
 func proxyMinioTenant(namespace string, tenantName string) (int, Closeable, error) {
