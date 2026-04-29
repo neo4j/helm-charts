@@ -1,11 +1,13 @@
 package integration_tests
 
 import (
-	"github.com/neo4j/helm-charts/internal/model"
-	"github.com/stretchr/testify/assert"
+	"testing"
 	"time"
+
+	"github.com/neo4j/helm-charts/internal/model"
+	"github.com/neo4j/helm-charts/internal/testutil/timeouts"
+	"github.com/stretchr/testify/assert"
 )
-import "testing"
 
 func exitMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart model.Neo4jHelmChartBuilder, extraArgs ...string) error {
 	err := run(
@@ -15,7 +17,7 @@ func exitMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart mode
 		return err
 	}
 
-	err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()), "rollout", "status", "--watch", "--timeout=120s", "statefulset/"+releaseName.String())
+	err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()), "rollout", "status", "--watch", timeouts.KubectlRollout(), "statefulset/"+releaseName.String())
 	if !assert.NoError(t, err) {
 		return err
 	}
@@ -30,7 +32,7 @@ func enterMaintenanceMode(t *testing.T, releaseName model.ReleaseName, chart mod
 	}
 
 	time.Sleep(30 * time.Second)
-	err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()), "wait", "--for=condition=Initialized", "--timeout=300s", "pod/"+releaseName.PodName())
+	err = run(t, "kubectl", "--namespace", string(releaseName.Namespace()), "wait", "--for=condition=Initialized", timeouts.KubectlPodReady(), "pod/"+releaseName.PodName())
 
 	if !assert.NoError(t, err) {
 		return err

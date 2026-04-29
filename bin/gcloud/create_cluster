@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 
-# This creates a new Kubernetes cluster on GKE
+# Creates a new Kubernetes cluster on GKE with retry on transient GCP failures.
 
-# make bash play nicely
-#
 set -o pipefail -o errtrace -o errexit -o nounset
 shopt -s inherit_errexit
 [[ -n "${TRACE:-}" ]] && set -o xtrace
@@ -12,7 +10,6 @@ shopt -s inherit_errexit
 CLOUDSDK_CORE_PROJECT="${CLOUDSDK_CORE_PROJECT:?CLOUDSDK_CORE_PROJECT is required}"
 CLOUDSDK_CONTAINER_CLUSTER="${CLOUDSDK_CONTAINER_CLUSTER:?CLOUDSDK_CONTAINER_CLUSTER is required}"
 CLOUDSDK_COMPUTE_ZONE="${CLOUDSDK_COMPUTE_ZONE:?CLOUDSDK_COMPUTE_ZONE is required}"
-#KUBECONFIG="${KUBECONFIG:?KUBECONFIG is required}"
 
 NODE_MACHINE="${NODE_MACHINE:-e2-standard-4}"
 NUM_NODES="${NUM_NODES:-11}"
@@ -20,23 +17,58 @@ RELEASE_CHANNEL="${RELEASE_CHANNEL:-stable}"
 DISK_TYPE="${DISK_TYPE:-pd-ssd}"
 DISK_SIZE="${DISK_SIZE:-40}"
 MAX_PODS_PER_NODE="${MAX_PODS_PER_NODE:-30}"
+MAX_ATTEMPTS="${CREATE_CLUSTER_MAX_ATTEMPTS:-3}"
 
 # For more info on release channels see https://cloud.google.com/kubernetes-engine/docs/concepts/release-channels
-# create a new Kubernetes cluster
-#
-gcloud container clusters create "${CLOUDSDK_CONTAINER_CLUSTER}" \
-     --release-channel="${RELEASE_CHANNEL}" \
-     --zone="${CLOUDSDK_COMPUTE_ZONE}" \
-     --num-nodes="${NUM_NODES}" \
-     --workload-pool="${CLOUDSDK_CORE_PROJECT}.svc.id.goog" \
-     --preemptible --machine-type="${NODE_MACHINE}" --image-type="COS_CONTAINERD" \
-     --disk-type="${DISK_TYPE}" --disk-size="${DISK_SIZE}" \
-     --max-pods-per-node="${MAX_PODS_PER_NODE}" --enable-ip-alias \
-     --enable-shielded-nodes --metadata=disable-legacy-endpoints=true --no-enable-basic-auth
+create_cluster() {
+    # --no-enable-autorepair: integration tests pin pods to specific nodes via
+    # nodeSelector labels applied by labelNodes(). If GKE auto-repairs a node
+    # mid-test (typically after a transient kubelet blip) the label goes with
+    # it and the scheduler can't place the pod — core-1 ends up Pending for
+    # the rest of the run. Clusters are short-lived (one CI run) so
+    # auto-repair costs more than it gives.
+    #
+    # Node auto-upgrade cannot be disabled while --release-channel is set
+    # (GKE enforces "Auto_upgrade must be true when release_channel is set"),
+    # and dropping the release channel trades cluster-version stability for a
+    # maintenance-window risk that is extremely unlikely to hit a ~1h CI run
+    # on the STABLE channel. Keep the release channel; tolerate the rare
+    # scheduled auto-upgrade.
+    gcloud container clusters create "${CLOUDSDK_CONTAINER_CLUSTER}" \
+         --release-channel="${RELEASE_CHANNEL}" \
+         --zone="${CLOUDSDK_COMPUTE_ZONE}" \
+         --num-nodes="${NUM_NODES}" \
+         --workload-pool="${CLOUDSDK_CORE_PROJECT}.svc.id.goog" \
+         --preemptible --machine-type="${NODE_MACHINE}" --image-type="COS_CONTAINERD" \
+         --disk-type="${DISK_TYPE}" --disk-size="${DISK_SIZE}" \
+         --max-pods-per-node="${MAX_PODS_PER_NODE}" --enable-ip-alias \
+         --enable-shielded-nodes --metadata=disable-legacy-endpoints=true --no-enable-basic-auth \
+         --no-enable-autorepair
+}
+
+attempt=1
+delay=30
+while (( attempt <= MAX_ATTEMPTS )); do
+    echo "Attempt ${attempt}/${MAX_ATTEMPTS}: creating cluster ${CLOUDSDK_CONTAINER_CLUSTER}"
+    if create_cluster; then
+        break
+    fi
+    if (( attempt == MAX_ATTEMPTS )); then
+        echo "Cluster creation failed after ${MAX_ATTEMPTS} attempts" >&2
+        exit 1
+    fi
+    # Partial state is a known GCP failure mode — delete before retrying so the next
+    # create doesn't fail with "already exists".
+    echo "Cluster creation failed; cleaning up partial state before retry"
+    gcloud container clusters delete --quiet --zone="${CLOUDSDK_COMPUTE_ZONE}" \
+        "${CLOUDSDK_CONTAINER_CLUSTER}" 2>/dev/null || true
+    echo "Waiting ${delay}s before retry..."
+    sleep "${delay}"
+    delay=$(( delay * 2 ))
+    attempt=$(( attempt + 1 ))
+done
 
 # Configure kubectl
 gcloud container clusters get-credentials "${CLOUDSDK_CONTAINER_CLUSTER}"
 
 echo "kubectl configured for $(kubectl config current-context)"
-
-

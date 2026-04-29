@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       HELM_CHART_VERSION:
-        description: 'Helm chart version to be released (e.g., 5.26.10)'
+        description: 'Helm chart version to be released (e.g., 5.26.26)'
         type: string
         required: true
       DOCKER_IMAGE_VERSION:
-        description: 'Docker image version/Neo4j version to use (e.g., 5.26.10)'
+        description: 'Docker image version/Neo4j version to use (e.g., 5.26.26)'
         type: string
         required: true
 
@@ -34,17 +34,20 @@ jobs:
   check-authorization:
     runs-on: ubuntu-latest
     outputs:
-      should_run: ${{ steps.check.outputs.should_run }}
+      should_run: ${{ steps.gate.outputs.should_run }}
     steps:
-      - id: check
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - id: gate
+        uses: ./.github/actions/authz-gate
+        with:
+          allowed_actors: ${{ vars.CI_ALLOWED_ACTORS }}
+          require_dispatch: 'true'
+          require_branch: '5.26'
+      - name: Enforce authorization
+        if: steps.gate.outputs.should_run != 'true'
         run: |
-          if [[ "${{ github.actor }}" == "bfeshti" || "${{ github.actor }}" == "riggi-alekaj" ]]; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
-          else
-            echo "should_run=false" >> $GITHUB_OUTPUT
-            echo "Only authorized users can run this workflow"
-            exit 1
-          fi
+          echo "Only authorized users can run this workflow"
+          exit 1
 
   build-reverseproxy-backup-release-image:
     name: ReverseProxy and Backup Docker Image build
@@ -53,75 +56,39 @@ jobs:
     if: ${{ needs.check-authorization.outputs.should_run == 'true' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Build & push release images
+        uses: ./.github/actions/build-neo4j-images
         with:
-          ref: 5.26
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push reverse proxy image
-        uses: docker/build-push-action@v5
-        with:
-          context: "{{defaultContext}}:neo4j-reverse-proxy"
-          push: true
-          tags: "neo4j/helm-charts-reverse-proxy:${{ inputs.HELM_CHART_VERSION }}"
-          provenance: false
-
-      - name: Build and push operations image
-        uses: docker/build-push-action@v5
-        with:
-          context: "{{defaultContext}}:neo4j/neo4j-operations"
-          push: true
-          tags: "neo4j/helm-charts-operations:${{ inputs.HELM_CHART_VERSION }}"
-          provenance: false
-
-      - name: Build and push backup image
-        uses: docker/build-push-action@v5
-        with:
-          context: "{{defaultContext}}:neo4j-admin"
-          push: true
-          tags: "neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION }}"
-          provenance: false
-          build-args: |
-            IMAGE=neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise
-            DISTRIBUTION=debian
-
-      - name: Build and push red hat backup image
-        uses: docker/build-push-action@v5
-        with:
-          context: "{{defaultContext}}:neo4j-admin"
-          push: true
-          tags: "neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION }}-ubi10"
-          provenance: false
-          build-args: |
-            IMAGE=neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise-ubi10
-            DISTRIBUTION=redhat
+          registry: docker.io
+          registry_username: ${{ secrets.DOCKERHUB_USERNAME }}
+          registry_password: ${{ secrets.DOCKERHUB_TOKEN }}
+          reverseproxy_tag: neo4j/helm-charts-reverse-proxy:${{ inputs.DOCKER_IMAGE_VERSION }}
+          operations_tag: neo4j/helm-charts-operations:${{ inputs.DOCKER_IMAGE_VERSION }}
+          backup_tag_debian: neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION }}
+          backup_tag_redhat: neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION }}-ubi10
+          backup_source_debian: neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise
+          backup_source_redhat: neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise-ubi10
+          cache_scope: release
 
   packaging:
     name: Packaging and Release
-    needs: [build-reverseproxy-backup-release-image]
+    needs: [check-authorization, build-reverseproxy-backup-release-image]
     runs-on: ubuntu-latest
-    if: ${{ needs.check-authorization.outputs.should_run == 'true' }}
+    if: needs.check-authorization.outputs.should_run == 'true'
     env:
       HELM_CHART_VERSION: ${{ inputs.HELM_CHART_VERSION }}
       DOCKER_IMAGE_VERSION: ${{ inputs.DOCKER_IMAGE_VERSION }}
       HELM_REPO_NAME: ${{ vars.HELM_REPO_NAME }}
     container:
-      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
+      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:${{ vars.CI_IMAGE_TAG || 'latest' }}
       options: --user 1001
       credentials:
         username: _json_key
         password: ${{ secrets.GCLOUD_SERVICE_KEY }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: '0'
           fetch-tags: true
@@ -129,10 +96,27 @@ jobs:
           ref: 5.26
 
       - name: Version Updates
-        run: |          
+        run: |
           git config --global user.email team-smcs@neo4j.com
           git config --global user.name "team-smcs"
           ./bin/gcloud/version_updates
+
+      - name: Generate changelog
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          mkdir -p tmp
+          python3 bin/changelog/generate.py \
+            --chart-version "${HELM_CHART_VERSION}" \
+            --docker-version "${DOCKER_IMAGE_VERSION}" \
+            --out tmp/release-notes.md
+          python3 bin/changelog/update_file.py \
+            --notes tmp/release-notes.md \
+            --changelog CHANGELOG.md \
+            --chart-version "${HELM_CHART_VERSION}" \
+            --docker-version "${DOCKER_IMAGE_VERSION}"
+          git add CHANGELOG.md
 
       - name: GPG Key Signing
         run: |
@@ -155,18 +139,19 @@ jobs:
         run: |          
           ./bin/gcloud/index_yaml_update
 
+      - name: Set Chart Version
+        id: chart_version
+        run: |
+          echo "CHART_VERSION=${HELM_CHART_VERSION}" >> $GITHUB_OUTPUT
+          echo "Using chart version ${HELM_CHART_VERSION} for release"
+
       - name: Release Notes
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@26994186c0ac3ef5cae75ac16aa32e8153525f77 # v1
         with:
-          name: v${{ inputs.HELM_CHART_VERSION }}
-          tag_name: ${{ inputs.HELM_CHART_VERSION }}
+          name: v${{ steps.chart_version.outputs.CHART_VERSION }}
+          tag_name: ${{ steps.chart_version.outputs.CHART_VERSION }}
           token: ${{ secrets.GH_TOKEN }}
-          body: "- Update to Neo4j ${{ inputs.DOCKER_IMAGE_VERSION}} as the new baseline, see [Release notes](https://neo4j.com/release-notes/database/neo4j-5///) for details of changes"
+          body_path: tmp/release-notes.md
           make_latest: true
           files: |
-            neo4j-${{ inputs.HELM_CHART_VERSION }}.tgz
-            neo4j-admin-${{ inputs.HELM_CHART_VERSION }}.tgz
-            neo4j-reverse-proxy-${{ inputs.HELM_CHART_VERSION }}.tgz
-            neo4j-headless-service-${{ inputs.HELM_CHART_VERSION}}.tgz
-            neo4j-persistent-volume-${{ inputs.HELM_CHART_VERSION }}.tgz
-            neo4j-loadbalancer-${{ inputs.HELM_CHART_VERSION }}.tgz 
+            tmp/new-packages/*.tgz

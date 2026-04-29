@@ -1,19 +1,21 @@
 package integration_tests
 
 import (
-	"fmt"
+	"context"
 	"testing"
 	"time"
+
+	"github.com/neo4j/helm-charts/internal/testutil/poll"
 )
 
 func waitForClusterConnection(t *testing.T) error {
-	maxRetries := 3
-	for i := 0; i < maxRetries; i++ {
+	return poll.Until(context.Background(), t, poll.Opts{
+		Interval:      10 * time.Second,
+		Timeout:       35 * time.Second,
+		Description:   "kubectl cluster-info to succeed",
+		RetryableErrs: func(error) bool { return true },
+	}, func(context.Context) (bool, error) {
 		err := run(t, "kubectl", "cluster-info")
-		if err == nil {
-			return nil
-		}
-		time.Sleep(10 * time.Second)
-	}
-	return fmt.Errorf("failed to connect to cluster after %d attempts", maxRetries)
+		return err == nil, err
+	})
 }

@@ -1,14 +1,18 @@
 package integration_tests
 
 import (
+	"context"
 	"fmt"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/hashicorp/go-multierror"
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/neo4j/helm-charts/internal/resources"
+	"github.com/neo4j/helm-charts/internal/testutil/poll"
 	"github.com/stretchr/testify/assert"
-	"strings"
 )
-import "testing"
 
 func volumesTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) []SubTest {
 	return []SubTest{
@@ -25,11 +29,29 @@ func volumesTests(name model.ReleaseName, chart model.Neo4jHelmChartBuilder) []S
 }
 
 func checkApoc(t *testing.T, releaseName model.ReleaseName) error {
-	results, err := runQuery(t, releaseName, "CALL apoc.help('apoc')", nil, model.Neo4jEdition == "community")
-	if !assert.NoError(t, err) {
+	var resultsLen int
+	err := poll.Until(context.Background(), t, poll.Opts{
+		Interval:    10 * time.Second,
+		Timeout:     2 * time.Minute,
+		Description: "APOC help query to run after plugin install",
+		RetryableErrs: func(err error) bool {
+			return isNotALeader(err) || strings.Contains(err.Error(), "DatabaseUnavailable") || strings.Contains(strings.ToLower(err.Error()), "database unavailable")
+		},
+	}, func(context.Context) (bool, error) {
+		results, err := runQuery(t, releaseName, "CALL apoc.help('apoc')", nil, model.Neo4jEdition == "community")
+		if err != nil {
+			return false, err
+		}
+		resultsLen = len(results)
+		if resultsLen <= 2 {
+			return false, fmt.Errorf("APOC help returned %d results", resultsLen)
+		}
+		return true, nil
+	})
+	if err != nil {
 		return err
 	}
-	assert.Greater(t, len(results), 2, "Apoc help returned %s", results)
+	assert.Greater(t, resultsLen, 2, "APOC help returned too few results")
 	return err
 }
 

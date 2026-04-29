@@ -10,13 +10,14 @@ import (
 	"github.com/neo4j/helm-charts/internal/resources"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // TestSecretMountsInGCloudK8s tests secret mounting functionality in Kubernetes environment
 func TestSecretMountsInGCloudK8s(t *testing.T) {
 	chart := model.Neo4jHelmChartCommunityAndEnterprise
-	releaseName := model.NewReleaseName("secret-mounts-" + TestRunIdentifier)
+	releaseName := model.NewReleaseName("secret-mounts-" + TestNamespace(t))
 	t.Parallel()
 
 	t.Logf("Starting setup of '%s'", t.Name())
@@ -146,7 +147,9 @@ func cleanupTestSecrets(t *testing.T, releaseName model.ReleaseName) {
 
 	for _, secretName := range secretNames {
 		err := Clientset.CoreV1().Secrets(string(namespace)).Delete(ctx, secretName, metav1.DeleteOptions{})
-		if err != nil {
+		if apierrors.IsNotFound(err) {
+			t.Logf("Secret already cleaned up: %s", secretName)
+		} else if err != nil {
 			t.Logf("Failed to cleanup secret %s: %v", secretName, err)
 		} else {
 			t.Logf("Cleaned up test secret: %s", secretName)
