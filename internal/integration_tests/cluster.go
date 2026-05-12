@@ -1077,9 +1077,12 @@ func checkLoadBalancerService(t *testing.T, name model.ReleaseName, expectedEndP
 	return nil
 }
 
-// checkPods checks for the number of pods which should be 5 (3 cluster core + 2 read replica)
+// checkPods checks for the number of Neo4j cluster core pods.
 func checkPods(t *testing.T, name model.ReleaseName) error {
-	pods, err := getPodsWithSpecificLabel(name.Namespace(), "helm.neo4j.com/clustering=true")
+	pods, err := getPodsWithSpecificLabel(name.Namespace(), fmt.Sprintf(
+		"app=%s,helm.neo4j.com/clustering=true,helm.neo4j.com/pod_category=neo4j-instance",
+		model.DefaultNeo4jName,
+	))
 	if !assert.NoError(t, err) {
 		return err
 	}
