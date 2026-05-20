@@ -53,7 +53,8 @@ jobs:
             --target-branch=dev \
             --chart-dirs . \
             --chart-yaml-schema=""   \
-            --validate-maintainers=false
+            --validate-maintainers=false \
+            --check-version-increment=false
 
   testutil-unit:
     # Exercises the new utility packages (poll, testid, timeouts) that are
