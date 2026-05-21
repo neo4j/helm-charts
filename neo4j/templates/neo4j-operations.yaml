@@ -35,7 +35,13 @@ spec:
           securityContext: {{ toYaml . | nindent 12 }}
           {{- end }}
           {{- with $.Values.neo4j.operations.resources }}
-          resources: {{ toYaml . | nindent 12 }}
+          resources:
+            {{- if hasKey . "requests" | or (hasKey . "limits") }}
+            {{- omit . "cpu" "memory" | toYaml | nindent 12 }}
+            {{- else }}
+            requests: {{ . | toYaml | nindent 14 }}
+            limits: {{ . | toYaml | nindent 14 }}
+            {{- end }}
           {{- end }}
           env:
             - name: RELEASE_NAME

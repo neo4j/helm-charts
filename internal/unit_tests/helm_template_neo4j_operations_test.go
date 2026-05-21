@@ -9,6 +9,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	v12 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 // TestNeo4jOperationsEnableServer tests for the neo4j.operations.enableServer flag
@@ -101,6 +102,80 @@ func TestNeo4jOperationsEnableServer(t *testing.T) {
 	assert.Equal(t, operationsRoleBinding.Subjects[0].Kind, "ServiceAccount")
 	assert.Equal(t, operationsRoleBinding.Subjects[0].Name, operationsServiceAccount.Name)
 
+}
+
+// TestNeo4jOperationsResourcesDefaultShape verifies the operations Job renders a
+// valid resources block (requests/limits) when values.yaml supplies the flat
+// `{cpu, memory}` shape. Guards against the schema error reported in issue #542
+// where `resources.cpu` / `resources.memory` were emitted directly on the container.
+func TestNeo4jOperationsResourcesDefaultShape(t *testing.T) {
+	t.Parallel()
+
+	clusterSize := 3
+	helmValues := model.DefaultEnterpriseValues
+	helmValues.Neo4J.MinimumClusterSize = clusterSize
+	helmValues.Neo4J.Operations = model.Operations{
+		EnableServer: true,
+		Image:        "demo:123",
+		Protocol:     "neo4j",
+	}
+
+	manifest, err := model.HelmTemplateFromStruct(t, model.HelmChart, helmValues)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	operationsJob := manifest.OfTypeWithName(
+		&batchv1.Job{},
+		fmt.Sprintf("%s-operations", model.DefaultHelmTemplateReleaseName.String()),
+	).(*batchv1.Job)
+	assert.NotNil(t, operationsJob, "operations job not found")
+
+	resources := operationsJob.Spec.Template.Spec.Containers[0].Resources
+	assert.Equal(t, resource.MustParse("100m"), resources.Requests[v1.ResourceCPU])
+	assert.Equal(t, resource.MustParse("128Mi"), resources.Requests[v1.ResourceMemory])
+	assert.Equal(t, resource.MustParse("100m"), resources.Limits[v1.ResourceCPU])
+	assert.Equal(t, resource.MustParse("128Mi"), resources.Limits[v1.ResourceMemory])
+}
+
+// TestNeo4jOperationsResourcesRequestsLimits verifies the operations Job
+// passes through explicit requests/limits when the values use the standard
+// Kubernetes shape.
+func TestNeo4jOperationsResourcesRequestsLimits(t *testing.T) {
+	t.Parallel()
+
+	clusterSize := 3
+	helmValues := model.DefaultEnterpriseValues
+	helmValues.Neo4J.MinimumClusterSize = clusterSize
+	helmValues.Neo4J.Operations = model.Operations{
+		EnableServer: true,
+		Image:        "demo:123",
+		Protocol:     "neo4j",
+	}
+
+	extraArgs := []string{
+		"--set", "neo4j.operations.resources.requests.cpu=200m",
+		"--set", "neo4j.operations.resources.requests.memory=256Mi",
+		"--set", "neo4j.operations.resources.limits.cpu=500m",
+		"--set", "neo4j.operations.resources.limits.memory=512Mi",
+	}
+
+	manifest, err := model.HelmTemplateFromStruct(t, model.HelmChart, helmValues, extraArgs...)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	operationsJob := manifest.OfTypeWithName(
+		&batchv1.Job{},
+		fmt.Sprintf("%s-operations", model.DefaultHelmTemplateReleaseName.String()),
+	).(*batchv1.Job)
+	assert.NotNil(t, operationsJob, "operations job not found")
+
+	resources := operationsJob.Spec.Template.Spec.Containers[0].Resources
+	assert.Equal(t, resource.MustParse("200m"), resources.Requests[v1.ResourceCPU])
+	assert.Equal(t, resource.MustParse("256Mi"), resources.Requests[v1.ResourceMemory])
+	assert.Equal(t, resource.MustParse("500m"), resources.Limits[v1.ResourceCPU])
+	assert.Equal(t, resource.MustParse("512Mi"), resources.Limits[v1.ResourceMemory])
 }
 
 // TestNeo4jOperationsWithSSLConfiguration tests SSL configuration for operations pod
