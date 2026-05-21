@@ -1,0 +1,9 @@
+extends: relaxed
+
+rules:
+  # Existing chart values contain long explanatory comments and legacy spacing.
+  # Keep YAML linting focused on parse errors instead of style-only churn.
+  empty-lines: disable
+  indentation: disable
+  line-length: disable
+  trailing-spaces: disable

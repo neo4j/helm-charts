@@ -318,7 +318,7 @@ services:
       enabled: true
       # Pod annotations for the cleanup job
       podAnnotations:
-        sidecar.istio.io/inject: "false" 
+        sidecar.istio.io/inject: "false"
       image:
         registry: registry.k8s.io
         repository: kubernetes/kubectl
