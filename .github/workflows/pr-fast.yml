@@ -55,6 +55,7 @@ jobs:
             --chart-yaml-schema="" \
             --lint-conf .ct/lintconf.yaml \
             --helm-lint-extra-args "--set neo4j.name=lint --set volumes.data.mode=defaultStorageClass --set neo4j.acceptLicenseAgreement=yes" \
+            --chart-yaml-schema=""   \
             --validate-maintainers=false \
             --check-version-increment=false
 
