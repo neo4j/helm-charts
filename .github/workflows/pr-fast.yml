@@ -52,7 +52,9 @@ jobs:
           ct lint \
             --target-branch=5.26 \
             --chart-dirs . \
-            --chart-yaml-schema=""   \
+            --chart-yaml-schema="" \
+            --lint-conf .ct/lintconf.yaml \
+            --helm-lint-extra-args "--set neo4j.name=lint --set volumes.data.mode=defaultStorageClass --set neo4j.acceptLicenseAgreement=yes" \
             --validate-maintainers=false \
             --check-version-increment=false
 
