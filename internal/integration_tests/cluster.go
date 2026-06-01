@@ -824,27 +824,32 @@ func CheckLogsFormat(t *testing.T, releaseName model.ReleaseName) error {
 	return nil
 }
 
-// CheckNeo4jOperationsPod checks whether the neo4j operations pod is executed or not
+// CheckNeo4jOperationsPod checks whether the neo4j operations pod is executed or not.
 func CheckNeo4jOperationsPod(t *testing.T, releaseName model.ReleaseName) error {
-	podName := fmt.Sprintf("%s-operations", releaseName.String())
-
 	pod, err := poll.UntilValue(context.Background(), t, poll.Opts{
 		Interval:      10 * time.Second,
 		Timeout:       5 * time.Minute,
-		Description:   fmt.Sprintf("neo4j operations pod %s in namespace %s to complete", podName, releaseName.Namespace()),
+		Description:   fmt.Sprintf("neo4j operations pod in namespace %s to complete", releaseName.Namespace()),
 		RetryableErrs: func(err error) bool { return !strings.Contains(err.Error(), "operations pod failed") },
 	}, func(context.Context) (v1.Pod, bool, error) {
-		pod, err := getSpecificPod(releaseName.Namespace(), podName)
+		pods, err := getPodsWithSpecificLabel(releaseName.Namespace(), "app=neo4j-operations")
 		if err != nil {
-			return v1.Pod{}, false, err
+			return v1.Pod{}, false, fmt.Errorf("error while fetching operations pod list: %v", err)
 		}
+		if len(pods.Items) == 0 {
+			return v1.Pod{}, false, fmt.Errorf("no operations pod found")
+		}
+		if len(pods.Items) > 1 {
+			return v1.Pod{}, false, fmt.Errorf("more than one operations pod found")
+		}
+		pod := pods.Items[0]
 		if pod.Status.Phase == v1.PodSucceeded {
-			return *pod, true, nil
+			return pod, true, nil
 		}
 		if pod.Status.Phase == v1.PodFailed {
-			return *pod, false, fmt.Errorf("operations pod failed")
+			return pod, false, fmt.Errorf("operations pod failed")
 		}
-		return *pod, false, fmt.Errorf("operations pod phase is %s", pod.Status.Phase)
+		return pod, false, fmt.Errorf("operations pod phase is %s", pod.Status.Phase)
 	})
 	if err != nil {
 		return err
