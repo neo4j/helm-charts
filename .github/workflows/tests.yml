@@ -159,9 +159,9 @@ jobs:
           reverseproxy_tag: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ env.RUN_ID }}
           operations_tag: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ env.RUN_ID }}
           backup_tag_debian: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ env.RUN_ID }}
-          backup_tag_redhat: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi9-${{ env.RUN_ID }}
-          backup_source_debian: ${{ inputs.RELEASE && format('neo4j:{0}-enterprise', inputs.DOCKER_IMAGE_VERSION) || format('{0}/neo4j:2025-enterprise-debian-nightly-bundle', vars.ARTIFACT_REGISTRY_REPO_NAME) }}
-          backup_source_redhat: ${{ inputs.RELEASE && format('neo4j:{0}-enterprise-ubi9', inputs.DOCKER_IMAGE_VERSION) || format('{0}/neo4j:2025-enterprise-redhat-nightly-bundle', vars.ARTIFACT_REGISTRY_REPO_NAME) }}
+          backup_tag_redhat: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi10-${{ env.RUN_ID }}
+          backup_source_debian: ${{ inputs.RELEASE && format('neo4j:{0}-enterprise-trixie', inputs.DOCKER_IMAGE_VERSION) || format('{0}/neo4j:2025-enterprise-debian-nightly-bundle', vars.ARTIFACT_REGISTRY_REPO_NAME) }}
+          backup_source_redhat: ${{ inputs.RELEASE && format('neo4j:{0}-enterprise-ubi10', inputs.DOCKER_IMAGE_VERSION) || format('{0}/neo4j:2025-enterprise-redhat-nightly-bundle', vars.ARTIFACT_REGISTRY_REPO_NAME) }}
           dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
           dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
 
@@ -272,9 +272,9 @@ jobs:
           reverseproxy_tag: neo4j/helm-charts-reverse-proxy:${{ inputs.DOCKER_IMAGE_VERSION }}
           operations_tag: neo4j/helm-charts-operations:${{ inputs.DOCKER_IMAGE_VERSION }}
           backup_tag_debian: neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION }}
-          backup_tag_redhat: neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION }}-ubi9
-          backup_source_debian: neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise
-          backup_source_redhat: neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise-ubi9
+          backup_tag_redhat: neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION }}-ubi10
+          backup_source_debian: neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise-trixie
+          backup_source_redhat: neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise-ubi10
           cache_scope: release
 
   packaging:
@@ -361,4 +361,3 @@ jobs:
           make_latest: true
           files: |
             tmp/new-packages/*.tgz
-

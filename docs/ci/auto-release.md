@@ -12,12 +12,13 @@ matching helm-chart version.
 1. Reads the current `appVersion` from `neo4j/Chart.yaml`.
 2. Queries Docker Hub for `library/neo4j` tags and keeps only GA calver
    tags matching `^\d{4}\.\d{2}\.\d+$` (rejects `-enterprise`, `-community`,
-   `-ubi9`, `nightly`, etc.).
+   `-trixie`, `-ubi10`, `nightly`, etc.).
 3. Compares the highest GA tag to the pinned `appVersion` by
    `(year, month, patch)`.
-4. Verifies that both `<tag>-enterprise` and `<tag>-enterprise-ubi9` variants
-   exist on Docker Hub — those are `FROM`-referenced when building backup
-   images in `tests.yml` / `package-and-release.yml`.
+4. Verifies that `<tag>-trixie`, `<tag>-enterprise-trixie`, `<tag>-ubi10`,
+   and `<tag>-enterprise-ubi10` exist on Docker Hub — those are pulled by
+   the release tests and `FROM`-referenced when building backup images in
+   `tests.yml` / `package-and-release.yml`.
 5. Skips if a GitHub release already exists for the derived helm-chart
    version.
 6. Derives the helm chart version by stripping the month's leading zero
@@ -106,5 +107,6 @@ done once.
 | Signal | Cause | Action |
 | --- | --- | --- |
 | `notify_failure` Slack ping with "Dispatched run: …" | The `tests.yml` run that auto-release triggered failed. | Open the linked run, investigate, fix, re-trigger via `gh workflow run auto-release.yml`. |
-| `notify_failure` Slack ping with empty run URL | The detector or dispatch step failed (before a run was located). | Open the orchestrator run linked in the message. |
-| Orchestrator succeeds but no release appears | Detector decided `should_release=false`. Orchestrator run logs show the reason (no newer tag, variants missing, release already exists, etc.). | Expected quiet behavior. |
+| `notify_failure` Slack ping with "missing_required_image_variants" | A newer GA tag exists, but at least one required `trixie`/`ubi10` release image tag is not available on Docker Hub. | Open the orchestrator run linked in the message and check the missing variant list. |
+| `notify_failure` Slack ping with "not dispatched" | The detector or dispatch step failed before a downstream run was located. | Open the orchestrator run linked in the message. |
+| Orchestrator succeeds but no release appears | Detector decided `should_release=false`. Orchestrator run logs show the reason (no newer tag, release already exists, etc.). | Expected quiet behavior. |
