@@ -9,8 +9,10 @@ stdout (``key=value`` lines, ready for ``>> $GITHUB_OUTPUT``).
 A release is triggered only if all of these hold:
 
 * a strictly-greater ``5.26.<patch>`` tag exists,
-* the ``<tag>-enterprise`` and ``<tag>-enterprise-ubi10`` variants exist
-  (they are ``FROM``-referenced during backup-image builds),
+* the explicit ``<tag>-trixie``, ``<tag>-enterprise-trixie``,
+  ``<tag>-ubi10``, and ``<tag>-enterprise-ubi10`` variants exist
+  (they are pulled by release tests and ``FROM``-referenced during backup-image
+  builds),
 * no GitHub release already exists for the same ``5.26.<patch>`` tag.
 
 Required env: ``GITHUB_TOKEN``. Optional env:
@@ -32,6 +34,12 @@ CHART_PATH = Path("neo4j/Chart.yaml")
 PATCH_TAG_RE = re.compile(r"^5\.26\.(\d+)$")
 APPVERSION_RE = re.compile(r"^appVersion:\s*(\S+)\s*$", re.MULTILINE)
 DOCKER_HUB_IMAGE = "library/neo4j"
+REQUIRED_RELEASE_SUFFIXES = (
+    "-trixie",
+    "-enterprise-trixie",
+    "-ubi10",
+    "-enterprise-ubi10",
+)
 
 
 def read_current_app_version(path: Path = CHART_PATH) -> str:
@@ -131,6 +139,10 @@ def pick_latest_526(tags: Iterable[str]) -> str | None:
     return best[1] if best else None
 
 
+def required_release_tags(docker_tag: str) -> list[str]:
+    return [f"{docker_tag}{suffix}" for suffix in REQUIRED_RELEASE_SUFFIXES]
+
+
 def write_outputs(fields: dict[str, str]) -> None:
     for key, value in fields.items():
         sys.stdout.write(f"{key}={value}\n")
@@ -172,11 +184,27 @@ def main(argv: list[str]) -> int:
         write_outputs({"should_release": "false"})
         return 0
 
-    for variant in (f"{latest}-enterprise", f"{latest}-enterprise-ubi10"):
-        if not tag_exists(DOCKER_HUB_IMAGE, variant, dh_token):
-            print(f"Variant missing: {variant}; skipping", file=sys.stderr)
-            write_outputs({"should_release": "false"})
-            return 0
+    missing_variants = [
+        variant
+        for variant in required_release_tags(latest)
+        if not tag_exists(DOCKER_HUB_IMAGE, variant, dh_token)
+    ]
+    if missing_variants:
+        missing = ", ".join(missing_variants)
+        print(
+            f"::error::Required Neo4j Docker image variant(s) missing for {latest}: {missing}",
+            file=sys.stderr,
+        )
+        write_outputs(
+            {
+                "should_release": "false",
+                "docker_image_version": latest,
+                "helm_chart_version": latest,
+                "failure_reason": "missing_required_image_variants",
+                "missing_variants": missing,
+            }
+        )
+        return 1
 
     if github_release_exists(owner, name, latest, gh_token):
         print(f"Release already exists for {latest}; skipping", file=sys.stderr)

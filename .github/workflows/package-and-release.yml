@@ -67,7 +67,7 @@ jobs:
           operations_tag: neo4j/helm-charts-operations:${{ inputs.DOCKER_IMAGE_VERSION }}
           backup_tag_debian: neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION }}
           backup_tag_redhat: neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION }}-ubi10
-          backup_source_debian: neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise
+          backup_source_debian: neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise-trixie
           backup_source_redhat: neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise-ubi10
           cache_scope: release
 

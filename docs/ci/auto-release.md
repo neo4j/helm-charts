@@ -12,8 +12,10 @@ Neo4j image is available, it dispatches the full `5.26` test/release pipeline.
 2. Queries Docker Hub for `library/neo4j` tags and keeps only tags matching
    `^5\.26\.\d+$`.
 3. Compares the highest discovered patch version to the pinned `appVersion`.
-4. Verifies that both `<tag>-enterprise` and `<tag>-enterprise-ubi10` variants
-   exist on Docker Hub. The backup image builds use these as source images.
+4. Verifies that `<tag>-trixie`, `<tag>-enterprise-trixie`, `<tag>-ubi10`,
+   and `<tag>-enterprise-ubi10` exist on Docker Hub. The release tests pull
+   these explicit base OS tags, and backup image builds use the enterprise
+   tags as source images.
 5. Skips if a GitHub release already exists for the same `5.26.x` tag.
 6. Emits the same value for `helm_chart_version` and `docker_image_version`,
    for example `5.26.26`.
@@ -40,8 +42,9 @@ not clutter release notes.
 
 * **Train:** Neo4j `5.26.x` on the `5.26` branch only.
 * **Release type:** patch releases only.
-* **Images:** Debian release images use `<tag>-enterprise`; RedHat release
-  images use `<tag>-enterprise-ubi10`.
+* **Images:** Debian release images use explicit `<tag>-trixie` /
+  `<tag>-enterprise-trixie`; RedHat release images use explicit `<tag>-ubi10`
+  / `<tag>-enterprise-ubi10`.
 * **Failure handling:** abort the release and post to the failures Slack
   channel. No issue is opened automatically.
 
@@ -91,5 +94,6 @@ done once.
 | Signal | Cause | Action |
 | --- | --- | --- |
 | Failure Slack ping with "Dispatched run: ..." | The dispatched `tests.yml` run failed. | Open the linked run, fix the failing test or release step, then re-trigger `auto-release.yml`. |
-| Failure Slack ping with an empty run URL | Detection or dispatch failed before a run was located. | Open the orchestrator run linked in the message. |
-| Orchestrator succeeds but no release appears | Detector emitted `should_release=false`. | Expected when no newer `5.26.x` image exists, a variant is missing, or the release already exists. |
+| Failure Slack ping with "missing_required_image_variants" | A newer `5.26.x` tag exists, but at least one required `trixie`/`ubi10` release image tag is not available on Docker Hub. | Open the orchestrator run linked in the message and check the missing variant list. |
+| Failure Slack ping with "not dispatched" | Detection or dispatch failed before a run was located. | Open the orchestrator run linked in the message. |
+| Orchestrator succeeds but no release appears | Detector emitted `should_release=false`. | Expected when no newer `5.26.x` image exists or the release already exists. |

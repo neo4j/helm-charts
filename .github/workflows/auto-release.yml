@@ -22,6 +22,8 @@ jobs:
       should_release: ${{ steps.detect.outputs.should_release }}
       helm_chart_version: ${{ steps.detect.outputs.helm_chart_version }}
       docker_image_version: ${{ steps.detect.outputs.docker_image_version }}
+      failure_reason: ${{ steps.detect.outputs.failure_reason }}
+      missing_variants: ${{ steps.detect.outputs.missing_variants }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -109,7 +111,7 @@ jobs:
 
   notify_failure:
     needs: [detect, run-tests-and-release]
-    if: failure() && needs.detect.outputs.should_release == 'true'
+    if: ${{ always() && (needs.detect.result == 'failure' || needs.run-tests-and-release.result == 'failure') }}
     runs-on: ubuntu-latest
     steps:
       - uses: slackapi/slack-github-action@fcfb566f8b0aab22203f066d80ca1d7e4b5d05b3 # v1
@@ -119,12 +121,12 @@ jobs:
           channel-id: ${{ vars.SLACK_CHANNEL_FAILURES }}
           payload: |
             {
-              "text": ":x: helm-charts auto-release failed for Neo4j ${{ needs.detect.outputs.docker_image_version }} (chart ${{ needs.detect.outputs.helm_chart_version }}). Dispatched run: ${{ needs.run-tests-and-release.outputs.run_url }} | Orchestrator: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+              "text": ":x: helm-charts auto-release failed. Detector: ${{ needs.detect.result }}; release run: ${{ needs.run-tests-and-release.result }}. Neo4j: ${{ needs.detect.outputs.docker_image_version || 'unknown' }}; chart: ${{ needs.detect.outputs.helm_chart_version || 'unknown' }}; reason: ${{ needs.detect.outputs.failure_reason || 'workflow_failure' }}; missing variants: ${{ needs.detect.outputs.missing_variants || 'n/a' }}. Dispatched run: ${{ needs.run-tests-and-release.outputs.run_url || 'not dispatched' }} | Orchestrator: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             }
 
   notify_success:
     needs: [detect, run-tests-and-release]
-    if: success() && needs.detect.outputs.should_release == 'true'
+    if: ${{ needs.detect.result == 'success' && needs.run-tests-and-release.result == 'success' && needs.detect.outputs.should_release == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: slackapi/slack-github-action@fcfb566f8b0aab22203f066d80ca1d7e4b5d05b3 # v1
