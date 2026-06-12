@@ -168,8 +168,11 @@ spec:
       targetPort: 7473
       name: tcp-https
     {{- end }}
-    {{- if or $clusterEnabled $.Values.analytics.enabled }}
+    {{- if or $clusterEnabled $.Values.analytics.enabled $.Values.services.internals.enabled }}
     #enable the ports for non Read Replicas
+    # internals.enabled also exposes the discovery ports below for standalone
+    # (non-clustered) instances that still use the K8S discovery resolver; without
+    # them the resolver returns an empty endpoint list and Bolt never opens.
     - protocol: TCP
       port: 7688
       targetPort: 7688
