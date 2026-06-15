@@ -522,6 +522,15 @@ statefulset:
 #      imageregistry: "https://hub.docker.com/"
 #      demo: alpha
 
+  # persistentVolumeClaimRetentionPolicy fields for Neo4j statefulset.
+  # Requires a Kubernetes version that supports this StatefulSet field. Kubernetes docs mark it stable in v1.32.
+  # Both fields accept "Retain" (default) or "Delete".
+  # Example for ephemeral/CI environments:
+  #   persistentVolumeClaimRetentionPolicy:
+  #     whenDeleted: Delete
+  #     whenScaled: Delete
+  persistentVolumeClaimRetentionPolicy: ~
+
 # additional environment variables for the Neo4j Container
 env: {}
 

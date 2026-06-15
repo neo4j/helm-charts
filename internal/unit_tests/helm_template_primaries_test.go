@@ -1598,6 +1598,95 @@ func TestVolumeClaimLabels(t *testing.T) {
 	}))
 }
 
+func TestPersistentVolumeClaimRetentionPolicyIsOmittedByDefault(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		manifest, err := model.HelmTemplate(t, chart, persistentVolumeClaimRetentionPolicyTestArgs(edition))
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		statefulSet := manifest.OfTypeWithName(&appsv1.StatefulSet{}, model.DefaultHelmTemplateReleaseName.String())
+		if !assert.NotNil(t, statefulSet, fmt.Sprintf("no statefulset found with name %s", model.DefaultHelmTemplateReleaseName)) {
+			return
+		}
+
+		assert.Nil(t, statefulSet.(*appsv1.StatefulSet).Spec.PersistentVolumeClaimRetentionPolicy)
+	}))
+}
+
+func TestPersistentVolumeClaimRetentionPolicyIsRendered(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		manifest, err := model.HelmTemplate(
+			t,
+			chart,
+			persistentVolumeClaimRetentionPolicyTestArgs(
+				edition,
+				"--set", "statefulset.persistentVolumeClaimRetentionPolicy.whenDeleted=Delete",
+				"--set", "statefulset.persistentVolumeClaimRetentionPolicy.whenScaled=Delete",
+			),
+		)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		statefulSet := manifest.OfTypeWithName(&appsv1.StatefulSet{}, model.DefaultHelmTemplateReleaseName.String())
+		if !assert.NotNil(t, statefulSet, fmt.Sprintf("no statefulset found with name %s", model.DefaultHelmTemplateReleaseName)) {
+			return
+		}
+
+		retentionPolicy := statefulSet.(*appsv1.StatefulSet).Spec.PersistentVolumeClaimRetentionPolicy
+		if !assert.NotNil(t, retentionPolicy) {
+			return
+		}
+		assert.Equal(t, appsv1.DeletePersistentVolumeClaimRetentionPolicyType, retentionPolicy.WhenDeleted)
+		assert.Equal(t, appsv1.DeletePersistentVolumeClaimRetentionPolicyType, retentionPolicy.WhenScaled)
+	}))
+}
+
+func TestPersistentVolumeClaimRetentionPolicyDefaultsMissingFieldsToRetain(t *testing.T) {
+	t.Parallel()
+
+	forEachPrimaryChart(t, andEachSupportedEdition(func(t *testing.T, chart model.Neo4jHelmChartBuilder, edition string) {
+		manifest, err := model.HelmTemplate(
+			t,
+			chart,
+			persistentVolumeClaimRetentionPolicyTestArgs(
+				edition,
+				"--set", "statefulset.persistentVolumeClaimRetentionPolicy.whenDeleted=Delete",
+			),
+		)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		statefulSet := manifest.OfTypeWithName(&appsv1.StatefulSet{}, model.DefaultHelmTemplateReleaseName.String())
+		if !assert.NotNil(t, statefulSet, fmt.Sprintf("no statefulset found with name %s", model.DefaultHelmTemplateReleaseName)) {
+			return
+		}
+
+		retentionPolicy := statefulSet.(*appsv1.StatefulSet).Spec.PersistentVolumeClaimRetentionPolicy
+		if !assert.NotNil(t, retentionPolicy) {
+			return
+		}
+		assert.Equal(t, appsv1.DeletePersistentVolumeClaimRetentionPolicyType, retentionPolicy.WhenDeleted)
+		assert.Equal(t, appsv1.RetainPersistentVolumeClaimRetentionPolicyType, retentionPolicy.WhenScaled)
+	}))
+}
+
+func persistentVolumeClaimRetentionPolicyTestArgs(edition string, extraArgs ...string) []string {
+	args := []string{}
+	args = append(args, useNeo4jClusterName...)
+	args = append(args, "--set", "volumes.data.mode=defaultStorageClass")
+	if edition == "enterprise" {
+		args = append(args, useEnterpriseAndAcceptLicense...)
+	}
+	return append(args, extraArgs...)
+}
+
 // TestNeo4jConfigWithEmptyLdapPasswordMountPath checks for error when empty ldapPasswordMountPath is provided along with a valid ldapPasswordFromSecret
 func TestNeo4jConfigWithEmptyLdapPasswordMountPath(t *testing.T) {
 	t.Parallel()

@@ -216,6 +216,10 @@ spec:
         {{- with include "neo4j.volumes" . }}{{ nindent 8 . }}{{ end -}}
   {{- $volumeClaimTemplates := include "neo4j.volumeClaimTemplates" . -}}
   {{- if $volumeClaimTemplates }}
+  {{- with .Values.statefulset.persistentVolumeClaimRetentionPolicy }}
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: {{ .whenDeleted | default "Retain" }}
+    whenScaled: {{ .whenScaled | default "Retain" }}
+  {{- end }}
   volumeClaimTemplates: {{ $volumeClaimTemplates | nindent 4 }}
   {{- end }}
-
