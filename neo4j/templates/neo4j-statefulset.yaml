@@ -218,9 +218,8 @@ spec:
   {{- if $volumeClaimTemplates }}
   {{- with .Values.statefulset.persistentVolumeClaimRetentionPolicy }}
   persistentVolumeClaimRetentionPolicy:
-    whenDeleted: {{ .whenDeleted }}
-    whenScaled: {{ .whenScaled  }}
+    whenDeleted: {{ .whenDeleted | default "Retain" }}
+    whenScaled: {{ .whenScaled | default "Retain" }}
   {{- end }}
   volumeClaimTemplates: {{ $volumeClaimTemplates | nindent 4 }}
   {{- end }}
-

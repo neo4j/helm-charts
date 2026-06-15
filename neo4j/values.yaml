@@ -523,7 +523,8 @@ statefulset:
 #      demo: alpha
 
   # persistentVolumeClaimRetentionPolicy fields for Neo4j statefulset.
-  # Requires Kubernetes 1.27+ (GA). Both fields accept "Retain" (default) or "Delete".
+  # Requires a Kubernetes version that supports this StatefulSet field. Kubernetes docs mark it stable in v1.32.
+  # Both fields accept "Retain" (default) or "Delete".
   # Example for ephemeral/CI environments:
   #   persistentVolumeClaimRetentionPolicy:
   #     whenDeleted: Delete
