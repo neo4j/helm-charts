@@ -4,7 +4,17 @@ on:
   schedule:
     # Every 2 hours.
     - cron: '0 */2 * * *'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: 'Release branch to check'
+        type: choice
+        required: true
+        default: both
+        options:
+          - both
+          - dev
+          - '5.26'
 
 permissions:
   contents: read
@@ -16,18 +26,19 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
-  detect:
+  auto-release:
+    name: Auto-release ${{ matrix.target_branch }}
     runs-on: ubuntu-latest
-    outputs:
-      should_release: ${{ steps.detect.outputs.should_release }}
-      helm_chart_version: ${{ steps.detect.outputs.helm_chart_version }}
-      docker_image_version: ${{ steps.detect.outputs.docker_image_version }}
-      failure_reason: ${{ steps.detect.outputs.failure_reason }}
-      missing_variants: ${{ steps.detect.outputs.missing_variants }}
+    strategy:
+      fail-fast: false
+      matrix:
+        target_branch: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.target_branch != 'both' && format('["{0}"]', inputs.target_branch) || '["dev","5.26"]') }}
+    env:
+      TARGET_BRANCH: ${{ matrix.target_branch }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          ref: dev
+          ref: ${{ matrix.target_branch }}
 
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
@@ -44,22 +55,14 @@ jobs:
         run: |
           python bin/release/detect_new_version.py >> "$GITHUB_OUTPUT"
 
-  run-tests-and-release:
-    needs: detect
-    if: needs.detect.outputs.should_release == 'true'
-    runs-on: ubuntu-latest
-    outputs:
-      run_id: ${{ steps.dispatch.outputs.run_id }}
-      run_url: ${{ steps.dispatch.outputs.run_url }}
-      run_conclusion: ${{ steps.watch.outputs.conclusion }}
-    steps:
       - name: Dispatch tests.yml with RELEASE=true
+        if: steps.detect.outputs.should_release == 'true'
         id: dispatch
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GH_REPO: ${{ github.repository }}
-          HELM_CHART_VERSION: ${{ needs.detect.outputs.helm_chart_version }}
-          DOCKER_IMAGE_VERSION: ${{ needs.detect.outputs.docker_image_version }}
+          HELM_CHART_VERSION: ${{ steps.detect.outputs.helm_chart_version }}
+          DOCKER_IMAGE_VERSION: ${{ steps.detect.outputs.docker_image_version }}
         run: |
           set -euo pipefail
 
@@ -68,7 +71,7 @@ jobs:
           before=$(date -u +%FT%TZ)
 
           gh workflow run tests.yml \
-            --ref dev \
+            --ref "${TARGET_BRANCH}" \
             -f HELM_CHART_VERSION="${HELM_CHART_VERSION}" \
             -f DOCKER_IMAGE_VERSION="${DOCKER_IMAGE_VERSION}" \
             -f RELEASE=true
@@ -80,7 +83,7 @@ jobs:
             run_id=$(gh run list \
               --workflow=tests.yml \
               --event=workflow_dispatch \
-              --branch=dev \
+              --branch="${TARGET_BRANCH}" \
               --created=">=${before}" \
               --limit 1 \
               --json databaseId \
@@ -99,6 +102,7 @@ jobs:
           echo "Dispatched run: ${url}"
 
       - name: Wait for tests.yml to finish
+        if: steps.detect.outputs.should_release == 'true'
         id: watch
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -109,32 +113,47 @@ jobs:
           conclusion=$(gh run view "${{ steps.dispatch.outputs.run_id }}" --json conclusion --jq .conclusion)
           echo "conclusion=${conclusion}" >> "$GITHUB_OUTPUT"
 
-  notify_failure:
-    needs: [detect, run-tests-and-release]
-    if: ${{ always() && (needs.detect.result == 'failure' || needs.run-tests-and-release.result == 'failure') }}
-    runs-on: ubuntu-latest
-    steps:
+      - name: Build failure notification context
+        if: failure()
+        id: failure_context
+        env:
+          DETECT_OUTCOME: ${{ steps.detect.outcome }}
+          DISPATCH_OUTCOME: ${{ steps.dispatch.outcome }}
+          WATCH_OUTCOME: ${{ steps.watch.outcome }}
+        run: |
+          set -euo pipefail
+
+          detector_result="${DETECT_OUTCOME:-skipped}"
+          release_result="skipped"
+          if [[ "${DISPATCH_OUTCOME:-}" == "failure" || "${WATCH_OUTCOME:-}" == "failure" ]]; then
+            release_result="failure"
+          elif [[ "${DISPATCH_OUTCOME:-}" == "cancelled" || "${WATCH_OUTCOME:-}" == "cancelled" ]]; then
+            release_result="cancelled"
+          elif [[ "${DISPATCH_OUTCOME:-}" == "success" && "${WATCH_OUTCOME:-}" == "success" ]]; then
+            release_result="success"
+          fi
+
+          echo "detector_result=${detector_result}" >> "$GITHUB_OUTPUT"
+          echo "release_result=${release_result}" >> "$GITHUB_OUTPUT"
+
       - uses: slackapi/slack-github-action@fcfb566f8b0aab22203f066d80ca1d7e4b5d05b3 # v1
+        if: failure()
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
           channel-id: ${{ vars.SLACK_CHANNEL_FAILURES }}
           payload: |
             {
-              "text": ":x: helm-charts auto-release failed. Detector: ${{ needs.detect.result }}; release run: ${{ needs.run-tests-and-release.result }}. Neo4j: ${{ needs.detect.outputs.docker_image_version || 'unknown' }}; chart: ${{ needs.detect.outputs.helm_chart_version || 'unknown' }}; reason: ${{ needs.detect.outputs.failure_reason || 'workflow_failure' }}; missing variants: ${{ needs.detect.outputs.missing_variants || 'n/a' }}. Dispatched run: ${{ needs.run-tests-and-release.outputs.run_url || 'not dispatched' }} | Orchestrator: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+              "text": ":x: helm-charts auto-release failed. Detector: ${{ steps.failure_context.outputs.detector_result }}; release run: ${{ steps.failure_context.outputs.release_result }}. Neo4j: ${{ steps.detect.outputs.docker_image_version || 'unknown' }}; chart: ${{ steps.detect.outputs.helm_chart_version || 'unknown' }}; reason: ${{ steps.detect.outputs.failure_reason || 'workflow_failure' }}; missing variants: ${{ steps.detect.outputs.missing_variants || 'n/a' }}. Dispatched run: ${{ steps.dispatch.outputs.run_url || 'not dispatched' }} | Orchestrator: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             }
 
-  notify_success:
-    needs: [detect, run-tests-and-release]
-    if: ${{ needs.detect.result == 'success' && needs.run-tests-and-release.result == 'success' && needs.detect.outputs.should_release == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
       - uses: slackapi/slack-github-action@fcfb566f8b0aab22203f066d80ca1d7e4b5d05b3 # v1
+        if: success() && steps.detect.outputs.should_release == 'true'
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
           channel-id: ${{ vars.SLACK_CHANNEL_RELEASES }}
           payload: |
             {
-              "text": ":white_check_mark: helm-charts auto-released ${{ needs.detect.outputs.helm_chart_version }} (Neo4j ${{ needs.detect.outputs.docker_image_version }}). Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.detect.outputs.helm_chart_version }}"
+              "text": ":white_check_mark: helm-charts auto-released ${{ steps.detect.outputs.helm_chart_version }} (Neo4j ${{ steps.detect.outputs.docker_image_version }}). Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ steps.detect.outputs.helm_chart_version }}"
             }
