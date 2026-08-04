@@ -15,11 +15,16 @@ type ReverseProxy struct {
 	ServiceName      string                `yaml:"serviceName,omitempty"`
 	Namespace        string                `yaml:"namespace,omitempty"`
 	Domain           string                `yaml:"domain,omitempty"`
+	Service          ReverseProxyService   `yaml:"service,omitempty"`
 	Ingress          Ingress               `yaml:"ingress,omitempty"`
 	PodLabels        map[string]string     `yaml:"podLabels,omitempty"`
 	NodeSelector     map[string]string     `yaml:"nodeSelector,omitempty"`
 	Tolerations      []Toleration          `yaml:"tolerations,omitempty"`
 	Resources        ReverseProxyResources `yaml:"resources,omitempty"`
+}
+
+type ReverseProxyService struct {
+	Annotations map[string]string `yaml:"annotations,omitempty"`
 }
 
 type ReverseProxyResources struct {

@@ -29,6 +29,38 @@ func TestReverseProxyIngressWithAnnotations(t *testing.T) {
 	assert.Equal(t, ingressAnnotations, annotations, "ingress annotations are not matching")
 }
 
+func TestReverseProxyServiceWithAnnotations(t *testing.T) {
+	t.Parallel()
+
+	annotations := map[string]string{
+		"cloud.google.com/neg": `{"ingress": true}`,
+	}
+	helmValues := model.DefaultNeo4jReverseProxyValues
+	helmValues.ReverseProxy.Service.Annotations = annotations
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while testing service annotations with reverse proxy helm chart")
+	serviceList := manifests.OfType(&corev1.Service{})
+	assert.Len(t, serviceList, 1, fmt.Sprintf("number of services should be 1, not equal with %d", len(serviceList)))
+
+	service := serviceList[0].(*corev1.Service)
+	assert.Equal(t, annotations, service.Annotations, "service annotations are not matching")
+}
+
+func TestReverseProxyServiceWithoutAnnotations(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jReverseProxyValues
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.ReverseProxyHelmChart, helmValues)
+	assert.NoError(t, err, "error seen while testing default service annotations with reverse proxy helm chart")
+	serviceList := manifests.OfType(&corev1.Service{})
+	assert.Len(t, serviceList, 1, fmt.Sprintf("number of services should be 1, not equal with %d", len(serviceList)))
+
+	service := serviceList[0].(*corev1.Service)
+	assert.Empty(t, service.Annotations, "service annotations should be empty by default")
+}
+
 // TestReverseProxyIngressWhenDisabled checks for no presence of ingress when disabled
 func TestReverseProxyIngressWhenDisabled(t *testing.T) {
 	t.Parallel()
