@@ -25,6 +25,12 @@ reverseProxy:
   # default is set to cluster.local
   domain: "cluster.local"
 
+  # Annotations for the reverse proxy ClusterIP Service. These are separate from ingress annotations.
+  # On GKE, add cloud.google.com/neg to enable a NEG backend for an Ingress.
+  service:
+    annotations: {}
+#      "cloud.google.com/neg": '{"ingress": true}'
+
   # securityContext defines privilege and access control settings for a Container. Making sure that we dont run Neo4j as root user.
   containerSecurityContext:
     allowPrivilegeEscalation: false

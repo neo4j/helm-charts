@@ -69,6 +69,7 @@ kind: Service
 metadata:
   name: {{ include "neo4j.reverseProxy.fullname" . }}-reverseproxy-service
   namespace: "{{ .Release.Namespace }}"
+  {{- include "neo4j.reverseProxy.annotations" $.Values.reverseProxy.service.annotations | indent 2 }}
 spec:
   type: ClusterIP
   selector:
@@ -78,4 +79,3 @@ spec:
       port: {{ $port }}
       targetPort: {{ add $port 8000 }}
 ---
-
