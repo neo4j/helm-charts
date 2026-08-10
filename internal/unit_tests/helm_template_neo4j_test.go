@@ -99,6 +99,46 @@ func TestNeo4jPanicOnShutDownConfig(t *testing.T) {
 	assert.Contains(t, defaultConfigMap.Data["server.panic.shutdown_on_panic"], "true")
 }
 
+func TestPluginsVolumeSetsPluginsDirectory(t *testing.T) {
+	t.Parallel()
+
+	args := append([]string{}, useDataModeAndAcceptLicense...)
+	args = append(args, useNeo4jClusterName...)
+	args = append(args,
+		"--set", "volumes.plugins.mode=share",
+		"--set", "volumes.plugins.share.name=data",
+	)
+
+	manifest, err := model.HelmTemplate(t, model.HelmChart, args)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	defaultConfigMap := manifest.OfTypeWithName(
+		&v1.ConfigMap{},
+		model.DefaultHelmTemplateReleaseName.DefaultConfigMapName(),
+	).(*v1.ConfigMap)
+	assert.Equal(t, "/plugins", defaultConfigMap.Data["server.directories.plugins"])
+}
+
+func TestPluginsDirectoryIsNotSetWithoutPluginsVolume(t *testing.T) {
+	t.Parallel()
+
+	args := append([]string{}, useDataModeAndAcceptLicense...)
+	args = append(args, useNeo4jClusterName...)
+
+	manifest, err := model.HelmTemplate(t, model.HelmChart, args)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	defaultConfigMap := manifest.OfTypeWithName(
+		&v1.ConfigMap{},
+		model.DefaultHelmTemplateReleaseName.DefaultConfigMapName(),
+	).(*v1.ConfigMap)
+	assert.NotContains(t, defaultConfigMap.Data, "server.directories.plugins")
+}
+
 // TestNeo4jServerAndUserLogsConfig checks whether the server and user logs are set in the respective conf files.
 func TestNeo4jServerAndUserLogsConfig(t *testing.T) {
 	t.Parallel()
