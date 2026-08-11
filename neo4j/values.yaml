@@ -197,6 +197,15 @@ volumes:
     share:
       name: "data"
 
+  # provide a volume to use for plugins
+  # n.b. plugins will be mounted to /plugins and server.directories.plugins will be set to /plugins
+  # any of the volume modes shown above for data can be used for plugins
+  # plugins:
+  #   disableSubPathExpr: false
+  #   mode: "share" # share an existing volume (e.g. the data volume)
+  #   share:
+  #     name: "data"
+
   # provide a volume to use for licenses
   # n.b. licenses will be mounted to /licenses on the underlying volume
   # any of the volume modes shown above for data can be used for licenses

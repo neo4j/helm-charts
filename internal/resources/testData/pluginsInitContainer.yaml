@@ -1,6 +1,5 @@
 config:
   "server.security.procedures.unrestricted": "apoc.*"
-  "server.directories.plugins": "/plugins"
 
 volumes:
   plugins:
