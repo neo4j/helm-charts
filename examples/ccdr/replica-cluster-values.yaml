@@ -1,0 +1,31 @@
+neo4j:
+  name: ccdr-replica
+  edition: enterprise
+  acceptLicenseAgreement: eval
+  minimumClusterSize: 3
+
+volumes:
+  data:
+    mode: defaultStorageClass
+
+services:
+  neo4j:
+    enabled: false
+  ccdr:
+    enabled: true
+    annotations: {}
+    spec:
+      type: ClusterIP
+
+ssl:
+  cluster:
+    privateKey:
+      secretName: cluster-tls
+    publicCertificate:
+      secretName: cluster-tls
+    trustedCerts:
+      sources:
+        - secret:
+            name: replica-cluster-ca
+        - secret:
+            name: source-cluster-ca

@@ -1,0 +1,23 @@
+neo4j:
+  name: ccdr-replica
+  edition: enterprise
+  acceptLicenseAgreement: eval
+  minimumClusterSize: 3
+
+volumes:
+  data:
+    mode: defaultStorageClass
+
+services:
+  neo4j:
+    enabled: false
+  ccdr:
+    enabled: false
+
+podSpec:
+  # Bind this Kubernetes service account to a Google service account with read access to the backup bucket.
+  serviceAccountName: neo4j-backup-reader
+
+config:
+  # The backup-pull RPO includes both the backup job cadence and this polling interval.
+  db.cluster.backup.pull_interval: 1m

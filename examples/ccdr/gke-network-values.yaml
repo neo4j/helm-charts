@@ -1,0 +1,8 @@
+services:
+  ccdr:
+    annotations:
+      networking.gke.io/load-balancer-type: Internal
+      networking.gke.io/internal-load-balancer-allow-global-access: "true"
+    spec:
+      type: LoadBalancer
+      externalTrafficPolicy: Cluster
