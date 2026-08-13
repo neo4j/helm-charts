@@ -248,11 +248,17 @@ type Internals struct {
 	Enabled     bool              `yaml:"enabled,omitempty"`
 	Annotations map[string]string `yaml:"annotations,omitempty"`
 }
+type CCDR struct {
+	Enabled     bool              `yaml:"enabled,omitempty"`
+	Annotations map[string]string `yaml:"annotations,omitempty"`
+	Spec        Spec              `yaml:"spec,omitempty"`
+}
 type Services struct {
 	Default   Default      `yaml:"default,omitempty"`
 	Neo4j     Neo4jService `yaml:"neo4j,omitempty"`
 	Admin     Admin        `yaml:"admin,omitempty"`
 	Internals Internals    `yaml:"internals,omitempty"`
+	CCDR      CCDR         `yaml:"ccdr,omitempty"`
 }
 
 type SecurityContext struct {
@@ -327,9 +333,16 @@ type HTTPS struct {
 	TrustedCerts      TrustedCerts      `yaml:"trustedCerts,omitempty"`
 	RevokedCerts      RevokedCerts      `yaml:"revokedCerts,omitempty"`
 }
+type Cluster struct {
+	PrivateKey        PrivateKey        `yaml:"privateKey,omitempty"`
+	PublicCertificate PublicCertificate `yaml:"publicCertificate,omitempty"`
+	TrustedCerts      TrustedCerts      `yaml:"trustedCerts,omitempty"`
+	RevokedCerts      RevokedCerts      `yaml:"revokedCerts,omitempty"`
+}
 type Ssl struct {
-	Bolt  Bolt  `yaml:"bolt,omitempty"`
-	HTTPS HTTPS `yaml:"https,omitempty"`
+	Bolt    Bolt    `yaml:"bolt,omitempty"`
+	HTTPS   HTTPS   `yaml:"https,omitempty"`
+	Cluster Cluster `yaml:"cluster,omitempty"`
 }
 type Image struct {
 	ImagePullPolicy  string   `yaml:"imagePullPolicy,omitempty"`

@@ -1,0 +1,40 @@
+{{- with .Values.services.ccdr }}
+{{- if .enabled }}
+{{- $isEnterprise := required "neo4j.edition must be specified" $.Values.neo4j.edition | regexMatch "(?i)enterprise" -}}
+{{- $clusterEnabled := eq (include "neo4j.isClusterEnabled" $) "true" -}}
+{{- if not $isEnterprise }}
+{{- fail "services.ccdr.enabled requires neo4j.edition=enterprise" }}
+{{- end }}
+{{- if not $clusterEnabled }}
+{{- fail "services.ccdr.enabled requires a Neo4j cluster; set neo4j.minimumClusterSize to at least 2" }}
+{{- end }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ include "neo4j.fullname" $ }}-ccdr"
+  namespace: "{{ $.Release.Namespace }}"
+  labels:
+    helm.neo4j.com/neo4j.name: "{{ template "neo4j.name" $ }}"
+    app: "{{ template "neo4j.name" $ }}"
+    helm.neo4j.com/instance: "{{ include "neo4j.fullname" $ }}"
+    helm.neo4j.com/service: "ccdr"
+    {{- include "neo4j.labels" $.Values.neo4j | indent 4 }}
+  {{- with .annotations }}
+  annotations: {{ toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  # Cluster members use their advertised addresses while the system database is forming.
+  # Publishing the endpoint before readiness avoids a startup dependency cycle.
+  publishNotReadyAddresses: true
+  type: "{{ .spec.type | required "The 'type' field is required in services.ccdr.spec" }}"
+  {{- with omit .spec "type" }}{{ include "neo4j.services.extraSpec" . | nindent 2 }}{{ end }}
+  selector:
+    app: "{{ template "neo4j.name" $ }}"
+    helm.neo4j.com/instance: "{{ include "neo4j.fullname" $ }}"
+  ports:
+    - protocol: TCP
+      port: 6000
+      targetPort: 6000
+      name: tcp-ccdr
+{{- end }}
+{{- end }}
