@@ -1,12 +1,19 @@
 {{- define "neo4j.ssl.volumesFromSecrets" -}}
 {{- range $name, $sslSpec := . -}}
 {{- if ( or $sslSpec.privateKey.secretName $sslSpec.publicCertificate.secretName ) }}
-- name: "{{ $name }}-cert"
-  secret:
-    secretName: "{{ required "When ssl.{{ $name }}.publicCertificate is set then ssl.{{ $name }}.privateKey.secretName must also be provided" $sslSpec.publicCertificate.secretName }}"
-- name: "{{ $name }}-key"
-  secret:
-    secretName:  "{{ required "When ssl.bolt.privateKey is set then ssl.bolt.publicCertificate.secretName must also be provided" $sslSpec.privateKey.secretName }}"
+- name: "{{ $name }}-certificates"
+  projected:
+    sources:
+      - secret:
+          name: "{{ required "When ssl.{{ $name }}.privateKey is set then ssl.{{ $name }}.publicCertificate.secretName must also be provided" $sslSpec.publicCertificate.secretName }}"
+          items:
+            - key: "{{ $sslSpec.publicCertificate.subPath | default "public.crt" }}"
+              path: public.crt
+      - secret:
+          name: "{{ required "When ssl.{{ $name }}.publicCertificate is set then ssl.{{ $name }}.privateKey.secretName must also be provided" $sslSpec.privateKey.secretName }}"
+          items:
+            - key: "{{ $sslSpec.privateKey.subPath | default "private.key" }}"
+              path: private.key
 {{- if $sslSpec.trustedCerts.sources }}
 - name: "{{ $name }}-trusted"
   projected:
@@ -26,13 +33,8 @@
 {{- define "neo4j.ssl.volumeMountsFromSecrets" -}}
 {{- range $name, $sslSpec := . -}}
 {{- if ( or $sslSpec.privateKey.secretName $sslSpec.publicCertificate.secretName ) }}
-- name: "{{ $name }}-cert"
-  mountPath: /var/lib/neo4j/certificates/{{ $name }}/public.crt
-  subPath: "{{ $sslSpec.publicCertificate.subPath | default "public.crt" }}"
-  readOnly: true
-- name: "{{ $name }}-key"
-  mountPath: "/var/lib/neo4j/certificates/{{ $name }}/private.key"
-  subPath: "{{ $sslSpec.privateKey.subPath | default "private.key"  }}"
+- name: "{{ $name }}-certificates"
+  mountPath: "/var/lib/neo4j/certificates/{{ $name }}"
   readOnly: true
 {{- if $sslSpec.trustedCerts.sources }}
 - name: "{{ $name }}-trusted"

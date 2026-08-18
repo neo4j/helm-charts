@@ -151,12 +151,18 @@ func CheckServiceAnnotations(t *testing.T, releaseName model.ReleaseName, chart 
 
 func getOurAnnotations(service coreV1.Service) map[string]string {
 	ourAnnotations := map[string]string{}
+	annotationsToIgnore := map[string]struct{}{
+		"networking.gke.io/target-pool": {},
+	}
 	prefixesToIgnore := []string{
 		"cloud.google.com/",
 		"meta.helm.sh/",
 		"helm.sh/",
 	}
 	for key, value := range service.Annotations {
+		if _, ignored := annotationsToIgnore[key]; ignored {
+			continue
+		}
 		if !matchesAnyPrefix(prefixesToIgnore, key) {
 			ourAnnotations[key] = value
 		}
