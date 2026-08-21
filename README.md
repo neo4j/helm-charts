@@ -17,5 +17,6 @@ See the `examples` directory for common usage patterns of this Helm Chart
 * [Manually created disks with a volume selector (Cluster)](../dev/examples/persistent-volume-selector-cluster/README.md)
 * [Manually created disks with a pre provisioned PVC](../dev/examples/persistent-volume-manual/README.md)
 * [Multi AKS cluster](../dev/examples/multi-cluster/README.md)
+* [Cross-cluster database replication (CCDR)](../dev/examples/ccdr/README.md)
 
  

@@ -1,0 +1,17 @@
+neo4j:
+  # Use the backup image version matching the Neo4j DBMS version.
+  imageTag: 2026.8.0
+  jobSchedule: "*/5 * * * *"
+
+backup:
+  databaseBackupEndpoints: "source-1-admin.source.svc.cluster.local:6362,source-2-admin.source.svc.cluster.local:6362,source-3-admin.source.svc.cluster.local:6362"
+  database: ccdr-source
+  cloudProvider: gcp
+  # Replace with a GCS bucket and prefix available to the service account below.
+  bucketName: replace-me/ccdr-source
+  preferDiffAsParent: true
+  remoteAddressResolution: true
+  keepBackupFiles: false
+
+# Bind this Kubernetes service account to a Google service account with write access to the bucket.
+serviceAccountName: neo4j-backup
