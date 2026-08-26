@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+
+# Publishes the already-created chart packages to the classic S3 Helm repository.
+
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=bin/release/helm_release_common
+source "${SCRIPT_DIR}/helm_release_common"
+
+require_command aws
+require_command helm
+require_command tar
+require_env HELM_REPO_NAME
+
+readonly S3_LOCAL_SYNC_DIR="tmp/release-packages"
+readonly S3_CACHE_CONTROL_MAX_AGE_SECONDS="${S3_CACHE_CONTROL_MAX_AGE_SECONDS:-300}"
+
+validate_release_packages
+
+if [[ "${HELM_REPO_NAME}" == "neo4j" ]]
+then
+  chart_version="$(chart_field neo4j version)"
+  source_bundle="neo4j-helm-charts-${chart_version}.tgz"
+
+  tar -czf "${source_bundle}" \
+    neo4j \
+    neo4j-persistent-volume \
+    neo4j-headless-service \
+    neo4j-docker-desktop-pv \
+    neo4j-admin \
+    neo4j-reverse-proxy \
+    neo4j-loadbalancer
+
+  aws s3 cp --acl public-read "${source_bundle}" s3://dist.neo4j.org/helm/
+  rm -f "${source_bundle}"
+fi
+
+rm -rf "${S3_LOCAL_SYNC_DIR}"
+mkdir -p "${S3_LOCAL_SYNC_DIR}"
+
+aws s3 sync "s3://helm.neo4j.com/${HELM_REPO_NAME}" "${S3_LOCAL_SYNC_DIR}"
+cp "${BUILD_OUT_DIR}"/*.tgz "${BUILD_OUT_DIR}"/*.tgz.prov "${S3_LOCAL_SYNC_DIR}/"
+
+helm repo index \
+  "${S3_LOCAL_SYNC_DIR}" \
+  --url "https://helm.neo4j.com/${HELM_REPO_NAME}"
+
+aws s3 sync \
+  --acl bucket-owner-full-control \
+  --cache-control "max-age=${S3_CACHE_CONTROL_MAX_AGE_SECONDS}" \
+  "${S3_LOCAL_SYNC_DIR}" \
+  "s3://helm.neo4j.com/${HELM_REPO_NAME}"
+
+printf 'Published the verified chart packages to https://helm.neo4j.com/%s\n' "${HELM_REPO_NAME}"
