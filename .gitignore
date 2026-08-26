@@ -8,3 +8,5 @@ devenv.local
 .backup_linux
 __pycache__/
 *.pyc
+tmp/
+gha-creds-*.json
