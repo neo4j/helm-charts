@@ -132,15 +132,13 @@ func TestClusterTLSValuesRenderFromTypedModel(t *testing.T) {
 	for _, volume := range statefulSet.Spec.Template.Spec.Volumes {
 		volumeNames[volume.Name] = true
 	}
-	assert.True(t, volumeNames["cluster-key"])
-	assert.True(t, volumeNames["cluster-cert"])
+	assert.True(t, volumeNames["cluster-certificates"])
 	assert.True(t, volumeNames["cluster-trusted"])
 
 	mountPaths := map[string]bool{}
 	for _, mount := range statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts {
 		mountPaths[mount.MountPath] = true
 	}
-	assert.True(t, mountPaths["/var/lib/neo4j/certificates/cluster/private.key"])
-	assert.True(t, mountPaths["/var/lib/neo4j/certificates/cluster/public.crt"])
+	assert.True(t, mountPaths["/var/lib/neo4j/certificates/cluster"])
 	assert.True(t, mountPaths["/var/lib/neo4j/certificates/cluster/trusted"])
 }
