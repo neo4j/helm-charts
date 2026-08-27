@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+
+# Creates and verifies the signed chart packages used by every release destination.
+
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=bin/release/helm_release_common
+source "${SCRIPT_DIR}/helm_release_common"
+
+require_command gpg
+require_command helm
+require_env PACKAGE_SIGNING_KEY
+require_env PACKAGE_SIGNING_PASSPHRASE
+
+readonly SIGNING_SANDBOX="signingkeysandbox"
+
+cleanup_signing_material() {
+  rm -rf "${SIGNING_SANDBOX}"
+  rm -f "${PACKAGE_SECRET_KEYRING}"
+}
+
+trap cleanup_signing_material EXIT
+
+[[ -d "${SIGNING_SANDBOX}" ]] || fail "Signing sandbox not found. Run bin/gcloud/gpg_signing first"
+
+mkdir -p "${BUILD_OUT_DIR}" "$(dirname "${PACKAGE_PUBLIC_KEYRING}")"
+rm -f "${BUILD_OUT_DIR}"/*.tgz "${BUILD_OUT_DIR}"/*.tgz.prov
+
+gpg --batch --yes \
+  --no-default-keyring \
+  --homedir "${SIGNING_SANDBOX}" \
+  --export \
+  --output "${PACKAGE_PUBLIC_KEYRING}" \
+  "${PACKAGE_SIGNING_KEY}"
+
+printf '%s\n' "${PACKAGE_SIGNING_PASSPHRASE}" |
+  gpg --batch --yes \
+    --no-default-keyring \
+    --homedir "${SIGNING_SANDBOX}" \
+    --pinentry-mode loopback \
+    --passphrase-fd 0 \
+    --export-secret-keys \
+    --output "${PACKAGE_SECRET_KEYRING}" \
+    "${PACKAGE_SIGNING_KEY}"
+
+for chart in "${RELEASE_CHARTS[@]}"
+do
+  helm lint "${chart}"
+
+  printf '%s\n' "${PACKAGE_SIGNING_PASSPHRASE}" |
+    helm package \
+      --sign "${chart}" \
+      --key "${PACKAGE_SIGNING_KEY}" \
+      --keyring "${PACKAGE_SECRET_KEYRING}" \
+      --passphrase-file - \
+      --destination "${BUILD_OUT_DIR}"
+done
+
+validate_release_packages
+
+for package in "${BUILD_OUT_DIR}"/*.tgz
+do
+  helm verify "${package}" --keyring "${PACKAGE_PUBLIC_KEYRING}"
+done
+
+printf 'Created and verified %s signed chart packages in %s\n' "${#RELEASE_CHARTS[@]}" "${BUILD_OUT_DIR}"
