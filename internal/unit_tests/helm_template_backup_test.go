@@ -635,6 +635,64 @@ func TestBackupS3GenericParameters(t *testing.T) {
 	assert.Contains(t, envVariables, corev1.EnvVar{Name: "S3_SIGNATURE_VERSION", Value: "4"})
 }
 
+// TestAggregateBackupS3ChecksumConfiguration checks that S3 checksum options are set for aggregate backups
+func TestAggregateBackupS3ChecksumConfiguration(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.AggregateBackup = model.AggregateBackup{
+		Enabled:  true,
+		FromPath: "s3://test-bucket",
+	}
+	helmValues.Backup.S3RequestChecksumCalculation = "WHEN_REQUIRED"
+	helmValues.Backup.S3ResponseChecksumValidation = "WHEN_REQUIRED"
+	helmValues.Backup.S3DisableMultipartChecksums = true
+	helmValues.ServiceAccountName = "backup-service-account"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err)
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
+
+	envVariables := cronjobs[0].(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env
+	assert.Contains(t, envVariables, corev1.EnvVar{Name: "AWS_REQUEST_CHECKSUM_CALCULATION", Value: "WHEN_REQUIRED"})
+	assert.Contains(t, envVariables, corev1.EnvVar{Name: "AWS_RESPONSE_CHECKSUM_VALIDATION", Value: "WHEN_REQUIRED"})
+	assert.Contains(t, envVariables, corev1.EnvVar{Name: "AWS_S3_DISABLE_MULTIPART_CHECKSUMS", Value: "true"})
+}
+
+// TestAggregateBackupS3ChecksumDefaults checks that unset S3 checksum options preserve AWS SDK defaults
+func TestAggregateBackupS3ChecksumDefaults(t *testing.T) {
+	t.Parallel()
+
+	helmValues := model.DefaultNeo4jBackupValues
+	helmValues.DisableLookups = true
+	helmValues.Backup.CloudProvider = "aws"
+	helmValues.Backup.AggregateBackup = model.AggregateBackup{
+		Enabled:  true,
+		FromPath: "s3://test-bucket",
+	}
+	helmValues.ServiceAccountName = "backup-service-account"
+
+	manifests, err := model.HelmTemplateFromStruct(t, model.BackupHelmChart, helmValues)
+	assert.NoError(t, err)
+
+	cronjobs := manifests.OfType(&batchv1.CronJob{})
+	assert.Len(t, cronjobs, 1, "there should be only one cronjob")
+
+	checksumEnvNames := []string{
+		"AWS_REQUEST_CHECKSUM_CALCULATION",
+		"AWS_RESPONSE_CHECKSUM_VALIDATION",
+		"AWS_S3_DISABLE_MULTIPART_CHECKSUMS",
+	}
+	envVariables := cronjobs[0].(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env
+	for _, envVariable := range envVariables {
+		assert.NotContains(t, checksumEnvNames, envVariable.Name)
+	}
+}
+
 // TestBackupAzureBlobServiceURL checks that the Azure blob service URL is properly configured
 func TestBackupAzureBlobServiceURL(t *testing.T) {
 	t.Parallel()
