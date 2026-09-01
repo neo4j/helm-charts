@@ -23,6 +23,16 @@ For S3-compatible storage providers (like Cloudian, MinIO, etc.):
 1. If you encounter signature errors, try setting s3Region to a fixed value like "us-east-1"
 2. Ensure s3ForcePathStyle is set to true
 3. For older S3 implementations, try setting s3SignatureVersion to "2"
+4. If you encounter checksum mismatch errors, try all of these settings together:
+   - Set s3RequestChecksumCalculation to "WHEN_REQUIRED"
+   - Set s3ResponseChecksumValidation to "WHEN_REQUIRED"
+   - Set s3DisableMultipartChecksums to true
+
+   Example configuration:
+   backup:
+     s3RequestChecksumCalculation: "WHEN_REQUIRED"
+     s3ResponseChecksumValidation: "WHEN_REQUIRED"
+     s3DisableMultipartChecksums: true
 {{- end }}
 {{- end }}
 

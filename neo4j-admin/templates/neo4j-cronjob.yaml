@@ -105,6 +105,18 @@ spec:
                   value: "{{ .Values.backup.s3Region | default "" }}"
                 - name: S3_SIGNATURE_VERSION
                   value: "{{ .Values.backup.s3SignatureVersion | default "" }}"
+                {{- if .Values.backup.s3RequestChecksumCalculation }}
+                - name: AWS_REQUEST_CHECKSUM_CALCULATION
+                  value: "{{ .Values.backup.s3RequestChecksumCalculation }}"
+                {{- end }}
+                {{- if .Values.backup.s3ResponseChecksumValidation }}
+                - name: AWS_RESPONSE_CHECKSUM_VALIDATION
+                  value: "{{ .Values.backup.s3ResponseChecksumValidation }}"
+                {{- end }}
+                {{- if .Values.backup.s3DisableMultipartChecksums }}
+                - name: AWS_S3_DISABLE_MULTIPART_CHECKSUMS
+                  value: "true"
+                {{- end }}
                 - name: CONSISTENCY_CHECK_ENABLE
                   value: "{{ .Values.consistencyCheck.enable | default false }}"
                 - name: CONSISTENCY_CHECK_INDEXES
@@ -178,5 +190,4 @@ spec:
 {{- else }}
   {{- printf "emptyDir: {}" | nindent 14 }}
 {{- end }}
-
 
