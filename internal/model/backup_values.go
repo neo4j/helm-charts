@@ -66,37 +66,40 @@ type Neo4jBackupNeo4j struct {
 }
 
 type Backup struct {
-	BucketName               string          `yaml:"bucketName,omitempty"`
-	DatabaseAdminServiceName string          `yaml:"databaseAdminServiceName,omitempty"`
-	DatabaseAdminServiceIP   string          `yaml:"databaseAdminServiceIP,omitempty"`
-	DatabaseNamespace        string          `yaml:"databaseNamespace,omitempty" default:"default"`
-	DatabaseBackupPort       string          `yaml:"databaseBackupPort,omitempty" default:"6362"`
-	DatabaseClusterDomain    string          `yaml:"databaseClusterDomain,omitempty" default:"cluster.local"`
-	DatabaseBackupEndpoints  string          `yaml:"databaseBackupEndpoints,omitempty"`
-	Database                 string          `yaml:"database,omitempty"`
-	AzureStorageAccountName  string          `yaml:"azureStorageAccountName,omitempty"`
-	AzureBlobServiceURL      string          `yaml:"azureBlobServiceURL,omitempty"`
-	CloudProvider            string          `yaml:"cloudProvider,omitempty"`
-	S3Endpoint               string          `yaml:"s3Endpoint,omitempty"`
-	S3EndpointTLS            bool            `yaml:"s3EndpointTLS,omitempty" default:"false"`
-	S3CASecretName           string          `yaml:"s3CASecretName,omitempty"`
-	S3CASecretKey            string          `yaml:"s3CASecretKey,omitempty"`
-	S3SkipVerify             bool            `yaml:"s3SkipVerify,omitempty" default:"false"`
-	S3ForcePathStyle         bool            `yaml:"s3ForcePathStyle,omitempty" default:"true"`
-	S3Region                 string          `yaml:"s3Region,omitempty"`
-	S3SignatureVersion       string          `yaml:"s3SignatureVersion,omitempty"`
-	SecretName               string          `yaml:"secretName,omitempty"`
-	SecretKeyName            string          `yaml:"secretKeyName,omitempty"`
-	PageCache                string          `yaml:"pageCache,omitempty"`
-	HeapSize                 string          `yaml:"heapSize,omitempty"`
-	FallbackToFull           bool            `yaml:"fallbackToFull" default:"true"`
-	IncludeMetadata          string          `yaml:"includeMetadata,omitempty"`
-	Type                     string          `yaml:"type,omitempty"`
-	KeepFailed               bool            `yaml:"keepFailed" default:"false"`
-	ParallelRecovery         bool            `yaml:"parallelRecovery" default:"false"`
-	KeepBackupFiles          bool            `yaml:"keepBackupFiles" default:"true"`
-	Verbose                  bool            `yaml:"verbose" default:"true"`
-	AggregateBackup          AggregateBackup `yaml:"aggregate,omitempty"`
+	BucketName                   string          `yaml:"bucketName,omitempty"`
+	DatabaseAdminServiceName     string          `yaml:"databaseAdminServiceName,omitempty"`
+	DatabaseAdminServiceIP       string          `yaml:"databaseAdminServiceIP,omitempty"`
+	DatabaseNamespace            string          `yaml:"databaseNamespace,omitempty" default:"default"`
+	DatabaseBackupPort           string          `yaml:"databaseBackupPort,omitempty" default:"6362"`
+	DatabaseClusterDomain        string          `yaml:"databaseClusterDomain,omitempty" default:"cluster.local"`
+	DatabaseBackupEndpoints      string          `yaml:"databaseBackupEndpoints,omitempty"`
+	Database                     string          `yaml:"database,omitempty"`
+	AzureStorageAccountName      string          `yaml:"azureStorageAccountName,omitempty"`
+	AzureBlobServiceURL          string          `yaml:"azureBlobServiceURL,omitempty"`
+	CloudProvider                string          `yaml:"cloudProvider,omitempty"`
+	S3Endpoint                   string          `yaml:"s3Endpoint,omitempty"`
+	S3EndpointTLS                bool            `yaml:"s3EndpointTLS,omitempty" default:"false"`
+	S3CASecretName               string          `yaml:"s3CASecretName,omitempty"`
+	S3CASecretKey                string          `yaml:"s3CASecretKey,omitempty"`
+	S3SkipVerify                 bool            `yaml:"s3SkipVerify,omitempty" default:"false"`
+	S3ForcePathStyle             bool            `yaml:"s3ForcePathStyle,omitempty" default:"true"`
+	S3Region                     string          `yaml:"s3Region,omitempty"`
+	S3SignatureVersion           string          `yaml:"s3SignatureVersion,omitempty"`
+	S3RequestChecksumCalculation string          `yaml:"s3RequestChecksumCalculation,omitempty"`
+	S3ResponseChecksumValidation string          `yaml:"s3ResponseChecksumValidation,omitempty"`
+	S3DisableMultipartChecksums  bool            `yaml:"s3DisableMultipartChecksums,omitempty" default:"false"`
+	SecretName                   string          `yaml:"secretName,omitempty"`
+	SecretKeyName                string          `yaml:"secretKeyName,omitempty"`
+	PageCache                    string          `yaml:"pageCache,omitempty"`
+	HeapSize                     string          `yaml:"heapSize,omitempty"`
+	FallbackToFull               bool            `yaml:"fallbackToFull" default:"true"`
+	IncludeMetadata              string          `yaml:"includeMetadata,omitempty"`
+	Type                         string          `yaml:"type,omitempty"`
+	KeepFailed                   bool            `yaml:"keepFailed" default:"false"`
+	ParallelRecovery             bool            `yaml:"parallelRecovery" default:"false"`
+	KeepBackupFiles              bool            `yaml:"keepBackupFiles" default:"true"`
+	Verbose                      bool            `yaml:"verbose" default:"true"`
+	AggregateBackup              AggregateBackup `yaml:"aggregate,omitempty"`
 }
 
 type AggregateBackup struct {

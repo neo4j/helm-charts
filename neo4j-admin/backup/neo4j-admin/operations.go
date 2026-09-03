@@ -190,6 +190,9 @@ func PerformAggregateBackup() error {
 	flags := GetAggregateBackupCommandFlags()
 	database := os.Getenv("AGGREGATE_BACKUP_DATABASE")
 	log.Printf("Printing aggregate backup flags %v", flags)
+	log.Printf("AWS_REQUEST_CHECKSUM_CALCULATION: %s", os.Getenv("AWS_REQUEST_CHECKSUM_CALCULATION"))
+	log.Printf("AWS_RESPONSE_CHECKSUM_VALIDATION: %s", os.Getenv("AWS_RESPONSE_CHECKSUM_VALIDATION"))
+	log.Printf("AWS_S3_DISABLE_MULTIPART_CHECKSUMS: %s", os.Getenv("AWS_S3_DISABLE_MULTIPART_CHECKSUMS"))
 	dir, _ := os.Getwd()
 	log.Println("current directory", dir)
 

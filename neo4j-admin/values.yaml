@@ -83,6 +83,23 @@ backup:
   # Valid values: "2", "4", or "" (empty for auto-detection)
   s3SignatureVersion: ""
 
+  # AWS SDK checksum configuration for S3 uploads
+  # These settings are useful for S3-compatible endpoints that do not support newer checksum requirements
+
+  # Control when the AWS SDK calculates request checksums
+  # Valid values: "WHEN_SUPPORTED" (default), "WHEN_REQUIRED", or "" to use the AWS SDK default
+  # Set to "WHEN_REQUIRED" when the endpoint does not support automatic checksum calculation
+  s3RequestChecksumCalculation: ""
+
+  # Control when the AWS SDK validates response checksums
+  # Valid values: "WHEN_SUPPORTED" (default), "WHEN_REQUIRED", or "" to use the AWS SDK default
+  # Set to "WHEN_REQUIRED" when the endpoint does not support automatic checksum validation
+  s3ResponseChecksumValidation: ""
+
+  # Disable checksums for multipart uploads
+  # Set to true together with the options above when an S3-compatible endpoint reports checksum mismatch errors
+  s3DisableMultipartChecksums: false
+
   #name of the database to backup ex: neo4j or neo4j,system (You can provide command separated database names)
   # In case of comma separated databases failure of any single database will lead to failure of complete operation
   database: ""
@@ -262,4 +279,3 @@ tolerations: []
 #    operator: "Equal"
 #    value: "value2"
 #    effect: "NoSchedule"
-
