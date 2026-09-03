@@ -279,16 +279,18 @@ jobs:
     needs: [run-tests-debian, run-tests-redhat, build-reverseproxy-backup-release-image, check-release]
     runs-on: ubuntu-latest
     if: needs.check-release.outputs.should_run == 'true'
+    environment: helm-production
+    concurrency:
+      group: helm-production-release
+      cancel-in-progress: false
+    permissions:
+      actions: read
+      contents: write
+      id-token: write
     env:
       HELM_CHART_VERSION: ${{ inputs.HELM_CHART_VERSION }}
       DOCKER_IMAGE_VERSION: ${{ inputs.DOCKER_IMAGE_VERSION }}
       HELM_REPO_NAME: ${{ vars.HELM_REPO_NAME }}
-    container:
-      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:${{ vars.CI_IMAGE_TAG || 'latest' }}
-      options: --user 1001
-      credentials:
-        username: _json_key
-        password: ${{ secrets.GCLOUD_SERVICE_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -297,6 +299,11 @@ jobs:
           fetch-tags: true
           token: ${{ secrets.GH_TOKEN }}
           ref: 5.26
+
+      - name: Set up Helm
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
+        with:
+          version: v3.21.4
 
       - name: Version Updates
         run: |
@@ -322,30 +329,57 @@ jobs:
           git add CHANGELOG.md
 
       - name: GPG Key Signing
-        run: |
-          export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_GPG }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_GPG }}
-          export ROLE_ARN_GPG=${{ secrets.ROLE_ARN_GPG }}
-          export SECRET_ID_GPG=${{ secrets.SECRET_ID_GPG }}          
-          ./bin/gcloud/gpg_signing          
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_GPG }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_GPG }}
+          ROLE_ARN_GPG: ${{ secrets.ROLE_ARN_GPG }}
+          SECRET_ID_GPG: ${{ secrets.SECRET_ID_GPG }}
+        run: ./bin/gcloud/gpg_signing
 
-      - name: Upload Helm Charts
+      - name: Package and verify Helm charts
+        env:
+          PACKAGE_SIGNING_KEY: ${{ secrets.PACKAGE_SIGNING_KEY }}
+          PACKAGE_SIGNING_PASSPHRASE: ${{ secrets.PACKAGE_SIGNING_PASSPHRASE }}
+        run: ./bin/release/package_charts
+
+      - name: Authenticate to Google Cloud
+        id: gcp-auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_HELM_RELEASE_SERVICE_ACCOUNT }}
+          token_format: access_token
+
+      - name: Log in to Artifact Registry
+        env:
+          ACCESS_TOKEN: ${{ steps.gcp-auth.outputs.access_token }}
+          GAR_HOST: ${{ vars.HELM_OCI_LOCATION }}-docker.pkg.dev
         run: |
-          export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_HELM }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_HELM }}
-          export AWS_REGION="us-east-1"          
-          export PACKAGE_SIGNING_KEY=${{ secrets.PACKAGE_SIGNING_KEY }}
-          export PACKAGE_SIGNING_PASSPHRASE=${{ secrets.PACKAGE_SIGNING_PASSPHRASE }}
-          ./bin/gcloud/package_upload          
+          printf '%s\n' "${ACCESS_TOKEN}" |
+            helm registry login "${GAR_HOST}" \
+              --username oauth2accesstoken \
+              --password-stdin
+
+      - name: Publish and verify OCI charts
+        env:
+          HELM_OCI_REGISTRY: ${{ vars.HELM_OCI_LOCATION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.HELM_OCI_REPOSITORY }}
+        run: ./bin/release/publish_oci
+
+      - name: Publish classic Helm repository
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_HELM }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_HELM }}
+          AWS_REGION: us-east-1
+        run: ./bin/release/publish_classic
 
       - name: Update index.yaml
-        run: |          
-          ./bin/gcloud/index_yaml_update
+        run: ./bin/gcloud/index_yaml_update
 
       - name: Set Chart Version
         id: chart_version
         run: |
-          echo "CHART_VERSION=${HELM_CHART_VERSION}" >> $GITHUB_OUTPUT
+          echo "CHART_VERSION=${HELM_CHART_VERSION}" >> "${GITHUB_OUTPUT}"
           echo "Using chart version ${HELM_CHART_VERSION} for release"
 
       - name: Release Notes
@@ -358,3 +392,5 @@ jobs:
           make_latest: true
           files: |
             tmp/new-packages/*.tgz
+            tmp/new-packages/*.tgz.prov
+            tmp/oci-digests.txt

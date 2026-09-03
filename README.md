@@ -8,6 +8,21 @@ Helm charts can be downloaded from [here](https://neo4j.com/deployment-center/#t
 
 [Full Documentation can be found here](https://neo4j.com/docs/operations-manual/current/kubernetes/)
 
+## OCI registry
+
+Released charts are also available from Google Artifact Registry as OCI
+artifacts. Specify the chart version explicitly:
+
+```bash
+helm install my-neo4j \
+  oci://europe-west2-docker.pkg.dev/neo4j-helm/helm-charts/neo4j \
+  --version 5.26.30 \
+  --values values.yaml
+```
+
+OCI registries do not use `helm repo add`. Release configuration and
+verification details are documented in [docs/ci/oci-release.md](docs/ci/oci-release.md).
+
 ## Examples
 See the `examples` directory for common usage patterns of this Helm Chart
 

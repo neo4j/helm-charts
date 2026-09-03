@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+
+readonly RELEASE_CHARTS=(
+  neo4j
+  neo4j-admin
+  neo4j-headless-service
+  neo4j-persistent-volume
+  neo4j-reverse-proxy
+  neo4j-loadbalancer
+)
+
+readonly BUILD_OUT_DIR="tmp/new-packages"
+readonly PACKAGE_PUBLIC_KEYRING="tmp/signing/pubring.gpg"
+readonly PACKAGE_SECRET_KEYRING="tmp/signing/secring.gpg"
+
+fail() {
+  printf 'ERROR: %s\n' "$*" >&2
+  exit 1
+}
+
+require_command() {
+  command -v "$1" >/dev/null 2>&1 || fail "Required command not found: $1"
+}
+
+require_env() {
+  [[ -n "${!1:-}" ]] || fail "$1 is required"
+}
+
+chart_field() {
+  local chart_source="$1"
+  local field="$2"
+
+  helm show chart "${chart_source}" |
+    awk -F ': ' -v field="${field}" '$1 == field { print $2; exit }'
+}
+
+validate_release_packages() {
+  local expected_version="${HELM_CHART_VERSION:-}"
+  local chart
+  local package
+  local package_name
+  local package_version
+  local packages
+  local provenance_files
+
+  [[ -d "${BUILD_OUT_DIR}" ]] || fail "Package directory not found: ${BUILD_OUT_DIR}"
+
+  if [[ -z "${expected_version}" ]]
+  then
+    expected_version="$(chart_field neo4j version)"
+  fi
+
+  for chart in "${RELEASE_CHARTS[@]}"
+  do
+    package="${BUILD_OUT_DIR}/${chart}-${expected_version}.tgz"
+    [[ -f "${package}" ]] || fail "Missing package: ${package}"
+    [[ -f "${package}.prov" ]] || fail "Missing provenance file: ${package}.prov"
+
+    package_name="$(chart_field "${package}" name)"
+    package_version="$(chart_field "${package}" version)"
+    [[ "${package_name}" == "${chart}" ]] || fail "Unexpected chart name in ${package}: ${package_name}"
+    [[ "${package_version}" == "${expected_version}" ]] || fail "Unexpected chart version in ${package}: ${package_version}"
+  done
+
+  shopt -s nullglob
+  packages=("${BUILD_OUT_DIR}"/*.tgz)
+  provenance_files=("${BUILD_OUT_DIR}"/*.tgz.prov)
+  shopt -u nullglob
+
+  [[ "${#packages[@]}" -eq "${#RELEASE_CHARTS[@]}" ]] || fail "Expected ${#RELEASE_CHARTS[@]} packages, found ${#packages[@]}"
+  [[ "${#provenance_files[@]}" -eq "${#RELEASE_CHARTS[@]}" ]] || fail "Expected ${#RELEASE_CHARTS[@]} provenance files, found ${#provenance_files[@]}"
+}

@@ -7,24 +7,33 @@ shopt -s inherit_errexit
 
 ROLE_ARN_GPG="${ROLE_ARN_GPG:?ROLE_ARN_GPG is required}"
 SECRET_ID_GPG="${SECRET_ID_GPG:?SECRET_ID_GPG is required}"
+AWS_CONFIG_DIR="${HOME}/.aws"
+AWS_CONFIG_FILE="${AWS_CONFIG_DIR}/config"
+SIGNING_KEY_FILE="signing-key.asc"
+SIGNING_SANDBOX="signingkeysandbox"
 
-#mkdir -p /root/.aws
-mkdir -p $HOME/.aws
+cleanup_signing_key_file() {
+  rm -f "${SIGNING_KEY_FILE}"
+}
 
-echo "[profile secrets]
-region = eu-west-1
-output = json
-role_arn = ${ROLE_ARN_GPG}
-credential_source = Environment" | tee $HOME/.aws/config
-#credential_source = Environment" | tee /root/.aws/config
+trap cleanup_signing_key_file EXIT
+
+mkdir -p "${AWS_CONFIG_DIR}"
+printf '%s\n' \
+  '[profile secrets]' \
+  'region = eu-west-1' \
+  'output = json' \
+  "role_arn = ${ROLE_ARN_GPG}" \
+  'credential_source = Environment' > "${AWS_CONFIG_FILE}"
 
 # fetch the key
-aws --profile secrets secretsmanager get-secret-value --secret-id ${SECRET_ID_GPG} | jq --raw-output '.SecretString' | jq --raw-output '.privateKey' | base64 --decode > signing-key.asc
+aws --profile secrets secretsmanager get-secret-value --secret-id "${SECRET_ID_GPG}" |
+  jq --raw-output '.SecretString' |
+  jq --raw-output '.privateKey' |
+  base64 --decode > "${SIGNING_KEY_FILE}"
 
 # stick it in a sandbox
-mkdir signingkeysandbox
-chmod 700 signingkeysandbox
-gpg --homedir signingkeysandbox --batch --import signing-key.asc || true
-#gpg --homedir signingkeysandbox --list-secret-keys
-# cleanup
-rm signing-key.asc
+rm -rf "${SIGNING_SANDBOX}"
+mkdir "${SIGNING_SANDBOX}"
+chmod 700 "${SIGNING_SANDBOX}"
+gpg --homedir "${SIGNING_SANDBOX}" --batch --import "${SIGNING_KEY_FILE}"

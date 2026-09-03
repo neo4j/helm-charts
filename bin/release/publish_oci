@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+
+# Publishes signed chart packages to an OCI registry and verifies the stored bytes.
+
+set -o pipefail -o errtrace -o errexit -o nounset
+shopt -s inherit_errexit
+[[ -n "${TRACE:-}" ]] && set -o xtrace
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=bin/release/helm_release_common
+source "${SCRIPT_DIR}/helm_release_common"
+
+require_command cmp
+require_command diff
+require_command helm
+require_command tar
+require_env HELM_OCI_REGISTRY
+
+validate_release_packages
+[[ -f "${PACKAGE_PUBLIC_KEYRING}" ]] || fail "Public keyring not found: ${PACKAGE_PUBLIC_KEYRING}"
+
+HELM_OCI_REGISTRY="${HELM_OCI_REGISTRY#oci://}"
+HELM_OCI_REGISTRY="${HELM_OCI_REGISTRY%/}"
+readonly HELM_OCI_REGISTRY
+readonly OCI_DIGESTS_FILE="tmp/oci-digests.txt"
+VERIFY_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/helm-oci-verify.XXXXXX")"
+readonly VERIFY_ROOT
+
+cleanup_verification() {
+  rm -rf "${VERIFY_ROOT}"
+}
+
+trap cleanup_verification EXIT
+: > "${OCI_DIGESTS_FILE}"
+
+PULLED_PACKAGE=""
+PULLED_PROVENANCE=""
+PULLED_DIGEST=""
+
+pull_and_verify_remote() {
+  local chart="$1"
+  local version="$2"
+  local destination="$3"
+  local remote_ref="oci://${HELM_OCI_REGISTRY}/${chart}"
+  local pull_output
+
+  mkdir -p "${destination}"
+  pull_output="$(helm pull "${remote_ref}" \
+    --version "${version}" \
+    --prov \
+    --destination "${destination}")"
+  printf '%s\n' "${pull_output}"
+
+  PULLED_PACKAGE="${destination}/${chart}-${version}.tgz"
+  PULLED_PROVENANCE="${PULLED_PACKAGE}.prov"
+  PULLED_DIGEST="$(printf '%s\n' "${pull_output}" | awk '$1 == "Digest:" { print $2; exit }')"
+
+  [[ -f "${PULLED_PACKAGE}" ]] || fail "OCI pull did not create ${PULLED_PACKAGE}"
+  [[ -f "${PULLED_PROVENANCE}" ]] || fail "OCI pull did not create ${PULLED_PROVENANCE}"
+  [[ "${PULLED_DIGEST}" == sha256:* ]] || fail "OCI pull did not return a manifest digest for ${chart}:${version}"
+  helm verify "${PULLED_PACKAGE}" --keyring "${PACKAGE_PUBLIC_KEYRING}"
+}
+
+packages_have_equal_content() {
+  local local_package="$1"
+  local remote_package="$2"
+  local comparison_root="$3"
+
+  mkdir -p "${comparison_root}/local" "${comparison_root}/remote"
+  tar -xzf "${local_package}" -C "${comparison_root}/local"
+  tar -xzf "${remote_package}" -C "${comparison_root}/remote"
+  diff -r "${comparison_root}/local" "${comparison_root}/remote" >/dev/null
+}
+
+for chart in "${RELEASE_CHARTS[@]}"
+do
+  version="${HELM_CHART_VERSION:-$(chart_field "${chart}" version)}"
+  package="${BUILD_OUT_DIR}/${chart}-${version}.tgz"
+  provenance="${package}.prov"
+  remote_ref="oci://${HELM_OCI_REGISTRY}/${chart}"
+  chart_verify_root="${VERIFY_ROOT}/${chart}"
+
+  if helm show chart "${remote_ref}" --version "${version}" >/dev/null 2>&1
+  then
+    pull_and_verify_remote "${chart}" "${version}" "${chart_verify_root}/existing"
+
+    if ! cmp -s "${package}" "${PULLED_PACKAGE}" || ! cmp -s "${provenance}" "${PULLED_PROVENANCE}"
+    then
+      if ! packages_have_equal_content "${package}" "${PULLED_PACKAGE}" "${chart_verify_root}/content"
+      then
+        fail "OCI already contains different chart content for ${chart}:${version}"
+      fi
+
+      printf 'Reusing immutable OCI package bytes for %s:%s\n' "${chart}" "${version}"
+      cp "${PULLED_PACKAGE}" "${package}"
+      cp "${PULLED_PROVENANCE}" "${provenance}"
+    else
+      printf 'OCI already contains the verified package for %s:%s\n' "${chart}" "${version}"
+    fi
+  else
+    push_output="$(helm push "${package}" "oci://${HELM_OCI_REGISTRY}")"
+    printf '%s\n' "${push_output}"
+    push_digest="$(printf '%s\n' "${push_output}" | awk '$1 == "Digest:" { print $2; exit }')"
+
+    pull_and_verify_remote "${chart}" "${version}" "${chart_verify_root}/pushed"
+    cmp -s "${package}" "${PULLED_PACKAGE}" || fail "OCI package bytes differ after push for ${chart}:${version}"
+    cmp -s "${provenance}" "${PULLED_PROVENANCE}" || fail "OCI provenance bytes differ after push for ${chart}:${version}"
+
+    if [[ -n "${push_digest}" && "${push_digest}" != "${PULLED_DIGEST}" ]]
+    then
+      fail "OCI digest changed after push for ${chart}:${version}"
+    fi
+  fi
+
+  printf '%s/%s:%s@%s\n' \
+    "${HELM_OCI_REGISTRY}" \
+    "${chart}" \
+    "${version}" \
+    "${PULLED_DIGEST}" >> "${OCI_DIGESTS_FILE}"
+done
+
+validate_release_packages
+printf 'Published and verified %s OCI charts\n' "${#RELEASE_CHARTS[@]}"
