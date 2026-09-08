@@ -276,7 +276,7 @@ func extractFromCredentialsFile(content string, variableName string) (string, er
 
 func handleError(err error) {
 	if err != nil {
-		log.Fatal(err.Error())
+		errorLogger.Fatal(err.Error())
 	}
 }
 
