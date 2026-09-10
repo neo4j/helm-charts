@@ -99,6 +99,8 @@ data:
   # This ensures the cluster waits for the minimum number of nodes before timing out
   # dbms.cluster.raft.binding_timeout controls how long a database waits to join a cluster
   dbms.cluster.raft.binding_timeout: "1d"
+  # Prevent unavailable cluster members from delaying writes in Kubernetes environments
+  dbms.cluster.raft.async_channel_acquisition_enabled: "true"
   {{- end }}
 
   {{- if $primaryAnalyticsType }}

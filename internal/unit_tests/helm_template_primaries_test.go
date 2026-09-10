@@ -994,6 +994,7 @@ func TestClusterEnabledConfigMap(t *testing.T) {
 	).(*v1.ConfigMap)
 	assert.Equal(t, defaultConfig.Data["initial.dbms.default_primaries_count"], fmt.Sprint(clusterSize))
 	assert.Equal(t, defaultConfig.Data["dbms.cluster.minimum_initial_system_primaries_count"], fmt.Sprint(clusterSize))
+	assert.Equal(t, "true", defaultConfig.Data["dbms.cluster.raft.async_channel_acquisition_enabled"])
 	assert.Contains(t, defaultConfig.Data, "dbms.cluster.discovery.resolver_type")
 	assert.Contains(t, defaultConfig.Data, "dbms.kubernetes.service_port_name")
 	assert.Contains(t, defaultConfig.Data, "dbms.kubernetes.service_port_name")
