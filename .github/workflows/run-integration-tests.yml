@@ -17,7 +17,7 @@ on:
         required: false
         default: 'false'
       docker_image_version:
-        description: 'Required when release is "true". The Neo4j docker image tag (e.g. 2025.04.0) to pull.'
+        description: 'Required when release is "true". The Neo4j docker image tag (e.g. 2026.07.1) to pull.'
         type: string
         required: false
         default: ''
@@ -131,7 +131,7 @@ jobs:
               neo4j_img="neo4j:${DOCKER_VERSION}-${os_suffix}"
             fi
           else
-            neo4j_img="${REGISTRY}/neo4j:2025-${EDITION}-${OS}-nightly-bundle"
+            neo4j_img="${REGISTRY}/neo4j:2026-${EDITION}-${OS}-nightly-bundle"
           fi
 
           # Backup image tag includes ubi10- prefix for RedHat.
