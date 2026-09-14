@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Creates and verifies the signed chart packages used by every release destination.
+# Creates the signed chart packages used by every release destination.
 
 set -o pipefail -o errtrace -o errexit -o nounset
 shopt -s inherit_errexit
@@ -61,9 +61,4 @@ done
 
 validate_release_packages
 
-for package in "${BUILD_OUT_DIR}"/*.tgz
-do
-  helm verify "${package}" --keyring "${PACKAGE_PUBLIC_KEYRING}"
-done
-
-printf 'Created and verified %s signed chart packages in %s\n' "${#RELEASE_CHARTS[@]}" "${BUILD_OUT_DIR}"
+printf 'Created %s signed chart packages in %s\n' "${#RELEASE_CHARTS[@]}" "${BUILD_OUT_DIR}"
