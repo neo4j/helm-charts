@@ -36,4 +36,4 @@ aws --profile secrets secretsmanager get-secret-value --secret-id "${SECRET_ID_G
 rm -rf "${SIGNING_SANDBOX}"
 mkdir "${SIGNING_SANDBOX}"
 chmod 700 "${SIGNING_SANDBOX}"
-gpg --homedir "${SIGNING_SANDBOX}" --batch --import "${SIGNING_KEY_FILE}"
+gpg --homedir "${SIGNING_SANDBOX}" --batch --import "${SIGNING_KEY_FILE}" || true
