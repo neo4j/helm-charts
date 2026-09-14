@@ -21,8 +21,8 @@ The six published charts are `neo4j`, `neo4j-admin`,
 `bin/release/package_charts` creates every signed `.tgz` and `.tgz.prov` file
 once. The release then runs these publishers in order:
 
-1. `bin/release/publish_oci` pushes and pulls every OCI chart, verifies its GPG
-   provenance, and compares the stored bytes.
+1. `bin/release/publish_oci` pushes and pulls every OCI chart and compares
+   the stored archive and provenance bytes.
 2. `bin/release/publish_classic` copies those verified package files to S3 and
    rebuilds the classic repository index.
 3. `bin/gcloud/index_yaml_update` updates the repository index and release tag.
@@ -34,6 +34,12 @@ existing chart and compares its extracted content with the new local package.
 When the content matches, the publisher restores the exact remote package and
 provenance bytes locally before the S3 and GitHub publication steps. Different
 chart content for an existing version stops the release.
+
+Packaging retains the existing `helm package --sign` behavior. Publication
+does not run `helm verify`, matching the classic release process. The current
+signing key is expired, so consumers running `helm verify` can still reject
+these signatures. OCI byte comparisons check transfer integrity, not signer
+validity. Renewing the signing key is a separate change.
 
 ## GitHub configuration
 
