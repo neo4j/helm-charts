@@ -5,7 +5,14 @@ import (
 	"os"
 )
 
+var errorLogger = log.New(os.Stderr, "", log.LstdFlags)
+
+func configureLogging() {
+	log.SetOutput(os.Stdout)
+}
+
 func main() {
+	configureLogging()
 
 	if aggregateEnabled := os.Getenv("AGGREGATE_BACKUP_ENABLED"); aggregateEnabled != "true" {
 		startupOperations()
@@ -26,7 +33,7 @@ func main() {
 		onPrem()
 		break
 	default:
-		log.Fatalf("Incorrect cloud provider %s", cloudProvider)
+		errorLogger.Fatalf("Incorrect cloud provider %s", cloudProvider)
 	}
 
 }

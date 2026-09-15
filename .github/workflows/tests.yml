@@ -160,8 +160,8 @@ jobs:
           operations_tag: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-operations:${{ env.RUN_ID }}
           backup_tag_debian: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ env.RUN_ID }}
           backup_tag_redhat: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:ubi10-${{ env.RUN_ID }}
-          backup_source_debian: ${{ inputs.RELEASE && format('neo4j:{0}-enterprise-trixie', inputs.DOCKER_IMAGE_VERSION) || format('{0}/neo4j:2025-enterprise-debian-nightly-bundle', vars.ARTIFACT_REGISTRY_REPO_NAME) }}
-          backup_source_redhat: ${{ inputs.RELEASE && format('neo4j:{0}-enterprise-ubi10', inputs.DOCKER_IMAGE_VERSION) || format('{0}/neo4j:2025-enterprise-redhat-nightly-bundle', vars.ARTIFACT_REGISTRY_REPO_NAME) }}
+          backup_source_debian: ${{ inputs.RELEASE && format('neo4j:{0}-enterprise-trixie', inputs.DOCKER_IMAGE_VERSION) || format('{0}/neo4j:2026-enterprise-debian-nightly-bundle', vars.ARTIFACT_REGISTRY_REPO_NAME) }}
+          backup_source_redhat: ${{ inputs.RELEASE && format('neo4j:{0}-enterprise-ubi10', inputs.DOCKER_IMAGE_VERSION) || format('{0}/neo4j:2026-enterprise-redhat-nightly-bundle', vars.ARTIFACT_REGISTRY_REPO_NAME) }}
           dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
           dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
 
