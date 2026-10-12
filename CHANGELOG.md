@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.26.32] - 2026-10-12
+
+*Neo4j docker image: `5.26.32`*
+
+- See [Neo4j release notes](https://neo4j.com/release-notes/database/neo4j-5/) for upstream DB changes
+- No user-facing helm-charts changes (maintenance release).
+
 ## [5.26.31] - 2026-09-22
 
 *Neo4j docker image: `5.26.31`*
