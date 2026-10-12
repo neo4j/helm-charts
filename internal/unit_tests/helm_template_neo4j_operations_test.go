@@ -6,10 +6,45 @@ import (
 
 	"github.com/neo4j/helm-charts/internal/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	v12 "k8s.io/api/rbac/v1"
 )
+
+func TestNeo4jOperationsBackoffLimit(t *testing.T) {
+	t.Parallel()
+
+	for _, testCase := range []struct {
+		name     string
+		args     []string
+		expected int32
+	}{
+		{name: "default retries disabled", expected: 0},
+		{name: "custom retries", args: []string{"--set", "neo4j.operations.backoffLimit=3"}, expected: 3},
+		{name: "retries disabled", args: []string{"--set", "neo4j.operations.backoffLimit=0"}, expected: 0},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			helmValues := model.DefaultEnterpriseValues
+			helmValues.Neo4J.MinimumClusterSize = 3
+			helmValues.Neo4J.Operations = model.Operations{EnableServer: true, Image: "demo:123", Protocol: "neo4j"}
+
+			manifest, err := model.HelmTemplateFromStruct(t, model.HelmChart, helmValues, testCase.args...)
+			require.NoError(t, err)
+
+			job := manifest.OfTypeWithName(
+				&batchv1.Job{},
+				fmt.Sprintf("%s-operations", model.DefaultHelmTemplateReleaseName.String()),
+			).(*batchv1.Job)
+			require.NotNil(t, job)
+			require.NotNil(t, job.Spec.BackoffLimit)
+			assert.Equal(t, testCase.expected, *job.Spec.BackoffLimit)
+			assert.Equal(t, v1.RestartPolicyNever, job.Spec.Template.Spec.RestartPolicy)
+		})
+	}
+}
 
 // TestNeo4jOperationsEnableServer tests for the neo4j.operations.enableServer flag
 func TestNeo4jOperationsEnableServer(t *testing.T) {
