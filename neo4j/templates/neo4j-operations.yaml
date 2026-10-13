@@ -13,7 +13,7 @@ metadata:
     app: "neo4j-operations"
     {{- include "neo4j.labels" $.Values.neo4j.operations | indent 4 }}
 spec:
-  backoffLimit: 0
+  backoffLimit: {{ $.Values.neo4j.operations.backoffLimit }}
   template:
     metadata:
       labels:

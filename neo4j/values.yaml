@@ -37,6 +37,9 @@ neo4j:
   # The operations Job's Pod ends successfully if the server is enabled, or it was already enabled
   operations:
       enableServer: false
+      # Number of retries after a failed operations Pod, using Kubernetes Job exponential backoff.
+      # Defaults to 0 to preserve existing behavior. Increase for delayed server startup.
+      backoffLimit: 0
       image: "neo4j/helm-charts-operations:2026.09.0"
       # imagePullPolicy: Always (default) or IfNotPresent
       imagePullPolicy: "Always"
