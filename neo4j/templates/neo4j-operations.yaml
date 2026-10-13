@@ -13,7 +13,7 @@ metadata:
     helm.neo4j.com/instance: "{{ include "neo4j.fullname" . }}"
     {{- include "neo4j.labels" $.Values.neo4j.operations | indent 4 }}
 spec:
-  backoffLimit: 0
+  backoffLimit: {{ $.Values.neo4j.operations.backoffLimit }}
   template:
     metadata:
       labels:
