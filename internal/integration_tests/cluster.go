@@ -221,7 +221,7 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentityForCluster(t *testing.T, 
 	err = createGCPServiceAccount(k8sServiceAccountName, namespace, gcpServiceAccountName)
 	assert.NoError(t, err, fmt.Sprintf("error seen while creating GCP service account for cluster %s. \n Err := %v", gcpServiceAccountName, err))
 
-	bucketName := model.BucketName
+	bucketName := TestBackupDestination(t)
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
 	helmValues := model.DefaultNeo4jBackupValues
 	helmValues.Backup = model.Backup{

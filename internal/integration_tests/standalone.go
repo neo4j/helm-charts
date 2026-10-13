@@ -938,8 +938,8 @@ func TestAggregateBackupWithWildcard(t *testing.T, standaloneReleaseName model.R
 		}, false)
 	})
 
-	// Use cloud storage so all backup jobs can share the same backup files
-	bucketName := model.BucketName
+	// Share the destination between the initial backup and aggregate jobs for this test.
+	bucketName := TestBackupDestination(t)
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
 	initialHelmValues := model.DefaultNeo4jBackupValues
 	initialHelmValues.Backup = model.Backup{
@@ -1320,7 +1320,7 @@ func InstallNeo4jBackupAzureHelmChart(t *testing.T, standaloneReleaseName model.
 		}, false)
 	})
 
-	bucketName := model.BucketName
+	bucketName := TestBackupDestination(t)
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
 	helmValues := model.DefaultNeo4jBackupValues
 	helmValues.Backup = model.Backup{
@@ -1398,7 +1398,7 @@ func InstallNeo4jBackupGCPHelmChart(t *testing.T, standaloneReleaseName model.Re
 		}, false)
 	})
 
-	bucketName := model.BucketName
+	bucketName := TestBackupDestination(t)
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
 	helmValues := model.DefaultNeo4jBackupValues
 	helmValues.Backup = model.Backup{
@@ -1624,7 +1624,7 @@ func installNeo4jBackupGCPCloudStorage(t *testing.T, standaloneReleaseName model
 		}, false)
 	})
 
-	bucketName := model.BucketName
+	bucketName := TestBackupDestination(t)
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
 	helmValues := model.DefaultNeo4jBackupValues
 	helmValues.Backup = model.Backup{
@@ -1796,7 +1796,7 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t *testing.T, standalone
 		return fmt.Errorf("error seen while creating GCP service account. \n Err := %v", err)
 	}
 
-	bucketName := model.BucketName
+	bucketName := TestBackupDestination(t)
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
 	helmValues := model.DefaultNeo4jBackupValues
 	helmValues.Backup = model.Backup{

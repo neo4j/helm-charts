@@ -44,3 +44,9 @@ func init() {
 func TestNamespace(t testing.TB) string {
 	return testid.For(TestRunIdentifier, t)
 }
+
+// TestBackupDestination isolates cloud backup artifacts by test and run.
+// Native backup filename checks list this prefix instead of the shared bucket root.
+func TestBackupDestination(t testing.TB) string {
+	return fmt.Sprintf("%s/%s", model.BucketName, TestNamespace(t))
+}
