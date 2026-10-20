@@ -1,5 +1,15 @@
 # Changelog
 
+## [2026.10.0] - 2026-10-20
+
+*Neo4j docker image: `2026.10.0`*
+
+- See [Neo4j release notes](https://neo4j.com/release-notes/database/neo4j-2026-10/) for upstream DB changes
+
+### Helm-charts changes
+
+- Add configurable retries for the Neo4j operations Job through neo4j.operations.backoffLimit, defaulting to 0. ([#560](https://github.com/neo4j/helm-charts/pull/560))
+
 ## [2026.9.0] - 2026-09-22
 
 *Neo4j docker image: `2026.09.0`*

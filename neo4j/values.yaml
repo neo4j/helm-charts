@@ -40,7 +40,7 @@ neo4j:
       # Number of retries after a failed operations Pod, using Kubernetes Job exponential backoff.
       # Defaults to 0 to preserve existing behavior. Increase for delayed server startup.
       backoffLimit: 0
-      image: "neo4j/helm-charts-operations:2026.09.0"
+      image: "neo4j/helm-charts-operations:2026.10.0"
       # imagePullPolicy: Always (default) or IfNotPresent
       imagePullPolicy: "Always"
       # protocol can be "neo4j or "neo4j+ssc" or "neo4j+s". Default set to neo4j
