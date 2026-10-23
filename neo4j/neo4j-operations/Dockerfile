@@ -1,5 +1,6 @@
-FROM golang:1.25.14-alpine
-RUN apk --no-cache add curl \
+FROM golang:1.26.10-alpine3.24
+RUN apk --no-cache upgrade \
+    && apk --no-cache add curl \
     && addgroup --gid 7474 --system neo4j \
     && adduser --uid 7474 --system --no-create-home --home "/go" --ingroup neo4j neo4j
 WORKDIR neo4j-operations
