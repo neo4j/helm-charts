@@ -1,5 +1,17 @@
 # Changelog
 
+## [2026.10.1] - 2026-10-23
+
+*Neo4j docker image: `2026.10.1`*
+
+- See [Neo4j release notes](https://neo4j.com/release-notes/database/neo4j-2026-10/) for upstream DB changes
+
+### Helm-charts changes
+
+- Patch networking, cryptography, gRPC, OpenTelemetry, and cloud SDK dependencies in repository-managed Go modules. ([#562](https://github.com/neo4j/helm-charts/pull/562))
+- Upgrade helper image Go toolchains to 1.26.10 and Alpine bases to 3.24, including the reverse-proxy runtime to 3.24.3. ([#562](https://github.com/neo4j/helm-charts/pull/562))
+- Upgrade Helm build and CI tooling to 3.22.1 and update the GKE authentication plugin package name in the CI image. ([#562](https://github.com/neo4j/helm-charts/pull/562))
+
 ## [2026.10.0] - 2026-10-20
 
 *Neo4j docker image: `2026.10.0`*
