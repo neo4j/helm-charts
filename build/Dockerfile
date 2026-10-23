@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y \
   wget  \
   ca-certificates \
   openssl \
-  google-cloud-sdk-gke-gcloud-auth-plugin \
+  google-cloud-cli-gke-gcloud-auth-plugin \
   kubectl \
   awscli \
   jq \
