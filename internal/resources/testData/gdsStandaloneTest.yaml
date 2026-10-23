@@ -13,6 +13,7 @@ volumes:
 env:
   NEO4J_PLUGINS: '["bloom"]'
 config:
+  internal.dbms.procedure_reload.enabled: "false"
   dbms.security.procedures.unrestricted: "gds.*,apoc.*,bloom.*"
   server.unmanaged_extension_classes: "com.neo4j.bloom.server=/bloom,semantics.extension=/rdf"
   dbms.security.http_auth_allowlist: "/,/browser.*,/bloom.*"
