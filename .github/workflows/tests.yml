@@ -159,6 +159,12 @@ jobs:
       - name: Set up gotestfmt
         run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
 
+      - name: Install MinIO client
+        run: |
+          curl -fsSL https://github.com/minio/mc/releases/download/RELEASE.2025-08-13T08-35-41Z/mc.linux-amd64.RELEASE.2025-08-13T08-35-41Z --create-dirs -o /root/minio-binaries/mc
+          chmod +x /root/minio-binaries/mc
+          mc --version
+
       - name: Run Enterprise Integration and Unit tests
         run: |
           mkdir -p .kube
