@@ -17,6 +17,10 @@ FROM ${IMAGE} as final
 ARG DISTRIBUTION
 RUN \
     if [ "${DISTRIBUTION}" = "debian" ]; then  \
+      if grep -q '^VERSION_CODENAME=bullseye$' /etc/os-release; then \
+        find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) \
+          -exec sed -i -e 's|deb[.]debian[.]org/debian-security|archive.debian.org/debian-security|g' -e 's|security[.]debian[.]org/debian-security|archive.debian.org/debian-security|g' {} + ; \
+      fi && \
       apt-get update && apt-get install -y bash netcat-openbsd curl wget gnupg apt-transport-https apt-utils lsb-release unzip less && rm -rf /var/lib/apt/lists/* ;  \
     else  \
       #for redhat
