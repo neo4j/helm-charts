@@ -5,7 +5,7 @@ set -o pipefail -o errtrace -o errexit -o nounset
 shopt -s inherit_errexit
 [[ -n "${TRACE:-}" ]] && set -o xtrace
 
-NEO4J_VERSION="${NEO4J_VERSION:?NEO4J_VERSION is required}"
+HELM_CHART_VERSION="${HELM_CHART_VERSION:?HELM_CHART_VERSION is required}"
 # neo4j or neo4j-experimental
 HELM_REPO_NAME="${HELM_REPO_NAME:?HELM_REPO_NAME is required}"
 echo "sleeping for 300 seconds"
@@ -16,24 +16,28 @@ helm repo update
 echo "Pulling 4.x helm charts"
 git add .
 if [ -n "$(git status --porcelain)" ]; then
-  git commit -m "Update chart versions to ${NEO4J_VERSION}"
+  git commit -m "Update chart versions to ${HELM_CHART_VERSION}"
   git push
 else
   echo "No changes to commit, skipping commit and push"
 fi
 
-helm pull neo4j/neo4j-standalone --version "${NEO4J_VERSION}"
-helm pull neo4j/neo4j-cluster-headless-service --version "${NEO4J_VERSION}"
-helm pull neo4j/neo4j-cluster-core --version "${NEO4J_VERSION}"
-helm pull neo4j/neo4j-cluster-read-replica --version "${NEO4J_VERSION}"
-helm pull neo4j/neo4j-cluster-loadbalancer --version "${NEO4J_VERSION}"
-helm pull neo4j/neo4j-reverse-proxy --version "${NEO4J_VERSION}"
-helm pull neo4j/neo4j-admin --version "${NEO4J_VERSION}"
+if ! git rev-parse "refs/tags/${HELM_CHART_VERSION}" >/dev/null 2>&1
+then
+  git tag -m "Tagging ${HELM_CHART_VERSION}" -a "${HELM_CHART_VERSION}"
+  git push origin "refs/tags/${HELM_CHART_VERSION}"
+fi
+
+HELM_CHARTS_LIST=("neo4j-standalone" "neo4j-admin" "neo4j-reverse-proxy" "neo4j-cluster-core" "neo4j-cluster-read-replica" "neo4j-cluster-headless-service" "neo4j-cluster-loadbalancer" "neo4j-gcloud-pv" "neo4j-docker-desktop-pv")
+for chart in "${HELM_CHARTS_LIST[@]}"
+do
+  helm pull "neo4j/${chart}" --version "${HELM_CHART_VERSION}"
+done
 
 # index.yaml is present only in dev branch
 git checkout dev
 git pull
-helm repo index . --merge index.yaml --url https://github.com/neo4j/helm-charts/releases/download/"${NEO4J_VERSION}"
+helm repo index . --merge index.yaml --url https://github.com/neo4j/helm-charts/releases/download/"${HELM_CHART_VERSION}"
 git add index.yaml
-git commit -m "Updating index.yaml with ${NEO4J_VERSION} entries"
+git commit -m "Updating index.yaml with ${HELM_CHART_VERSION} entries"
 git push

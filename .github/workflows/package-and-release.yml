@@ -1,0 +1,152 @@
+name: Package and Release Only for v4.4
+
+on:
+  workflow_dispatch:
+    inputs:
+      HELM_CHART_VERSION:
+        description: 'Helm chart version to be released (e.g., 4.4.48-1)'
+        required: true
+        type: string
+      DOCKER_IMAGE_VERSION:
+        description: 'Neo4j Docker image version to use (e.g., 4.4.48)'
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      HELM_CHART_VERSION:
+        description: 'Helm chart version to be released (e.g., 4.4.48-1)'
+        required: true
+        type: string
+      DOCKER_IMAGE_VERSION:
+        description: 'Neo4j Docker image version to use (e.g., 4.4.48)'
+        required: true
+        type: string
+
+    secrets:
+      AWS_ACCESS_KEY_ID_GPG:
+        required: true
+      AWS_ACCESS_KEY_ID_HELM:
+        required: true
+      AWS_SECRET_ACCESS_KEY_GPG:
+        required: true
+      AWS_SECRET_ACCESS_KEY_HELM:
+        required: true
+      DOCKERHUB_TOKEN:
+        required: true
+      DOCKERHUB_USERNAME:
+        required: true
+      GCLOUD_SERVICE_KEY:
+        required: true
+      GH_TOKEN:
+        required: true
+      PACKAGE_SIGNING_KEY:
+        required: true
+      PACKAGE_SIGNING_PASSPHRASE:
+        required: true
+      ROLE_ARN_GPG:
+        required: true
+      SECRET_ID_GPG:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-reverseproxy-backup-release-image:
+    permissions: {}
+    name: ReverseProxy and Backup Docker Image build
+    runs-on: ubuntu-latest
+    if: ${{ github.ref_name == '4.4' && github.event_name == 'workflow_dispatch' && (github.actor == 'riggi-alekaj' || github.actor == 'bfeshti') }}
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push reverse proxy image
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5.4.0
+        with:
+          context: "{{defaultContext}}:neo4j-reverse-proxy"
+          push: true
+          tags: "neo4j/helm-charts-reverse-proxy:${{ inputs.DOCKER_IMAGE_VERSION }}"
+          provenance: false
+
+      - name: Build and push backup image
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5.4.0
+        with:
+          context: "{{defaultContext}}:neo4j-admin"
+          push: true
+          tags: "neo4j/helm-charts-backup:${{ inputs.HELM_CHART_VERSION }}"
+          provenance: false
+          build-args: |
+            IMAGE=neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise
+            DISTRIBUTION=debian
+
+  packaging:
+    name: Packaging and Release
+    needs:
+      - build-reverseproxy-backup-release-image
+    runs-on: ubuntu-latest
+    if: ${{ github.ref_name == '4.4' && github.event_name == 'workflow_dispatch' && (github.actor == 'riggi-alekaj' || github.actor == 'bfeshti') }}
+    concurrency:
+      group: helm-production-release
+      cancel-in-progress: false
+    env:
+      HELM_CHART_VERSION: ${{ inputs.HELM_CHART_VERSION }}
+      DOCKER_IMAGE_VERSION: ${{ inputs.DOCKER_IMAGE_VERSION }}
+      HELM_REPO_NAME: ${{ vars.HELM_REPO_NAME }}
+    container:
+      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
+      options: --user 1001
+      credentials:
+        username: _json_key
+        password: ${{ secrets.GCLOUD_SERVICE_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: '0'
+          fetch-tags: true
+          token: ${{ secrets.GH_TOKEN }}
+          ref: 4.4
+
+      - name: Version Updates
+        run: |
+          git config --global user.email team-smcs@neo4j.com
+          git config --global user.name "team-smcs"
+          ./bin/gcloud/version_updates
+      - name: GPG Key Signing
+        run: |
+          export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_GPG }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_GPG }}
+          export ROLE_ARN_GPG=${{ secrets.ROLE_ARN_GPG }}
+          export SECRET_ID_GPG=${{ secrets.SECRET_ID_GPG }}
+          ./bin/gcloud/gpg_signing
+      - name: Upload Helm Charts
+        run: |
+          export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_HELM }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_HELM }}
+          export AWS_REGION="us-east-1"
+          export PACKAGE_SIGNING_KEY=${{ secrets.PACKAGE_SIGNING_KEY }}
+          export PACKAGE_SIGNING_PASSPHRASE=${{ secrets.PACKAGE_SIGNING_PASSPHRASE }}
+          ./bin/gcloud/package_upload
+
+      - name: Update index.yaml
+        run: |
+          ./bin/gcloud/index_yaml_update
+
+      - name: Release Notes
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          name: v${{ inputs.HELM_CHART_VERSION }}
+          tag_name: ${{ inputs.HELM_CHART_VERSION }}
+          token: ${{ secrets.GH_TOKEN }}
+          body: "Helm charts ${{ inputs.HELM_CHART_VERSION }} using Neo4j ${{ inputs.DOCKER_IMAGE_VERSION }}"
+          make_latest: false
+          files: |
+            tmp/new-packages/*.tgz
+            tmp/new-packages/*.tgz.prov
