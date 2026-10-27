@@ -840,7 +840,9 @@ func InstallNeo4jBackupGCPHelmChartWithWorkloadIdentity(t *testing.T, standalone
 	assert.NoError(t, err, fmt.Sprintf("error seen while creating k8s service account %s. \n Err := %v", k8sServiceAccountName, err))
 
 	err = createGCPServiceAccount(k8sServiceAccountName, namespace, gcpServiceAccountName)
-	assert.NoError(t, err, fmt.Sprintf("error seen while creating GCP service account. \n Err := %v", err))
+	if err != nil {
+		return err
+	}
 
 	bucketName := model.BucketName
 	helmClient := model.NewHelmClient(model.DefaultNeo4jBackupChartName)
@@ -971,6 +973,7 @@ func standaloneCleanup(t *testing.T, releaseName model.ReleaseName) func() {
 func createGCPServiceAccount(k8sServiceAccountName string, namespace string, gcpServiceAccountName string) error {
 	//mutex required since GCP does not allow you to create and add iam policies to service accounts concurrently
 	mutex.Lock()
+	defer mutex.Unlock()
 	stdout, stderr, err := RunCommand(exec.Command("gcloud", "iam", "service-accounts", "create", gcpServiceAccountName,
 		fmt.Sprintf("--project=%s", string(gcloud.CurrentProject()))))
 	if err != nil {
@@ -978,8 +981,14 @@ func createGCPServiceAccount(k8sServiceAccountName string, namespace string, gcp
 	}
 	log.Printf("GCP service account creation done \n Stdout = %s \n Stderr = %s", string(stdout), string(stderr))
 
-	stdout, stderr, err = RunCommand(exec.Command("gcloud", "projects", "add-iam-policy-binding", string(gcloud.CurrentProject()), "--member",
-		fmt.Sprintf("serviceAccount:%s@%s.iam.gserviceaccount.com", gcpServiceAccountName, string(gcloud.CurrentProject())), "--role", "roles/storage.admin"))
+	for attempt := 0; attempt < 5; attempt++ {
+		stdout, stderr, err = RunCommand(exec.Command("gcloud", "projects", "add-iam-policy-binding", string(gcloud.CurrentProject()), "--member",
+			fmt.Sprintf("serviceAccount:%s@%s.iam.gserviceaccount.com", gcpServiceAccountName, string(gcloud.CurrentProject())), "--role", "roles/storage.admin"))
+		if err == nil || !strings.Contains(string(stderr), "does not exist") || attempt == 4 {
+			break
+		}
+		time.Sleep(5 * time.Second << attempt)
+	}
 	if err != nil {
 		return fmt.Errorf("error seen while trying to add iam policy binding to gcp service account %s \n Here's why err := %s \n stderr := %s", gcpServiceAccountName, err, string(stderr))
 	}
@@ -995,7 +1004,6 @@ func createGCPServiceAccount(k8sServiceAccountName string, namespace string, gcp
 
 	// sleep for few seconds to allow the settings be applied...immediate helm install after this step leads to failure
 	time.Sleep(120 * time.Second)
-	mutex.Unlock()
 	return nil
 }
 
