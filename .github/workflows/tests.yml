@@ -94,6 +94,14 @@ jobs:
           tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ env.CURRENT_DATE }}-v4.4"
           provenance: false
 
+      - name: Build and push MinIO test image
+        uses: docker/build-push-action@v5
+        with:
+          context: "{{defaultContext}}:build/minio"
+          push: true
+          tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/minio:${{ env.CURRENT_DATE }}-v4.4"
+          provenance: false
+
       - name: Build and push backup image
         uses: docker/build-push-action@v5
         if: ${{ !inputs.RELEASE }}
@@ -127,6 +135,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NEO4J_EDITION: "enterprise"
+      MINIO_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/minio:${{ needs.current-date.outputs.CURRENT_DATE }}-v4.4"
       CLOUDSDK_CONTAINER_CLUSTER: ${{ needs.gke-setup.outputs.CLOUDSDK_CONTAINER_CLUSTER }}
       NEO4J_DOCKER_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j:4.4-enterprise-debian-nightly"
       NEO4J_REVERSE_PROXY_IMG: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/reverseproxy:${{ needs.current-date.outputs.CURRENT_DATE }}-v4.4"

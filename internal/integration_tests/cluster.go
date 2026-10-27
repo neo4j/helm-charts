@@ -813,7 +813,11 @@ func installMinio(namespace string, tenantName string) error {
 		}
 	}
 
-	stdout, stderr, err = RunCommand(exec.Command("kubectl", "minio", "tenant", "create", tenantName, "--servers", "2", "--volumes", "4", "--capacity", "10Gi", "--disable-tls", "-n", namespace))
+	args := []string{"minio", "tenant", "create", tenantName, "--servers", "2", "--volumes", "4", "--capacity", "10Gi", "--disable-tls", "-n", namespace}
+	if image := os.Getenv("MINIO_DOCKER_IMG"); image != "" {
+		args = append(args, "--image", image)
+	}
+	stdout, stderr, err = RunCommand(exec.Command("kubectl", args...))
 	if err != nil {
 		log.Printf("%v", string(stderr))
 		return err
