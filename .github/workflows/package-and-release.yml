@@ -22,8 +22,38 @@ on:
         required: true
         type: string
 
+    secrets:
+      AWS_ACCESS_KEY_ID_GPG:
+        required: true
+      AWS_ACCESS_KEY_ID_HELM:
+        required: true
+      AWS_SECRET_ACCESS_KEY_GPG:
+        required: true
+      AWS_SECRET_ACCESS_KEY_HELM:
+        required: true
+      DOCKERHUB_TOKEN:
+        required: true
+      DOCKERHUB_USERNAME:
+        required: true
+      GCLOUD_SERVICE_KEY:
+        required: true
+      GH_TOKEN:
+        required: true
+      PACKAGE_SIGNING_KEY:
+        required: true
+      PACKAGE_SIGNING_PASSPHRASE:
+        required: true
+      ROLE_ARN_GPG:
+        required: true
+      SECRET_ID_GPG:
+        required: true
+
+permissions:
+  contents: read
+
 jobs:
   build-reverseproxy-backup-release-image:
+    permissions: {}
     name: ReverseProxy and Backup Docker Image build
     runs-on: ubuntu-latest
     if: ${{ github.ref_name == '4.4' && github.event_name == 'workflow_dispatch' && (github.actor == 'riggi-alekaj' || github.actor == 'bfeshti') }}
@@ -110,7 +140,7 @@ jobs:
           ./bin/gcloud/index_yaml_update
 
       - name: Release Notes
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           name: v${{ inputs.HELM_CHART_VERSION }}
           tag_name: ${{ inputs.HELM_CHART_VERSION }}

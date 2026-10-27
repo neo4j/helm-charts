@@ -288,4 +288,16 @@ jobs:
     with:
       HELM_CHART_VERSION: ${{ inputs.HELM_CHART_VERSION }}
       DOCKER_IMAGE_VERSION: ${{ inputs.DOCKER_IMAGE_VERSION }}
-    secrets: inherit
+    secrets:
+      AWS_ACCESS_KEY_ID_GPG: ${{ secrets.AWS_ACCESS_KEY_ID_GPG }}
+      AWS_ACCESS_KEY_ID_HELM: ${{ secrets.AWS_ACCESS_KEY_ID_HELM }}
+      AWS_SECRET_ACCESS_KEY_GPG: ${{ secrets.AWS_SECRET_ACCESS_KEY_GPG }}
+      AWS_SECRET_ACCESS_KEY_HELM: ${{ secrets.AWS_SECRET_ACCESS_KEY_HELM }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      GCLOUD_SERVICE_KEY: ${{ secrets.GCLOUD_SERVICE_KEY }}
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      PACKAGE_SIGNING_KEY: ${{ secrets.PACKAGE_SIGNING_KEY }}
+      PACKAGE_SIGNING_PASSPHRASE: ${{ secrets.PACKAGE_SIGNING_PASSPHRASE }}
+      ROLE_ARN_GPG: ${{ secrets.ROLE_ARN_GPG }}
+      SECRET_ID_GPG: ${{ secrets.SECRET_ID_GPG }}
