@@ -1,5 +1,5 @@
 ARG IMAGE
-FROM golang:1.21-bullseye as build
+FROM golang:1.26.10-trixie as build
 RUN apt-get install -y curl
 WORKDIR backup
 COPY backup/aws aws/
@@ -10,13 +10,17 @@ COPY backup/main main/
 COPY backup/neo4j-admin neo4j-admin/
 COPY backup/go.mod go.mod
 RUN go mod tidy && go mod download && go mod verify
-RUN env GOOS=linux GOARCH=amd64 go build -v -o backup_linux main/*
+RUN env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -o backup_linux main/*
 
 ARG IMAGE
 FROM ${IMAGE} as final
 ARG DISTRIBUTION
 RUN \
     if [ "${DISTRIBUTION}" = "debian" ]; then  \
+      if grep -q '^VERSION_CODENAME=bullseye$' /etc/os-release; then \
+        find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) \
+          -exec sed -i -e 's|deb[.]debian[.]org/debian-security|archive.debian.org/debian-security|g' -e 's|security[.]debian[.]org/debian-security|archive.debian.org/debian-security|g' {} + ; \
+      fi && \
       apt-get update && apt-get install -y bash netcat-openbsd curl wget gnupg apt-transport-https apt-utils lsb-release unzip less && rm -rf /var/lib/apt/lists/* ;  \
     else  \
       #for redhat

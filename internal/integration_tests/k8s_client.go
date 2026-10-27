@@ -141,6 +141,9 @@ func getOurAnnotations(service coreV1.Service) map[string]string {
 		"meta.helm.sh/",
 	}
 	for key, value := range service.Annotations {
+		if key == "networking.gke.io/target-pool" {
+			continue
+		}
 		if !matchesAnyPrefix(prefixesToIgnore, key) {
 			ourAnnotations[key] = value
 		}
