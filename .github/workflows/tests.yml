@@ -3,8 +3,12 @@ name: Execute Tests for v4.4
 on:
   workflow_dispatch:
     inputs:
-      NEO4J_VERSION:
-        description: 'Neo4j v4.4.x version to be released'
+      HELM_CHART_VERSION:
+        description: 'Helm chart version to be released (e.g., 4.4.48-1)'
+        required: true
+        type: string
+      DOCKER_IMAGE_VERSION:
+        description: 'Neo4j Docker image version to use (e.g., 4.4.48)'
         required: true
         type: string
       RELEASE:
@@ -104,7 +108,7 @@ jobs:
 
       - name: Build and push backup image
         uses: docker/build-push-action@v5
-        if: ${{ !inputs.RELEASE }}
+        if: inputs.DOCKER_IMAGE_VERSION == ''
         with:
           context: "{{defaultContext}}:neo4j-admin"
           push: true
@@ -116,14 +120,14 @@ jobs:
 
       - name: Build and push backup image
         uses: docker/build-push-action@v5
-        if: ${{ inputs.RELEASE }}
+        if: inputs.DOCKER_IMAGE_VERSION != ''
         with:
           context: "{{defaultContext}}:neo4j-admin"
           push: true
           tags: "${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/neo4j-admin:${{ env.CURRENT_DATE }}-v4.4"
           provenance: false
           build-args: |
-            IMAGE=neo4j:${{ inputs.NEO4J_VERSION }}-enterprise
+            IMAGE=neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise
             DISTRIBUTION=debian
 
   run-enterprise-tests:
@@ -182,10 +186,8 @@ jobs:
           export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
           echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)
-          #inputs.RELEASE does not hold value when workflow_dispatch is not called
-          ISRELEASE=${{ inputs.RELEASE }}
-          if [[ ${#ISRELEASE} != 0 ]]; then            
-            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}-enterprise"
+          if [[ "${{ inputs.DOCKER_IMAGE_VERSION }}" != "" ]]; then
+            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}-enterprise"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
@@ -240,10 +242,8 @@ jobs:
           export KUBECONFIG="${CURRENT_DIRECTORY}/.kube/config"
           echo "printing kubeconfig path $KUBECONFIG"
           export IPS_PASS=$(gcloud auth print-access-token)
-          #inputs.RELEASE does not hold value when workflow_dispatch is not called
-          ISRELEASE=${{ inputs.RELEASE }}
-          if [[ ${#ISRELEASE} != 0 ]]; then            
-            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.NEO4J_VERSION }}"
+          if [[ "${{ inputs.DOCKER_IMAGE_VERSION }}" != "" ]]; then
+            export NEO4J_DOCKER_IMG="neo4j:${{ inputs.DOCKER_IMAGE_VERSION }}"
           fi
           echo "NEO4J_DOCKER_IMG=${NEO4J_DOCKER_IMG}"
           go test -json -v -timeout ${GO_TEST_TIMEOUT} ./internal/integration_tests/ 2>&1 | tee /tmp/gotest.log | gotestfmt
@@ -278,105 +278,14 @@ jobs:
         run: |
           ./bin/gcloud/delete_cluster
 
-  build-reverseproxy-backup-release-image:
-    name: ReverseProxy and Backup Docker Image build
-    needs:
-      - run-community-tests
-      - run-enterprise-tests
-    runs-on: ubuntu-latest
-    if: ${{ inputs.RELEASE && github.ref_name == '4.4' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'riggi-alekaj' || github.actor == 'bfeshti') }}
-    steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push reverse proxy image
-        uses: docker/build-push-action@v5
-        with:
-          context: "{{defaultContext}}:neo4j-reverse-proxy"
-          push: true
-          tags: "neo4j/helm-charts-reverse-proxy:${{ inputs.NEO4J_VERSION }}"
-          provenance: false
-
-      - name: Build and push backup image
-        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5.4.0
-        with:
-          context: "{{defaultContext}}:neo4j-admin"
-          push: true
-          tags: "neo4j/helm-charts-backup:${{ inputs.NEO4J_VERSION }}"
-          provenance: false
-          build-args: |
-            IMAGE=neo4j:${{ inputs.NEO4J_VERSION }}-enterprise
-            DISTRIBUTION=debian
-
   packaging:
     name: Packaging and Release
     needs:
       - run-community-tests
       - run-enterprise-tests
-    runs-on: ubuntu-latest
-    if: ${{ inputs.RELEASE && github.ref_name == '4.4' && success() && github.event_name == 'workflow_dispatch' && (github.actor == 'riggi-alekaj' || github.actor == 'bfeshti') }}
-    env:
-      NEO4J_VERSION: ${{ inputs.NEO4J_VERSION }}
-      HELM_REPO_NAME: ${{ vars.HELM_REPO_NAME }}
-    container:
-      image: ${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/githubactions:latest
-      options: --user 1001
-      credentials:
-        username: _json_key
-        password: ${{ secrets.GCLOUD_SERVICE_KEY }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: '0'
-          fetch-tags: true
-          token: ${{ secrets.GH_TOKEN }}
-          ref: 4.4
-
-      - name: Version Updates
-        run: |
-          git config --global user.email team-smcs@neo4j.com
-          git config --global user.name "team-smcs"
-          ./bin/gcloud/version_updates
-      - name: GPG Key Signing
-        run: |
-          export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_GPG }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_GPG }}
-          export ROLE_ARN_GPG=${{ secrets.ROLE_ARN_GPG }}
-          export SECRET_ID_GPG=${{ secrets.SECRET_ID_GPG }}
-          ./bin/gcloud/gpg_signing
-      - name: Upload Helm Charts
-        run: |
-          export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID_HELM }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY_HELM }}
-          export AWS_REGION="us-east-1"
-          export PACKAGE_SIGNING_KEY=${{ secrets.PACKAGE_SIGNING_KEY }}
-          export PACKAGE_SIGNING_PASSPHRASE=${{ secrets.PACKAGE_SIGNING_PASSPHRASE }}
-          ./bin/gcloud/package_upload
-
-      - name: Update index.yaml
-        run: |
-          ./bin/gcloud/index_yaml_update
-
-      - name: Release Notes
-        uses: softprops/action-gh-release@v2
-        with:
-          name: v${{ inputs.NEO4J_VERSION }}
-          tag_name: ${{ inputs.NEO4J_VERSION }}
-          token: ${{ secrets.GH_TOKEN }}
-          body: "- Updated to Neo4j ${{ inputs.NEO4J_VERSION }} as the new baseline"
-          make_latest: false
-          files: |
-            neo4j-standalone-${{ inputs.NEO4J_VERSION }}.tgz
-            neo4j-cluster-core-${{ inputs.NEO4J_VERSION }}.tgz
-            neo4j-cluster-read-replica-${{ inputs.NEO4J_VERSION }}.tgz
-            neo4j-cluster-headless-service-${{ inputs.NEO4J_VERSION }}.tgz
-            neo4j-admin-${{ inputs.NEO4J_VERSION }}.tgz
-            neo4j-reverse-proxy-${{ inputs.NEO4J_VERSION }}.tgz
-            neo4j-cluster-loadbalancer-${{ inputs.NEO4J_VERSION }}.tgz
+    if: ${{ inputs.RELEASE && github.ref_name == '4.4' && github.event_name == 'workflow_dispatch' && (github.actor == 'riggi-alekaj' || github.actor == 'bfeshti') }}
+    uses: ./.github/workflows/package-and-release.yml
+    with:
+      HELM_CHART_VERSION: ${{ inputs.HELM_CHART_VERSION }}
+      DOCKER_IMAGE_VERSION: ${{ inputs.DOCKER_IMAGE_VERSION }}
+    secrets: inherit

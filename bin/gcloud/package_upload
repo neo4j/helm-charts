@@ -22,6 +22,7 @@ S3_CACHE_CONTROL_MAX_AGE_SECONDS="${S3_CACHE_CONTROL_MAX_AGE_SECONDS:-300}"
 
 # Required env vars
 #
+HELM_CHART_VERSION="${HELM_CHART_VERSION:?HELM_CHART_VERSION is required}"
 # to create a keyring try gpg --export-secret-keys "<ID of the key you want to use to sign>" >~/.gnupg/secring.gpg
 #PACKAGE_SIGNING_KEYRING="${PACKAGE_SIGNING_KEYRING:?PACKAGE_SIGNING_KEYRING is required}"
 PACKAGE_SIGNING_KEY="${PACKAGE_SIGNING_KEY:?PACKAGE_SIGNING_KEY is required}"
@@ -32,9 +33,9 @@ echo "Deleting sandbox"
 rm -rf signingkeysandbox
 
 if [ ${S3_UPLOAD_TO_SUB_FOLDER} == "neo4j" ]; then
-    tar -czvf "neo4j-helm-charts-${NEO4J_VERSION}.tgz" neo4j-standalone neo4j-cluster* neo4j-gcloud* neo4j-docker* neo4j-admin neo4j-reverse-proxy
-    aws s3 cp --acl public-read "neo4j-helm-charts-${NEO4J_VERSION}.tgz" s3://dist.neo4j.org/helm/
-    rm -f "neo4j-helm-charts-${NEO4J_VERSION}.tgz"
+    tar -czvf "neo4j-helm-charts-${HELM_CHART_VERSION}.tgz" neo4j-standalone neo4j-cluster* neo4j-gcloud* neo4j-docker* neo4j-admin neo4j-reverse-proxy
+    aws s3 cp --acl public-read "neo4j-helm-charts-${HELM_CHART_VERSION}.tgz" s3://dist.neo4j.org/helm/
+    rm -f "neo4j-helm-charts-${HELM_CHART_VERSION}.tgz"
 fi
 
 HELM_CHARTS_LIST=("neo4j-standalone" "neo4j-admin" "neo4j-reverse-proxy" "neo4j-cluster-core" "neo4j-cluster-read-replica" "neo4j-cluster-headless-service" "neo4j-cluster-loadbalancer" "neo4j-gcloud-pv" "neo4j-docker-desktop-pv")
