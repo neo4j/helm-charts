@@ -12,6 +12,7 @@ source "${SCRIPT_DIR}/helm_release_common"
 
 require_command gpg
 require_command helm
+require_command go
 require_env PACKAGE_SIGNING_KEY
 require_env PACKAGE_SIGNING_PASSPHRASE
 
@@ -23,6 +24,18 @@ cleanup_signing_material() {
 }
 
 trap cleanup_signing_material EXIT
+
+# Validate the final release version before packaging either release workflow.
+neo4j_version=$(awk '/^appVersion:/ {print $2}' neo4j/Chart.yaml)
+for edition in community enterprise
+do
+  image="neo4j:${neo4j_version}"
+  if [[ "$edition" == "enterprise" ]]
+  then
+    image="${image}-enterprise"
+  fi
+  NEO4J_EDITION="$edition" NEO4J_DOCKER_IMG="$image" "${SCRIPT_DIR}/../../build/check-neo4j-conf"
+done
 
 [[ -d "${SIGNING_SANDBOX}" ]] || fail "Signing sandbox not found. Run bin/gcloud/gpg_signing first"
 
