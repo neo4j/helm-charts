@@ -19,6 +19,38 @@ permissions:
   contents: read
 
 jobs:
+  neo4j-conf:
+    name: Neo4j configuration defaults
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        edition: [community, enterprise]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Test configuration comparison
+        run: go test -race -count=1 ./cmd/neo4j-conf
+
+      - name: Check defaults against the chart's Neo4j version
+        env:
+          NEO4J_EDITION: ${{ matrix.edition }}
+        run: |
+          version=$(awk '/^appVersion:/ {print $2}' neo4j/Chart.yaml)
+          image="neo4j:${version}"
+          if [[ "$NEO4J_EDITION" == "enterprise" ]]
+          then
+            image="${image}-enterprise"
+          fi
+          NEO4J_DOCKER_IMG="$image" ./build/check-neo4j-conf
+
   helm-lint:
     name: helm lint + chart-testing
     runs-on: ubuntu-latest
