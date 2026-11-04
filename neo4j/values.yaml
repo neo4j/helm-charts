@@ -74,6 +74,13 @@ neo4j:
   # this can be used to perform tasks that cannot be performed when Neo4j is running such as `neo4j-admin dump`
   offlineMaintenanceModeEnabled: false
   #
+  # Enforce minimum resource requests of 500m CPU and 2G/2Gi memory.
+  # Set enabled to false for ephemeral/test environments needing smaller requests.
+  # Resource format checks still apply. Lower requests do not reduce actual usage;
+  # size heap/page cache and limits appropriately to avoid memory pressure/OOM kills.
+  resourcesValidation:
+    enabled: true
+
   # Resources for the Neo4j Container. Two formats supported:
   # 1. Shorthand (values used for both requests and limits):
   #    resources:
