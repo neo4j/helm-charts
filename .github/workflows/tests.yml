@@ -89,7 +89,7 @@ jobs:
       - name: 'Set up Cloud SDK'
         uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
         with:
-          version: '>= 363.0.0'
+          version: '568.0.0'
           
       - name: Run Cleanup
         run: ./bin/gcloud/cleanup_resources
@@ -221,7 +221,7 @@ jobs:
       - name: 'Set up Cloud SDK'
         uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
         with:
-          version: '>= 363.0.0'
+          version: '568.0.0'
 
       - name: Delete GKE Cluster
         run: |
@@ -249,7 +249,7 @@ jobs:
       - name: 'Set up Cloud SDK'
         uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
         with:
-          version: '>= 363.0.0'
+          version: '568.0.0'
 
       - name: Delete GKE Cluster
         run: |
