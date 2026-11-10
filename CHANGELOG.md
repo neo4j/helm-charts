@@ -1,5 +1,12 @@
 # Changelog
 
+## [2026.10.2] - 2026-11-10
+
+*Neo4j docker image: `2026.10.2`*
+
+- See [Neo4j release notes](https://neo4j.com/release-notes/database/neo4j-2026-10/) for upstream DB changes
+- No user-facing helm-charts changes (maintenance release).
+
 ## [2026.10.1] - 2026-10-23
 
 *Neo4j docker image: `2026.10.1`*
