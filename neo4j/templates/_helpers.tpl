@@ -208,7 +208,7 @@ E.g. by adding `--set podSpec.loadbalancer=include`
         {{ $cpuFloat = $cpuRegexValue | float64 }}
     {{- end -}}
 
-    {{- if lt $cpuFloat 0.5 }}
+    {{- if and .Values.neo4j.resourcesValidation.enabled (lt $cpuFloat 0.5) }}
         {{ fail (printf "Provided cpu value %s is less than minimum. \n %s" $cpu (include "neo4j.resources.invalidCPUMessage" .) ) }}
     {{- end -}}
 {{- end -}}
@@ -263,7 +263,7 @@ E.g. by adding `--set podSpec.loadbalancer=include`
         {{ $memoryFloat = divf ($memory | float64) 1000000000 -}}
     {{- end -}}
 
-    {{- if lt $memoryFloat 2.0 }}
+    {{- if and .Values.neo4j.resourcesValidation.enabled (lt $memoryFloat 2.0) }}
         {{ fail (printf "Provided memory value %s is less than minimum. \n %s" $memoryOrig "Please set memory to be a minimum of 2Gi or 2G via --set neo4j.resources.memory=2Gi or --set neo4j.resources.memory=2G") }}
     {{- end -}}
 
