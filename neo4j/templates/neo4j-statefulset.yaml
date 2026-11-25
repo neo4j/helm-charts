@@ -4,6 +4,7 @@
 {{- $offlineMaintenanceEnabled :=  .Values.neo4j.offlineMaintenanceModeEnabled }}
 {{- $neo4jImage := include "neo4j.image" . }}
 {{- $backupEnabled := false }}
+{{- $boltEnabled := index $.Values.config "server.bolt.enabled" | default "true" | regexMatch "(?i)yes|true" }}
 {{- $httpEnabled := index $.Values.config "server.http.enabled" | default "true" | regexMatch "(?i)yes|true" }}
 {{- $httpsEnabled := index $.Values.config "server.https.enabled" | default "false" | regexMatch "(?i)yes|true" }}
 {{- $prometheusEnabled := index $.Values.config "server.metrics.prometheus.enabled" | default "" | regexMatch "(?i)yes|true" }}
@@ -117,8 +118,10 @@ spec:
             - containerPort: 7474
               name: http
             {{- end }}
+            {{- if $boltEnabled }}
             - containerPort: 7687
               name: bolt
+            {{- end }}
             {{- if $httpsEnabled }}
             - containerPort: 7473
               name: https
@@ -162,8 +165,8 @@ spec:
             {{- if $offlineMaintenanceEnabled  }}
             {{- include "neo4j.maintenanceVolumeMounts" .Values.volumes | indent 12 }}
             {{- end }}
-          {{- include "neo4j.readinessProbe" .Values.readinessProbe | nindent 10 }}  
-          
+          {{- include "neo4j.readinessProbe" .Values.readinessProbe | nindent 10 }}
+
           {{- if $offlineMaintenanceEnabled }}
           # liveness and startup probes are disabled in offlineMaintenanceMode
           {{- else }}

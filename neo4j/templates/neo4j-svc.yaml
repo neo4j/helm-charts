@@ -5,6 +5,7 @@
 {{- $clusterEnabled = eq (include "neo4j.isClusterEnabled" .) "true" }}
 {{- $backupEnabled = index $.Values.config "server.backup.enabled" | default "true" | regexMatch "(?i)yes|true" }}
 {{- end }}
+{{- $boltEnabled := index $.Values.config "server.bolt.enabled" | default "true" | regexMatch "(?i)yes|true" }}
 {{- $httpEnabled := index $.Values.config "server.http.enabled" | default "true" | regexMatch "(?i)yes|true" }}
 {{- $httpsEnabled := index $.Values.config "server.https.enabled" | default "false" | regexMatch "(?i)yes|true" }}
 {{- $jmxEnabled := index $.Values.config "server.metrics.jmx.enabled" | default "" | regexMatch "(?i)yes|true" }}
@@ -34,10 +35,12 @@ spec:
     app: "{{ template "neo4j.name" $ }}"
     helm.neo4j.com/instance: "{{ include "neo4j.fullname" . }}"
   ports:
+    {{- if $boltEnabled }}
     - protocol: TCP
       port: 7687
       targetPort: 7687
       name: tcp-bolt
+    {{- end }}
     {{- if $httpEnabled }}
     - protocol: TCP
       port: 7474
